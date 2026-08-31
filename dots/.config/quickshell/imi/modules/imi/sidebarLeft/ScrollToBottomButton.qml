@@ -14,8 +14,12 @@ RippleButton {
         bottomMargin: Appearance.spacing.space150
     }
 
-    opacity: !target.atYEnd ? 1 : 0
-    scale: !target.atYEnd ? 1 : 0.7
+    // Distance, not atYEnd: the chase settles within a pixel of the end
+    // and atYEnd's own margin math left the pill lingering there.
+    readonly property bool farFromEnd: (target.originY + target.contentHeight
+        + target.bottomMargin - target.height - target.contentY) > 8
+    opacity: farFromEnd ? 1 : 0
+    scale: farFromEnd ? 1 : 0.7
     visible: opacity > 0
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)

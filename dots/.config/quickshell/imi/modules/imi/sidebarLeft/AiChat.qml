@@ -506,6 +506,11 @@ Item {
 
             StyledListView { // Message list
                 id: messageListView
+                // An unclipped ListView renders off-screen delegates OVER
+                // the tools bar above it, and their readOnly TextAreas ate
+                // every click on the chips whenever the transcript was
+                // scrolled anywhere but the top.
+                clip: true
                 z: 0
                 anchors.fill: parent
                 spacing: Appearance.spacing.space150
@@ -1251,13 +1256,19 @@ Item {
                     implicitWidth: 40
                     implicitHeight: 40
                     buttonRadius: Appearance.rounding.small
-                    enabled: messageInputField.text.length > 0
+                    // While generating this is the STOP control (M3's send
+                    // morph) - the one way to end a runaway answer.
+                    enabled: messageInputField.text.length > 0 || Ai.isGenerating
                     toggled: enabled
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: sendButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: {
+                            if (Ai.isGenerating) {
+                                Ai.stopGeneration();
+                                return;
+                            }
                             const inputText = messageInputField.text;
                             root.acceptComposer(inputText);
                             messageInputField.clear();
@@ -1270,7 +1281,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         iconSize: 22
                         color: sendButton.enabled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer2Disabled
-                        text: "arrow_upward"
+                        text: Ai.isGenerating ? "stop" : "arrow_upward"
                     }
                 }
             }
