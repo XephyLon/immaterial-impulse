@@ -250,7 +250,7 @@ ColumnLayout {
         Layout.leftMargin: Appearance.spacing.space100
         Layout.rightMargin: Appearance.spacing.space100
         Layout.topMargin: Appearance.spacing.space100
-        implicitHeight: choosing ? 84 : 44
+        implicitHeight: choosing ? chooserColumn.implicitHeight + 16 : 44
 
         function plant(type, name, baseUrl) {
             let providers = [...(Config.options.ai.customProviders || [])];
@@ -309,37 +309,74 @@ ColumnLayout {
             }
         }
 
-        GridLayout {
-            anchors.fill: parent
-            anchors.margins: 4
+        ColumnLayout {
+            id: chooserColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 8
             visible: addSlot.choosing
-            columns: 3
-            rowSpacing: Appearance.spacing.space50
-            columnSpacing: Appearance.spacing.space50
+            spacing: 2
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: Appearance.spacing.space100
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Provider type")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                }
+                RippleButton {
+                    implicitWidth: 26
+                    implicitHeight: 26
+                    buttonRadius: Appearance.rounding.full
+                    colBackground: "transparent"
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+                    onClicked: addSlot.choosing = false
+                    contentItem: MaterialSymbol {
+                        anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "close"
+                        iconSize: Appearance.font.pixelSize.normal
+                        color: Appearance.colors.colSubtext
+                    }
+                }
+            }
 
             component TypeChoice: RippleButton {
                 property string label
+                property string detail
                 property string glyph
                 Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitHeight: 40
                 buttonRadius: Appearance.rounding.small
-                colBackground: Appearance.colors.colLayer2
+                colBackground: "transparent"
                 colBackgroundHover: Appearance.colors.colLayer2Hover
                 colRipple: Appearance.colors.colLayer2Active
                 contentItem: Item {
-                    implicitHeight: choiceRow.implicitHeight
                     RowLayout {
-                        id: choiceRow
-                        anchors.centerIn: parent
-                        spacing: Appearance.spacing.space50
+                        anchors.fill: parent
+                        anchors.leftMargin: Appearance.spacing.space100
+                        anchors.rightMargin: Appearance.spacing.space100
+                        spacing: Appearance.spacing.space100
                         MaterialSymbol {
                             text: glyph
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnLayer2
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colPrimary
                         }
                         StyledText {
                             text: label
-                            color: Appearance.colors.colOnLayer2
+                            color: Appearance.colors.colOnLayer1
+                            font.pixelSize: Appearance.font.pixelSize.small
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            horizontalAlignment: Text.AlignRight
+                            text: detail
+                            color: Appearance.colors.colSubtext
                             font.pixelSize: Appearance.font.pixelSize.smaller
                         }
                     }
@@ -348,40 +385,27 @@ ColumnLayout {
 
             TypeChoice {
                 label: Translation.tr("OpenAI-compatible")
+                detail: Translation.tr("any server with /v1")
                 glyph: "cloud"
                 onClicked: addSlot.plant("openai", "New Provider", "")
             }
             TypeChoice {
                 label: "Anthropic"
+                detail: "api.anthropic.com"
                 glyph: "psychology_alt"
                 onClicked: addSlot.plant("anthropic", "Anthropic", "https://api.anthropic.com/v1")
             }
             TypeChoice {
                 label: "Google Gemini"
+                detail: "generativelanguage.googleapis.com"
                 glyph: "auto_awesome"
                 onClicked: addSlot.plant("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta")
             }
             TypeChoice {
                 label: "Mistral"
+                detail: "api.mistral.ai"
                 glyph: "air"
                 onClicked: addSlot.plant("mistral", "Mistral", "https://api.mistral.ai/v1")
-            }
-            RippleButton {
-                Layout.rowSpan: 2
-                implicitWidth: 32
-                Layout.fillHeight: true
-                buttonRadius: Appearance.rounding.small
-                colBackground: "transparent"
-                colBackgroundHover: Appearance.colors.colLayer2Hover
-                colRipple: Appearance.colors.colLayer2Active
-                onClicked: addSlot.choosing = false
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    text: "close"
-                    iconSize: Appearance.font.pixelSize.normal
-                    color: Appearance.colors.colSubtext
-                }
             }
         }
     }
