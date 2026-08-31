@@ -83,24 +83,30 @@ RippleButton {
         }
     }
 
-    MaterialSymbol {
-        id: pageGlyph
+    CustomIcon {
+        id: distroIcon
         anchors.centerIn: parent
-        // ONE glyph (the maintainer's call; the distro mark retired from
-        // this button): the AI spark when closed, the open page's own icon
-        // while the sidebar is up. Same purpose, so it is the same element
-        // - the glyph REWRITES mid-morph (animateChange), and the fill
-        // arrives with the lit shape behind it.
-        text: root.toggled && GlobalStates.sidebarLeftTabIcon.length > 0
-            ? GlobalStates.sidebarLeftTabIcon
-            : "auto_awesome"
-        iconSize: 18
-        fill: root.toggled ? 1 : 0
-        animateChange: true
-        z: 2
-        color: root.toggled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colPrimary
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        width: root.isMaterial ? (root.vertical ? 24 : 22) : 19.5
+        height: root.isMaterial ? (root.vertical ? 24 : 22) : 19.5
+        source: Config.options.custom.distroIcon !== ""
+            ? Config.options.custom.distroIcon
+            : `${SystemInfo.distroIcon}.svg`
+        colorize: Config.options.custom.colorizeIcon
+        color: Appearance.colors.colPrimary
+        // Closed, the button is the BRAND; open, it is the PAGE. An SVG and
+        // a font glyph cannot share one path, so the handoff is the travel:
+        // scale through zero, opposite spins, one container.
+        scale: root.toggled ? 0 : 1
+        rotation: root.toggled ? 90 : 0
+        opacity: root.toggled ? 0 : 1
+        Behavior on scale {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on rotation {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
 
         Rectangle {
@@ -119,6 +125,38 @@ RippleButton {
             Behavior on opacity {
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
             }
+        }
+    }
+
+    MaterialSymbol {
+        id: pageGlyph
+        anchors.centerIn: parent
+        // The open page's icon - Intelligence is the single spark
+        // (star_shine), and switching pages REWRITES this one element
+        // mid-morph rather than swapping twins.
+        text: GlobalStates.sidebarLeftTabIcon.length > 0
+            ? GlobalStates.sidebarLeftTabIcon : "star_shine"
+        iconSize: 18
+        fill: 1
+        animateChange: true
+        z: 2
+        color: Appearance.m3colors.m3onPrimary
+        scale: root.toggled ? 1 : 0
+        rotation: root.toggled ? 0 : -90
+        opacity: root.toggled ? 1 : 0
+        visible: opacity > 0.01
+        Behavior on scale {
+            NumberAnimation {
+                duration: Appearance.animation.elementMove.duration
+                easing.type: Easing.OutBack
+                easing.overshoot: 1.2
+            }
+        }
+        Behavior on rotation {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
     }
 }

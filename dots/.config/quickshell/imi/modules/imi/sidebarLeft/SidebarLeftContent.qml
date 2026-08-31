@@ -21,7 +21,7 @@ Item {
     property bool mediaEnabled: Config.options.sidebar.media.enable
     property bool phoneEnabled: Config.options.sidebar.phone.enable
     property var tabButtonList: [
-        ...(root.aiChatEnabled ? [{"icon": "neurology", "name": Translation.tr("Intelligence")}] : []),
+        ...(root.aiChatEnabled ? [{"icon": "star_shine", "name": Translation.tr("Intelligence")}] : []),
         ...(root.translatorEnabled ? [{"icon": "translate", "name": Translation.tr("Translator")}] : []),
         ...(root.mediaEnabled ? [{"icon": "music_note", "name": Translation.tr("Media")}] : []),
         ...(root.phoneEnabled ? [{"icon": "smartphone", "name": Translation.tr("Phone")}] : []),
