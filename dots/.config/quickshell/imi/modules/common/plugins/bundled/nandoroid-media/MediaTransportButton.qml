@@ -434,6 +434,10 @@ Item {
                         requestPaint();
                     }
                     Component.onCompleted: if (artSource !== "") loadImage(artSource)
+                    Connections {
+                        target: MediaArtTrim
+                        function onClipsChanged() { artCanvas.requestPaint() }
+                    }
                     onImageLoaded: {
                         artClip.artLoaded = artSource !== "" && isImageLoaded(artSource);
                         requestPaint();
@@ -446,7 +450,12 @@ Item {
                         ctx.beginPath();
                         ctx.arc(width / 2, height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
                         ctx.clip();
-                        ctx.drawImage(artCanvas.artSource, 0, 0, width, height);
+                        const artTrim = MediaArtTrim.clipFor(root.artUrl);
+                        if (artTrim !== null)
+                            ctx.drawImage(artCanvas.artSource, artTrim.x, artTrim.y,
+                                artTrim.width, artTrim.height, 0, 0, width, height);
+                        else
+                            ctx.drawImage(artCanvas.artSource, 0, 0, width, height);
                         ctx.restore();
                     }
                 }

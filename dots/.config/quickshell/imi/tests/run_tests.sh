@@ -1846,6 +1846,12 @@ if ! python3 "$SCRIPT_DIR/test_subject_mask_lasso.py"; then
     exit 1
 fi
 
+echo "Running media art-trim tests..."
+if ! python3 "$SCRIPT_DIR/test_media_art_trim.py"; then
+    echo "Media art-trim tests failed."
+    exit 1
+fi
+
 echo "Running clock depth model list tests..."
 if ! python3 "$SCRIPT_DIR/test_clock_depth_models.py"; then
     echo "Clock depth model list tests failed."

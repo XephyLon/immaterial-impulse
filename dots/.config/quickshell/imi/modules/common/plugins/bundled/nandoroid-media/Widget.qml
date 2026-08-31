@@ -195,6 +195,13 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     cache: false
                     visible: root.artUrl !== ""
+                    // Letterboxed art arrives with its bars baked in; the
+                    // probe's source rect cuts them off before the
+                    // crop-fill, so the bars never become the picture.
+                    Binding on sourceClipRect {
+                        value: MediaArtTrim.clipFor(root.artUrl)
+                        when: MediaArtTrim.clipFor(root.artUrl) !== null
+                    }
                 }
                 // No track, no art: the card face stays, with the glyph the
                 // 2x2's empty artwork disc uses.
