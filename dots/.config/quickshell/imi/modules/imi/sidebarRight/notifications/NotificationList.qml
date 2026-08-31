@@ -1,7 +1,7 @@
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
-import Qt5Compat.GraphicalEffects
+import Quickshell.Widgets
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -16,25 +16,25 @@ Item {
     readonly property real minimumUsefulHeight: statusRow.implicitHeight
         + Appearance.spacing.space100 + Appearance.font.pixelSize.large * 2
 
-    NotificationListView { // Scrollable window
-        id: listview
+    ClippingRectangle {
+        // The rounded clip, WITHOUT the old OpacityMask layer: that
+        // Qt5Compat effect rendered the entire list to black - thirty
+        // notifications counted, none visible - and a rounded clip needs
+        // no shader here at all.
+        id: listClip
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: statusRow.top
         anchors.bottomMargin: Appearance.spacing.space100
+        radius: Appearance.rounding.normal
+        color: "transparent"
 
-        clip: true
-        layer.enabled: true
-        layer.effect: OpacityMask {
-            maskSource: Rectangle {
-                width: listview.width
-                height: listview.height
-                radius: Appearance.rounding.normal
-            }
+        NotificationListView { // Scrollable window
+            id: listview
+            anchors.fill: parent
+            popup: false
         }
-
-        popup: false
     }
 
     // Placeholder when list is empty. Given the list's area rather than the
@@ -42,7 +42,7 @@ Item {
     // state can use, and the placeholder decides whether its shape fits from
     // the height it is handed.
     Item {
-        anchors.fill: listview
+        anchors.fill: listClip
 
         PagePlaceholder {
             // This list shares the sidebar column with a bottom widget group of
