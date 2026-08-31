@@ -787,30 +787,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 width: parent.width
                                 spacing: Appearance.spacing.space150
 
-                                // The current built-in model's key, the row
-                                // /key used to be the only door to.
-                                ConfigTextArea {
-                                    Layout.fillWidth: true
-                                    visible: (Ai.models[Ai.currentModelId]?.requires_key ?? false)
-                                    buttonIcon: "key"
-                                    text: Translation.tr("%1 key").arg(Ai.models[Ai.currentModelId]?.name ?? "")
-                                    placeholderText: Translation.tr("Enter API key")
-                                    password: true
-                                    value: KeyringStorage.loaded
-                                        ? (KeyringStorage.keyringData.apiKeys?.[Ai.models[Ai.currentModelId]?.key_id] || "")
-                                        : ""
-                                    onValueChanged: {
-                                        if (!textArea.activeFocus) return;
-                                        const keyId = Ai.models[Ai.currentModelId]?.key_id;
-                                        if (!keyId) return;
-                                        const currentText = value;
-                                        Qt.callLater(() => {
-                                            if (KeyringStorage.loaded)
-                                                KeyringStorage.setNestedField(["apiKeys", keyId], currentText);
-                                        });
-                                    }
-                                }
-
                                 AiProvidersEditor {
                                     Layout.fillWidth: true
                                 }
