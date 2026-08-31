@@ -1,6 +1,5 @@
 import qs.modules.common
 import qs.modules.common.functions
-import qs.services
 import Qt5Compat.GraphicalEffects
 import QtQuick
 import Quickshell
@@ -10,16 +9,6 @@ import Quickshell.Services.Notifications
 MaterialShape { // App icon
     id: root
     property var appIcon: ""
-    property var appName: ""
-    // The icon actually drawn: the notification's own appIcon when it sent
-    // one, else a desktop-entry guess from the app's name - Discord/Vesktop
-    // send their avatar as image data and no appIcon at all, which left the
-    // corner badge (and the whole tile, once the avatar was gone) empty.
-    readonly property string resolvedAppIcon: {
-        if (root.appIcon !== "") return root.appIcon
-        const guessed = AppSearch.guessIcon(root.appName)
-        return guessed === "image-missing" ? "" : guessed
-    }
     property var summary: ""
     property var urgency: NotificationUrgency.Normal
     property bool isUrgent: urgency === NotificationUrgency.Critical
@@ -41,7 +30,7 @@ MaterialShape { // App icon
     color: isUrgent ? Appearance.colors.colPrimaryContainer : Appearance.colors.colSecondaryContainer
     Loader {
         id: materialSymbolLoader
-        active: root.resolvedAppIcon == ""
+        active: root.appIcon == ""
         anchors.fill: parent
         sourceComponent: MaterialSymbol {
             text: {
@@ -59,13 +48,13 @@ MaterialShape { // App icon
     }
     Loader {
         id: appIconLoader
-        active: root.image == "" && root.resolvedAppIcon != ""
+        active: root.image == "" && root.appIcon != ""
         anchors.centerIn: parent
         sourceComponent: IconImage {
             id: appIconImage
             implicitSize: root.appIconSize
             asynchronous: true
-            source: Quickshell.iconPath(root.resolvedAppIcon, "image-missing")
+            source: Quickshell.iconPath(root.appIcon, "image-missing")
         }
     }
     Loader {
@@ -101,13 +90,13 @@ MaterialShape { // App icon
             }
             Loader {
                 id: notifImageAppIconLoader
-                active: root.resolvedAppIcon != ""
+                active: root.appIcon != ""
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
                 sourceComponent: IconImage {
                     implicitSize: root.smallAppIconSize
                     asynchronous: true
-                    source: Quickshell.iconPath(root.resolvedAppIcon, "image-missing")
+                    source: Quickshell.iconPath(root.appIcon, "image-missing")
                 }
             }
         }

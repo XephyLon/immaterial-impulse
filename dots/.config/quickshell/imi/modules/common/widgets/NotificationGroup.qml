@@ -179,7 +179,6 @@ MouseArea { // Notification group area
             spacing: Appearance.spacing.space150
 
             NotificationAppIcon { // Icons
-                appName: root.notificationGroup?.appName
                 Layout.alignment: Qt.AlignTop
                 Layout.fillWidth: false
                 image: root?.multipleNotifications ? "" : notificationGroup?.notifications[0]?.image ?? ""

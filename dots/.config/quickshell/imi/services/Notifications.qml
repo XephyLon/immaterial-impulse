@@ -26,7 +26,13 @@ Singleton {
         })) ?? []
         property bool popup: false
         property bool isTransient: notification?.hints.transient ?? false
-        property string appIcon: notification?.appIcon ?? ""
+        // The notification's own icon when it sent one, else a desktop-entry
+        // guess from the app's name - Discord/Vesktop send their avatar as
+        // image data and no appIcon at all, which left the tile empty once
+        // the avatar was gone. Resolved HERE, not in the widget: the icon
+        // widget is presentational (lint_dumb_widgets), and the guess is a
+        // fact about the notification, not about how it is drawn.
+        property string appIcon: root.resolveAppIcon(notification?.appIcon ?? "", wrapper.appName)
         property string appName: notification?.appName ?? ""
         property string body: notification?.body ?? ""
         property string image: notification?.image ?? ""
@@ -40,6 +46,12 @@ Singleton {
                 root.discardNotification(notificationId);
             }
         }
+    }
+
+    function resolveAppIcon(own, appName) {
+        if (own !== "") return own;
+        const guessed = AppSearch.guessIcon(appName);
+        return guessed === "image-missing" ? "" : guessed;
     }
 
     function notifToJSON(notif) {
@@ -287,7 +299,7 @@ Singleton {
                 return notifComponent.createObject(root, {
                     "notificationId": notif.notificationId,
                     "actions": [], // Notification actions are meaningless if they're not tracked by the server or the sender is dead
-                    "appIcon": notif.appIcon,
+                    "appIcon": root.resolveAppIcon(notif.appIcon ?? "", notif.appName ?? ""),
                     "appName": notif.appName,
                     "body": notif.body,
                     // Files written before the persist-side strip above still
