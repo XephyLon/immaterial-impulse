@@ -489,7 +489,9 @@ Rectangle {
                     id: loadingIndicatorLoader
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    shown: (root.messageBlocks.length < 1) && (!root.messageData.done)
+                    // messageData goes undefined while a delegate tears
+                    // down; an undefined message is not "thinking".
+                    shown: (root.messageBlocks.length < 1) && !(root.messageData?.done ?? true)
                         && !(root.messageData?.generatingImage ?? false)
                     sourceComponent: ShimmerLabel {
                         running: true
