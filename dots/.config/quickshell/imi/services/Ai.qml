@@ -181,6 +181,23 @@ Singleton {
                         }
                     },
                 },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "generate_image",
+                        "description": "Generate an image from a text prompt using the user's image-generation model. Use when the user asks to draw, render, paint or generate a picture.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "prompt": {
+                                    "type": "string",
+                                    "description": "The image prompt - detailed and self-contained, since the generator sees nothing else",
+                                },
+                            },
+                            "required": ["prompt"]
+                        }
+                    },
+                },
             ],
             "search": [],
             "none": [],
@@ -1055,7 +1072,11 @@ And a final paragraph after the math, so the stream does not end on a block boun
         /** /images/generations (or /edits with an attachment): one
             non-streaming request whose b64 payload lands as a file in the
             durable attachment store and renders as a markdown image. */
-        function makeImageRequest(model) {
+        function makeImageRequest(model, promptOverride) {
+            // Called with a foreign generator by the tool path, so the key
+            // env is set HERE, for THIS model - not inherited from the
+            // chat model that asked.
+            if (model.requires_key) requester.environment[`${root.apiKeyEnvVarName}`] = root.apiKeys ? (root.apiKeys[model.key_id] ?? "") : "";
             requester.message = root.aiMessageComponent.createObject(root, {
                 "role": "assistant",
                 "model": currentModelId,
@@ -1068,10 +1089,12 @@ And a final paragraph after the math, so the stream does not end on a block boun
             root.messageIDs = [...root.messageIDs, mid];
             root.messageByID[mid] = requester.message;
 
-            let prompt = "";
-            for (let i = root.messageIDs.length - 1; i >= 0; i--) {
-                const m = root.messageByID[root.messageIDs[i]];
-                if (m?.role === "user") { prompt = String(m.rawContent ?? m.content ?? ""); break; }
+            let prompt = String(promptOverride ?? "").trim();
+            if (prompt.length === 0) {
+                for (let i = root.messageIDs.length - 1; i >= 0; i--) {
+                    const m = root.messageByID[root.messageIDs[i]];
+                    if (m?.role === "user") { prompt = String(m.rawContent ?? m.content ?? ""); break; }
+                }
             }
             const attachment = root.pendingFilePaths[0] ?? "";
             root.pendingFilePaths = [];
@@ -1394,6 +1417,30 @@ And a final paragraph after the math, so the stream does not end on a block boun
             message.rawContent += contentToAppend;
             message.content += contentToAppend;
             message.functionPending = true; // Use thinking to indicate the command is waiting for approval
+        }
+        else if (name === "generate_image") {
+            const prompt = String(args?.prompt ?? "").trim();
+            if (prompt.length === 0) {
+                addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `prompt`."));
+                requester.makeRequest();
+                return;
+            }
+            // Prefer a generator from the same provider as the caller;
+            // any surfaced generator otherwise.
+            const currentKey = models[currentModelId]?.key_id;
+            const generators = root.modelList
+                .map(id => root.models[id])
+                .filter(m => m?.imageGeneration && m.api_format === "openai");
+            const generator = generators.find(m => m.key_id === currentKey) ?? generators[0];
+            if (!generator) {
+                addFunctionOutputMessage(name, Translation.tr("No image-generation model is available from the configured providers."));
+                requester.makeRequest();
+                return;
+            }
+            const note = `\n\n*${Translation.tr("Generating image with %1…").arg(generator.name)}*\n`;
+            message.content += note;
+            message.rawContent += note;
+            requester.makeImageRequest(generator, prompt);
         }
         else root.addMessage(Translation.tr("Unknown function call: %1").arg(name), "assistant");
     }

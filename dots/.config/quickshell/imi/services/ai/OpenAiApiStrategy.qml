@@ -3,6 +3,28 @@ import qs.modules.common.functions as CF
 
 ApiStrategy {
     property bool isReasoning: false
+    // Streamed tool calls arrive as fragments - a name in one delta,
+    // argument shards across many - and this dialect used to drop them
+    // all on the floor: no OpenAI-format model could ever call a
+    // function. Accumulated here, emitted when the stream ends.
+    property string pendingToolName: ""
+    property string pendingToolArgs: ""
+
+    function reset() {
+        isReasoning = false;
+        pendingToolName = "";
+        pendingToolArgs = "";
+    }
+
+    function takePendingToolCall() {
+        if (pendingToolName.length === 0) return null;
+        let parsed = {};
+        try { parsed = JSON.parse(pendingToolArgs.length > 0 ? pendingToolArgs : "{}"); } catch (e) { /* shards, not JSON */ }
+        const call = { "name": pendingToolName, "args": parsed };
+        pendingToolName = "";
+        pendingToolArgs = "";
+        return call;
+    }
     
     function buildEndpoint(model: AiModel): string {
         // console.log("[AI] Endpoint: " + model.endpoint);
@@ -98,7 +120,8 @@ ApiStrategy {
         // Handle special cases
         if (!cleanData || cleanData.startsWith(":")) return {};
         if (cleanData === "[DONE]") {
-            return { finished: true };
+            const call = takePendingToolCall();
+            return call ? { functionCall: call, finished: true } : { finished: true };
         }
         
         // Real stuff
@@ -111,6 +134,18 @@ ApiStrategy {
                 message.rawContent += errorMsg;
                 message.content += errorMsg;
                 return { finished: true };
+            }
+
+            const toolCalls = dataJson.choices?.[0]?.delta?.tool_calls;
+            if (toolCalls && toolCalls.length > 0) {
+                const fn = toolCalls[0].function ?? {};
+                if (fn.name) pendingToolName += fn.name;
+                if (fn.arguments) pendingToolArgs += fn.arguments;
+            }
+            // Servers that skip [DONE] end the call with a finish_reason.
+            if (dataJson.choices?.[0]?.finish_reason === "tool_calls") {
+                const call = takePendingToolCall();
+                if (call) return { functionCall: call, finished: true };
             }
 
             let newContent = "";
@@ -168,8 +203,4 @@ ApiStrategy {
         return {};
     }
     
-    function reset() {
-        isReasoning = false;
-    }
-
 }
