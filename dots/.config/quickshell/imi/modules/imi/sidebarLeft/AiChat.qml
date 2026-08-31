@@ -339,6 +339,13 @@ Item {
                 Ai.simulateStream(Ai.testStreamText);
             }
         },
+        {
+            name: "export",
+            description: Translation.tr("Export this chat to Downloads"),
+            execute: () => {
+                Ai.exportChat();
+            }
+        },
     ]
 
     function handleInput(inputText) {
@@ -834,6 +841,24 @@ Item {
 
                                 AiProvidersEditor {
                                     Layout.fillWidth: true
+                                }
+
+                                ConfigTextArea {
+                                    // The system prompt, finally editable
+                                    // where the rest of the AI setup lives.
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: Appearance.spacing.space100
+                                    buttonIcon: "psychology"
+                                    text: Translation.tr("System prompt")
+                                    placeholderText: Translation.tr("Extra instructions for every chat")
+                                    value: Config.options.ai.systemPrompt ?? ""
+                                    onValueChanged: {
+                                        // Keystrokes only; a dying view must
+                                        // not write (the provider-wipe rule).
+                                        if (!textArea.activeFocus || !visible) return;
+                                        if (Config.options.ai.systemPrompt !== value)
+                                            Config.options.ai.systemPrompt = value;
+                                    }
                                 }
 
                                 RippleButton {

@@ -1014,7 +1014,33 @@ And a final paragraph after the math, so the stream does not end on a block boun
             if (requester.message.content.includes("API key not valid")) {
                 root.addApiKeyAdvice(models[requester.message.model]);
             }
+            // A dead endpoint fails with an empty transcript and no
+            // explanation; say what happened and name the retry.
+            if (exitCode !== 0 && requester.message.content.trim().length === 0) {
+                const note = Translation.tr("**Request failed** (curl exit %1). Check the provider's Base URL and key, then hit Regenerate.").arg(exitCode);
+                requester.message.content += note;
+                requester.message.rawContent += note;
+            }
         }
+    }
+
+    /** The visible transcript, as a markdown file in Downloads. */
+    function exportChat() {
+        if (root.messageIDs.length === 0) return;
+        let md = "";
+        for (const id of root.messageIDs) {
+            const m = root.messageByID[id];
+            if (!m || !(m.visibleToUser ?? true)) continue;
+            const who = m.role === "user" ? Translation.tr("User")
+                : m.role === "assistant" ? (root.models[m.model]?.name ?? m.model ?? "Assistant")
+                : Translation.tr("Interface");
+            md += `## ${who}\n\n${(m.rawContent && m.rawContent.length > 0) ? m.rawContent : m.content}\n\n`;
+        }
+        const dir = CF.FileUtils.trimFileProtocol(Directories.downloads);
+        const path = `${dir}/ai-chat-${Math.floor(Date.now() / 1000)}.md`;
+        Quickshell.execDetached(["bash", "-c",
+            `echo '${CF.StringUtils.shellSingleQuoteEscape(md)}' > '${path}'`]);
+        root.addMessage(Translation.tr("Chat exported to %1").arg(path), root.interfaceRole);
     }
 
     function sendUserMessage(message) {
