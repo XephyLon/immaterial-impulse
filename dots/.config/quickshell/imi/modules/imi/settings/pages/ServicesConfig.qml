@@ -137,6 +137,12 @@ ContentPage {
                                     placeholderText: Translation.tr("Provider Name (e.g. OpenRouter)")
                                     value: Config.options.ai.customProviders[index].name
                                     onValueChanged: {
+                                        // Only a keystroke may write: valueChanged also
+                                        // fires when the binding above re-evaluates (page
+                                        // load, config reload), and a write from one of
+                                        // those moments is how a provider's name gets
+                                        // blanked without anyone typing.
+                                        if (!textArea.activeFocus) return;
                                         let providers = [...Config.options.ai.customProviders];
                                         if (providers[index].name !== value) {
                                             providers[index].name = value;
@@ -152,6 +158,8 @@ ContentPage {
                                     fieldWidth: 240
                                     value: Config.options.ai.customProviders[index].baseUrl
                                     onValueChanged: {
+                                        // Same focus guard as the name field above.
+                                        if (!textArea.activeFocus) return;
                                         let providers = [...Config.options.ai.customProviders];
                                         if (providers[index].baseUrl !== value) {
                                             providers[index].baseUrl = value;
