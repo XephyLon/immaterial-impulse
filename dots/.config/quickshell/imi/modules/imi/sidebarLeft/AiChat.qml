@@ -5,6 +5,7 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.imi.sidebarLeft.aiChat
 import qs.modules.imi.aiProviders
+import "../../../services/ai/prompt_history.js" as PromptHistory
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -17,6 +18,47 @@ Item {
     property real padding: Appearance.spacing.space50
     property var inputField: messageInputField
     property string commandPrefix: "/"
+
+    // Prompt recall (the tested fold) and the edit takeback. Reset on every
+    // send so a recalled prompt does not leak into the next stepping run.
+    property var promptHistoryState: PromptHistory.idle()
+    property int editingMessageIndex: -1
+
+    function stepPromptHistory(delta) {
+        const r = PromptHistory.step(root.promptHistoryState,
+            Ai.ownPromptHistory, messageInputField.text, delta);
+        if (!r.handled) return false;
+        root.promptHistoryState = { index: r.index, backup: r.backup };
+        if (r.text !== null) {
+            messageInputField.text = r.text;
+            messageInputField.cursorPosition = messageInputField.text.length;
+        }
+        return true;
+    }
+
+    function beginEdit(messageIndex, content) {
+        root.editingMessageIndex = messageIndex;
+        messageInputField.text = String(content ?? "");
+        messageInputField.cursorPosition = messageInputField.text.length;
+        messageInputField.forceActiveFocus();
+    }
+
+    function cancelEdit() {
+        if (root.editingMessageIndex < 0) return;
+        root.editingMessageIndex = -1;
+        messageInputField.clear();
+    }
+
+    function acceptComposer(inputText) {
+        root.promptHistoryState = PromptHistory.idle();
+        if (root.editingMessageIndex >= 0) {
+            const at = root.editingMessageIndex;
+            root.editingMessageIndex = -1;
+            Ai.editAndResend(at, inputText);
+            return;
+        }
+        root.handleInput(inputText);
+    }
 
     // One number the opening choreography hangs off: the composer's
     // rise/blur and the transcript reveal both fire when it bumps.
@@ -116,6 +158,28 @@ Item {
         }
         if ((event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.ShiftModifier) && event.key === Qt.Key_O) {
             AiSessions.newSession();
+        }
+        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_R) {
+            // Redo the last answer with the same wording.
+            for (let at = Ai.messageIDs.length - 1; at >= 0; at--) {
+                if (Ai.messageByID[Ai.messageIDs[at]]?.role === "assistant") {
+                    Ai.regenerate(at);
+                    break;
+                }
+            }
+            event.accepted = true;
+        }
+        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Up
+                && messageInputField.text.length === 0) {
+            // Take the last question back for another go.
+            for (let at = Ai.messageIDs.length - 1; at >= 0; at--) {
+                const m = Ai.messageByID[Ai.messageIDs[at]];
+                if (m?.role === "user" && m.visibleToUser !== false) {
+                    root.beginEdit(at, String(m.rawContent ?? m.content ?? ""));
+                    break;
+                }
+            }
+            event.accepted = true;
         }
     }
 
@@ -476,6 +540,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     transcriptRevealToken: root.transcriptRevealToken
                     transcriptRevealDelay: index * 40
                     arrivalWindow: root.messageArrivalWindow
+                    onEditResendRequested: (messageIndex, content) => root.beginEdit(messageIndex, content)
                     messageIndex: index
                     messageData: {
                         Ai.messageByID[modelData];
@@ -733,6 +798,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
             radius: Appearance.rounding.normal - root.padding
             color: Appearance.colors.colLayer2
             implicitHeight: Math.max(inputFieldRowLayout.implicitHeight + inputFieldRowLayout.anchors.topMargin + commandButtonsRow.implicitHeight + commandButtonsRow.anchors.bottomMargin + spacing, 45) + (attachedFileIndicator.implicitHeight + spacing + attachedFileIndicator.anchors.topMargin)
+                + (editBanner.visible ? editBanner.implicitHeight + spacing : 0)
             clip: true
 
             Behavior on implicitHeight {
@@ -766,6 +832,32 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     NumberAnimation { target: inputWrapper; property: "opacity"; to: 1; duration: Appearance.animation.scale(320); easing.type: Easing.OutCubic }
                     NumberAnimation { target: inputBlur; property: "radius"; to: 0; duration: Appearance.animation.scale(350); easing.type: Easing.OutCubic }
                     NumberAnimation { target: inputWrapperRise; property: "y"; to: 0; duration: Appearance.animation.scale(450); easing.type: Easing.OutExpo }
+                }
+            }
+
+            RowLayout { // The takeback banner: says the mode, names the exit.
+                id: editBanner
+                visible: root.editingMessageIndex >= 0
+                anchors {
+                    top: attachedFileIndicator.bottom
+                    left: parent.left
+                    right: parent.right
+                    topMargin: visible ? Appearance.spacing.space50 : 0
+                    leftMargin: Appearance.spacing.space150
+                    rightMargin: Appearance.spacing.space150
+                }
+                spacing: Appearance.spacing.space50
+                MaterialSymbol {
+                    text: "edit_note"
+                    iconSize: Appearance.font.pixelSize.larger
+                    color: Appearance.colors.colPrimary
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                    text: Translation.tr("Editing a question - Enter resends as a new chat, Esc cancels")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smaller
                 }
             }
 
@@ -919,7 +1011,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         }
 
                         function accept() {
-                            root.handleInput(text);
+                            root.acceptComposer(text);
                             text = "";
                         }
 
@@ -933,6 +1025,17 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                             } else if (event.key === Qt.Key_Down && suggestions.visible) {
                                 suggestions.selectedIndex = Math.min(root.suggestionList.length - 1, suggestions.selectedIndex + 1);
                                 event.accepted = true;
+                            } else if (event.key === Qt.Key_Up && event.modifiers === Qt.NoModifier
+                                    && root.editingMessageIndex < 0
+                                    && (messageInputField.text.length === 0 || root.promptHistoryState.index !== -1)) {
+                                // Shell-style recall - only from an empty
+                                // draft, so cursor movement in a real
+                                // multi-line message is never hijacked.
+                                if (root.stepPromptHistory(-1)) event.accepted = true;
+                            } else if (event.key === Qt.Key_Down && event.modifiers === Qt.NoModifier
+                                    && root.editingMessageIndex < 0
+                                    && root.promptHistoryState.index !== -1) {
+                                if (root.stepPromptHistory(1)) event.accepted = true;
                             } else if ((event.key === Qt.Key_Enter || event.key === Qt.Key_Return)) {
                                 if (event.modifiers & Qt.ShiftModifier) {
                                     // Insert newline
@@ -942,7 +1045,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                     // Accept text
                                     const inputText = messageInputField.text;
                                     messageInputField.clear();
-                                    root.handleInput(inputText);
+                                    root.acceptComposer(inputText);
                                     event.accepted = true;
                                 }
                             } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_V) {
@@ -970,8 +1073,12 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 }
                                 event.accepted = false; // No image, let text pasting proceed
                             } else if (event.key === Qt.Key_Escape) {
-                                // Esc to detach file
-                                if (Ai.pendingFilePath.length > 0) {
+                                if (root.editingMessageIndex >= 0) {
+                                    // Cancel the takeback before Escape can
+                                    // mean detach-file.
+                                    root.cancelEdit();
+                                    event.accepted = true;
+                                } else if (Ai.pendingFilePath.length > 0) {
                                     Ai.attachFile("");
                                     event.accepted = true;
                                 } else {
@@ -996,7 +1103,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         cursorShape: sendButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: {
                             const inputText = messageInputField.text;
-                            root.handleInput(inputText);
+                            root.acceptComposer(inputText);
                             messageInputField.clear();
                         }
                     }
