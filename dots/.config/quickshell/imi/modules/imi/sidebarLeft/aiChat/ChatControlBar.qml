@@ -155,6 +155,8 @@ Item {
             hint: Translation.tr("Total token count\nInput: %1\nOutput: %2").arg(Ai.tokenCount.input).arg(Ai.tokenCount.output)
                 + (ctx > 0 ? "\n" + Translation.tr("Context window: %1").arg(ctx)
                     + (nearLimit ? "\n" + Translation.tr("Running out - consider a new chat") : "") : "")
+                + "\n" + Translation.tr("Today: %1 · 7d: %2 · 30d: %3")
+                    .arg(AiUsage.today.total).arg(AiUsage.week.total).arg(AiUsage.month.total)
         }
 
         Item { Layout.fillWidth: true }

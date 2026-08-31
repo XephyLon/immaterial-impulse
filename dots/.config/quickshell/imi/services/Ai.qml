@@ -1045,6 +1045,15 @@ And a final paragraph after the math, so the stream does not end on a block boun
             // old write-only lastSession snapshot had no restore path and
             // retires here.
             AiSessions.scheduleSave();
+            // The ledger: whatever the provider's last usage frame said
+            // (or -1s - the request still counts), ok unless the message
+            // carries a failure note.
+            AiUsage.record({
+                "input": root.tokenCount.input,
+                "output": root.tokenCount.output,
+                "total": root.tokenCount.total,
+            }, !requester.message.content.includes("**Request failed**")
+                && !requester.message.content.includes("**Error**"));
             root.requestSessionTitle();
             root.responseFinished()
         }

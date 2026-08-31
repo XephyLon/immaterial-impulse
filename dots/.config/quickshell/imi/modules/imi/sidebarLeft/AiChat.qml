@@ -340,6 +340,23 @@ Item {
             }
         },
         {
+            name: "usage",
+            description: Translation.tr("Show token usage"),
+            execute: () => {
+                const row = (label, b) => `| ${label} | ${b.total ?? 0} | ${b.requests ?? 0} | ${b.ok ?? 0} | ${b.err ?? 0} |`;
+                Ai.addMessage([
+                    Translation.tr("## Token usage"),
+                    "",
+                    `| | ${Translation.tr("tokens")} | ${Translation.tr("requests")} | ok | err |`,
+                    "|---|---|---|---|---|",
+                    row(Translation.tr("Today"), AiUsage.today),
+                    row(Translation.tr("7 days"), AiUsage.week),
+                    row(Translation.tr("30 days"), AiUsage.month),
+                    row(Translation.tr("All time"), AiUsage.allTime),
+                ].join("\n"), Ai.interfaceRole);
+            }
+        },
+        {
             name: "export",
             description: Translation.tr("Export this chat to Downloads"),
             execute: () => {
