@@ -21,6 +21,10 @@ StyledFlickable {
     property color selectionColor: Appearance.colors.colSecondaryContainer
 
     property int charSize: 20
+    // Space BETWEEN cells. The glyph itself fills 0.9 of its cell, so with
+    // the default 0 the shapes nearly touch - the lockscreen's look - and a
+    // small field can ask for real air instead of shrinking the shapes.
+    property int charGap: 0
 
     contentWidth: dotsRow.implicitWidth
     contentX: (Math.max(contentWidth - width, 0))
@@ -34,7 +38,7 @@ StyledFlickable {
         anchors {
             verticalCenter: parent.verticalCenter
             left: parent.left
-            leftMargin: root.charSize * root.cursorPosition
+            leftMargin: (root.charSize + root.charGap) * root.cursorPosition
         }
         color: root.color
         implicitWidth: 2
@@ -51,7 +55,7 @@ StyledFlickable {
             verticalCenter: parent.verticalCenter
             leftMargin: Appearance.spacing.space50 - 5 // -5 to account for spacing being simulated by char item width
         }
-        spacing: 0
+        spacing: root.charGap
 
         Repeater {
             model: ScriptModel { // TODO: use proper custom object model to insert new char at the correct pos
@@ -109,7 +113,10 @@ StyledFlickable {
                         NumberAnimation {
                             target: materialShape
                             properties: "implicitSize"
-                            to: 18
+                            // The cell's size, not the lockscreen's 18: a
+                            // fixed 18 overflowed any smaller charSize and
+                            // smeared the shapes into each other.
+                            to: root.charSize * 0.9
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
                         }
