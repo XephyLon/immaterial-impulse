@@ -94,6 +94,16 @@ Item {
     readonly property bool lyricsUp: root.spanName === "3x2"
         && largeExtras.item !== null && largeExtras.item.viewLyrics === true
 
+    // 1x1 hover choreography (the reference shot): at rest the transport
+    // rides low on bare artwork; hovering the card slides it up to its
+    // lifted slot, fades the seek bar in beneath, and raises the bottom
+    // inner shadow. The geometry's lifted layout is canonical - rest is an
+    // offset the existing y Behaviors animate.
+    HoverHandler { id: cardHover }
+    readonly property bool tinyHover: cardHover.hovered
+    readonly property real tinyDrop: root.spanName === "1x1" && !root.tinyHover
+        ? 22 * Appearance.effectiveScale : 0
+
     // ---- the card (shared, never destroyed) ------------------------------
     Expressive.WidgetCard {
         id: bgCard
@@ -165,6 +175,9 @@ Item {
                     anchors.bottom: parent.bottom
                     height: 44
                     z: 1
+                    // The hover's inner shadow: rest is bare artwork.
+                    opacity: root.tinyHover ? 1 : 0
+                    Behavior on opacity { Expressive.SpanFade {} }
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: "transparent" }
                         GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.55) }
@@ -213,7 +226,7 @@ Item {
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
         x: root.transport ? root.transport.prev.x : 0
-        y: root.transport ? root.transport.prev.y : 0
+        y: (root.transport ? root.transport.prev.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.prev.width : 0
         height: root.transport ? root.transport.prev.height : 0
         Behavior on x { Expressive.SpanTravel {} }
@@ -240,7 +253,7 @@ Item {
         progress: root.playbackProgress
         artUrl: root.artUrl
         x: root.transport ? root.transport.play.x : 0
-        y: root.transport ? root.transport.play.y : 0
+        y: (root.transport ? root.transport.play.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.play.width : 0
         height: root.transport ? root.transport.play.height : 0
         Behavior on x { Expressive.SpanTravel {} }
@@ -257,7 +270,7 @@ Item {
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
         x: root.transport ? root.transport.next.x : 0
-        y: root.transport ? root.transport.next.y : 0
+        y: (root.transport ? root.transport.next.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.next.width : 0
         height: root.transport ? root.transport.next.height : 0
         Behavior on x { Expressive.SpanTravel {} }
@@ -282,7 +295,8 @@ Item {
         // A null slot parks it invisible, which is also what stops its
         // wave clocks - a 0x0 seeker still ticking is a timer for nothing.
         // (Every span carries a slot now; 1x1's is the compact straight bar.)
-        opacity: (root.lyricsUp || root.progressSlot === null) ? 0 : 1
+        opacity: (root.lyricsUp || root.progressSlot === null
+            || (root.spanName === "1x1" && !root.tinyHover)) ? 0 : 1
         Behavior on opacity { Expressive.SpanFade {} }
         visible: opacity > 0
         z: 3
