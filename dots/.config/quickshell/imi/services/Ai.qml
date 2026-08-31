@@ -1082,8 +1082,9 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 "model": currentModelId,
                 "content": "",
                 "rawContent": "",
-                "thinking": true,
+                "thinking": false,
                 "done": false,
+                "generatingImage": true,
             });
             const mid = idForMessage(requester.message);
             root.messageIDs = [...root.messageIDs, mid];
@@ -1151,6 +1152,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
                     const md = `![generated image](${ref})`;
                     requester.message.content += md;
                     requester.message.rawContent += md;
+                    requester.message.generatingImage = false;
                     requester.markDone();
                     return;
                 }
@@ -1158,6 +1160,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
                     const err = `**Error**: ${data.slice(16).trim()}`;
                     requester.message.content += err;
                     requester.message.rawContent += err;
+                    requester.message.generatingImage = false;
                     requester.markDone();
                     return;
                 }

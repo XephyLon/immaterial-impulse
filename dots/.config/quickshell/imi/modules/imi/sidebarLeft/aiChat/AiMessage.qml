@@ -393,6 +393,57 @@ Rectangle {
             }
         }
 
+        Rectangle {
+            // The image skeleton: an image-shaped placeholder with a
+            // sweeping highlight while a generation is in flight; the
+            // markdown image replaces it when the sentinel lands.
+            visible: (root.messageData?.generatingImage ?? false) && !(root.messageData?.done ?? true)
+            Layout.fillWidth: true
+            implicitHeight: 200
+            radius: Appearance.rounding.normal
+            color: Appearance.colors.colLayer2
+            clip: true
+
+            Rectangle {
+                id: skeletonSweep
+                width: parent.width * 0.35
+                height: parent.height
+                opacity: 0.5
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: ColorUtils.transparentize(Appearance.colors.colLayer2Hover, 1) }
+                    GradientStop { position: 0.5; color: Appearance.colors.colLayer2Hover }
+                    GradientStop { position: 1.0; color: ColorUtils.transparentize(Appearance.colors.colLayer2Hover, 1) }
+                }
+                NumberAnimation on x {
+                    running: skeletonSweep.visible
+                    loops: Animation.Infinite
+                    from: -skeletonSweep.width
+                    to: skeletonSweep.parent ? skeletonSweep.parent.width : 400
+                    duration: 1400
+                }
+            }
+
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: Appearance.spacing.space100
+                MaterialSymbol {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "image"
+                    iconSize: 36
+                    color: Appearance.colors.colSubtext
+                }
+                ShimmerLabel {
+                    Layout.alignment: Qt.AlignHCenter
+                    running: true
+                    text: Translation.tr("Generating image…")
+                    baseColor: Appearance.colors.colSubtext
+                    glowColor: Appearance.colors.colOnLayer1
+                    font.pixelSize: Appearance.font.pixelSize.small
+                }
+            }
+        }
+
         ColumnLayout { // Message content
             id: messageContentColumnLayout
             spacing: 0
@@ -411,6 +462,7 @@ Rectangle {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     shown: (root.messageBlocks.length < 1) && (!root.messageData.done)
+                        && !(root.messageData?.generatingImage ?? false)
                     sourceComponent: ShimmerLabel {
                         running: true
                         text: Translation.tr("Thinking…")

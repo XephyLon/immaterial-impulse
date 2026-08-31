@@ -23,5 +23,8 @@ QtObject {
     property var functionCall
     property string functionResponse
     property bool functionPending: false
+    // An image generation is in flight for this message: the transcript
+    // shows an image-shaped skeleton until the sentinel resolves it.
+    property bool generatingImage: false
     property bool visibleToUser: true
 }
