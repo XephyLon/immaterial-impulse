@@ -876,6 +876,7 @@ Item {
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
                                     horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                     text: "arrow_back"
                                     iconSize: Appearance.font.pixelSize.larger
                                     color: Appearance.colors.colOnLayer1
@@ -902,6 +903,7 @@ Item {
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
                                     horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                     text: "sync"
                                     iconSize: Appearance.font.pixelSize.larger
                                     color: Appearance.colors.colPrimary

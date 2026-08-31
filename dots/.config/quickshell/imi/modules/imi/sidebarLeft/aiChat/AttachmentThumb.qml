@@ -49,6 +49,7 @@ ClippingRectangle {
         contentItem: MaterialSymbol {
             anchors.centerIn: parent
             horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             text: "close"
             iconSize: Appearance.font.pixelSize.normal
             color: "#ffffff"

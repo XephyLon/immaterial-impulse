@@ -73,6 +73,7 @@ Rectangle {
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "arrow_back"
                     iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colOnLayer1
@@ -188,6 +189,7 @@ Rectangle {
         contentItem: MaterialSymbol {
             anchors.centerIn: parent
             horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             text: actionButton.glyph
             fill: actionButton.glyphFill
             iconSize: Appearance.font.pixelSize.normal

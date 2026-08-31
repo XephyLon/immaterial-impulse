@@ -252,6 +252,7 @@ Item {
                         contentItem: MaterialSymbol {
                             anchors.centerIn: parent
                             horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
                             text: "close"
                             iconSize: Appearance.font.pixelSize.larger
                             color: Appearance.colors.colOnLayer1
