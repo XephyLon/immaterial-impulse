@@ -795,21 +795,22 @@ Item {
                             }
                             Item { Layout.fillWidth: true }
                             RippleButton {
-                                // The fetch, as a small FAB in the header
-                                // (was a text button lost at the bottom).
-                                implicitWidth: 40
-                                implicitHeight: 40
-                                buttonRadius: Appearance.rounding.normal
-                                colBackground: Appearance.colors.colPrimaryContainer
-                                colBackgroundHover: Appearance.colors.colPrimaryContainerHover
-                                colRipple: Appearance.colors.colPrimaryContainerActive
+                                // The fetch: a flat primary-inked icon in
+                                // the header (was a text button lost at the
+                                // bottom; the filled FAB read too heavy).
+                                implicitWidth: 36
+                                implicitHeight: 36
+                                buttonRadius: Appearance.rounding.full
+                                colBackground: "transparent"
+                                colBackgroundHover: Appearance.colors.colLayer2Hover
+                                colRipple: Appearance.colors.colLayer2Active
                                 onClicked: Ai.fetchCustomModels()
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
                                     horizontalAlignment: Text.AlignHCenter
                                     text: "sync"
                                     iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.m3colors.m3onPrimaryContainer
+                                    color: Appearance.colors.colPrimary
                                 }
                                 StyledToolTip { text: Translation.tr("Fetch models") }
                             }
