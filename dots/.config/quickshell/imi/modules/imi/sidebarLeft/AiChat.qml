@@ -562,22 +562,39 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 property bool following: true
                 property real lastContentY: 0
                 onContentYChanged: {
-                    if (contentY < lastContentY - 2) following = false;
+                    if (contentY < lastContentY - 2) {
+                        following = false;
+                        followAnim.stop();
+                    }
                     lastContentY = contentY;
                 }
                 onAtYEndChanged: if (atYEnd) following = true
-                onContentHeightChanged: {
-                    if (following) {
-                        positionViewAtEnd();
-                        Qt.callLater(positionViewAtEnd);
-                    }
+
+                // The chase, not the snap: positionViewAtEnd() per chunk
+                // repainted the whole viewport in bursts - the recorded
+                // stutter. Growth now retargets one short animation from
+                // wherever the view is, so the follow reads as continuous
+                // motion; the detector above still stops it the moment the
+                // user scrolls up, because an upward wheel is the one thing
+                // that moves contentY down mid-chase.
+                function followToEnd() {
+                    const end = messageListView.originY + messageListView.contentHeight
+                        + messageListView.bottomMargin - messageListView.height;
+                    if (end - messageListView.contentY < 1) return;
+                    followAnim.stop();
+                    followAnim.from = messageListView.contentY;
+                    followAnim.to = end;
+                    followAnim.start();
                 }
-                onCountChanged: {
-                    if (following) {
-                        positionViewAtEnd();
-                        Qt.callLater(positionViewAtEnd);
-                    }
+                NumberAnimation {
+                    id: followAnim
+                    target: messageListView
+                    property: "contentY"
+                    duration: 220
+                    easing.type: Easing.OutCubic
                 }
+                onContentHeightChanged: if (following) followToEnd()
+                onCountChanged: if (following) followToEnd()
 
                 add: null // Prevent function calls from being janky
 
