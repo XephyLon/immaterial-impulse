@@ -195,11 +195,22 @@ Item {
     // composer after the first keystroke in a message's edit field.
     property bool transcriptEditActive: false
 
+    // The vacuum stands down whenever ANY other editable text item holds
+    // focus - the temp chip's inline editor was armed and instantly
+    // disarmed by it, which read as the chip not responding at all.
+    function composerMayVacuum() {
+        const afi = root.Window.activeFocusItem;
+        return !(afi && afi !== messageInputField
+            && afi.cursorPosition !== undefined && afi.readOnly === false);
+    }
+
     onFocusChanged: focus => {
         // Never while a canvas view covers the composer: stealing focus to
         // a hidden input routed the browse view's search typing into the
-        // chat box. And never while a message is being edited in place.
-        if (focus && root.activeView === "" && !root.transcriptEditActive) {
+        // chat box. And never while a message is being edited in place,
+        // nor while any other editor owns the keys.
+        if (focus && root.activeView === "" && !root.transcriptEditActive
+                && root.composerMayVacuum()) {
             root.inputField.forceActiveFocus();
         }
     }
@@ -208,7 +219,7 @@ Item {
         // Same guard as onFocusChanged: with a view open, the composer is
         // under an overlay and must not vacuum the keys - nor while a
         // message edit field owns them.
-        if (root.activeView !== "" || root.transcriptEditActive) return;
+        if (root.activeView !== "" || root.transcriptEditActive || !root.composerMayVacuum()) return;
         messageInputField.forceActiveFocus();
         if (event.modifiers === Qt.NoModifier) {
             if (event.key === Qt.Key_PageUp) {
