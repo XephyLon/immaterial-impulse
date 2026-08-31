@@ -52,8 +52,8 @@ var TINY_PLAY = 46;            // the cookie play button
 // The half-pill flankers (2026-08-31 redesign): stuck flush to the play
 // button's sides, round edge outward; the row lifted, a straight seek bar
 // riding below it.
-var TINY_SIDE_W = 20;
-var TINY_SIDE_H = 40;
+var TINY_SIDE_W = 26;
+var TINY_SIDE_H = 28;
 var TINY_SEEK_H = 16;
 var TINY_SEEK_BOTTOM = 8;      // seek's clearance from the card's bottom
 var TINY_ROW_GAP = 8;          // between the row and the seek
