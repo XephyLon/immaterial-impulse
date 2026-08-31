@@ -269,6 +269,60 @@ if ! python3 "$SCRIPT_DIR/lint_spacing.py"; then
     exit 1
 fi
 
+echo "Running test ai skeleton contract..."
+if ! python3 "$SCRIPT_DIR/test_ai_skeleton_contract.py"; then
+    echo "test ai skeleton contract failed."
+    exit 1
+fi
+
+echo "Running test bar layout list contract..."
+if ! python3 "$SCRIPT_DIR/test_bar_layout_list_contract.py"; then
+    echo "test bar layout list contract failed."
+    exit 1
+fi
+
+echo "Running ripple tone lint..."
+if ! python3 "$SCRIPT_DIR/lint_ripple_tone.py"; then
+    echo "Ripple tone lint failed."
+    exit 1
+fi
+
+echo "Running combo box press tests..."
+if ! python3 "$SCRIPT_DIR/test_combo_box_press.py"; then
+    echo "Combo box press tests failed."
+    exit 1
+fi
+
+echo "Running keyring on-demand tests..."
+if ! python3 "$SCRIPT_DIR/test_keyring_on_demand.py"; then
+    echo "Keyring on-demand tests failed."
+    exit 1
+fi
+
+echo "Running openrgb stream tests..."
+if ! python3 "$SCRIPT_DIR/test_openrgb_stream.py"; then
+    echo "OpenRGB stream tests failed."
+    exit 1
+fi
+
+echo "Running presets apply-only tests..."
+if ! python3 "$SCRIPT_DIR/test_presets_apply_only.py"; then
+    echo "Presets apply-only tests failed."
+    exit 1
+fi
+
+echo "Running selection array flow tests..."
+if ! python3 "$SCRIPT_DIR/test_selection_array_flow.py"; then
+    echo "Selection array flow tests failed."
+    exit 1
+fi
+
+echo "Running sni watchdog planner tests..."
+if ! python3 "$SCRIPT_DIR/test_sni_watchdog.py"; then
+    echo "SNI watchdog planner tests failed."
+    exit 1
+fi
+
 # Static lint: an Appearance token a QML file reads must be declared. An
 # undeclared one is `undefined`, which renders 0 after a single warning - or
 # NaN, with no warning at all, where the call site does arithmetic on it.
