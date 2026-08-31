@@ -42,6 +42,9 @@ function parseCustomProviderModels(responseJsonString, baseUrl, providerName, ke
                 name: providerName + ": " + guessModelName(model.id),
                 providerName: providerName,
                 model: model.id,
+                // Generators are named like generators; no /models listing
+                // says which endpoint a model wants, so the id has to.
+                imageGeneration: /image|dall-e|flux|diffusion/i.test(model.id),
                 description: `Online | Custom (${providerName}) | ${model.id}`,
                 endpoint: sanitizedBaseUrl + "/chat/completions",
                 requires_key: true,

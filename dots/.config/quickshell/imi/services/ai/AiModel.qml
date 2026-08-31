@@ -38,6 +38,10 @@ QtObject {
     // cannot declare them, and a false "can't see images" is worse than
     // no gate. `tools` above is the request schema list, not a capability.
     property bool thinking: false
+    // An image GENERATOR: served on /images/generations|edits, never
+    // /chat/completions - the parser marks these by id, and the requester
+    // routes them to their own endpoint and response shape.
+    property bool imageGeneration: false
     property bool vision: false
     property int contextWindow: 0
 }

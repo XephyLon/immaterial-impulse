@@ -977,6 +977,12 @@ And a final paragraph after the math, so the stream does not end on a block boun
             /* Put API key in environment variable */
             if (model.requires_key) requester.environment[`${root.apiKeyEnvVarName}`] = root.apiKeys ? (root.apiKeys[model.key_id] ?? "") : ""
 
+            /* Image generators speak a different endpoint and shape */
+            if (model.imageGeneration) {
+                requester.makeImageRequest(model);
+                return;
+            }
+
             /* Build endpoint, request data */
             const endpoint = root.currentApiStrategy.buildEndpoint(model);
             const messageArray = root.messageIDs.map(id => root.messageByID[id]);
@@ -1046,11 +1052,92 @@ And a final paragraph after the math, so the stream does not end on a block boun
             requester.running = true
         }
 
+        /** /images/generations (or /edits with an attachment): one
+            non-streaming request whose b64 payload lands as a file in the
+            durable attachment store and renders as a markdown image. */
+        function makeImageRequest(model) {
+            requester.message = root.aiMessageComponent.createObject(root, {
+                "role": "assistant",
+                "model": currentModelId,
+                "content": "",
+                "rawContent": "",
+                "thinking": true,
+                "done": false,
+            });
+            const mid = idForMessage(requester.message);
+            root.messageIDs = [...root.messageIDs, mid];
+            root.messageByID[mid] = requester.message;
+
+            let prompt = "";
+            for (let i = root.messageIDs.length - 1; i >= 0; i--) {
+                const m = root.messageByID[root.messageIDs[i]];
+                if (m?.role === "user") { prompt = String(m.rawContent ?? m.content ?? ""); break; }
+            }
+            const attachment = root.pendingFilePaths[0] ?? "";
+            root.pendingFilePaths = [];
+            const base = model.endpoint.replace(/\/chat\/completions\/?$/, "");
+            const endpoint = base + (attachment ? "/images/edits" : "/images/generations");
+            const authHeader = requester.currentStrategy.buildAuthorizationHeader(root.apiKeyEnvVarName);
+            const outPath = `${Directories.aiAttachments}/gen-$(date +%s).png`;
+            const respPath = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath) + ".image.json";
+
+            let script = "#!/usr/bin/env bash\n";
+            if (attachment) {
+                script += `curl -s "${endpoint}"`
+                    + (authHeader ? ` ${authHeader}` : "")
+                    + ` -F model='${CF.StringUtils.shellSingleQuoteEscape(model.model)}'`
+                    + ` -F prompt='${CF.StringUtils.shellSingleQuoteEscape(prompt)}'`
+                    + ` -F image=@'${CF.StringUtils.shellSingleQuoteEscape(attachment)}'`
+                    + ` -o '${respPath}'\n`;
+            } else {
+                const body = Object.assign({
+                    "model": model.model,
+                    "prompt": prompt,
+                    "response_format": "b64_json",
+                }, model.extraParams ?? {});
+                script += `BODY_FILE='${respPath}.body'\n`;
+                script += `printf '%s' '${CF.StringUtils.shellSingleQuoteEscape(JSON.stringify(body))}' > "$BODY_FILE"\n`;
+                script += `curl -s "${endpoint}" -H "Content-Type: application/json"`
+                    + (authHeader ? ` ${authHeader}` : "")
+                    + ` --data @"$BODY_FILE" -o '${respPath}'\n`;
+                script += `rm -f "$BODY_FILE"\n`;
+            }
+            script += `OUT="${outPath}"\n`;
+            script += `b64=$(jq -r '.data[0].b64_json // empty' '${respPath}')\n`;
+            script += `if [ -n "$b64" ]; then printf '%s' "$b64" | base64 -d > "$OUT"; echo "IMI_IMAGE_SAVED:$OUT";\n`;
+            script += `elif [ -n "$(jq -r '.data[0].url // empty' '${respPath}')" ]; then echo "IMI_IMAGE_URL:$(jq -r '.data[0].url' '${respPath}')";\n`;
+            script += `else echo "IMI_IMAGE_ERROR:$(jq -c '.error.message // .error // .' '${respPath}' | head -c 300)"; fi\n`;
+            script += `rm -f '${respPath}'\n`;
+
+            const shellScriptPath = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath);
+            requesterScriptFile.path = Qt.resolvedUrl(shellScriptPath);
+            requesterScriptFile.setText(script);
+            requester.command = requester.baseCommand.concat([shellScriptPath]);
+            requester.running = true;
+        }
+
         stderr: StdioCollector { id: requesterStderr }
         stdout: SplitParser {
             onRead: data => {
                 if (data.length === 0) return;
                 if (requester.message.thinking) requester.message.thinking = false;
+
+                // Image-run sentinels ride ahead of the streaming parser.
+                if (data.startsWith("IMI_IMAGE_SAVED:") || data.startsWith("IMI_IMAGE_URL:")) {
+                    const ref = data.slice(data.indexOf(":") + 1).trim();
+                    const md = `![generated image](${ref})`;
+                    requester.message.content += md;
+                    requester.message.rawContent += md;
+                    requester.markDone();
+                    return;
+                }
+                if (data.startsWith("IMI_IMAGE_ERROR:")) {
+                    const err = `**Error**: ${data.slice(16).trim()}`;
+                    requester.message.content += err;
+                    requester.message.rawContent += err;
+                    requester.markDone();
+                    return;
+                }
                 // console.log("[Ai] Raw response line: ", data);
 
                 // Handle response line
