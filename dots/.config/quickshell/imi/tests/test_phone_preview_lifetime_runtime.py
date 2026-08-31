@@ -37,6 +37,8 @@ import os
 import shutil
 import signal
 import subprocess
+
+import nested_display
 import tempfile
 import time
 import unittest
@@ -259,10 +261,13 @@ class PhonePreviewLifetimeRuntimeTest(unittest.TestCase):
         self.addCleanup(_stop, control)
 
         # dbus-run-session, not the inherited bus: the fake busctl is the only
-        # daemon this harness may see.
-        proc = subprocess.run(
+        # daemon this harness may see. Through the retry wrapper: the nested
+        # bus has collapsed under a green harness before (all checks ok,
+        # summary line lost) - the environment's failure, retried once.
+        proc = nested_display.run_harness_with_bus_retry(
             ["dbus-run-session", "--", "qs", "-p", str(HARNESS)],
-            cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=600)
+            env=env, cwd=str(ROOT), timeout=600,
+            marker=f"[PhonePreviewLifetime] checks: {EXPECTED_CHECKS} failures: 0")
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")

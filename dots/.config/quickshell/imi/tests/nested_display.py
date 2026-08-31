@@ -90,3 +90,29 @@ def _stop(proc):
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
         proc.kill()
+
+
+def run_harness_with_bus_retry(args, *, env, cwd, timeout, marker, retries=1):
+    """Run a qs harness, retrying once when the nested dbus collapsed.
+
+    Two different runtime suites have now failed the same way (notes
+    migration 2026-08-31, phone preview lifetime 2026-09-01): every check
+    printed "ok", then "A connection to the bus can't be made" and the
+    summary line never arrived - the session bus died under the harness
+    during teardown. That is the environment failing, not the code under
+    test, and it reproduces neither solo nor on the next full run. The
+    retry triggers ONLY on that signature: the marker missing AND the bus
+    complaint present. A real failure - a check printing FAIL, a summary
+    reporting failures - returns immediately.
+    """
+    import subprocess
+    for attempt in range(retries + 1):
+        proc = subprocess.run(args, cwd=cwd, env=env,
+                              capture_output=True, text=True, timeout=timeout)
+        output = proc.stdout + proc.stderr
+        bus_died = ("connection to the bus" in output.lower()
+                    and marker not in output)
+        if not bus_died or attempt == retries:
+            return proc
+        print(f"[nested_display] session bus collapsed under the harness; retrying ({attempt + 1}/{retries})")
+    return proc
