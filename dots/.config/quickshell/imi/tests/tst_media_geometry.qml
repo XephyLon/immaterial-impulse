@@ -128,14 +128,15 @@ TestCase {
 
     function test_1x1_row_rides_low_and_centred_on_the_tile() {
         const t = Geometry.transportRects("1x1", 132, 108, 1);
-        compare(t.prev.width, 26);
+        compare(t.prev.width, 24);
         compare(t.play.width, 48);
-        // row: 26 + 10 + 48 + 10 + 26 = 120, centred in 132.
-        compare(t.prev.x, 6);
+        // row: 24 + 6 + 48 + 6 + 24 = 108, centred in 132 - a deliberate
+        // 12px of artwork on each side, where 6px read as flush.
+        compare(t.prev.x, 12);
         compare(t.play.x, 42);
-        compare(t.next.x, 100);
+        compare(t.next.x, 96);
         compare(t.play.y, 108 - 12 - 48, "12 clear of the bottom edge");
-        compare(t.prev.y - t.play.y, (48 - 26) / 2, "sides centred on play");
+        compare(t.prev.y - t.play.y, (48 - 24) / 2, "sides centred on play");
     }
 
     function test_1x1_shows_no_seek_no_time_no_button_artwork() {

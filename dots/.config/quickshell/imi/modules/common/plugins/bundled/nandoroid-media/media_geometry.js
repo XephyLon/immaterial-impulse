@@ -49,8 +49,10 @@ var COMPACT_SPACING = 12;      // Appearance.spacing.space150
 // ---- 1x1 constants (designed against the maintainer's reference shot:
 // artwork fills the card, a small transport row sits low on it) -----------
 var TINY_PLAY = 48;            // the cookie play button
-var TINY_SIDE = 26;            // prev/next discs
-var TINY_GAP = 10;
+var TINY_SIDE = 24;            // prev/next discs
+// Sized so the row keeps ~12px of artwork on each side of the 132px card:
+// at 26/10 the discs sat 6px off the edges, reading as flush.
+var TINY_GAP = 6;
 var TINY_BOTTOM = 12;          // the row's clearance from the card's bottom
 
 // ---- 2x2 constants -------------------------------------------------------
