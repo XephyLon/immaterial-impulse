@@ -13,6 +13,13 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The Intelligence tab reads as an instrument.** Three surfaces - a
+  chip tools bar (model, temperature, key, tokens, new chat), the chat
+  area, the composer - with an opening choreography: the pane waves in,
+  the composer rises last through a de-blur, and reopening a
+  conversation staggers the visible messages back onto the stage. The
+  empty state greets you with a rolled hello (pin one with
+  sidebar.ai.greeting) over a keycap rail of the keys worth knowing.
 - **The Bar layout section is a draggable list.** The chip flows become
   grouped rows - drag handle, icon, name, remove - that lift on hold and
   part live as you drag, including across Left/Center/Right. Adding a
