@@ -15,7 +15,10 @@ Provider chain, in order:
     Alan Walker's "Darkside" for "Faded": a plausible mask of the wrong
     thing, which is worse than no lyrics at all.
 
-Output: time§text pairs joined by § with a trailing "ok", or "not_found".
+Output: one JSON line - {"ok": true, "lines": [{"t": sec, "text": "...",
+"words": [[sec, "word"], ...]?}]} - or "not_found". `words` is present only
+when the source carried word-level timing (enhanced LRC inline stamps, TTML
+span timings); the shell synthesizes an even sweep otherwise.
 """
 import json
 import re
@@ -32,30 +35,52 @@ def http_json(url):
         return None
 
 
-def parse_lrc(text):
+WORD_STAMP = re.compile(r"<(\d+):(\d+(?:\.\d+)?)>")
+
+
+def parse_lrc_rich(text):
+    """[(t, text, words|None)] - words from enhanced-LRC inline <mm:ss.xx>."""
     lines = []
     for raw in text.splitlines():
-        words = re.sub(r"\[[^\]]*\]", "", raw).strip()
-        if not words:
+        plain = WORD_STAMP.sub("", raw)
+        words_text = re.sub(r"\[[^\]]*\]", "", plain).strip()
+        if not words_text:
             continue
+        words = None
+        stamps = list(WORD_STAMP.finditer(raw))
+        if stamps:
+            words = []
+            for index, stamp in enumerate(stamps):
+                end = stamps[index + 1].start() if index + 1 < len(stamps) else len(raw)
+                fragment = re.sub(r"\[[^\]]*\]", "", raw[stamp.end():end]).strip()
+                if fragment:
+                    words.append((int(stamp.group(1)) * 60 + float(stamp.group(2)), fragment))
+            words = words or None
         for stamp in re.finditer(r"\[(\d+):(\d+(?:\.\d+)?)\]", raw):
-            lines.append((int(stamp.group(1)) * 60 + float(stamp.group(2)), words))
-    lines.sort(key=lambda pair: pair[0])
+            lines.append((int(stamp.group(1)) * 60 + float(stamp.group(2)), words_text, words))
+    lines.sort(key=lambda entry: entry[0])
     return lines
 
 
-def parse_ttml(text):
-    import xml.etree.ElementTree as ET
+def parse_lrc(text):
+    """Line-level pairs; the rich parser's shadow, kept for its callers."""
+    return [(t, words_text) for t, words_text, _ in parse_lrc_rich(text)]
 
-    def seconds(value):
-        if value.endswith("ms"):
-            return float(value[:-2]) / 1000
-        if value.endswith("s") and ":" not in value:
-            return float(value[:-1])
-        out = 0.0
-        for part in value.split(":"):
-            out = out * 60 + float(part)
-        return out
+
+def ttml_seconds(value):
+    if value.endswith("ms"):
+        return float(value[:-2]) / 1000
+    if value.endswith("s") and ":" not in value:
+        return float(value[:-1])
+    out = 0.0
+    for part in value.split(":"):
+        out = out * 60 + float(part)
+    return out
+
+
+def parse_ttml_rich(text):
+    """[(t, text, words|None)] - words from per-span begin timings."""
+    import xml.etree.ElementTree as ET
 
     try:
         root = ET.fromstring(text)
@@ -66,15 +91,32 @@ def parse_ttml(text):
         if node.tag != "p" and not node.tag.endswith("}p"):
             continue
         begin = node.get("begin")
-        words = "".join(node.itertext()).strip()
-        if begin is None or not words:
+        line_text = "".join(node.itertext()).strip()
+        if begin is None or not line_text:
             continue
+        words = []
+        for span in node:
+            if span.tag != "span" and not span.tag.endswith("}span"):
+                continue
+            span_begin = span.get("begin")
+            span_text = "".join(span.itertext()).strip()
+            if span_begin is None or not span_text:
+                continue
+            try:
+                words.append((ttml_seconds(span_begin), span_text))
+            except ValueError:
+                continue
         try:
-            lines.append((seconds(begin), words))
+            lines.append((ttml_seconds(begin), line_text, words or None))
         except ValueError:
             continue
-    lines.sort(key=lambda pair: pair[0])
+    lines.sort(key=lambda entry: entry[0])
     return lines
+
+
+def parse_ttml(text):
+    """Line-level pairs; the rich parser's shadow, kept for its callers."""
+    return [(t, line_text) for t, line_text, _ in parse_ttml_rich(text)]
 
 
 def from_unison(title, artist, duration):
@@ -90,9 +132,9 @@ def from_unison(title, artist, duration):
     if not body:
         return None
     if fmt == "lrc":
-        return parse_lrc(body) or None
+        return parse_lrc_rich(body) or None
     if fmt == "ttml":
-        return parse_ttml(body) or None
+        return parse_ttml_rich(body) or None
     return None
 
 
@@ -128,14 +170,14 @@ def from_lrclib(title, artist, duration):
     exact = http_json(base + "/get?" + urllib.parse.urlencode(
         {"track_name": title, "artist_name": artist, "duration": int(duration or 0)}))
     if isinstance(exact, dict) and exact.get("syncedLyrics"):
-        parsed = parse_lrc(exact["syncedLyrics"])
+        parsed = parse_lrc_rich(exact["syncedLyrics"])
         if parsed:
             return parsed
     hits = http_json(base + "/search?" + urllib.parse.urlencode(
         {"track_name": title, "artist_name": artist}))
     hit = pick_search_hit(hits, artist, duration)
     if hit:
-        return parse_lrc(hit["syncedLyrics"]) or None
+        return parse_lrc_rich(hit["syncedLyrics"]) or None
     return None
 
 
@@ -151,11 +193,10 @@ def main():
     for provider in (from_unison, from_lrclib):
         lines = provider(title, artist, duration)
         if lines:
-            flat = []
-            for stamp, words in lines:
-                flat.append(str(stamp))
-                flat.append(words.replace("§", " "))
-            print("§".join(flat + ["ok"]))
+            print(json.dumps({"ok": True, "lines": [
+                {"t": stamp, "text": line_text,
+                 **({"words": [[wt, ww] for wt, ww in words]} if words else {})}
+                for stamp, line_text, words in lines]}))
             return 0
     print("not_found")
     return 0

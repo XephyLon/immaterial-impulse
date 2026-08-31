@@ -74,7 +74,7 @@ class ProviderChainTests(unittest.TestCase):
 
     def test_unison_answers_first(self):
         self.responses["unison"] = {"lyrics": "[00:01.0]hi", "format": "lrc"}
-        self.assertEqual(lyrics.from_unison("t", "a", 100), [(1.0, "hi")])
+        self.assertEqual(lyrics.from_unison("t", "a", 100), [(1.0, "hi", None)])
 
     def test_unison_plain_is_not_an_answer(self):
         self.responses["unison"] = {"lyrics": "just words", "format": "plain"}
@@ -88,8 +88,47 @@ class ProviderChainTests(unittest.TestCase):
         self.responses["/get?"] = {"syncedLyrics": "[00:02.0]exact"}
         self.responses["/search?"] = [ {"syncedLyrics": "[00:09.0]loose",
                                         "artistName": "a", "duration": 100} ]
-        self.assertEqual(lyrics.from_lrclib("t", "a", 100), [(2.0, "exact")])
+        self.assertEqual(lyrics.from_lrclib("t", "a", 100), [(2.0, "exact", None)])
         self.assertTrue(any("/get?" in u for u in self.calls))
+
+
+
+class WordTimingTests(unittest.TestCase):
+    def test_enhanced_lrc_words_are_extracted(self):
+        rich = lyrics.parse_lrc_rich("[00:10.0]<00:10.0>hello <00:11.5>there")
+        self.assertEqual(len(rich), 1)
+        t, text, words = rich[0]
+        self.assertEqual((t, text), (10.0, "hello there"))
+        self.assertEqual(words, [(10.0, "hello"), (11.5, "there")])
+
+    def test_plain_lrc_has_no_words(self):
+        self.assertEqual(lyrics.parse_lrc_rich("[00:10.0]hello there")[0][2], None)
+
+    def test_ttml_span_words_are_extracted(self):
+        doc = ('<tt xmlns="http://www.w3.org/ns/ttml"><body><div>'
+               '<p begin="10s"><span begin="10s">hello</span> '
+               '<span begin="11.5s">there</span></p></div></body></tt>')
+        t, text, words = lyrics.parse_ttml_rich(doc)[0]
+        self.assertEqual((t, text), (10.0, "hello there"))
+        self.assertEqual(words, [(10.0, "hello"), (11.5, "there")])
+
+    def test_the_wire_is_json(self):
+        import io, contextlib, sys as _sys
+        argv, _sys.argv = _sys.argv, ["lyrics.py", "T", "A", "100"]
+        orig = lyrics.http_json
+        lyrics.http_json = lambda url: ({"lyrics": "[00:01.0]<00:01.0>hi <00:02.0>ho",
+                                         "format": "lrc"} if "unison" in url else None)
+        try:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                lyrics.main()
+        finally:
+            lyrics.http_json = orig
+            _sys.argv = argv
+        import json as _json
+        payload = _json.loads(out.getvalue())
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["lines"][0]["words"], [[1.0, "hi"], [2.0, "ho"]])
 
 
 if __name__ == "__main__":

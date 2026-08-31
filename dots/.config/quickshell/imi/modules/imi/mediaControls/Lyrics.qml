@@ -19,6 +19,30 @@ Item {
         when: root.player !== null && root.player !== undefined
     }
 
+    // The sweep clock the active line's words follow.
+    property real sweepPosition: 0
+    Timer {
+        interval: 90
+        repeat: true
+        running: root.visible && LyricsService.status === "ok"
+        onTriggered: root.sweepPosition = LyricsService.estimatedPosition()
+    }
+
+    function escapeMarkup(text) {
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }
+    // The active line as rich text: sung words in the active colour, the
+    // rest dimmed - the word flips as the clock crosses its stamp.
+    function karaokeMarkup(timeline, position) {
+        let parts = []
+        for (let i = 0; i < timeline.length; i++) {
+            const word = timeline[i]
+            const tone = word.time <= position ? root.activeColor : root.dimColor
+            parts.push(`<font color="${tone}">${root.escapeMarkup(word.text)}</font>`)
+        }
+        return parts.join(" ")
+    }
+
     property color textColor: "white"
     property color activeColor: "white"
     property color dimColor: Qt.rgba(1, 1, 1, 0.35)
@@ -98,8 +122,16 @@ Item {
                     Layout.fillWidth: true
                     horizontalAlignment: root.textAlignment
                     wrapMode: Text.WordWrap
-                    text: LyricsService.slots[index] ?? ""
                     readonly property int dist: Math.abs(index - LyricsService.before)
+                    textFormat: dist === 0 ? Text.RichText : Text.PlainText
+                    text: {
+                        if (dist === 0) {
+                            const timeline = LyricsService.activeWordTimeline
+                            if (timeline.length > 0)
+                                return root.karaokeMarkup(timeline, root.sweepPosition)
+                        }
+                        return LyricsService.slots[index] ?? ""
+                    }
                     font.pixelSize: {
                         if (dist === 0) return Appearance.font.pixelSize.normal
                         if (dist === 1) return Appearance.font.pixelSize.small

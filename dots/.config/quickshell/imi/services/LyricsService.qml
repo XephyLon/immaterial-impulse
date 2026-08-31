@@ -30,6 +30,50 @@ Singleton {
     property int sidebarLyricsRefs: 0
     readonly property bool lyricsWanted: root.desktopWidgetLyricsActive || root.sidebarLyricsRefs > 0
 
+    // The word-sweep clock: MPRIS position only moves when the player
+    // answers a poll, so the sweep interpolates from the last answer while
+    // playing. Consumers poll estimatedPosition() on their own cadence.
+    property real lastKnownPosition: 0
+    property double lastPositionWall: 0
+    readonly property bool playing: root.activePlayer?.playbackState === MprisPlaybackState.Playing
+    Connections {
+        target: root.activePlayer
+        function onPositionChanged() {
+            root.lastKnownPosition = root.activePlayer.position
+            root.lastPositionWall = Date.now()
+        }
+    }
+    function estimatedPosition() {
+        if (!root.playing)
+            return root.activePlayer?.position ?? root.lastKnownPosition
+        return root.lastKnownPosition + (Date.now() - root.lastPositionWall) / 1000
+    }
+
+    function looksLikeWords(value) {
+        return value !== null && value !== undefined
+            && typeof value.length === "number" && value.length > 0
+    }
+
+    // The active line's words with absolute times: the provider's own when
+    // the source carried word-level timing, an even sweep across the line's
+    // span otherwise - so every line animates per word, just with honest
+    // timing where it exists and synthesized timing where it does not.
+    readonly property var activeWordTimeline: {
+        if (root.activeIndex < 0 || root.activeIndex >= root.lyricsLines.length)
+            return []
+        const line = root.lyricsLines[root.activeIndex]
+        if (root.looksLikeWords(line.words))
+            return line.words.map(word => ({ time: Number(word[0]), text: String(word[1]) }))
+        const start = line.time
+        const next = root.activeIndex + 1 < root.lyricsLines.length
+            ? root.lyricsLines[root.activeIndex + 1].time : start + 8
+        const tokens = String(line.text).split(/\s+/).filter(word => word.length > 0)
+        if (tokens.length === 0)
+            return []
+        const step = Math.max(0.001, (next - start) / tokens.length)
+        return tokens.map((word, index) => ({ time: start + index * step, text: word }))
+    }
+
     readonly property int before: 3
     readonly property int after:  3
     readonly property int total:  7
@@ -83,15 +127,20 @@ Singleton {
                 if (trimmed === "not_found") { root.status = "not_found"; return }
                 if (trimmed === "no_info")   { root.status = "no_info";   return }
 
-                const parts = trimmed.split("§")
-                if (parts.length < 3) return
-                if (parts[parts.length - 1].trim() !== "ok") return
-
+                let parsed = null
+                try {
+                    parsed = JSON.parse(trimmed)
+                } catch (error) {
+                    parsed = null
+                }
+                if (!parsed || parsed.ok !== true) return
+                const rawLines = parsed.lines ?? []
                 let lines = []
-                for (let i = 0; i < parts.length - 1; i += 2) {
-                    const t = parseFloat(parts[i])
-                    const txt = parts[i + 1] || ""
-                    if (!isNaN(t)) lines.push({ time: t, text: txt })
+                for (let i = 0; i < rawLines.length; i++) {
+                    const entry = rawLines[i]
+                    const t = Number(entry?.t)
+                    if (!isNaN(t))
+                        lines.push({ time: t, text: entry.text ?? "", words: entry.words ?? null })
                 }
 
                 if (lines.length === 0) { root.status = "not_found"; return }
