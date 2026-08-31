@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 import "../../../services/ai_provider_keys.js" as ProviderKeys
 
 /**
@@ -35,7 +36,11 @@ ColumnLayout {
         // pill ripples in its container's Active, and the flat variant -
         // whose colLayer1 default reads as no background at all on this
         // page - ripples in the Layer2 family it hovers in.
-        colRippleToggled: Appearance.colors.colSecondaryContainerActive
+        // A filled surface ripples in its ON-color, faint: this palette's
+        // PrimaryActive sits nearly on Primary itself, which was the
+        // weakness - and SecondaryContainerActive was the wrong family
+        // for a colPrimary fill entirely.
+        colRippleToggled: ColorUtils.transparentize(Appearance.colors.colOnPrimary, 0.75)
         colBackground: "transparent"
         colBackgroundHover: Appearance.colors.colLayer2Hover
         colRipple: Appearance.colors.colLayer2Active
