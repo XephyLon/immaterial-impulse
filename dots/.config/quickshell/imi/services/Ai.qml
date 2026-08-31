@@ -9,6 +9,7 @@ import Quickshell.Wayland
 import QtQuick
 import qs.services.ai
 import "./ai/model_curation.js" as Curation
+import "./ai/ai_personas.js" as PersonasFold
 import "./ai/ai_sessions.js" as SessionsFold
 import "AiModelsParser.js" as AiModelsParser
 
@@ -32,7 +33,9 @@ Singleton {
     signal responseFinished()
 
     property string systemPrompt: {
-        let prompt = Config.options?.ai?.systemPrompt ?? "";
+        // The active persona's prompt wins over the free-text card.
+        let prompt = PersonasFold.effectivePrompt(AiPersonas.active,
+            Config.options?.ai?.systemPrompt ?? "");
         for (let key in root.promptSubstitutions) {
             // prompt = prompt.replaceAll(key, root.promptSubstitutions[key]);
             // QML/JS doesn't support replaceAll, so use split/join

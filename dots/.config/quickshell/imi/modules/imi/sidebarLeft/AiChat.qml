@@ -848,6 +848,62 @@ Item {
                                     Layout.topMargin: Appearance.spacing.space100
                                     spacing: Appearance.spacing.space100
                                     MaterialSymbol {
+                                        text: "person_play"
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: Appearance.colors.colOnLayer1
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("Persona")
+                                        color: Appearance.colors.colOnLayer1
+                                        font.pixelSize: Appearance.font.pixelSize.small
+                                    }
+                                }
+                                Flow {
+                                    // One chip per persona plus Custom; a
+                                    // pick applies prompt AND temperature.
+                                    Layout.fillWidth: true
+                                    spacing: Appearance.spacing.space50
+                                    Repeater {
+                                        model: [{ "id": "", "name": Translation.tr("Custom"), "icon": "edit_note", "description": Translation.tr("The free-text prompt below") }]
+                                            .concat(AiPersonas.all)
+                                        delegate: RippleButton {
+                                            id: personaChip
+                                            required property var modelData
+                                            readonly property bool current: AiPersonas.activeId === modelData.id
+                                            implicitHeight: 30
+                                            implicitWidth: chipRow.implicitWidth + Appearance.spacing.space200 * 2
+                                            buttonRadius: Appearance.rounding.full
+                                            colBackground: current ? Appearance.colors.colPrimaryContainer : Appearance.colors.colLayer2
+                                            colBackgroundHover: current ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colLayer2Hover
+                                            colRipple: current ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colLayer2Active
+                                            onClicked: AiPersonas.pick(modelData.id)
+                                            contentItem: Item {
+                                                implicitWidth: chipRow.implicitWidth
+                                                implicitHeight: chipRow.implicitHeight
+                                                RowLayout {
+                                                    id: chipRow
+                                                    anchors.centerIn: parent
+                                                    spacing: Appearance.spacing.space50
+                                                    MaterialSymbol {
+                                                        text: personaChip.modelData.icon ?? "person"
+                                                        iconSize: Appearance.font.pixelSize.normal
+                                                        color: personaChip.current ? Appearance.m3colors.m3onPrimaryContainer : Appearance.colors.colOnLayer2
+                                                    }
+                                                    StyledText {
+                                                        text: personaChip.modelData.name
+                                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                                        color: personaChip.current ? Appearance.m3colors.m3onPrimaryContainer : Appearance.colors.colOnLayer2
+                                                    }
+                                                }
+                                            }
+                                            StyledToolTip { text: personaChip.modelData.description ?? "" }
+                                        }
+                                    }
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: Appearance.spacing.space100
+                                    MaterialSymbol {
                                         text: "psychology"
                                         iconSize: Appearance.font.pixelSize.larger
                                         color: Appearance.colors.colOnLayer1
@@ -856,6 +912,12 @@ Item {
                                         text: Translation.tr("System prompt")
                                         color: Appearance.colors.colOnLayer1
                                         font.pixelSize: Appearance.font.pixelSize.small
+                                    }
+                                    StyledText {
+                                        visible: AiPersonas.activeId !== ""
+                                        text: Translation.tr("(the persona above speaks; typing here switches to Custom)")
+                                        color: Appearance.colors.colSubtext
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
                                     }
                                 }
                                 Rectangle {
@@ -893,8 +955,14 @@ Item {
                                                 // view must not write (the
                                                 // provider-wipe rule).
                                                 if (!activeFocus || !visible) return;
-                                                if (Config.options.ai.systemPrompt !== text)
+                                                if (Config.options.ai.systemPrompt !== text) {
                                                     Config.options.ai.systemPrompt = text;
+                                                    // The card the user just
+                                                    // typed into is what
+                                                    // should speak.
+                                                    if (Config.options.ai.persona !== "")
+                                                        Config.options.ai.persona = "";
+                                                }
                                             }
                                         }
                                     }
