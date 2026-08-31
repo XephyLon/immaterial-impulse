@@ -897,6 +897,58 @@ And a final paragraph after the math, so the stream does not end on a block boun
         id: titlerScriptFile
     }
 
+    FileView {
+        id: inlineImageFile
+    }
+
+    /** An image the CHAT stream carried inline. A data URL's base64 rides
+        to disk through a FileView (multi-megabyte strings never touch an
+        argv), decodes into the durable store, and lands in the message as
+        markdown; a plain http url embeds directly. */
+    property var inlineImageQueue: []
+    function saveInlineImage(url, message) {
+        if (!url.startsWith("data:")) {
+            const md = `\n![generated image](${url})\n`;
+            message.content += md;
+            message.rawContent += md;
+            return;
+        }
+        const comma = url.indexOf(",");
+        if (comma === -1) return;
+        root.inlineImageQueue = [...root.inlineImageQueue, { "b64": url.slice(comma + 1), "message": message }];
+        Qt.callLater(root.drainInlineImages);
+    }
+    function drainInlineImages() {
+        if (inlineImageSaver.running || root.inlineImageQueue.length === 0) return;
+        const job = root.inlineImageQueue[0];
+        root.inlineImageQueue = root.inlineImageQueue.slice(1);
+        const b64Path = `${Directories.aiAttachments}/inline.b64.tmp`;
+        const outPath = `${Directories.aiAttachments}/inline-${Date.now()}.png`;
+        inlineImageFile.path = Qt.resolvedUrl(b64Path);
+        inlineImageFile.setText(job.b64);
+        inlineImageSaver.message = job.message;
+        inlineImageSaver.outPath = outPath;
+        inlineImageSaver.command = ["bash", "-c",
+            `base64 -d '${b64Path}' > '${outPath}' && rm -f '${b64Path}' && echo ok`];
+        inlineImageSaver.running = true;
+    }
+    Process {
+        id: inlineImageSaver
+        property var message
+        property string outPath: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() === "ok" && inlineImageSaver.message) {
+                    const md = `\n![generated image](${inlineImageSaver.outPath})\n`;
+                    inlineImageSaver.message.content += md;
+                    inlineImageSaver.message.rawContent += md;
+                    AiSessions.scheduleSave();
+                }
+                Qt.callLater(root.drainInlineImages);
+            }
+        }
+    }
+
     // The session's title, asked of the model itself: one tiny
     // non-streaming completion after the first finished answer. Only the
     // OpenAI dialect (every provider-fetched and imported model) is asked;
@@ -1176,6 +1228,10 @@ And a final paragraph after the math, so the stream does not end on a block boun
                     const result = requester.currentStrategy.parseResponseLine(data, requester.message);
                     // console.log("[Ai] Parsed response result: ", JSON.stringify(result, null, 2));
 
+                    if (result.inlineImages) {
+                        for (const url of result.inlineImages)
+                            root.saveInlineImage(url, requester.message);
+                    }
                     if (result.functionCall) {
                         requester.message.functionCall = result.functionCall;
                         root.handleFunctionCall(result.functionCall.name, result.functionCall.args, requester.message);

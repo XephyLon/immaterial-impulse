@@ -153,6 +153,21 @@ ApiStrategy {
                 if (call) return { functionCall: call, finished: true };
             }
 
+            // Inline images: some servers answer a generation request from
+            // the CHAT model itself, as delta.images data URLs (observed
+            // live from gpt-5.6-sol) - one colossal base64 line the dialect
+            // used to ignore entirely, leaving an empty message.
+            const images = dataJson.choices?.[0]?.delta?.images
+                ?? dataJson.choices?.[0]?.message?.images;
+            if (images && images.length > 0) {
+                const inline = [];
+                for (const img of images) {
+                    const url = img.image_url?.url ?? img.url ?? "";
+                    if (url.length > 0) inline.push(url);
+                }
+                if (inline.length > 0) return { inlineImages: inline };
+            }
+
             let newContent = "";
 
             const responseContent = dataJson.choices[0]?.delta?.content || dataJson.message?.content;
