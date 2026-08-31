@@ -266,6 +266,22 @@ Singleton {
     // Every model is a brought model now, so the picker shows them all;
     // kept as its own name because the composer binds it.
     readonly property var pickerModelList: root.modelList
+
+    // What the composer's Up key recalls: the prompts someone actually
+    // typed into THIS chat - user role, visible, non-empty - in order.
+    // Hidden carriers (tool outputs, silent instructions) are not prompts.
+    readonly property var ownPromptHistory: {
+        const list = [];
+        for (let i = 0; i < root.messageIDs.length; i++) {
+            const message = root.messageByID[root.messageIDs[i]];
+            if (message?.role !== "user" || message.visibleToUser === false)
+                continue;
+            const text = String(message.rawContent ?? message.content ?? "").trim();
+            if (text.length > 0)
+                list.push(text);
+        }
+        return list;
+    }
     property var currentModelId: Persistent.states?.ai?.model || modelList[0]
 
     property var apiStrategies: {
@@ -835,6 +851,29 @@ Singleton {
         requester.makeRequest();
     }
 
+    /**
+     * Sends a rewritten question as a FORK (spec 2026-08-31): everything
+     * after the old wording answered the old wording, so the current
+     * session is flushed and left behind - still openable in Chats - and
+     * the edit continues in a fresh transcript truncated at the edited
+     * question. Never a removeMessage loop: nothing is destroyed.
+     */
+    function editAndResend(messageIndex, newText) {
+        const text = String(newText ?? "").trim();
+        if (text.length === 0) return;
+        if (messageIndex < 0 || messageIndex >= root.messageIDs.length) return;
+        if (root.messageByID[root.messageIDs[messageIndex]]?.role !== "user") return;
+        if (root.isGenerating) {
+            root.addMessage(Translation.tr("Wait for the current answer to finish before editing."), root.interfaceRole);
+            return;
+        }
+        AiSessions.saveNow();
+        AiSessions.currentId = "";
+        const kept = root.chatToJson(root.messageIDs.slice(0, messageIndex));
+        root.loadMessagesFromJson(kept);
+        root.sendUserMessage(text);
+    }
+
     function createFunctionOutputMessage(name, output, includeOutputInChat = true) {
         return aiMessageComponent.createObject(root, {
             "role": "user",
@@ -928,8 +967,8 @@ Singleton {
         else root.addMessage(Translation.tr("Unknown function call: %1").arg(name), "assistant");
     }
 
-    function chatToJson() {
-        return root.messageIDs.map(id => {
+    function chatToJson(ids = root.messageIDs) {
+        return ids.map(id => {
             const message = root.messageByID[id]
             return ({
                 "role": message.role,
