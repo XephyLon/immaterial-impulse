@@ -218,7 +218,9 @@ RowLayout {
                     enabled: false
                     anchors.fill: parent
                     sourceComponent: PasswordChars {
-                        charSize: 16
+                        // Sized to the field's small text, not the lockscreen's
+                        // hero row the widget was born on.
+                        charSize: 12
                         length: textArea.text.length
                         selectionStart: textArea.selectionStart
                         selectionEnd: textArea.selectionEnd
