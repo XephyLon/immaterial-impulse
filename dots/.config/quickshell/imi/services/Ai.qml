@@ -700,7 +700,8 @@ Singleton {
                 root.postResponseHook = null; // Reset hook after use
             }
             // The finished answer is the autosave's strongest trigger; the
-            // old saveChat("lastSession") had no restore path and retires.
+            // old write-only lastSession snapshot had no restore path and
+            // retires here.
             AiSessions.scheduleSave();
             root.responseFinished()
         }
