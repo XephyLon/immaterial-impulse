@@ -673,7 +673,7 @@ Item {
                         visible: Ai.modelList.length > 0
                         Layout.fillWidth: true
                         keys: ["/key"]
-                        label: Translation.tr("Set an API key to get started")
+                        label: Translation.tr("Manage providers & keys")
                         actionable: true
                         onTriggered: root.activeView = "keys"
                     }
