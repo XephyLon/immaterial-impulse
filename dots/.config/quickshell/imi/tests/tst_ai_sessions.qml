@@ -71,6 +71,15 @@ TestCase {
         compare(grown.length, 3, "an unknown id is an insert");
     }
 
+    function test_model_titles_are_stripped_of_their_decorations() {
+        compare(Sessions.titleFromModelReply('"Wallpaper Engine Crash"', "fb"), "Wallpaper Engine Crash");
+        compare(Sessions.titleFromModelReply("Title: Fixing the follow scroll.", "fb"), "Fixing the follow scroll");
+        compare(Sessions.titleFromModelReply("**Currency Widget Ideas**\nplus rambling", "fb"), "Currency Widget Ideas");
+        compare(Sessions.titleFromModelReply("   \n\n", "the fallback"), "the fallback", "empty keeps the fallback");
+        const long = Sessions.titleFromModelReply("x".repeat(200), "fb");
+        verify(long.length <= 61, "capped like every other title");
+    }
+
     function test_rebuild_folds_meta_lines() {
         const lines = [
             JSON.stringify(meta("a", "one", 100)),

@@ -111,3 +111,18 @@ function rebuildIndex(metaLines) {
     }
     return sortedIndex(rows);
 }
+
+// A model's title reply, made safe for the index: models decorate -
+// quotes, "Title:" prefixes, markdown, a trailing period, extra lines -
+// and every decoration is stripped before the row shows it. An empty or
+// unusable reply keeps the fallback (the trimmed first prompt).
+function titleFromModelReply(raw, fallback) {
+    var line = String(raw || "").split("\n").map(function (l) { return l.trim(); })
+        .filter(function (l) { return l.length > 0; })[0] || "";
+    line = line.replace(/^title\s*[:\-]\s*/i, "");
+    line = line.replace(/^["'`\u201c\u2018*_#\s]+/, "").replace(/["'`\u201d\u2019*_\s]+$/, "");
+    line = line.replace(/\.$/, "").replace(/\s+/g, " ").trim();
+    if (line.length === 0) return fallback || "";
+    if (line.length > TITLE_MAX) line = line.slice(0, TITLE_MAX) + "\u2026";
+    return line;
+}

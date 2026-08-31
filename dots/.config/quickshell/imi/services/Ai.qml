@@ -9,6 +9,7 @@ import Quickshell.Wayland
 import QtQuick
 import qs.services.ai
 import "./ai/model_curation.js" as Curation
+import "./ai/ai_sessions.js" as SessionsFold
 import "AiModelsParser.js" as AiModelsParser
 
 /**
@@ -875,6 +876,75 @@ And a final paragraph after the math, so the stream does not end on a block boun
         id: requesterScriptFile
     }
 
+    FileView {
+        id: titlerScriptFile
+    }
+
+    // The session's title, asked of the model itself: one tiny
+    // non-streaming completion after the first finished answer. Only the
+    // OpenAI dialect (every provider-fetched and imported model) is asked;
+    // elsewhere the trimmed first prompt stays. A manual rename is safe -
+    // this fires once, on the first answer, and never again.
+    property string pendingTitleSessionId: ""
+    function requestSessionTitle() {
+        if (titler.running) return;
+        if (!AiSessions.currentId || AiSessions.currentId.length === 0) return;
+        const visible = root.messageIDs
+            .map(id => root.messageByID[id])
+            .filter(m => m && (m.role === "user" || m.role === "assistant"));
+        if (visible.length !== 2) return; // exactly first question + first answer
+        const model = models[currentModelId];
+        if (!model || model.api_format !== "openai") return;
+        const question = String(visible[0].rawContent ?? visible[0].content ?? "").slice(0, 1200);
+        const answer = String(visible[1].rawContent ?? visible[1].content ?? "").slice(0, 1200);
+        if (question.length === 0 || answer.length === 0) return;
+
+        const data = {
+            "model": model.model,
+            "messages": [
+                { "role": "system", "content": "You title conversations. Reply with ONLY a concise 3-6 word title for the exchange. No quotes, no punctuation, no explanations." },
+                { "role": "user", "content": `Question:\n${question}\n\nAnswer:\n${answer}` }
+            ],
+            "stream": false,
+            "temperature": 0.3
+        };
+        if (model.requires_key) titler.environment[`${root.apiKeyEnvVarName}`] = root.apiKeys ? (root.apiKeys[model.key_id] ?? "") : "";
+        const authHeader = root.currentApiStrategy.buildAuthorizationHeader(root.apiKeyEnvVarName);
+        const script = "#!/usr/bin/env bash\n"
+            + `curl -s --max-time 20 "${model.endpoint}"`
+            + ` -H "Content-Type: application/json"`
+            + (authHeader ? ` ${authHeader}` : "")
+            + ` --data '${CF.StringUtils.shellSingleQuoteEscape(JSON.stringify(data))}'`
+            + "\n";
+        const path = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath) + ".title.sh";
+        titlerScriptFile.path = Qt.resolvedUrl(path);
+        titlerScriptFile.setText(script);
+        root.pendingTitleSessionId = AiSessions.currentId;
+        titler.command = ["bash", path];
+        titler.running = true;
+    }
+
+    Process {
+        id: titler
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const sessionId = root.pendingTitleSessionId;
+                root.pendingTitleSessionId = "";
+                if (!sessionId || sessionId.length === 0) return;
+                try {
+                    const reply = JSON.parse(text);
+                    const raw = reply.choices?.[0]?.message?.content ?? "";
+                    const current = AiSessions.index.find(r => r.id === sessionId);
+                    const title = SessionsFold.titleFromModelReply(raw, current?.title ?? "");
+                    if (title.length > 0 && current && title !== current.title)
+                        AiSessions.rename(sessionId, title);
+                } catch (e) {
+                    // A failed titling is silence, never an error in the chat.
+                }
+            }
+        }
+    }
+
     Process {
         id: requester
         property list<string> baseCommand: ["bash"]
@@ -891,6 +961,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
             // old write-only lastSession snapshot had no restore path and
             // retires here.
             AiSessions.scheduleSave();
+            root.requestSessionTitle();
             root.responseFinished()
         }
 
