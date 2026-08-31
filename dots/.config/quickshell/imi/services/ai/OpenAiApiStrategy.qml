@@ -24,6 +24,12 @@ ApiStrategy {
             "tools": tools,
             "temperature": temperature,
         };
+        // Opt-in reasoning ask (OpenRouter grammar); gated on the model
+        // DECLARING thinking, because a strict server 400s on unknown
+        // fields. R1-style servers stream reasoning_content unasked and the
+        // parser below routes it either way; extraParams still win.
+        if (model.thinking)
+            baseData["reasoning"] = { "effort": "medium" };
         return model.extraParams ? Object.assign({}, baseData, model.extraParams) : baseData;
     }
 

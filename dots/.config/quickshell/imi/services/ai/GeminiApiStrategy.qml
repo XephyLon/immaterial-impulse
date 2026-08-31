@@ -74,6 +74,10 @@ ApiStrategy {
                 "temperature": temperature,
             },
         };
+        // Thoughts are requested, not assumed: thinkingConfig on a model
+        // that has no thinking phase is a 400.
+        if (model.thinking)
+            baseData.generationConfig["thinkingConfig"] = { "includeThoughts": true };
         // print("Gemini API call payload:", JSON.stringify(baseData, null, 2));
         return model.extraParams ? Object.assign({}, baseData, model.extraParams) : baseData;
     }

@@ -87,11 +87,16 @@ Item {
                     Layout.leftMargin: Appearance.spacing.space50
                     text: "linked_services"
                 }
-                StyledText {
+                ShimmerLabel {
                     id: thinkBlockLanguage
                     Layout.fillWidth: false
                     Layout.alignment: Qt.AlignLeft
-                    text: root.completed ? Translation.tr("Thought") : (Translation.tr("Thinking") + ".".repeat(Math.random() * 4))
+                    // The sweep IS the "still thinking" signal (the random
+                    // dots only ever rolled once per completion flip anyway).
+                    running: !root.completed
+                    text: root.completed ? Translation.tr("Thought") : Translation.tr("Thinking")
+                    baseColor: Appearance.colors.colSubtext
+                    glowColor: Appearance.colors.colOnLayer1
                 }
                 Item { Layout.fillWidth: true }
                 RippleButton { // Expand button
