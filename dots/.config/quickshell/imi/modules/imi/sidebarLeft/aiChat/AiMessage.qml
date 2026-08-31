@@ -63,6 +63,22 @@ Rectangle {
     }
 
     property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.messageData?.content)
+    // The streaming tail re-parses on every chunk, and a Repeater over the
+    // whole split rebuilt EVERY block's delegate each time - settled
+    // paragraphs flashed and the trailing heading morphed between shapes
+    // (the recorded flicker). The PREFIX only changes when a new block is
+    // born, so it freezes per block-count and only the last segment renders
+    // live.
+    property var stablePrefix: []
+    property int stableForCount: -1
+    readonly property var tailBlock: root.messageBlocks.length > 0
+        ? root.messageBlocks[root.messageBlocks.length - 1] : null
+    onMessageBlocksChanged: {
+        if (root.messageBlocks.length !== root.stableForCount) {
+            root.stableForCount = root.messageBlocks.length;
+            root.stablePrefix = root.messageBlocks.slice(0, -1);
+        }
+    }
 
     anchors.left: parent?.left
     anchors.right: parent?.right
@@ -181,17 +197,20 @@ Rectangle {
                             }
                         }
 
-                        StyledText {
+                        ShimmerLabel {
                             id: providerName
                             Layout.alignment: Qt.AlignVCenter
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
+                            // The glow IS the generating signal, for every
+                            // model - reasoning or not.
+                            running: messageData?.role == 'assistant' && !(messageData?.done ?? true)
+                            baseColor: Appearance.colors.colSubtext
+                            glowColor: Appearance.m3colors.m3onSecondaryContainer
                             font.pixelSize: Appearance.font.pixelSize.normal
-                            color: Appearance.m3colors.m3onSecondaryContainer
-                            text: messageData?.role == 'assistant' ? Ai.models[messageData?.model].name :
+                            text: messageData?.role == 'assistant' ? (Ai.models[messageData?.model]?.name ?? messageData?.model ?? "") :
                                 (messageData?.role == 'user' && SystemInfo.username) ? SystemInfo.username :
                                 Translation.tr("Interface")
                         }
+                        Item { Layout.fillWidth: true }
                     }
                 }
 
@@ -331,10 +350,21 @@ Rectangle {
             }
             Repeater {
                 model: ScriptModel {
-                    values: root.messageBlocks
+                    values: root.stablePrefix
                 }
-                delegate: DelegateChooser {
-                    id: messageDelegate
+                delegate: blockChooser
+            }
+            // The live tail: one delegate re-rendering per chunk instead of
+            // all of them. Declared after the Repeater so saveMessage still
+            // walks the segments in order.
+            Repeater {
+                model: ScriptModel {
+                    values: root.tailBlock !== null ? [root.tailBlock] : []
+                }
+                delegate: blockChooser
+            }
+            DelegateChooser {
+                    id: blockChooser
                     role: "type"
 
                     DelegateChoice { roleValue: "code"; MessageCodeBlock {
@@ -363,7 +393,6 @@ Rectangle {
                         done: root.messageData?.done ?? false
                         forceDisableChunkSplitting: root.messageData?.content.includes("```") ?? true
                     } }
-                }
             }
         }
 
