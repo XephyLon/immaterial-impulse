@@ -584,6 +584,110 @@ Singleton {
         promptLoader.reload();
     }
 
+    // /test's sample: long enough that streaming spans many viewports -
+    // short samples finished before scroll, coalescer and shimmer ever
+    // interacted, which is where the stutter lived.
+    readonly property string testStreamText: `
+<think>
+A longer think block to test revealing animation
+OwO wem ipsum dowo sit amet, consekituwet awipiscing ewit, sed do eiuwsmod tempow inwididunt ut wabowe et dowo mawa. Ut enim ad minim weniam, quis nostwud exeucitation uwuwamcow bowowis nisi ut awiquip ex ea commowo consequat. Duuis aute iwuwe dowo in wepwependewit in wowuptate velit esse ciwwum dowo eu fugiat nuwa pawiatuw. Excepteuw sint occaecat cupidatat non pwowoident, sunt in cuwpa qui officia desewunt mowit anim id est wabowum. Meouw! >w<
+Mowe uwu wem ipsum!
+</think>
+## ✏️ Markdown test
+### Formatting
+
+- *Italic*, \`Monospace\`, **Bold**, [Link](https://example.com)
+
+### Prose
+
+Streaming text is judged on its worst paragraph, not its best. A renderer that looks composed while short bullets tick in can still fall apart when a long unbroken paragraph grows word by word, because every appended chunk re-wraps the whole block and every re-wrap is a chance to shift lines the reader is in the middle of. This paragraph exists to be that stress: long, plain, unbroken, and steadily growing.
+
+The second stress is the follow scroll. While content grows past the viewport the view must advance at the speed the content demands - too eager and the text the reader is on slides out from under them, too lazy and the growth pools invisibly below the fold until it arrives as a lurch. The right behavior is a chase that keeps its velocity across retargets instead of restarting its easing curve on every chunk.
+
+The third stress is mixed content. A stream rarely stays one shape for long: prose gives way to a table, the table to code, the code back to prose, and each transition changes the block structure the renderer has to keep stable. The stable-prefix split means settled blocks never re-render - only the tail is live - and this section exercises exactly that boundary, block after block.
+
+A fourth paragraph, because three is a pattern and four is a test. By the time this text arrives, the transcript is several viewports tall, the earliest blocks are far above the fold, and any accidental whole-transcript work would show up as a frame spike right about here. If the motion still reads as one continuous glide, the coalescer and the chase are doing their jobs.
+
+### Table
+
+Quickshell vs AGS/Astal
+
+|                          | Quickshell       | AGS/Astal         |
+|--------------------------|------------------|-------------------|
+| UI Toolkit               | Qt               | Gtk3/Gtk4         |
+| Language                 | QML              | Js/Ts/Lua         |
+| Reactivity               | Implied          | Needs declaration |
+| Widget placement         | Mildly difficult | More intuitive    |
+| Bluetooth & Wifi support | ❌               | ✅                |
+| No-delay keybinds        | ✅               | ❌                |
+| Development              | New APIs         | New syntax        |
+
+### Code block
+
+Just a hello world...
+
+\`\`\`cpp
+#include <bits/stdc++.h>
+// This is intentionally very long to test scrolling
+const std::string GREETING = "UwU";
+int main(int argc, char* argv[]) {
+    std::cout << GREETING;
+}
+\`\`\`
+
+### A second, longer code block
+
+\`\`\`python
+def follow_to_end(view, velocity=1200):
+    """The chase, not the snap - retarget mid-flight, keep the speed."""
+    end = view.origin_y + view.content_height + view.bottom_margin - view.height
+    if end - view.content_y < 1:
+        return
+    view.anim.to = end
+    if not view.anim.running:
+        view.anim.start()
+
+def coalesce(chunks, interval_ms=50):
+    buffer = []
+    for chunk in chunks:
+        buffer.append(chunk)
+        if elapsed() >= interval_ms:
+            yield "".join(buffer)
+            buffer.clear()
+    if buffer:
+        yield "".join(buffer)
+\`\`\`
+
+### List, long enough to wrap
+
+- The first item is short.
+- The second item is deliberately much longer than the first, long enough to wrap onto a second line at any sane sidebar width, because wrapped list items re-measure differently from unwrapped ones.
+- Third: *italic across a wrapping boundary is its own small renderer test*, so this item keeps going until it certainly wraps too.
+- Fourth, with \`inline code\` and **bold** mixed in the middle of a sentence that also wraps.
+
+### LaTeX
+
+
+Inline w/ dollar signs: $\\frac{1}{2} = \\frac{2}{4}$
+
+Inline w/ double dollar signs: $$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$
+
+Inline w/ backslash and square brackets \\[\\int_0^\\infty \\frac{1}{x^2} dx = \\infty\\]
+
+Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
+
+### Closing prose
+
+And a final paragraph after the math, so the stream does not end on a block boundary but mid-prose, the way real answers usually do. When this sentence finishes, done flips, the coalescer syncs its last copy immediately, and the shimmer on the model name stops.
+`
+
+    property IpcHandler testIpc: IpcHandler {
+        target: "ai"
+        function testStream(): void {
+            root.simulateStream(root.testStreamText);
+        }
+    }
+
     // /test's streamer: feeds a canned response through the same
     // message-object append path a network stream uses, so streaming
     // rendering is testable without a model on the other end.
