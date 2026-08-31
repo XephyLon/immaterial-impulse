@@ -154,7 +154,20 @@ ShellRoot {
         harness.seedService();
         postSeed1.start();
     } }
+    // Retried: the service's own fetch cadence races the seed, and a late
+    // clobber can catch one measurement window with every column mid-fade.
+    property int seedTries: 0
+    function columnsReady() {
+        const columns = harness.findAll(widget, "currencyMovementColumn", []);
+        return columns.filter(c => c.visible && c.opacity === 1).length >= 4;
+    }
     Timer { id: postSeed1; interval: 300; onTriggered: {
+        if (!harness.columnsReady() && harness.seedTries++ < 12) {
+            harness.seedService();
+            postSeed1.start();
+            return;
+        }
+        harness.seedTries = 0;
         harness.measureSpan("3x2");
         harness.shoot("align_3x2", () => toSpan2.start());
     } }
@@ -167,6 +180,11 @@ ShellRoot {
         postSeed2.start();
     } }
     Timer { id: postSeed2; interval: 300; onTriggered: {
+        if (!harness.columnsReady() && harness.seedTries++ < 12) {
+            harness.seedService();
+            postSeed2.start();
+            return;
+        }
         harness.measureSpan("3x1");
         harness.shoot("align_3x1", () => {
             console.log(`[CurrencyAlign] checks: ${harness.checksRun} failures: ${harness.failures}`);
