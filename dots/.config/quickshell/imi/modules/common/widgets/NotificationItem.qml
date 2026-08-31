@@ -120,6 +120,7 @@ Item { // Notification item area
 
     NotificationAppIcon { // App icon
         id: notificationIcon
+        appName: notificationObject.appName
         opacity: (!onlyNotification && notificationObject.image != "" && expanded) ? 1 : 0
         visible: opacity > 0
 

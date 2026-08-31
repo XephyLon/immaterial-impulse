@@ -49,7 +49,10 @@ Singleton {
             "appIcon": notif.appIcon,
             "appName": notif.appName,
             "body": notif.body,
-            "image": notif.image,
+            // image://qsimage/ URLs are minted by THIS process's provider
+            // and die with it; persisted, they come back as a broken-image
+            // glyph after every restart. Only a path survives a restart.
+            "image": String(notif.image).startsWith("image://") ? "" : notif.image,
             "summary": notif.summary,
             "time": notif.time,
             "urgency": notif.urgency,
@@ -287,7 +290,9 @@ Singleton {
                     "appIcon": notif.appIcon,
                     "appName": notif.appName,
                     "body": notif.body,
-                    "image": notif.image,
+                    // Files written before the persist-side strip above still
+                    // carry dead provider URLs; drop them here too.
+                    "image": String(notif.image ?? "").startsWith("image://") ? "" : (notif.image ?? ""),
                     "summary": notif.summary,
                     "time": notif.time,
                     "urgency": notif.urgency,
