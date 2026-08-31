@@ -51,24 +51,14 @@ Rectangle {
                 values: root.keys
             }
 
-            delegate: Rectangle {
-                id: keyCap
+            // The cheatsheet's keycap, not a flat colLayer2 chip: on the
+            // empty state's own layer the chip was a tone-on-tone rectangle
+            // that read as plain text ("These key combinations should be
+            // styled as keys").
+            delegate: KeyboardKey {
                 required property var modelData
-
-                implicitWidth: Math.max(keyCapLabel.implicitWidth + Appearance.spacing.space150,
-                    root.implicitHeight * 0.66)
-                implicitHeight: Math.round(root.implicitHeight * 0.66)
-                radius: Appearance.rounding.verysmall
-                color: Appearance.colors.colLayer2
-
-                StyledText {
-                    id: keyCapLabel
-                    anchors.centerIn: parent
-                    text: keyCap.modelData
-                    font.family: Appearance.font.family.monospace
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnLayer2
-                }
+                key: modelData
+                pixelSize: Appearance.font.pixelSize.smaller
             }
         }
 
