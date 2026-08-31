@@ -198,10 +198,15 @@ ComboBox {
         }
     }
 
+    /** Wider menu than button, when the rows deserve it: 0 keeps the
+        popup matched to the button (the default); a value is the menu's
+        width, never narrower than the button. */
+    property real popupWidth: 0
+
     popup: Popup {
         id: popup
         y: root.height + 4
-        width: root.width
+        width: root.popupWidth > 0 ? Math.max(root.width, root.popupWidth) : root.width
         height: Math.min(listView.contentHeight + topPadding + bottomPadding, 300)
         padding: Appearance.spacing.space100
 

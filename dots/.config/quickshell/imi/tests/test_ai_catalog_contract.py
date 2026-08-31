@@ -278,8 +278,8 @@ def test_ai_qml_declares_no_builtin_models():
     body = AI_QML.read_text(encoding="utf-8")
     assert "property var models: ({})" in body, (
         "Ai.qml's models map must start empty - providers fill it")
-    assert "key_get_link" not in body.split("addApiKeyAdvice")[0], (
-        "a built-in model literal (key_get_link field) is back in Ai.qml")
+    assert "key_get_link\":" not in body and "\"key_get_link\"" not in body, (
+        "a built-in model literal (a quoted key_get_link field) is back in Ai.qml")
 
 
 def test_the_dialect_vocabulary_matches_the_strategies():

@@ -1028,6 +1028,9 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     Layout.preferredWidth: Math.min(implicitWidth, 190)
                     Layout.minimumWidth: 0
                     implicitHeight: 28
+                    // Model names are long; the menu opens wider than the
+                    // compact button so they read whole.
+                    popupWidth: 260
                     buttonIcon: "network_intelligence"
                     textRole: "name"
                     colBackground: "transparent"
