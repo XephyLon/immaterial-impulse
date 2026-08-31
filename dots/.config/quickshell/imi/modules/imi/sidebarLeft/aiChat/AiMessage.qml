@@ -175,11 +175,16 @@ Rectangle {
                         anchors.rightMargin: Appearance.spacing.space150
                         spacing: Appearance.spacing.space150
 
-                        Item {
+                        Rectangle {
+                            // The turn's anchor: a small tonal badge makes
+                            // the start of a message legible where a bare
+                            // name floated (the plate's one job, kept at a
+                            // fraction of its ink).
                             Layout.alignment: Qt.AlignVCenter
-                            Layout.fillHeight: true
-                            implicitWidth: messageData?.role == 'assistant' ? modelIcon.width : roleIcon.implicitWidth
-                            implicitHeight: messageData?.role == 'assistant' ? modelIcon.height : roleIcon.implicitHeight
+                            implicitWidth: 28
+                            implicitHeight: 28
+                            radius: Appearance.rounding.full
+                            color: Appearance.colors.colSecondaryContainer
 
                             CustomIcon {
                                 id: modelIcon
@@ -191,7 +196,7 @@ Rectangle {
                                     messageData?.role == 'user' ? 'arch-symbolic' : 'desktop-symbolic'
 
                                 colorize: true
-                                color: Appearance.colors.colSubtext
+                                color: Appearance.m3colors.m3onSecondaryContainer
                             }
 
                             MaterialSymbol {
@@ -199,7 +204,7 @@ Rectangle {
                                 anchors.centerIn: parent
                                 visible: !modelIcon.visible
                                 iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colSubtext
+                                color: Appearance.m3colors.m3onSecondaryContainer
                                 text: messageData?.role == 'user' ? 'person' : 
                                     messageData?.role == 'interface' ? 'settings' : 
                                     messageData?.role == 'assistant' ? 'neurology' : 
@@ -213,9 +218,10 @@ Rectangle {
                             // The glow IS the generating signal, for every
                             // model - reasoning or not.
                             running: messageData?.role == 'assistant' && !(messageData?.done ?? true)
-                            baseColor: Appearance.colors.colSubtext
-                            glowColor: Appearance.colors.colOnLayer1
+                            baseColor: Appearance.colors.colOnLayer1
+                            glowColor: Appearance.colors.colPrimary
                             font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.DemiBold
                             text: messageData?.role == 'assistant' ? (Ai.models[messageData?.model]?.name ?? messageData?.model ?? "") :
                                 (messageData?.role == 'user' && SystemInfo.username) ? SystemInfo.username :
                                 Translation.tr("Interface")
