@@ -4,6 +4,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.imi.sidebarLeft.aiChat
+import qs.modules.imi.aiProviders
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -20,6 +21,12 @@ Item {
     // One number the opening choreography hangs off: the composer's
     // rise/blur and the transcript reveal both fire when it bumps.
     property int entranceTrigger: -1
+
+    // The keys view: the chat area renders the shared providers editor in
+    // place - the maintainer's call over a jump to Settings. Closing it is
+    // an arrival, so the transcript reveals again.
+    property bool keysViewOpen: false
+    onKeysViewOpenChanged: if (!root.keysViewOpen) root.revealTranscript()
 
     // ---- transcript reveal ------------------------------------------------
     // Delegates in view when this bumps run a short arrival; offscreen rows
@@ -353,6 +360,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 anchors.rightMargin: Appearance.spacing.space100
                 inputField: messageInputField
                 commandPrefix: root.commandPrefix
+                onKeysRequested: root.keysViewOpen = !root.keysViewOpen
             }
         }
 
@@ -468,6 +476,113 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "O"]; label: Translation.tr("Expand the sidebar") }
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "P"]; label: Translation.tr("Pin it open") }
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "D"]; label: Translation.tr("Detach it into its own window") }
+                }
+            }
+
+            Loader {
+                // Providers & keys, rendered in place over the transcript.
+                id: keysViewLoader
+                z: 10
+                anchors.fill: parent
+                active: root.keysViewOpen
+                onLoaded: if (!KeyringStorage.loaded) KeyringStorage.fetchKeyringData()
+                opacity: active ? 1 : 0
+                visible: opacity > 0.01
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+
+                sourceComponent: Rectangle {
+                    color: Appearance.colors.colLayer1
+                    radius: Appearance.rounding.large
+
+                    // Arrives from the right, the fork's going-deeper
+                    // direction; the back arrow is the way out.
+                    transform: Translate { id: keysViewSlide; y: 0 }
+                    Component.onCompleted: {
+                        keysViewSlide.x = 24;
+                        keysSlideAnim.start();
+                    }
+                    NumberAnimation {
+                        id: keysSlideAnim
+                        target: keysViewSlide
+                        property: "x"
+                        to: 0
+                        duration: Appearance.animation.elementMoveEnter.duration
+                        easing.type: Easing.OutExpo
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Appearance.spacing.space150
+                        spacing: Appearance.spacing.space100
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Appearance.spacing.space100
+                            RippleButton {
+                                implicitWidth: 32
+                                implicitHeight: 32
+                                buttonRadius: Appearance.rounding.full
+                                colBackground: "transparent"
+                                onClicked: root.keysViewOpen = false
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: "arrow_back"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colOnLayer1
+                                }
+                            }
+                            StyledText {
+                                text: Translation.tr("Providers & keys")
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                font.weight: Font.DemiBold
+                                color: Appearance.colors.colOnLayer1
+                            }
+                        }
+
+                        StyledFlickable {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+                            contentHeight: keysColumn.implicitHeight
+
+                            ColumnLayout {
+                                id: keysColumn
+                                width: parent.width
+                                spacing: Appearance.spacing.space150
+
+                                // The current built-in model's key, the row
+                                // /key used to be the only door to.
+                                ConfigTextArea {
+                                    Layout.fillWidth: true
+                                    visible: (Ai.models[Ai.currentModelId]?.requires_key ?? false)
+                                    buttonIcon: "key"
+                                    text: Translation.tr("%1 key").arg(Ai.models[Ai.currentModelId]?.name ?? "")
+                                    placeholderText: Translation.tr("Enter API key")
+                                    password: true
+                                    value: KeyringStorage.loaded
+                                        ? (KeyringStorage.keyringData.apiKeys?.[Ai.models[Ai.currentModelId]?.key_id] || "")
+                                        : ""
+                                    onValueChanged: {
+                                        if (!textArea.activeFocus) return;
+                                        const keyId = Ai.models[Ai.currentModelId]?.key_id;
+                                        if (!keyId) return;
+                                        const currentText = value;
+                                        Qt.callLater(() => {
+                                            if (KeyringStorage.loaded)
+                                                KeyringStorage.setNestedField(["apiKeys", keyId], currentText);
+                                        });
+                                    }
+                                }
+
+                                AiProvidersEditor {
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -27,6 +27,8 @@ Item {
 
     implicitHeight: 32
 
+    signal keysRequested()
+
     function prefill(command) {
         if (!root.inputField) return;
         root.inputField.text = command;
@@ -162,9 +164,9 @@ Item {
             chipInk: Ai.currentModelHasApiKey ? Appearance.colors.colOnLayer1
                                               : Appearance.m3colors.m3error
             hint: Ai.currentModelHasApiKey
-                ? Translation.tr("API key is set\nChange with %1key YOUR_API_KEY").arg(root.commandPrefix)
-                : Translation.tr("No API key\nSet it with %1key YOUR_API_KEY").arg(root.commandPrefix)
-            onClicked: root.prefill(root.commandPrefix + "key ")
+                ? Translation.tr("Providers & keys")
+                : Translation.tr("No API key for this model\nClick to manage providers & keys")
+            onClicked: root.keysRequested()
         }
         ControlChip {
             visible: Ai.tokenCount.total > 0

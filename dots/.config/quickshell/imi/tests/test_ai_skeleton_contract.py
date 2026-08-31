@@ -38,12 +38,26 @@ def test_the_composer_has_one_entrance_writer():
 
 def test_the_chips_carry_the_pills_command_hints():
     body = BAR.read_text(encoding="utf-8")
-    for hint in ("temp VALUE", "key YOUR_API_KEY"):
-        assert hint in body, f"a chip lost its command hint: {hint}"
+    assert "temp VALUE" in body, "the temp chip lost its command hint"
+    assert "keysRequested" in body, (
+        "the key chip must open the keys view, not pre-fill a command")
     assert "StyledComboBox" in body and "setModel" in body, (
         "the model control must be a real picker, not a pre-fill")
     assert "StyledToolTip" in body
     assert "clearMessages" in body, "the new-chat chip lost its action"
+
+
+def test_one_providers_editor_serves_both_surfaces():
+    """The sidebar keys view and the Services page render the SAME editor -
+    a second copy is how the two drift, and drifting key-migration logic is
+    how someone's key lands on the wrong provider."""
+    editor = ROOT / "modules/imi/aiProviders/AiProvidersEditor.qml"
+    assert editor.exists()
+    chat = CHAT.read_text(encoding="utf-8")
+    services = (ROOT / "modules/imi/settings/pages/ServicesConfig.qml").read_text(encoding="utf-8")
+    assert "AiProvidersEditor" in chat and "AiProvidersEditor" in services
+    assert "apiKeysAfterRemoval" not in services, (
+        "the key-migration logic must live in the one editor")
 
 
 def test_the_greeting_key_exists_and_rolls():
