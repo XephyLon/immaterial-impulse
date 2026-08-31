@@ -362,6 +362,7 @@
       ],
       "rightLayout": [
         "submapIndicator",
+        "recordIndicator",
         "privacyIndicator",
         "sysTray",
         "hyprlandXkbIndicator",

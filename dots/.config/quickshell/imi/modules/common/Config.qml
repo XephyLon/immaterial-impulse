@@ -137,6 +137,18 @@ Singleton {
             root.options.bar.media.preferredPlayer = normalized;
     }
 
+    function migrateRecordIndicatorIntoBar() {
+        if (root.options.bar.layouts.migratedRecordIndicator)
+            return;
+        const layout = root.options.bar.layouts.rightLayout.slice();
+        if (!layout.includes("recordIndicator")) {
+            const at = layout.indexOf("privacyIndicator");
+            layout.splice(at >= 0 ? at : layout.length, 0, "recordIndicator");
+            root.setNestedValue("bar.layouts.rightLayout", layout);
+        }
+        root.setNestedValue("bar.layouts.migratedRecordIndicator", true);
+    }
+
     function migrateSplitCheatsheetButtons() {
         if (!root.options.cheatsheet.migratedSplitButtons) {
             root.setNestedValue("cheatsheet.splitButtons", true);
@@ -505,6 +517,7 @@ Singleton {
             root.migratePreferredPlayerToBusId();
             root.migrateDeadParallaxSwitches();
             root.migrateSplitCheatsheetButtons();
+            root.migrateRecordIndicatorIntoBar();
             root.migrateDesktopWidgetsToPlugins();
             root.migrateDesktopWidgetOptionsToPlugins();
         }
@@ -1109,7 +1122,12 @@ Singleton {
                 property JsonObject layouts: JsonObject {
                     property list<string> leftLayout: ["workspaces"]
                     property list<string> middleLayout: ["clockWidget"]
-                    property list<string> rightLayout: ["submapIndicator", "privacyIndicator", "systemIcons"]
+                    property list<string> rightLayout: ["submapIndicator", "recordIndicator", "privacyIndicator", "systemIcons"]
+                    // Whether recordIndicator has been folded into a stored
+                    // rightLayout that predates it (the chip draws nothing
+                    // while no recording runs, so arriving unasked costs no
+                    // bar space).
+                    property bool migratedRecordIndicator: false
                 }
                 
                 property list<string> screenList: [] // List of names, like "eDP-1", find out with 'hyprctl monitors' command

@@ -37,6 +37,7 @@ Singleton {
         { id: "systemIcons",       name: Translation.tr("System Icons"),         icon: "info" },
         { id: "networkSpeed",      name: Translation.tr("Network Speed"),        icon: "network_check" },
         { id: "timerPill",         name: Translation.tr("Timer"),                icon: "timer" },
+        { id: "recordIndicator",   name: Translation.tr("Recording"),            icon: "screen_record" },
         { id: "privacyIndicator",  name: Translation.tr("Privacy"),              icon: "privacy_tip" },
         { id: "submapIndicator",   name: Translation.tr("Submap"),               icon: "keyboard" },
         { id: "clockWidget",       name: Translation.tr("Clock"),                icon: "schedule" },

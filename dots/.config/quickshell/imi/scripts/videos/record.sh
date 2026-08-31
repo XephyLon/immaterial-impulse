@@ -27,7 +27,8 @@ set_recording_state() {
     mkdir -p "$(dirname "$STATE_FILE")"
     [[ -f "$STATE_FILE" ]] || echo '{}' > "$STATE_FILE"
     tmp=$(mktemp)
-    jq --arg region "$region" ".record.enable = $state | .record.region = \$region" \
+    jq --arg region "$region" \
+        ".record.enable = $state | .record.region = \$region | .record.startedAt = (if $state then (now | floor) else 0 end)" \
         "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"
 }
 

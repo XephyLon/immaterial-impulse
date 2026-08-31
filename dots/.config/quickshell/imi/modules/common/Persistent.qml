@@ -97,6 +97,11 @@ Singleton {
                 // process, so a shell restart mid-capture has to be able to
                 // find its way back to the rectangle being recorded.
                 property string region: ""
+                // Unix seconds the current recording started, 0 when idle.
+                // Written by record.sh beside `enable`, and persisted for
+                // the same reason: the recording outlives the shell, and
+                // the bar's elapsed timer has to survive a restart.
+                property real startedAt: 0
             }
 
             property JsonObject overlay: JsonObject {
