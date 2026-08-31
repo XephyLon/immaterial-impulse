@@ -178,12 +178,18 @@ Item {
     property var suggestionList: []
 
     onFocusChanged: focus => {
-        if (focus) {
+        // Never while a canvas view covers the composer: stealing focus to
+        // a hidden input routed the browse view's search typing into the
+        // chat box.
+        if (focus && root.activeView === "") {
             root.inputField.forceActiveFocus();
         }
     }
 
     Keys.onPressed: event => {
+        // Same guard as onFocusChanged: with a view open, the composer is
+        // under an overlay and must not vacuum the keys.
+        if (root.activeView !== "") return;
         messageInputField.forceActiveFocus();
         if (event.modifiers === Qt.NoModifier) {
             if (event.key === Qt.Key_PageUp) {
