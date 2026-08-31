@@ -19,6 +19,7 @@ import qs.modules.imi.settings
 import qs.modules.imi.regionSelector
 import qs.modules.imi.screenCorners
 import qs.modules.imi.screensaver
+import qs.modules.imi.imageViewer
 import qs.modules.imi.screenTranslator
 import qs.modules.imi.sessionScreen
 import qs.modules.imi.sidebarLeft
@@ -52,6 +53,7 @@ Scope {
     PanelLoader { component: RegionSelector {} }
     PanelLoader { component: ScreenCorners {} }
     PanelLoader { component: Screensaver {} }
+    PanelLoader { component: ImageViewer {} }
     PanelLoader { component: ScreenTranslator {} }
     PanelLoader { component: SessionScreen {} }
     PanelLoader { component: SidebarLeft {} }

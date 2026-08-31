@@ -14,6 +14,8 @@ Singleton {
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
+    // A path here opens the fullscreen image viewer on it; "" closes it.
+    property string aiImageViewerSource: ""
     // Which tab the left sidebar shows next time it opens, as the tab's
     // untranslated id rather than its index: every name in the tab bar is a
     // Translation.tr(...) call, so a deep link resolved against the label
