@@ -83,6 +83,33 @@ RippleButton {
         }
     }
 
+    MaterialSymbol {
+        id: aiSpark
+        anchors.centerIn: parent
+        text: "auto_awesome"
+        iconSize: 18
+        fill: 1
+        color: Appearance.m3colors.m3onPrimary
+        scale: root.toggled ? 1 : 0
+        rotation: root.toggled ? 0 : -90
+        opacity: root.toggled ? 1 : 0
+        visible: opacity > 0.01
+        z: 2
+        Behavior on scale {
+            NumberAnimation {
+                duration: Appearance.animation.elementMove.duration
+                easing.type: Easing.OutBack
+                easing.overshoot: 1.2
+            }
+        }
+        Behavior on rotation {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+    }
+
     CustomIcon {
         id: distroIcon
         anchors.centerIn: parent
@@ -92,9 +119,23 @@ RippleButton {
             ? Config.options.custom.distroIcon
             : `${SystemInfo.distroIcon}.svg`
         colorize: Config.options.custom.colorizeIcon
-        color: root.toggled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colPrimary
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        color: Appearance.colors.colPrimary
+        // Through-zero morph: the brand mark hands the button to the AI
+        // spark as the sidebar opens - distro shrinks and spins out, the
+        // spark grows in over the lit glyph. Two glyph systems (an SVG and
+        // a font symbol) cannot share one path, so the morph is the
+        // travel: scale through zero, opposite spins, one container.
+        scale: root.toggled ? 0 : 1
+        rotation: root.toggled ? 90 : 0
+        opacity: root.toggled ? 0 : 1
+        Behavior on scale {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on rotation {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
 
         Rectangle {
