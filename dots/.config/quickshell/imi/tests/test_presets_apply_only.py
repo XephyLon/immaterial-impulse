@@ -117,3 +117,26 @@ class ApplyOnlyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+SETTINGS = ROOT / "modules/imi/settings"
+
+
+class DialogPins(unittest.TestCase):
+    def test_the_commands_row_is_never_preselected(self):
+        dialog = (SETTINGS / "PresetApplyDialog.qml").read_text()
+        self.assertIn("group.defaultOn && (root.counts[group.id] ?? 0) > 0", dialog)
+        groups = (ROOT / "modules/common/functions/preset_groups.js").read_text()
+        self.assertIn('id: "commands"', groups)
+        self.assertIn("defaultOn: false", groups)
+        self.assertEqual(groups.count("defaultOn: false"), 1,
+                         "commands is the one default-off group")
+
+    def test_apply_goes_through_the_dialog(self):
+        profile = (SETTINGS / "pages/Profile.qml").read_text()
+        self.assertNotIn("Presets.apply(", profile,
+                         "the card must request the dialog, not bypass it")
+        self.assertIn("Presets.requestApply(", profile)
+        host = (SETTINGS / "SettingsContent.qml").read_text()
+        self.assertIn("PresetApplyDialog", host,
+                      "the dialog is hosted at the settings-window level")

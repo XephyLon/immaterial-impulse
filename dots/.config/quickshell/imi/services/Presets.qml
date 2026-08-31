@@ -73,6 +73,23 @@ Singleton {
         saveProc.running = true
     }
 
+    // The selective-apply popup's request, mirroring PluginStore's
+    // pendingInstallEntry: the Profile page only requests, the window-level
+    // host in SettingsContent shows the dialog, and the dialog itself calls
+    // apply() with the chosen sections.
+    property string pendingApplyName: ""
+    property var pendingApplyData: null
+
+    function requestApply(name, presetData) {
+        root.pendingApplyData = presetData ?? null
+        root.pendingApplyName = name
+    }
+
+    function cancelApply() {
+        root.pendingApplyName = ""
+        root.pendingApplyData = null
+    }
+
     // `sections` comes from PresetGroups.sectionsFor - config keys and
     // appearance:<sub> spellings, sanitized by construction, but still
     // passed as ONE argv element after --only, never shell-spliced.

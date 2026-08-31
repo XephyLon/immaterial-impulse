@@ -973,4 +973,35 @@ Item {
             }
         }
     }
+    // Window-level host for the selective preset apply confirmation,
+    // mirroring the plugin hosts above: driven purely by
+    // Presets.pendingApplyName so the Profile page only has to request it.
+    Loader {
+        id: presetApplyDialogLoader
+        anchors.fill: parent
+        active: false
+        readonly property bool wanted: Presets.pendingApplyName !== ""
+
+        onWantedChanged: if (wanted) active = true
+        onActiveChanged: if (active && item) item.forceActiveFocus()
+        sourceComponent: PresetApplyDialog {}
+
+        Binding {
+            target: presetApplyDialogLoader.item
+            property: "show"
+            value: presetApplyDialogLoader.wanted
+            when: presetApplyDialogLoader.item !== null
+        }
+
+        Connections {
+            target: presetApplyDialogLoader.item
+            function onDismiss() { Presets.cancelApply(); }
+            // Keep the loader alive through the close animation, then release it.
+            function onVisibleChanged() {
+                if (presetApplyDialogLoader.item && !presetApplyDialogLoader.item.visible
+                        && !presetApplyDialogLoader.wanted)
+                    presetApplyDialogLoader.active = false;
+            }
+        }
+    }
 }

@@ -288,6 +288,10 @@ ContentPage {
 
                         property string presetName: fileName.replace(".json", "")
                         property string presetWallpaper: ""
+                        // The parsed document, kept for the selective-apply
+                        // dialog's group counts - parsing once here beats the
+                        // dialog re-reading the file.
+                        property var presetJson: null
                         property string presetDescription: ""
 
                         FileView {
@@ -318,6 +322,7 @@ ContentPage {
                                         ? (engine.activePreview || stillWallpaper || "")
                                         : stillWallpaper
                                     presetDelegate.presetDescription = data?._presetMeta?.description ?? ""
+                                    presetDelegate.presetJson = data
                                 } catch (e) {
                                     console.log("Failed to parse preset:", e)
                                 }
@@ -327,7 +332,7 @@ ContentPage {
                         imageSource: presetDelegate.presetWallpaper
                         title: presetDelegate.presetName
                         description: presetDelegate.presetDescription !== "" ? presetDelegate.presetDescription : Translation.tr("Saved preset")
-                        onApply: () => Presets.apply(presetDelegate.presetName)
+                        onApply: () => Presets.requestApply(presetDelegate.presetName, presetDelegate.presetJson)
                         onRemove: () => Presets.remove(presetDelegate.presetName)
                         onOverwrite: () => Presets.overwrite(presetDelegate.presetName, presetDelegate.presetDescription)
                     }
