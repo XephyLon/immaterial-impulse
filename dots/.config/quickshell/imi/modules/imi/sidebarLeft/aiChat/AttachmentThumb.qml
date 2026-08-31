@@ -38,7 +38,7 @@ ClippingRectangle {
         visible: root.removable
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.margins: 4
+        anchors.margins: Appearance.spacing.space50
         implicitWidth: 22
         implicitHeight: 22
         buttonRadius: Appearance.rounding.full

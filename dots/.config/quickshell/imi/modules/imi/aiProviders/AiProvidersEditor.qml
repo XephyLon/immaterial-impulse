@@ -336,7 +336,7 @@ ColumnLayout {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.margins: 8
+            anchors.margins: Appearance.spacing.space100
             opacity: addSlot.choosing ? 1 : 0
             visible: opacity > 0
             Behavior on opacity {
@@ -348,7 +348,7 @@ ColumnLayout {
                     animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
                 }
             }
-            spacing: 2
+            spacing: Appearance.spacing.space25
 
             RowLayout {
                 Layout.fillWidth: true
