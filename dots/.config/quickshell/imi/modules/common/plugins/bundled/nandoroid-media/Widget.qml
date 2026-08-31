@@ -205,7 +205,10 @@ Item {
         // cookie frame and the corner badges OVERLAP it - and the seeker's
         // ring (z 3) overlaps the badges, whose faces it was drawn across.
         // Badges top the ladder; play stays under everything.
-        z: 4
+        // 1x1 inverts the ladder: the cookie draws OVER the tucked
+        // flanker edges, so their flat sides disappear beneath its curve
+        // and the pieces read as one piece.
+        z: root.spanName === "1x1" ? 1 : 4
         role: "prev"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
@@ -230,7 +233,7 @@ Item {
         // order pull opposite ways here, so the seeker keeps the top for
         // BOTH and forwards the hover and presses that are not its own.
         coveredHover: seeker.hoveringPlay
-        z: 1
+        z: root.spanName === "1x1" ? 4 : 1
         role: "play"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
@@ -249,7 +252,7 @@ Item {
     MediaTransportButton {
         id: nextButton
         objectName: "nextButton"
-        z: 4
+        z: root.spanName === "1x1" ? 1 : 4
         role: "next"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
