@@ -28,6 +28,7 @@ Item {
     implicitHeight: 32
 
     signal keysRequested()
+    signal sessionsRequested()
 
     function prefill(command) {
         if (!root.inputField) return;
@@ -179,9 +180,17 @@ Item {
         Item { Layout.fillWidth: true }
 
         ControlChip {
+            chipIcon: "forum"
+            hint: Translation.tr("Chats")
+            onClicked: root.sessionsRequested()
+        }
+
+        ControlChip {
             chipIcon: "edit_square"
             hint: Translation.tr("New chat")
-            onClicked: Ai.clearMessages()
+            // Finalize-then-clear: the current session gets its last flush
+            // before the transcript empties.
+            onClicked: AiSessions.newSession()
         }
     }
 }

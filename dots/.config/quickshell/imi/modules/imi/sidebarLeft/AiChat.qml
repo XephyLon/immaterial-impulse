@@ -25,8 +25,14 @@ Item {
     // The keys view: the chat area renders the shared providers editor in
     // place - the maintainer's call over a jump to Settings. Closing it is
     // an arrival, so the transcript reveals again.
-    property bool keysViewOpen: false
-    onKeysViewOpenChanged: if (!root.keysViewOpen) root.revealTranscript()
+    // One view over the transcript at a time: "" (the chat), "keys", or
+    // "sessions". Closing any of them is an arrival, so the transcript
+    // reveals; the step-back below reads the same emptiness.
+    property string activeView: ""
+    function toggleView(name) {
+        root.activeView = (root.activeView === name) ? "" : name;
+    }
+    onActiveViewChanged: if (root.activeView === "") root.revealTranscript()
 
     // ---- transcript reveal ------------------------------------------------
     // Delegates in view when this bumps run a short arrival; offscreen rows
@@ -109,7 +115,7 @@ Item {
             }
         }
         if ((event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.ShiftModifier) && event.key === Qt.Key_O) {
-            Ai.clearMessages();
+            AiSessions.newSession();
         }
     }
 
@@ -383,7 +389,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 anchors.rightMargin: Appearance.spacing.space100
                 inputField: messageInputField
                 commandPrefix: root.commandPrefix
-                onKeysRequested: root.keysViewOpen = !root.keysViewOpen
+                onKeysRequested: root.toggleView("keys")
+                onSessionsRequested: root.toggleView("sessions")
             }
         }
 
@@ -413,10 +420,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
             Item {
                 id: transcriptPage
                 anchors.fill: parent
-                scale: root.keysViewOpen ? 0.95 : 1
-                opacity: root.keysViewOpen ? 0 : 1
+                scale: root.activeView === "" ? 1 : 0.95
+                opacity: root.activeView === "" ? 1 : 0
                 visible: opacity > 0.01
-                enabled: !root.keysViewOpen
+                enabled: root.activeView === ""
                 Behavior on scale {
                     animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
                 }
@@ -526,18 +533,30 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
 
             Loader {
                 // Providers & keys, rendered in place over the transcript.
-                id: keysViewLoader
+                id: overlayViewLoader
                 z: 10
                 anchors.fill: parent
-                active: root.keysViewOpen
-                onLoaded: if (!KeyringStorage.loaded) KeyringStorage.fetchKeyringData()
+                active: root.activeView.length > 0
+                onLoaded: if (root.activeView === "keys" && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData()
                 opacity: active ? 1 : 0
                 visible: opacity > 0.01
                 Behavior on opacity {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
 
-                sourceComponent: Rectangle {
+                sourceComponent: root.activeView === "keys" ? keysViewComponent
+                    : root.activeView === "sessions" ? sessionsViewComponent : null
+
+                Component {
+                    id: sessionsViewComponent
+                    SessionListView {
+                        onClosed: root.activeView = ""
+                    }
+                }
+
+                Component {
+                    id: keysViewComponent
+                Rectangle {
                     color: Appearance.colors.colLayer1
                     radius: Appearance.rounding.large
 
@@ -570,7 +589,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 implicitHeight: 32
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
-                                onClicked: root.keysViewOpen = false
+                                onClicked: root.activeView = ""
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
                                     horizontalAlignment: Text.AlignHCenter
@@ -628,6 +647,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                             }
                         }
                     }
+                }
                 }
             }
         }
