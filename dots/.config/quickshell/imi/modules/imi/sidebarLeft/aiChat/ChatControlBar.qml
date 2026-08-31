@@ -146,11 +146,16 @@ Item {
                 }
             }
         }
-        ControlChip {
+        InlineEditChip {
             chipIcon: "device_thermostat"
             value: Ai.temperature.toFixed(1)
-            hint: Translation.tr("Temperature\nChange with %1temp VALUE").arg(root.commandPrefix)
-            onClicked: root.prefill(root.commandPrefix + "temp ")
+            hint: Translation.tr("Temperature\nClick to edit, or %1temp VALUE").arg(root.commandPrefix)
+            onCommitted: text => {
+                const temperature = parseFloat(text);
+                // A non-number is a cancelled thought, not an error worth a
+                // message; the service clamps the range itself.
+                if (!isNaN(temperature)) Ai.setTemperature(temperature);
+            }
         }
         ControlChip {
             chipIcon: Ai.currentModelHasApiKey ? "key" : "key_off"
