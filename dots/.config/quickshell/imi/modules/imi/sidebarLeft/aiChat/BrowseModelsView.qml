@@ -3,6 +3,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import "../../../../services/ai/openrouter_models.js" as OR
+import "../../../../services/ai/model_curation.js" as Curation
 import QtQuick
 import QtQuick.Layouts
 
@@ -35,8 +36,43 @@ Rectangle {
     }
 
     property string query: ""
-    readonly property var filtered: OR.filterRows(OpenRouterModels.models, root.query)
+    // The merged list (spec 2026-08-31): every provider's fetched models
+    // first - each with a surfaced toggle bound to its provider's curation
+    // - then the OpenRouter index. One search across both.
+    readonly property var providerRows: {
+        const rows = [];
+        for (const id of Ai.modelList) {
+            const m = Ai.models[id];
+            const idx = Curation.providerIndexOf(m?.key_id);
+            if (idx < 0) continue;
+            rows.push({
+                kind: "provider",
+                providerIndex: idx,
+                rawId: m.model,
+                id: m.model,
+                name: m.name,
+                provider: m.providerName ?? (Config.options.ai.customProviders?.[idx]?.name ?? ""),
+                contextWindow: 0, promptPrice: 0, completionPrice: 0,
+                vision: false, reasoning: m.thinking === true
+            });
+        }
+        return rows;
+    }
+    readonly property var filtered: OR.filterRows(root.providerRows, root.query)
+        .concat(OR.filterRows(OpenRouterModels.models, root.query))
     readonly property int shownCap: 60
+
+    function toggleSurfaced(row) {
+        // The ONLY thing this view may write on a provider: its curation.
+        let providers = [...Config.options.ai.customProviders];
+        providers[row.providerIndex].selectedModels = Curation.withToggled(
+            providers[row.providerIndex].selectedModels ?? [], row.rawId);
+        Config.options.ai.customProviders = providers;
+    }
+    function surfaced(row) {
+        return Curation.isSurfaced(
+            Config.options.ai.customProviders?.[row.providerIndex]?.selectedModels, row.rawId);
+    }
 
     function importRow(row) {
         Config.options.ai.extraModels = OR.withImported(
@@ -159,7 +195,9 @@ Rectangle {
                         colBackground: "transparent"
                         colBackgroundHover: Appearance.colors.colLayer2Hover
                         colRipple: Appearance.colors.colLayer2Active
-                        onClicked: root.importRow(modelRow.modelData)
+                        onClicked: modelRow.modelData.kind === "provider"
+                            ? root.toggleSurfaced(modelRow.modelData)
+                            : root.importRow(modelRow.modelData)
                         contentItem: RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: Appearance.spacing.space150
@@ -178,7 +216,10 @@ Rectangle {
                                 StyledText {
                                     Layout.fillWidth: true
                                     elide: Text.ElideRight
-                                    text: `${modelRow.modelData.provider} · ${Math.round(modelRow.modelData.contextWindow / 1000)}k · ${OR.priceLabel(modelRow.modelData.promptPrice, modelRow.modelData.completionPrice)}`
+                                    text: modelRow.modelData.kind === "provider"
+                                        ? Translation.tr("%1 · your provider · click to %2").arg(modelRow.modelData.provider)
+                                              .arg(root.surfaced(modelRow.modelData) ? Translation.tr("hide") : Translation.tr("show"))
+                                        : `${modelRow.modelData.provider} · ${Math.round(modelRow.modelData.contextWindow / 1000)}k · ${OR.priceLabel(modelRow.modelData.promptPrice, modelRow.modelData.completionPrice)}`
                                     color: Appearance.colors.colSubtext
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                 }
@@ -187,6 +228,13 @@ Rectangle {
                             // needs a host with `hovered` (a Text has none),
                             // so these showed unconditionally and leaked
                             // popup windows past the view's close.
+                            MaterialSymbol {
+                                visible: modelRow.modelData.kind === "provider"
+                                text: root.surfaced(modelRow.modelData) ? "check_circle" : "radio_button_unchecked"
+                                fill: root.surfaced(modelRow.modelData) ? 1 : 0
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: root.surfaced(modelRow.modelData) ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                            }
                             MaterialSymbol {
                                 visible: modelRow.modelData.reasoning
                                 text: "star_shine"

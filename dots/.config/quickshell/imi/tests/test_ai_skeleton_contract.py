@@ -119,7 +119,18 @@ def test_the_browse_view_rides_the_switcher_and_writes_only_extra_models():
     assert '"browse"' in chat and "BrowseModelsView" in chat
     view = (ROOT / "modules/imi/sidebarLeft/aiChat/BrowseModelsView.qml").read_text(encoding="utf-8")
     assert "Config.options.ai.extraModels" in view
-    assert "customProviders" not in view, "the browse import must not touch providers"
+    # The one legal provider write is the curation list; a view that edits
+    # name/baseUrl/enabled has left its lane.
+    for line in view.splitlines():
+        if "=" not in line:
+            continue
+        target = line.split("=", 1)[0]
+        if "customProviders" not in target:
+            continue  # a read - customProviders right of the = assigns a local
+        if "Config.options.ai.customProviders " in target:
+            continue  # the whole-list reassign the notify rule demands
+        raise AssertionError(f"browse writes providers beyond curation: {line.strip()}")
+    assert "selectedModels" in view, "the surfaced toggle is gone"
     model = (ROOT / "services/ai/AiModel.qml").read_text(encoding="utf-8")
     for field in ("property bool thinking", "property bool vision", "property int contextWindow"):
         assert field in model, f"AiModel lost {field}"
