@@ -115,8 +115,6 @@ class ApplyOnlyTests(unittest.TestCase):
             self.assertEqual((config_dir / "config.json").read_text(), before)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 SETTINGS = ROOT / "modules/imi/settings"
@@ -140,3 +138,7 @@ class DialogPins(unittest.TestCase):
         host = (SETTINGS / "SettingsContent.qml").read_text()
         self.assertIn("PresetApplyDialog", host,
                       "the dialog is hosted at the settings-window level")
+
+
+if __name__ == "__main__":
+    unittest.main()
