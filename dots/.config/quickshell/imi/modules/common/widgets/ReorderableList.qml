@@ -79,6 +79,20 @@ Item {
         root.rowDragStarted(index);
     }
 
+    // The drop's commit REBUILDS this Repeater (the caller reassigns the
+    // stored list the model is bound to), destroying the delegate whose
+    // drag handler is still mid-emission - so the handler code after the
+    // commit is not guaranteed to run. Every reset therefore happens at
+    // LIST level, and BEFORE the signal whose handler commits.
+    function finishDrag(index, target) {
+        root.dragIndex = -1;
+        root.rowDropped(index, target);
+    }
+    function settleDrag() {
+        root.dragIndex = -1;
+        root.rowDragEnded();
+    }
+
     Item {
         id: rowsArea
         width: root.width
@@ -194,8 +208,7 @@ Item {
                             function unliftIfIdle() {
                                 if (reorder.dragging) return;
                                 if (root.dragIndex !== row.index) return;
-                                root.dragIndex = -1;
-                                root.rowDragEnded();
+                                root.settleDrag();
                             }
                             onReleased: unliftIfIdle()
                             onCanceled: unliftIfIdle()
@@ -208,11 +221,8 @@ Item {
                             onDragStarted: root.beginRow(row.index)
                             onTargetChanged: if (reorder.dragging) root.rowDragMoved(reorder.target)
                             onScenePositionChanged: if (reorder.dragging) root.rowDragMoved(reorder.target)
-                            onDropped: target => root.rowDropped(row.index, target)
-                            onDragEnded: {
-                                root.dragIndex = -1;
-                                root.rowDragEnded();
-                            }
+                            onDropped: target => root.finishDrag(row.index, target)
+                            onDragEnded: root.settleDrag()
                         }
                     }
 

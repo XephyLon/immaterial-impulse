@@ -255,7 +255,13 @@ ContentPage {
                 bucketsProvider: () => barLayoutSection.dropBuckets()
                 onRowDragStarted: index => barLayoutSection.beginDrag(layoutList.bucket, index)
                 onRowDragMoved: target => barLayoutSection.dragMoved(target)
-                onRowDropped: (index, target) => barLayoutSection.commitDrop(layoutList.bucket, index, target)
+                onRowDropped: (index, target) => {
+                    barLayoutSection.commitDrop(layoutList.bucket, index, target);
+                    // The commit may rebuild the emitting list's delegates,
+                    // so the delegate-side dragEnded is not guaranteed to
+                    // arrive - close the drag here, idempotently.
+                    barLayoutSection.endDrag();
+                }
                 onRowDragEnded: barLayoutSection.endDrag()
                 onAddRequested: id => barLayoutSection.writeLayout(layoutList.bucket,
                     LayoutOps.insert(barLayoutSection.storedLayout(layoutList.bucket),
