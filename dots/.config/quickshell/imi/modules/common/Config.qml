@@ -601,6 +601,9 @@ Singleton {
                     {
                         "enabled": false,
                         "name": "OpenRouter",
+                        // "openai" (any OpenAI-compatible server) or
+                        // "anthropic" (fixed api.anthropic.com, key only).
+                        "type": "openai",
                         "baseUrl": "https://openrouter.ai/api/v1",
                         // Curation: empty surfaces every fetched model;
                         // name raw model ids to surface only those (the

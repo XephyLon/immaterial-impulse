@@ -265,6 +265,10 @@ Singleton {
             property string apiKey
             property string providerName
             property int providerIndex
+            // "openai" (Bearer, /models, chat/completions entries) or
+            // "anthropic" (x-api-key + version header, /models, /messages
+            // entries) - the provider card's own type.
+            property string providerType: "openai"
             
             // Positional args ($1/$2), never spliced into the script body: apiKey
             // is a secret and baseUrl comes from custom-provider config (which flows
@@ -275,7 +279,9 @@ Singleton {
             // base URL that already ended in /models, a 401 from a missing
             // key and a server that was not there, and a reader could act on
             // none of them.
-            command: ["bash", "-c", 'curl -sL --max-time 10 -H "Authorization: Bearer $1" -w "\n%{http_code}" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
+            command: providerType === "anthropic"
+                ? ["bash", "-c", 'curl -sL --max-time 10 -H "x-api-key: $1" -H "anthropic-version: 2023-06-01" -w "\n%{http_code}" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
+                : ["bash", "-c", 'curl -sL --max-time 10 -H "Authorization: Bearer $1" -w "\n%{http_code}" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
             stdout: StdioCollector {
                 onStreamFinished: {
                     const cut = text.lastIndexOf("\n");
@@ -298,7 +304,9 @@ Singleton {
                         root.customProviderFeedbackText = Translation.tr("HTTP %2 from %1 at %3.").arg(fetcherProcess.providerName).arg(status).arg(where);
                         return;
                     }
-                    const parsedModels = AiModelsParser.parseCustomProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`);
+                    const parsedModels = fetcherProcess.providerType === "anthropic"
+                        ? AiModelsParser.parseAnthropicProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`)
+                        : AiModelsParser.parseCustomProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`);
                     if (parsedModels.length > 0) {
                         parsedModels.forEach(model => {
                             const safeModelName = root.safeModelName(model.model);
@@ -361,7 +369,8 @@ Singleton {
                 baseUrl: AiModelsParser.normalizeBaseUrl(provider.baseUrl || ""),
                 apiKey: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${i}`] || "") : "",
                 providerName: provider.name || "Custom",
-                providerIndex: i
+                providerIndex: i,
+                providerType: provider.type || "openai"
             });
             fetcher.running = true;
         }

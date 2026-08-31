@@ -98,14 +98,21 @@ ColumnLayout {
                         iconSize: Appearance.font.pixelSize.larger
                         color: Appearance.colors.colPrimary
                     }
-                    StyledText {
-                        Layout.fillWidth: true
+    StyledText {
                         elide: Text.ElideRight
                         text: Config.options.ai.customProviders[providerCard.index].name
                             || Translation.tr("Provider %1").arg(providerCard.index + 1)
                         font.pixelSize: Appearance.font.pixelSize.normal
                         font.weight: Font.DemiBold
                         color: Appearance.colors.colOnLayer2
+                    }
+                    StyledText {
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                        text: (Config.options.ai.customProviders[providerCard.index].type ?? "openai") === "anthropic"
+                            ? "Anthropic" : Translation.tr("OpenAI-compatible")
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
                     }
                     StyledSwitch {
                         // Non-checkable: the click is an INTENT and the write
@@ -185,6 +192,9 @@ ColumnLayout {
                 }
 
                 ConfigTextArea {
+                    // Anthropic's endpoint is fixed; the card asks for a
+                    // key and nothing else.
+                    visible: (Config.options.ai.customProviders[providerCard.index].type ?? "openai") !== "anthropic"
                     buttonIcon: "link"
                     text: Translation.tr("Base URL")
                     placeholderText: Translation.tr("e.g. https://openrouter.ai/api/v1")
@@ -225,24 +235,25 @@ ColumnLayout {
         }
     }
 
-    RippleButton {
-        // Add, as the M3 "empty slot" affordance: full width, dashed
-        // outline, where the next card will appear.
-        id: addProviderButton
+    Item {
+        // The empty slot: one click opens the type choice - the average
+        // user never touches the config file, so ANY provider kind must be
+        // addable from here. Picking plants a pre-filled card; Anthropic
+        // arrives with its fixed endpoint and needs only a key.
+        id: addSlot
+        property bool choosing: false
         Layout.fillWidth: true
-        // Inset from the window edges - full-bleed clipped the dashes.
         Layout.leftMargin: Appearance.spacing.space100
         Layout.rightMargin: Appearance.spacing.space100
         Layout.topMargin: Appearance.spacing.space100
         implicitHeight: 44
-        buttonRadius: Appearance.rounding.normal
-        colBackground: "transparent"
-        colBackgroundHover: Appearance.colors.colLayer2Hover
-        colRipple: Appearance.colors.colLayer2Active
-        onClicked: {
+
+        function plant(type, name, baseUrl) {
             let providers = [...(Config.options.ai.customProviders || [])];
-            providers.push({ enabled: false, name: "New Provider", baseUrl: "", selectedModels: [] });
+            providers.push({ "enabled": false, "name": name, "type": type,
+                             "baseUrl": baseUrl, "selectedModels": [] });
             Config.options.ai.customProviders = providers;
+            addSlot.choosing = false;
         }
 
         Canvas {
@@ -259,28 +270,100 @@ ColumnLayout {
                 ctx.lineWidth = 1.5;
                 ctx.setLineDash([6, 6]);
                 const r = Appearance.rounding.normal;
-                const inset = 2; // full stroke width inside the canvas
+                const inset = 2;
                 ctx.beginPath();
                 ctx.roundedRect(inset, inset, width - inset * 2, height - inset * 2, r, r);
                 ctx.stroke();
             }
         }
 
-        contentItem: Item {
-            implicitHeight: addRow.implicitHeight
-            RowLayout {
-                id: addRow
-                anchors.centerIn: parent
-                spacing: Appearance.spacing.space100
-                MaterialSymbol {
-                    text: "add"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer1
+        RippleButton {
+            anchors.fill: parent
+            visible: !addSlot.choosing
+            buttonRadius: Appearance.rounding.normal
+            colBackground: "transparent"
+            colBackgroundHover: Appearance.colors.colLayer2Hover
+            colRipple: Appearance.colors.colLayer2Active
+            onClicked: addSlot.choosing = true
+            contentItem: Item {
+                implicitHeight: addRow.implicitHeight
+                RowLayout {
+                    id: addRow
+                    anchors.centerIn: parent
+                    spacing: Appearance.spacing.space100
+                    MaterialSymbol {
+                        text: "add"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colOnLayer1
+                    }
+                    StyledText {
+                        text: Translation.tr("Add Provider")
+                        color: Appearance.colors.colOnLayer1
+                        font.pixelSize: Appearance.font.pixelSize.small
+                    }
                 }
-                StyledText {
-                    text: Translation.tr("Add Provider")
-                    color: Appearance.colors.colOnLayer1
-                    font.pixelSize: Appearance.font.pixelSize.small
+            }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 4
+            visible: addSlot.choosing
+            spacing: Appearance.spacing.space50
+
+            component TypeChoice: RippleButton {
+                property string label
+                property string glyph
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                buttonRadius: Appearance.rounding.small
+                colBackground: Appearance.colors.colLayer2
+                colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
+                contentItem: Item {
+                    implicitHeight: choiceRow.implicitHeight
+                    RowLayout {
+                        id: choiceRow
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space50
+                        MaterialSymbol {
+                            text: glyph
+                            iconSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnLayer2
+                        }
+                        StyledText {
+                            text: label
+                            color: Appearance.colors.colOnLayer2
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                        }
+                    }
+                }
+            }
+
+            TypeChoice {
+                label: Translation.tr("OpenAI-compatible")
+                glyph: "cloud"
+                onClicked: addSlot.plant("openai", "New Provider", "")
+            }
+            TypeChoice {
+                label: "Anthropic"
+                glyph: "psychology_alt"
+                onClicked: addSlot.plant("anthropic", "Anthropic", "https://api.anthropic.com/v1")
+            }
+            RippleButton {
+                implicitWidth: 32
+                Layout.fillHeight: true
+                buttonRadius: Appearance.rounding.small
+                colBackground: "transparent"
+                colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
+                onClicked: addSlot.choosing = false
+                contentItem: MaterialSymbol {
+                    anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "close"
+                    iconSize: Appearance.font.pixelSize.normal
+                    color: Appearance.colors.colSubtext
                 }
             }
         }

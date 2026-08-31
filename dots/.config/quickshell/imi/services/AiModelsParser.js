@@ -57,3 +57,32 @@ function parseCustomProviderModels(responseJsonString, baseUrl, providerName, ke
         return [];
     }
 }
+
+// Anthropic's GET /v1/models: {data:[{id, display_name, ...}]} - same
+// spine as the OpenAI listing, different endpoint suffix and dialect.
+function parseAnthropicProviderModels(responseJsonString, baseUrl, providerName, keyId) {
+    try {
+        if (!responseJsonString || responseJsonString.trim() === "") return [];
+        const data = JSON.parse(responseJsonString);
+        if (!data || !Array.isArray(data.data)) return [];
+        const sanitizedBaseUrl = normalizeBaseUrl(baseUrl);
+        let result = [];
+        data.data.forEach(model => {
+            if (!model.id) return;
+            result.push({
+                name: providerName + ": " + (model.display_name || guessModelName(model.id)),
+                providerName: providerName,
+                model: model.id,
+                description: `Online | ${providerName} | ${model.id}`,
+                endpoint: sanitizedBaseUrl + "/messages",
+                requires_key: true,
+                key_id: keyId,
+                api_format: "anthropic",
+                thinking: true
+            });
+        });
+        return result;
+    } catch (e) {
+        return [];
+    }
+}
