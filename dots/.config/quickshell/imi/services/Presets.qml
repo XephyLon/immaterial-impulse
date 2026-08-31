@@ -73,11 +73,23 @@ Singleton {
         saveProc.running = true
     }
 
-    function apply(name) {
+    // `sections` comes from PresetGroups.sectionsFor - config keys and
+    // appearance:<sub> spellings, sanitized by construction, but still
+    // passed as ONE argv element after --only, never shell-spliced.
+    function apply(name, sections) {
         GlobalStates.settingsOpen = false
-        Wallpapers.confirmedPath = ""
-        Wallpapers.previewPath = ""
-        Quickshell.execDetached(["bash", Directories.presetsScriptPath, "--apply", name])
+        // Clearing the wallpaper preview belongs to the wallpaper group:
+        // an apply that keeps the current wallpaper must not blank it.
+        const wallpaperIncluded = !sections
+            || sections.some(s => s === "background" || s === "wallpaperSelector")
+        if (wallpaperIncluded) {
+            Wallpapers.confirmedPath = ""
+            Wallpapers.previewPath = ""
+        }
+        const argv = ["bash", Directories.presetsScriptPath, "--apply", name]
+        if (sections && sections.length > 0)
+            argv.push("--only", sections.join(","))
+        Quickshell.execDetached(argv)
     }
 
     function remove(name) {
