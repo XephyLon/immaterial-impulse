@@ -82,6 +82,7 @@ Singleton {
     property string userAiPrompts: FileUtils.trimFileProtocol(`${Directories.shellConfig}/ai/prompts`)
     property string userActions: FileUtils.trimFileProtocol(`${Directories.shellConfig}/actions`)
     property string aiChats: FileUtils.trimFileProtocol(`${Directories.state}/user/ai/chats`)
+    property string aiSessions: FileUtils.trimFileProtocol(`${Directories.state}/user/ai/chats/sessions`)
     property string aiTranslationScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/ai/gemini-translate.sh`)
     property string iconThemeScanScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/icons/scan-icon-themes.py`)
     property string iconThemeApplyScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/icons/apply-icon-theme.sh`)
@@ -141,6 +142,7 @@ Singleton {
         Quickshell.execDetached(["bash", "-c", `rm -rf '${latexOutput}'; mkdir -p '${latexOutput}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${cliphistDecode}'; mkdir -p '${cliphistDecode}'`])
         Quickshell.execDetached(["mkdir", "-p", `${aiChats}`])
+        Quickshell.execDetached(["mkdir", "-p", `${aiSessions}`])
         Quickshell.execDetached(["rm", "-rf", `${tempImages}`])
     }
 }

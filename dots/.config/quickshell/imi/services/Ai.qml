@@ -570,6 +570,7 @@ Singleton {
         const id = idForMessage(aiMessage);
         root.messageIDs = [...root.messageIDs, id];
         root.messageByID[id] = aiMessage;
+        AiSessions.scheduleSave();
     }
 
     function removeMessage(index) {
@@ -698,7 +699,9 @@ Singleton {
                 root.postResponseHook();
                 root.postResponseHook = null; // Reset hook after use
             }
-            root.saveChat("lastSession")
+            // The finished answer is the autosave's strongest trigger; the
+            // old saveChat("lastSession") had no restore path and retires.
+            AiSessions.scheduleSave();
             root.responseFinished()
         }
 
@@ -828,6 +831,9 @@ Singleton {
 
     function sendUserMessage(message) {
         if (message.length === 0) return;
+        // The first user message of an unsaved chat mints its session -
+        // lazily, so an empty chat never touches disk (spec 2026-08-31).
+        AiSessions.mint(message);
         root.addMessage(message, "user");
         requester.makeRequest();
     }
@@ -979,48 +985,49 @@ Singleton {
         const saveContent = JSON.stringify(root.chatToJson())
         chatSaveFile.setText(saveContent)
         getSavedChats.running = true;
+        // Commands are sugar over sessions: /save NAME also names the
+        // current auto-saved session.
+        if (AiSessions.currentId.length > 0)
+            AiSessions.rename(AiSessions.currentId, chatName.trim())
     }
 
     /**
      * Loads chat from a JSON list of message objects.
      * @param chatName name of the chat
      */
-    function loadChat(chatName) {
-        try {
-            chatSaveFile.chatName = chatName.trim()
-            chatSaveFile.reload()
-            const saveContent = chatSaveFile.text()
-            // console.log(saveContent)
-            const saveData = JSON.parse(saveContent)
-            root.clearMessages()
-            root.messageIDs = saveData.map((_, i) => {
-                return i
-            })
-            // console.log(JSON.stringify(messageIDs))
-            for (let i = 0; i < saveData.length; i++) {
-                const message = saveData[i];
-                root.messageByID[i] = root.aiMessageComponent.createObject(root, {
-                    "role": message.role,
-                    "rawContent": message.rawContent,
-                    "content": message.rawContent,
-                    "fileMimeType": message.fileMimeType,
-                    "fileUri": message.fileUri,
-                    "localFilePath": message.localFilePath,
-                    "model": message.model,
-                    "thinking": message.thinking,
-                    "done": message.done,
-                    "annotations": message.annotations,
-                    "annotationSources": message.annotationSources,
-                    "functionName": message.functionName,
-                    "functionCall": message.functionCall,
-                    "functionResponse": message.functionResponse,
-                    "visibleToUser": message.visibleToUser,
-                });
-            }
-        } catch (e) {
-            console.log("[AI] Could not load chat: ", e);
-        } finally {
-            getSavedChats.running = true;
+    /** Rebuilds the live chat from a saved message array - shared by the
+        legacy /load path and AiSessions.openSession. */
+    function loadMessagesFromJson(saveData) {
+        root.clearMessages()
+        root.messageIDs = saveData.map((_, i) => {
+            return i
+        })
+        for (let i = 0; i < saveData.length; i++) {
+            const message = saveData[i];
+            root.messageByID[i] = root.aiMessageComponent.createObject(root, {
+                "role": message.role,
+                "rawContent": message.rawContent,
+                "content": message.rawContent,
+                "fileMimeType": message.fileMimeType,
+                "fileUri": message.fileUri,
+                "localFilePath": message.localFilePath,
+                "model": message.model,
+                "thinking": message.thinking,
+                "done": message.done,
+                "annotations": message.annotations,
+                "annotationSources": message.annotationSources,
+                "functionName": message.functionName,
+                "functionCall": message.functionCall,
+                "functionResponse": message.functionResponse,
+                "visibleToUser": message.visibleToUser,
+            });
         }
+    }
+
+    function loadChat(chatName) {
+        // Sugar over sessions now: a legacy flat file imports as a session
+        // and opens (the original stays); see the sessions view's Legacy
+        // section for the same door.
+        AiSessions.importLegacy(`${Directories.aiChats}/${chatName.trim()}.json`)
     }
 }
