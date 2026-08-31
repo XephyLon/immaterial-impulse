@@ -499,6 +499,9 @@ Rectangle {
                         segmentLang: modelData.lang
                         messageData: root.messageData
                     } }
+                    DelegateChoice { roleValue: "genimage"; MessageGenImageBlock {
+                        segmentContent: modelData.content
+                    } }
                     DelegateChoice { roleValue: "think"; MessageThinkBlock {
                         editing: root.editing
                         renderMarkdown: root.renderMarkdown

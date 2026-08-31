@@ -51,7 +51,7 @@ Singleton {
      * @returns {Array<{type: "text" | "think" | "code", content: string, lang?: string, completed?: boolean}>}
      */
     function splitMarkdownBlocks(markdown) {
-        const regex = /```(\w+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>/g;
+        const regex = /```(\w+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>|!\[[^\]\n]*\]\((\/[^)\s]*\/(?:inline-|gen-)[^)\s]+)\)/g;
         /**
          * @type {{type: "text" | "think" | "code"; content: string; lang: string | undefined; completed: boolean | undefined}[]}
          */
@@ -77,6 +77,14 @@ Singleton {
                         completed: true
                     });
                 }
+            } else if (match[0].startsWith('![')) {
+                // A generated image from the attachment store: its own
+                // block, so the transcript can render a real (rounded,
+                // clickable) Image instead of a raw markdown img.
+                result.push({
+                    type: "genimage",
+                    content: match[4]
+                });
             } else if (match[0].startsWith('<think>')) {
                 if (match[3] && match[3].trim()) {
                     result.push({
