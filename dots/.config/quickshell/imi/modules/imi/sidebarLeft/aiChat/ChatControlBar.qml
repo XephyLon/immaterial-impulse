@@ -56,7 +56,15 @@ Item {
         colRipple: Appearance.colors.colLayer2Active
         rippleEnabled: !chip.inert
 
-        contentItem: RowLayout {
+        // A Control force-sizes its contentItem to the padded rect, and a
+        // RowLayout wider than its implicit width lays children out from
+        // the LEFT - which pushed a lone icon off-centre. The Item takes
+        // the forced size; the row inside keeps its implicit one, centred.
+        contentItem: Item {
+            implicitWidth: chipContent.implicitWidth
+            implicitHeight: chipContent.implicitHeight
+
+            RowLayout {
             id: chipContent
             anchors.centerIn: parent
             spacing: Appearance.spacing.space50
@@ -92,6 +100,7 @@ Item {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
             }
+        }
         }
 
         StyledToolTip {
