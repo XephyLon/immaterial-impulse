@@ -13,6 +13,15 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Browse OpenRouter, import with one click.** The picker's "Browse
+  models…" row (and a door in Providers & keys) opens a searchable index
+  of OpenRouter's catalogue - context, pricing, reasoning and vision at
+  a glance. A click imports the model, keys it to your OpenRouter key,
+  and selects it. Models now carry capability metadata; reasoning is
+  requested wherever a model declares it.
+- **Drafts survive.** The composer's unsent text persists per chat -
+  and for the chat you haven't started yet - through restarts and
+  session switches, restored whenever the composer is empty.
 - **The composer remembers, and questions get second drafts.** Up/Down
   steps through this chat's past prompts shell-style (your unsent draft
   survives the round trip), and any question can be taken back - the
