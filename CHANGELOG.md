@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The quick toggles take pages.** The android grid becomes swipeable
+  pages with a dot rail - compose each page deliberately in edit mode,
+  add one with the + beside the dots, and empty pages sweep themselves
+  away when editing ends. A dragged tile held against the pager's edge
+  walks onto the neighbouring page. Existing layouts carry over as
+  page one.
 - **Apply a preset selectively.** Apply opens a dialog: six groups -
   wallpaper, theming, fonts, panels, widgets, everything else - all
   preselected so Enter still applies the whole preset, each showing how
