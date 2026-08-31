@@ -1023,13 +1023,19 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 root.pendingFilePaths = [];
             }
 
-            /* Create command string */
+            /* Create command string. The body goes through a FILE, written
+               by bash's builtin printf: a base64-encoded image inlined as a
+               curl argument blew ARG_MAX ("Argument list too long", exit
+               126) - builtins never exec, so they have no such limit. */
             let scriptRequestContent = ""
+            scriptRequestContent += `BODY_FILE='${CF.FileUtils.trimFileProtocol(root.requestScriptFilePath)}.body.json'\n`
+            scriptRequestContent += `printf '%s' '${CF.StringUtils.shellSingleQuoteEscape(JSON.stringify(data))}' > "$BODY_FILE"\n`
             scriptRequestContent += `curl --no-buffer "${endpoint}"`
                 + ` ${headerString}`
                 + (authHeader ? ` ${authHeader}` : "")
-                + ` --data '${CF.StringUtils.shellSingleQuoteEscape(JSON.stringify(data))}'`
+                + ` --data @"$BODY_FILE"`
                 + "\n"
+            scriptRequestContent += `rm -f "$BODY_FILE"\n`
             
             /* Send the request */
             const scriptContent = requester.currentStrategy.finalizeScriptContent(scriptShebang + scriptFileSetupContent + scriptRequestContent)
