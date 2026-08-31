@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Widgets
 
 Rectangle {
     id: root
@@ -396,16 +397,17 @@ Rectangle {
             }
         }
 
-        Rectangle {
+        ClippingRectangle {
             // The image skeleton: an image-shaped placeholder with a
             // sweeping highlight while a generation is in flight; the
-            // markdown image replaces it when the sentinel lands.
+            // markdown image replaces it when the sentinel lands. A
+            // ClippingRectangle so the sweep respects the corners - a
+            // plain clip is square and un-rounded the plate.
             visible: (root.messageData?.generatingImage ?? false) && !(root.messageData?.done ?? true)
             Layout.fillWidth: true
-            implicitHeight: 200
+            implicitHeight: 180
             radius: Appearance.rounding.normal
             color: Appearance.colors.colLayer2
-            clip: true
 
             Rectangle {
                 id: skeletonSweep
@@ -427,17 +429,18 @@ Rectangle {
                 }
             }
 
-            ColumnLayout {
+            RowLayout {
+                // One line, the "Thinking..." grammar: icon beside label.
                 anchors.centerIn: parent
                 spacing: Appearance.spacing.space100
                 MaterialSymbol {
-                    Layout.alignment: Qt.AlignHCenter
+                    Layout.alignment: Qt.AlignVCenter
                     text: "image"
-                    iconSize: 36
+                    iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colSubtext
                 }
                 ShimmerLabel {
-                    Layout.alignment: Qt.AlignHCenter
+                    Layout.alignment: Qt.AlignVCenter
                     running: true
                     text: Translation.tr("Generating image…")
                     baseColor: Appearance.colors.colSubtext
