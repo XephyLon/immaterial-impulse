@@ -113,6 +113,18 @@ Item {
         "Page_↑/↓": "⇞/⇟",
     })
 
+    // Section glyphs, keyed on the group names keybinds.lua uses today,
+    // with a neutral fallback for any group added later.
+    property var sectionIcons: ({
+        "Utilities": "handyman",
+        "Session": "power_settings_new",
+        "Apps": "apps",
+        "Screen": "desktop_windows",
+        "Window": "select_window",
+        "Media": "music_note",
+        "Workspace": "workspaces"
+    })
+
     property var keyBlacklist: ["Super_L"]
     property var keySubstitutions: Object.assign({
         "Super": "",
@@ -204,16 +216,25 @@ Item {
                             anchors.margins: keybindSection.cardPadding
                             spacing: root.titleSpacing
                             
-                            StyledText {
-                                id: sectionTitle
-                                visible: text.length > 0
-                                font {
-                                    family: Appearance.font.family.title
-                                    pixelSize: Appearance.font.pixelSize.title
-                                    variableAxes: Appearance.font.variableAxes.title
+                            Row {
+                                visible: sectionTitle.text.length > 0
+                                spacing: Appearance.spacing.space100
+                                MaterialSymbol {
+                                    anchors.verticalCenter: sectionTitle.verticalCenter
+                                    text: root.sectionIcons[keybindSection.modelData.name] ?? "keyboard"
+                                    iconSize: Appearance.font.pixelSize.title
+                                    color: Appearance.colors.colPrimary
                                 }
-                                color: Appearance.colors.colOnLayer1
-                                text: keybindSection.modelData.name
+                                StyledText {
+                                    id: sectionTitle
+                                    font {
+                                        family: Appearance.font.family.title
+                                        pixelSize: Appearance.font.pixelSize.title
+                                        variableAxes: Appearance.font.variableAxes.title
+                                    }
+                                    color: Appearance.colors.colOnLayer1
+                                    text: keybindSection.modelData.name
+                                }
                             }
 
                             GridLayout {
