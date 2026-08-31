@@ -124,6 +124,19 @@ Item {
         "Slash": "/",
         "Hash": "#",
         "Return": "Enter",
+        "XF86AudioRaiseVolume": Translation.tr("Volume Up"),
+        "XF86AudioLowerVolume": Translation.tr("Volume Down"),
+        "XF86AudioMute": Translation.tr("Mute"),
+        "XF86AudioMicMute": Translation.tr("Mic Mute"),
+        "XF86AudioPlay": Translation.tr("Play"),
+        "XF86AudioPause": Translation.tr("Pause"),
+        "XF86AudioNext": Translation.tr("Next Track"),
+        "XF86AudioPrev": Translation.tr("Prev Track"),
+        "XF86AudioStop": Translation.tr("Stop"),
+        "XF86MonBrightnessUp": Translation.tr("Brightness Up"),
+        "XF86MonBrightnessDown": Translation.tr("Brightness Down"),
+        "XF86KbdBrightnessUp": Translation.tr("Kbd Light Up"),
+        "XF86KbdBrightnessDown": Translation.tr("Kbd Light Down"),
         // "Shift": "",
       },
       !!Config.options.cheatsheet.superKey ? {
@@ -142,22 +155,53 @@ Item {
             model: root.columns
 
             delegate: Column { // One balanced column of sections
+                id: sectionsColumn
                 spacing: root.spacing
                 required property var modelData
                 anchors.top: row.top
 
+                // The widest section in this column decides the card width
+                // for all of them, so the column reads as a stack of equal
+                // cards. Computed from implicitWidth, never width: a
+                // positioner Column takes its implicitWidth from its
+                // children's WIDTH, so a card bound to parent.width is a
+                // binding loop that silently collapses the whole sheet to
+                // zero (it did).
+                readonly property real cardWidth: {
+                    let widest = 0;
+                    for (let i = 0; i < children.length; i++)
+                        widest = Math.max(widest, children[i].implicitWidth);
+                    return widest;
+                }
+
                 Repeater {
                     model: modelData
 
-                    delegate: Item { // Section with real keybinds
+                    delegate: Rectangle { // Section card
                         id: keybindSection
                         required property var modelData
-                        implicitWidth: sectionColumn.implicitWidth
-                        implicitHeight: sectionColumn.implicitHeight
+                        // Every section is its own surface rather than a
+                        // heading floating on the sheet - the card is what
+                        // separates one group of binds from the next. Width
+                        // follows the widest sibling (see cardWidth), so a
+                        // column reads as a stack of equal cards, not a
+                        // ragged pile.
+                        readonly property real cardPadding: Appearance.spacing.space150
+                        width: sectionsColumn.cardWidth
+                        color: Appearance.colors.colLayer1
+                        radius: Appearance.rounding.normal
+                        implicitWidth: sectionColumn.implicitWidth + cardPadding * 2
+                        implicitHeight: sectionColumn.implicitHeight + cardPadding * 2
 
                         Column {
                             id: sectionColumn
-                            anchors.centerIn: parent
+                            // Left-anchored, not centered: the card is as wide
+                            // as the column's widest section, and a narrower
+                            // section centered in that width floats its title
+                            // into the middle of the card.
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.margins: keybindSection.cardPadding
                             spacing: root.titleSpacing
                             
                             StyledText {
@@ -168,7 +212,7 @@ Item {
                                     pixelSize: Appearance.font.pixelSize.title
                                     variableAxes: Appearance.font.variableAxes.title
                                 }
-                                color: Appearance.colors.colOnLayer0
+                                color: Appearance.colors.colOnLayer1
                                 text: keybindSection.modelData.name
                             }
 
