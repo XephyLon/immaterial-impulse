@@ -113,12 +113,33 @@ Item {
         anchors.fill: parent
         spacing: Appearance.spacing.space50
 
-        ControlChip { // Model: the name is a value, so compact keeps it.
-            chipIcon: "network_intelligence"
-            value: Ai.getModel()?.name ?? Translation.tr("Model")
-            caret: true
-            hint: Translation.tr("Current model\nSet it with %1model MODEL").arg(root.commandPrefix)
-            onClicked: root.prefill(root.commandPrefix + "model ")
+        StyledComboBox { // Model: a real picker, not a pre-fill.
+            id: modelPicker
+            Layout.alignment: Qt.AlignVCenter
+            Layout.preferredWidth: Math.min(implicitWidth, 210)
+            implicitHeight: 32
+            buttonIcon: "network_intelligence"
+            textRole: "name"
+            colBackground: Appearance.colors.colLayer2
+            colBackgroundHover: Appearance.colors.colLayer2Hover
+            colBackgroundActive: Appearance.colors.colLayer2Active
+            // The model's own `icon` is a symbolic asset name, not a
+            // material glyph, so the picker carries its own glyph and the
+            // rows show names only.
+            model: Ai.modelList.map(id => ({ name: Ai.models[id]?.name ?? id, value: id }))
+            currentIndex: Ai.modelList.indexOf(Ai.currentModelId)
+            onActivated: index => {
+                const chosen = modelPicker.model[index];
+                if (chosen) Ai.setModel(chosen.value);
+            }
+            // A pick writes currentIndex and destroys the binding above, so
+            // an external change (the /model command) resyncs it here.
+            Connections {
+                target: Ai
+                function onCurrentModelIdChanged() {
+                    modelPicker.currentIndex = Ai.modelList.indexOf(Ai.currentModelId);
+                }
+            }
         }
         ControlChip {
             chipIcon: "device_thermostat"

@@ -38,8 +38,10 @@ def test_the_composer_has_one_entrance_writer():
 
 def test_the_chips_carry_the_pills_command_hints():
     body = BAR.read_text(encoding="utf-8")
-    for hint in ("model MODEL", "temp VALUE", "key YOUR_API_KEY"):
+    for hint in ("temp VALUE", "key YOUR_API_KEY"):
         assert hint in body, f"a chip lost its command hint: {hint}"
+    assert "StyledComboBox" in body and "setModel" in body, (
+        "the model control must be a real picker, not a pre-fill")
     assert "StyledToolTip" in body
     assert "clearMessages" in body, "the new-chat chip lost its action"
 
