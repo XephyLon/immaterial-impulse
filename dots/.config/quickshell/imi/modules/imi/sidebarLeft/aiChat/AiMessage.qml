@@ -19,7 +19,12 @@ Rectangle {
     // A user turn reads as a chat bubble - inset from the left, tinted,
     // no header plate - while assistant/interface turns keep the document
     // layout their content needs.
-    readonly property bool isUser: messageData?.role === 'user'
+    // A tool's answer rides the user role for the API's sake, but it is
+    // not the user speaking - it renders as a compact tool row, never as
+    // a bubble.
+    readonly property bool isToolOutput: messageData?.role === 'user'
+        && (messageData?.functionName?.length ?? 0) > 0
+    readonly property bool isUser: messageData?.role === 'user' && !isToolOutput
     property real contentSpacing: Appearance.spacing.space50
 
     property bool enableMouseSelection: false
@@ -247,7 +252,8 @@ Rectangle {
                                 visible: !modelIcon.visible
                                 iconSize: Appearance.font.pixelSize.larger
                                 color: Appearance.m3colors.m3onSecondaryContainer
-                                text: messageData?.role == 'user' ? 'person' : 
+                                text: root.isToolOutput ? 'construction'
+                                    : messageData?.role == 'user' ? 'person' : 
                                     messageData?.role == 'interface' ? 'settings' : 
                                     messageData?.role == 'assistant' ? 'neurology' : 
                                     'computer'
@@ -264,7 +270,8 @@ Rectangle {
                             glowColor: Appearance.colors.colPrimary
                             font.pixelSize: Appearance.font.pixelSize.normal
                             font.weight: Font.DemiBold
-                            text: messageData?.role == 'assistant' ? (Ai.models[messageData?.model]?.name ?? messageData?.model ?? "") :
+                            text: root.isToolOutput ? (messageData?.functionName ?? "tool")
+                                : messageData?.role == 'assistant' ? (Ai.models[messageData?.model]?.name ?? messageData?.model ?? "") :
                                 (messageData?.role == 'user' && SystemInfo.username) ? SystemInfo.username :
                                 Translation.tr("Interface")
                         }
@@ -450,8 +457,23 @@ Rectangle {
             }
         }
 
+        StyledText {
+            // The tool's answer, as one quiet line - the raw content wraps
+            // it in <think> markers for the API, which rendered as an
+            // absurd "Thought" collapse inside a user bubble.
+            visible: root.isToolOutput
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            maximumLineCount: 4
+            elide: Text.ElideRight
+            text: String(root.messageData?.functionResponse ?? "")
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smaller
+        }
+
         ColumnLayout { // Message content
             id: messageContentColumnLayout
+            visible: !root.isToolOutput
             spacing: 0
 
             Item {
@@ -530,6 +552,7 @@ Rectangle {
         }
 
         RowLayout {
+            visible: !root.isToolOutput
             Layout.fillWidth: true
             Item { Layout.fillWidth: true }
             Item {
