@@ -72,8 +72,13 @@ Item {
         running: root.visible
         onTriggered: root.nowTick = Date.now()
     }
-    // { pct, abs, direction } per quote, or null while the day is young.
+    // { pct, abs, direction } per quote. Day-over-day from the daily
+    // closes first - the same data the trend charts read, so the arrow and
+    // the chart cannot disagree. The 24h observed fold is the fallback for
+    // a cold daily store, and null hides the column entirely.
     function movementFor(code) {
+        const daily = Daily.changeFrom(CurrencyService.daily, code, root.nowTick);
+        if (daily !== null) return daily;
         const current = CurrencyService.rates[code];
         if (current === undefined) return null;
         return History.changeOf(CurrencyService.history, code, root.nowTick, current);

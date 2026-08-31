@@ -73,6 +73,25 @@ function closesFor(store, code, now, count) {
     return out;
 }
 
+// Which way the day went, from the last two daily closes - the same data
+// the trend charts read. The live rate is deliberately not in this: the
+// upstream dataset is daily, so intraday movement of it is almost always
+// zero, and an arrow that reads the live rate against this morning's value
+// says "flat" all day next to a weekly chart that visibly moves.
+// Same shape and dead band as the 24h changeOf; null below two closes.
+function changeFrom(store, code, now) {
+    var closes = closesFor(store, code, now, DAYS_KEPT);
+    if (closes.length < 2) return null;
+    var previous = closes[closes.length - 2].value;
+    var last = closes[closes.length - 1].value;
+    var pct = (last - previous) / previous * 100;
+    return {
+        pct: pct,
+        abs: last - previous,
+        direction: Math.abs(pct) < FLAT_PCT ? 0 : (pct > 0 ? 1 : -1)
+    };
+}
+
 // The chart series, normalised to the unit box (x by day order, y across
 // the observed range, a flat line pinned mid-height), plus the trend's
 // direction (last close against first, with the same dead band the 24h

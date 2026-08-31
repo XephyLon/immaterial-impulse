@@ -81,4 +81,31 @@ TestCase {
         for (const close of closes)
             verify(close.value > 40, "never a zero point dragging the chart");
     }
+    function test_movement_reads_the_last_two_closes() {
+        const store = warmStore(5);
+        // USD closes decline toward yesterday (50 + back * 0.1), so the
+        // day-over-day step is 50.1 against 50.2.
+        const change = Daily.changeFrom(store, "USD", nowMs);
+        verify(change !== null);
+        fuzzyCompare(change.abs, -0.1, 1e-9);
+        fuzzyCompare(change.pct, -0.1 / 50.2 * 100, 1e-9);
+        compare(change.direction, -1);
+    }
+
+    function test_movement_is_null_below_two_closes() {
+        compare(Daily.changeFrom(null, "USD", nowMs), null);
+        compare(Daily.changeFrom(warmStore(1), "USD", nowMs), null);
+    }
+
+    function test_movement_dead_band_reads_flat() {
+        let store = { base: "EGP", days: {} };
+        store = Daily.foldSnapshot(store, "EGP", Daily.dateKey(nowMs - 2 * dayMs),
+            { USD: 50.0 }, nowMs);
+        store = Daily.foldSnapshot(store, "EGP", Daily.dateKey(nowMs - 1 * dayMs),
+            { USD: 50.000001 }, nowMs);
+        const change = Daily.changeFrom(store, "USD", nowMs);
+        verify(change !== null);
+        compare(change.direction, 0, "inside the dead band the day is flat");
+    }
+
 }
