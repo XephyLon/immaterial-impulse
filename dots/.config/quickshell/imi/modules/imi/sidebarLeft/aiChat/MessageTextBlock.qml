@@ -201,9 +201,20 @@ ColumnLayout {
                 : root.messageData?.role === 'user' ? Appearance.m3colors.m3onSecondaryContainer
                 : Appearance.colors.colOnLayer1
             textFormat: renderMarkdown ? TextEdit.MarkdownText : TextEdit.PlainText
+            // The width inline images are fitted to, sampled OUTSIDE the
+            // text binding and quantized to 20px steps. text reading `width`
+            // directly is a binding loop: wrapped text feeds implicitWidth
+            // back into the layout that hands the width out, and every
+            // message with an inline image logged it on transcript load.
+            property real imageFitWidth: 0
+            onWidthChanged: {
+                const quantized = Math.floor(width / 20) * 20;
+                if (quantized !== imageFitWidth)
+                    imageFitWidth = quantized;
+            }
             text: {
                 const raw = liveTail ? committedText : modelData;
-                return (root.editing || !renderMarkdown) ? raw : root.fitLocalImages(raw, width);
+                return (root.editing || !renderMarkdown) ? raw : root.fitLocalImages(raw, imageFitWidth);
             }
 
             onTextChanged: {
