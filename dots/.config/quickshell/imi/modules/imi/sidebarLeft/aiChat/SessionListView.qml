@@ -65,6 +65,7 @@ Rectangle {
                 implicitHeight: 32
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"
+                colRipple: Appearance.colors.colLayer2Active
                 onClicked: root.closed()
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
@@ -169,6 +170,7 @@ Rectangle {
         implicitHeight: 28
         buttonRadius: Appearance.rounding.full
         colBackground: "transparent"
+        colRipple: Appearance.colors.colLayer2Active
         contentItem: MaterialSymbol {
             anchors.centerIn: parent
             horizontalAlignment: Text.AlignHCenter

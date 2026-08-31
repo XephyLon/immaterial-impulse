@@ -271,6 +271,7 @@ Scope {
                             id: wallpaperRow
                             implicitHeight: 40
                             colBackground: "transparent"
+                            colRipple: Appearance.colors.colLayer2Active
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
@@ -315,6 +316,7 @@ Scope {
                             id: widgetsRow
                             implicitHeight: 40
                             colBackground: "transparent"
+                            colRipple: Appearance.colors.colLayer2Active
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
@@ -363,6 +365,7 @@ Scope {
                             property bool rowVisible: !GlobalStates.editMode
                             implicitHeight: 40
                             colBackground: "transparent"
+                            colRipple: Appearance.colors.colLayer2Active
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
@@ -388,6 +391,7 @@ Scope {
                         RippleButton {
                             implicitHeight: 40
                             colBackground: "transparent"
+                            colRipple: Appearance.colors.colLayer2Active
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
@@ -427,6 +431,7 @@ Scope {
                         RippleButton {
                             implicitHeight: 40
                             colBackground: "transparent"
+                            colRipple: Appearance.colors.colLayer2Active
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }

@@ -40,6 +40,7 @@ Item {
             
             buttonRadius: Appearance.rounding.small
             colBackground: "transparent"
+            colRipple: Appearance.colors.colLayer2Active
             
             leftPadding: 12 * Appearance.effectiveScale
             rightPadding: 12 * Appearance.effectiveScale

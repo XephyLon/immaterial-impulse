@@ -178,6 +178,7 @@ StyledPopup {
                 implicitHeight: 64
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"
+                colRipple: Appearance.colors.colLayer1Active
                 colBackgroundHover: Appearance.colors.colLayer1Hover
                 onClicked: DiscordVoice.setMuted(!DiscordVoice.muted)
                 contentItem: MaterialShapeWrappedMaterialSymbol {
@@ -197,6 +198,7 @@ StyledPopup {
                 implicitHeight: 64
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"
+                colRipple: Appearance.colors.colLayer1Active
                 colBackgroundHover: Appearance.colors.colLayer1Hover
                 onClicked: DiscordVoice.setDeafened(!DiscordVoice.deafened)
                 contentItem: MaterialShapeWrappedMaterialSymbol {

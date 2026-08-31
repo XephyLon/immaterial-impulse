@@ -364,6 +364,7 @@ Item {
                     implicitHeight: 32
                     buttonRadius: Appearance.rounding.full
                     colBackground: "transparent"
+                    colRipple: Appearance.colors.colLayer2Active
                     onClicked: settingsSearchField.text = ""
                     contentItem: MaterialSymbol {
                         horizontalAlignment: Text.AlignHCenter

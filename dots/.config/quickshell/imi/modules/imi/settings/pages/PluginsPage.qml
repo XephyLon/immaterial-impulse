@@ -432,6 +432,7 @@ Item {
                                             implicitHeight: 36
                                             buttonRadius: Appearance.rounding.full
                                             colBackground: "transparent"
+                                            colRipple: Appearance.colors.colLayer2Active
                                             colBackgroundHover: Appearance.colors.colLayer2
                                             onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
 

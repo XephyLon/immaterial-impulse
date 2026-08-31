@@ -260,6 +260,7 @@ Item {
                     anchors.fill: parent
                     buttonRadius: Appearance.rounding.large
                     colBackground: "transparent"
+                    colRipple: Appearance.colors.colLayer2Active
                     colBackgroundHover: Appearance.colors.colLayer2
                     
                     onClicked: root.openMoreWallpapers()

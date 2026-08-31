@@ -41,6 +41,7 @@ Rectangle {
         implicitHeight: 36
         buttonRadius: toggled ? Appearance.rounding.small : height / 2
         colBackground: "transparent"
+        colRipple: Appearance.colors.colLayer1Active
         colBackgroundHover: Appearance.colors.colLayer1Hover
         colBackgroundToggled: Appearance.colors.colPrimary
         contentItem: MaterialSymbol {
@@ -80,6 +81,7 @@ Rectangle {
                 implicitHeight: 26
                 buttonRadius: height / 2
                 colBackground: "transparent"
+                colRipple: Appearance.colors.colLayer1Active
                 colBackgroundHover: Appearance.colors.colLayer1Hover
                 contentItem: Rectangle {
                     anchors.centerIn: parent
@@ -111,6 +113,7 @@ Rectangle {
                 implicitHeight: 26
                 buttonRadius: height / 2
                 colBackground: "transparent"
+                colRipple: Appearance.colors.colLayer1Active
                 colBackgroundHover: Appearance.colors.colLayer1Hover
                 toggled: bar.annotationLayer.strokeWidth === modelData
                 colBackgroundToggled: Appearance.colors.colSecondaryContainer

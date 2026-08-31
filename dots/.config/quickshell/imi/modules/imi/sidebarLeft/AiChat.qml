@@ -706,6 +706,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 implicitHeight: 32
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
+                                colRipple: Appearance.colors.colLayer2Active
                                 onClicked: root.activeView = ""
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent

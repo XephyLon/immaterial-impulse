@@ -246,6 +246,7 @@ Item {
                         implicitHeight: 32
                         buttonRadius: Appearance.rounding.full
                         colBackground: "transparent"
+                        colRipple: Appearance.colors.colLayer2Active
                         onClicked: root.removeRequested(row.index)
                         contentItem: MaterialSymbol {
                             anchors.centerIn: parent

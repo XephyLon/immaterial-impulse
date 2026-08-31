@@ -317,6 +317,7 @@ PanelWindow {
         
         buttonRadius: Appearance.rounding.small
         colBackground: "transparent"
+        colRipple: Appearance.colors.colLayer2Active
         
         // Define padding for the content
         leftPadding: 12 * Appearance.effectiveScale

@@ -223,6 +223,7 @@ Item {
                         Layout.fillWidth: true
                         implicitHeight: 40
                         colBackground: "transparent"
+                        colRipple: Appearance.colors.colLayer2Active
                         buttonRadius: Appearance.rounding.verylarge
                         colBackgroundHover: Appearance.colors.colLayer2
                         onClicked: Config.options.background.wallpaperAnimation = transRow.modelData.value

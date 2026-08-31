@@ -157,6 +157,7 @@ Item {
             objectName: "editMenuPin"
             implicitHeight: 40
             colBackground: "transparent"
+            colRipple: Appearance.colors.colLayer2Active
             colBackgroundHover: Appearance.colors.colLayer2
             // The intent shape: the click flips the value at its source (the
             // same read the `pinned` binding makes), and the check beside the
@@ -225,6 +226,7 @@ Item {
                     enabled: root.stepBack !== null
                     onClicked: root.stepSize(-1)
                     colBackground: "transparent"
+                    colRipple: Appearance.colors.colLayer2Active
                     colBackgroundHover: Appearance.colors.colLayer2
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
@@ -249,6 +251,7 @@ Item {
                     enabled: root.stepForward !== null
                     onClicked: root.stepSize(1)
                     colBackground: "transparent"
+                    colRipple: Appearance.colors.colLayer2Active
                     colBackgroundHover: Appearance.colors.colLayer2
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
@@ -267,6 +270,7 @@ Item {
             objectName: "editMenuRemove"
             implicitHeight: 40
             colBackground: "transparent"
+            colRipple: Appearance.colors.colLayer2Active
             colBackgroundHover: Appearance.colors.colLayer2
             // Presence: the same write the drawer's toggle and Settings >
             // Widgets make, through the one spelling. The dismiss is raised as

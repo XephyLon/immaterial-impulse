@@ -102,6 +102,7 @@ Item {
                 implicitHeight: 32 * Appearance.effectiveScale
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"
+                colRipple: Appearance.colors.colLayer2Active
                 colBackgroundHover: Appearance.colors.colLayer2Hover
                 onClicked: root.yearMode = !root.yearMode
                 contentItem: RowLayout {
@@ -126,6 +127,7 @@ Item {
                 implicitWidth: 32 * Appearance.effectiveScale; implicitHeight: 32 * Appearance.effectiveScale
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"; colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
                 enabled: !root.yearMode
                 onClicked: root.monthShift--
                 contentItem: MaterialSymbol {
@@ -138,6 +140,7 @@ Item {
                 implicitWidth: 32 * Appearance.effectiveScale; implicitHeight: 32 * Appearance.effectiveScale
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"; colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
                 enabled: !root.yearMode
                 onClicked: root.monthShift++
                 contentItem: MaterialSymbol {
@@ -312,6 +315,7 @@ Item {
                 implicitHeight: 36 * Appearance.effectiveScale
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"; colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
                 onClicked: root.cancelled()
                 contentItem: StyledText {
                     text: "Cancel"; font.pixelSize: Appearance.font.pixelSize.small
@@ -323,6 +327,7 @@ Item {
                 implicitHeight: 36 * Appearance.effectiveScale
                 buttonRadius: Appearance.rounding.full
                 colBackground: "transparent"; colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
                 onClicked: {
                     if (root.pendingDateStr) {
                         root.currentDateStr = root.pendingDateStr
