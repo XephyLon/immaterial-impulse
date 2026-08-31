@@ -43,6 +43,25 @@ Item {
         messageInputField.forceActiveFocus();
     }
 
+    function regenerateLastAnswer() {
+        for (let at = Ai.messageIDs.length - 1; at >= 0; at--) {
+            if (Ai.messageByID[Ai.messageIDs[at]]?.role === "assistant") {
+                Ai.regenerate(at);
+                return;
+            }
+        }
+    }
+
+    function editLastQuestion() {
+        for (let at = Ai.messageIDs.length - 1; at >= 0; at--) {
+            const m = Ai.messageByID[Ai.messageIDs[at]];
+            if (m?.role === "user" && m.visibleToUser !== false) {
+                root.beginEdit(at, String(m.rawContent ?? m.content ?? ""));
+                return;
+            }
+        }
+    }
+
     function cancelEdit() {
         if (root.editingMessageIndex < 0) return;
         root.editingMessageIndex = -1;
@@ -158,28 +177,6 @@ Item {
         }
         if ((event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.ShiftModifier) && event.key === Qt.Key_O) {
             AiSessions.newSession();
-        }
-        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_R) {
-            // Redo the last answer with the same wording.
-            for (let at = Ai.messageIDs.length - 1; at >= 0; at--) {
-                if (Ai.messageByID[Ai.messageIDs[at]]?.role === "assistant") {
-                    Ai.regenerate(at);
-                    break;
-                }
-            }
-            event.accepted = true;
-        }
-        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Up
-                && messageInputField.text.length === 0) {
-            // Take the last question back for another go.
-            for (let at = Ai.messageIDs.length - 1; at >= 0; at--) {
-                const m = Ai.messageByID[Ai.messageIDs[at]];
-                if (m?.role === "user" && m.visibleToUser !== false) {
-                    root.beginEdit(at, String(m.rawContent ?? m.content ?? ""));
-                    break;
-                }
-            }
-            event.accepted = true;
         }
     }
 
@@ -1016,6 +1013,20 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         }
 
                         Keys.onPressed: event => {
+                            // These live HERE, not on the pane root: the
+                            // TextArea holds focus and consumes modified
+                            // arrows internally, so root arms never fire.
+                            if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_R) {
+                                root.regenerateLastAnswer();
+                                event.accepted = true;
+                                return;
+                            }
+                            if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Up
+                                    && messageInputField.text.length === 0) {
+                                root.editLastQuestion();
+                                event.accepted = true;
+                                return;
+                            }
                             if (event.key === Qt.Key_Tab) {
                                 suggestions.acceptSelectedWord();
                                 event.accepted = true;
