@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Chats save themselves.** Every conversation persists as a session
+  the moment you send the first message - no /save needed. The tools
+  bar's new history chip opens the list: pinned first, open on the row,
+  rename in place, pin and delete on hover, and your old /save files
+  waiting at the foot to be imported. /save now names the current
+  session; /load imports the file it names.
 - **The Intelligence tab reads as an instrument.** Three surfaces - a
   chip tools bar (model, temperature, key, tokens, new chat), the chat
   area, the composer - with an opening choreography: the pane waves in,

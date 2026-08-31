@@ -44,7 +44,8 @@ def test_the_chips_carry_the_pills_command_hints():
     assert "StyledComboBox" in body and "setModel" in body, (
         "the model control must be a real picker, not a pre-fill")
     assert "StyledToolTip" in body
-    assert "clearMessages" in body, "the new-chat chip lost its action"
+    assert "newSession" in body, (
+        "the new-chat chip must finalize the session, not just clear")
 
 
 def test_one_providers_editor_serves_both_surfaces():
@@ -66,6 +67,30 @@ def test_the_greeting_key_exists_and_rolls():
         "sidebar.ai.greeting is gone from the schema")
     chat = CHAT.read_text(encoding="utf-8")
     assert "refreshGreeting" in chat and "greetingLines" in chat
+
+
+AI_SERVICE = ROOT / "services/Ai.qml"
+SESSIONS = ROOT / "services/AiSessions.qml"
+
+
+def test_chats_save_themselves_through_one_storage():
+    """The autosave replaced the write-only saveChat("lastSession"); a
+    second storage path growing back is how two copies of a chat drift."""
+    ai = AI_SERVICE.read_text(encoding="utf-8")
+    assert 'saveChat("lastSession")' not in ai, "the dead autosave crept back"
+    assert "AiSessions.mint(" in ai, "the first user message must mint"
+    assert "AiSessions.scheduleSave()" in ai, "adds and answers must flush"
+    assert SESSIONS.exists()
+
+
+def test_one_view_switcher_owns_the_overlays():
+    chat = CHAT.read_text(encoding="utf-8")
+    assert 'property string activeView' in chat
+    assert "keysViewOpen" not in chat, (
+        "the keys view must ride the switcher, not a flag of its own")
+    assert "SessionListView" in chat
+    bar = BAR.read_text(encoding="utf-8")
+    assert "sessionsRequested" in bar, "the history chip requests, never renders"
 
 
 if __name__ == "__main__":
