@@ -489,12 +489,36 @@ Item {
                     }, 
                 ]
 
-                ApiInputBoxIndicator { // Tool indicator
-                    icon: "api"
-                    text: Booru.providers[Booru.currentProvider].name
-                    tooltipText: Translation.tr("Current API endpoint: %1\nSet it with %2mode PROVIDER")
-                        .arg(Booru.providers[Booru.currentProvider].url)
-                        .arg(root.commandPrefix)
+                StyledComboBox { // The provider menu - same grammar as the AI model picker
+                    id: providerPicker
+                    Layout.fillWidth: false
+                    Layout.preferredWidth: Math.min(implicitWidth, 170)
+                    Layout.minimumWidth: 0
+                    implicitHeight: 28
+                    popupWidth: 220
+                    buttonIcon: "api"
+                    textRole: "name"
+                    colBackground: "transparent"
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colBackgroundActive: Appearance.colors.colLayer2Active
+                    model: Booru.providerList.map(provider => ({
+                        name: Booru.providers[provider].name, value: provider }))
+                    currentIndex: Booru.providerList.indexOf(Booru.currentProvider)
+                    displayText: providerPicker.currentIndex < 0
+                        ? Translation.tr("Provider")
+                        : (providerPicker.model[providerPicker.currentIndex]?.name ?? "")
+                    onActivated: index => {
+                        const chosen = providerPicker.model[index];
+                        if (chosen) Booru.setProvider(chosen.value);
+                    }
+                    // A pick writes currentIndex and destroys the binding;
+                    // the /mode command path resyncs it here.
+                    Connections {
+                        target: Booru
+                        function onCurrentProviderChanged() {
+                            providerPicker.currentIndex = Booru.providerList.indexOf(Booru.currentProvider);
+                        }
+                    }
                 }
 
                 StyledText {
