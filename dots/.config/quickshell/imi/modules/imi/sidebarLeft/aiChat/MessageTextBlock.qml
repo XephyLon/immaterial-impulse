@@ -119,6 +119,19 @@ ColumnLayout {
             required property int index
             required property string modelData
 
+            // The append fade. The base shows COMMITTED text; a stacked twin
+            // renders the full text and fades in over each flush, so only
+            // the appended words fade - identical glyphs overlap invisibly.
+            // The commit lands when the fade does.
+            readonly property bool liveTail: !root.done && index === textLinesRepeater.count - 1 && !root.editing
+            property string committedText: ""
+            onModelDataChanged: {
+                if (!liveTail) return;
+                ghostFade.stop();
+                ghost.opacity = 0;
+                ghostFade.start();
+            }
+
             // A NEW paragraph fades in the moment it is born. The previous
             // scheme held each line at opacity 0 until the NEXT one arrived,
             // so the stream rendered one paragraph behind and landed in
@@ -126,6 +139,7 @@ ColumnLayout {
             // an updated one just keeps its text.
             opacity: 1
             Component.onCompleted: {
+                committedText = modelData;
                 if (root.fadeChunkSplitting && !(root.messageData?.done ?? true)) {
                     opacity = 0;
                     Qt.callLater(() => textArea.opacity = 1);
@@ -149,7 +163,7 @@ ColumnLayout {
                 : root.messageData?.role === 'user' ? Appearance.m3colors.m3onSecondaryContainer
                 : Appearance.colors.colOnLayer1
             textFormat: renderMarkdown ? TextEdit.MarkdownText : TextEdit.PlainText
-            text: modelData
+            text: liveTail ? committedText : modelData
 
             onTextChanged: {
                 if (!root.editing) return
@@ -167,6 +181,38 @@ ColumnLayout {
                 hoverEnabled: true
                 cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : 
                     (enableMouseSelection || editing) ? Qt.IBeamCursor : Qt.ArrowCursor
+            }
+
+            TextArea {
+                id: ghost
+                anchors.fill: parent
+                visible: textArea.liveTail && opacity > 0
+                opacity: 0
+                enabled: false
+                readOnly: true
+                background: null
+                renderType: Text.NativeRendering
+                font: textArea.font
+                wrapMode: textArea.wrapMode
+                color: textArea.color
+                textFormat: textArea.textFormat
+                text: textArea.liveTail ? textArea.modelData : ""
+            }
+            SequentialAnimation {
+                id: ghostFade
+                NumberAnimation {
+                    target: ghost
+                    property: "opacity"
+                    to: 1
+                    duration: 200
+                    easing.type: Easing.OutQuad
+                }
+                ScriptAction {
+                    script: {
+                        textArea.committedText = textArea.modelData;
+                        ghost.opacity = 0;
+                    }
+                }
             }
 
             Rectangle {
