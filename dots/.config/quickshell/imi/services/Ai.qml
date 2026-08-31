@@ -1194,7 +1194,15 @@ And a final paragraph after the math, so the stream does not end on a block boun
 
         onExited: (exitCode, exitStatus) => {
             const result = requester.currentStrategy.onRequestFinished(requester.message);
-            
+
+            // The exit-time flush can still carry a tool call (a stream
+            // that ended without its closing frame) - route it exactly as
+            // the streaming path does.
+            if (result.functionCall) {
+                requester.message.functionCall = result.functionCall;
+                root.handleFunctionCall(result.functionCall.name, result.functionCall.args, requester.message);
+            }
+
             if (result.finished) {
                 requester.markDone();
             } else if (!requester.message.done) {

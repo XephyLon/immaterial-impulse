@@ -136,11 +136,16 @@ ApiStrategy {
                 return { finished: true };
             }
 
-            const toolCalls = dataJson.choices?.[0]?.delta?.tool_calls;
+            // Streamed fragments (delta) or a whole call in one chunk
+            // (message) - servers use either shape.
+            const toolCalls = dataJson.choices?.[0]?.delta?.tool_calls
+                ?? dataJson.choices?.[0]?.message?.tool_calls;
             if (toolCalls && toolCalls.length > 0) {
-                const fn = toolCalls[0].function ?? {};
-                if (fn.name) pendingToolName += fn.name;
-                if (fn.arguments) pendingToolArgs += fn.arguments;
+                for (const tc of toolCalls) {
+                    const fn = tc.function ?? {};
+                    if (fn.name) pendingToolName += fn.name;
+                    if (fn.arguments) pendingToolArgs += fn.arguments;
+                }
             }
             // Servers that skip [DONE] end the call with a finish_reason.
             if (dataJson.choices?.[0]?.finish_reason === "tool_calls") {
@@ -199,8 +204,12 @@ ApiStrategy {
     }
     
     function onRequestFinished(message) {
-        // OpenAI format doesn't need special finish handling
-        return {};
+        // A stream that ended without [DONE] or a tool_calls finish_reason
+        // still owes its accumulated call - this is the flush of last
+        // resort, which is exactly where a proxy that just closes the
+        // connection lands.
+        const call = takePendingToolCall();
+        return call ? { functionCall: call, finished: true } : {};
     }
     
 }
