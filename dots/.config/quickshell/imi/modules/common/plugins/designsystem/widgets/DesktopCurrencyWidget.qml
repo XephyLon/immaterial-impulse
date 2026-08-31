@@ -697,7 +697,11 @@ Item {
                         Behavior on opacity { SpanFade {} }
                         anchors.right: parent.right
                         anchors.rightMargin: 2 * Appearance.effectiveScale
-                        y: valueText.y + (valueText.height - movementColumn.implicitHeight) / 2
+                        // Anchored, not computed: the y formula read
+                        // implicitHeight at a moment the layout had not
+                        // settled it, and the two-line block hung below the
+                        // value it describes.
+                        anchors.verticalCenter: valueText.verticalCenter
                         spacing: -2 * Appearance.effectiveScale
                         StyledText {
                             Layout.alignment: Qt.AlignRight
