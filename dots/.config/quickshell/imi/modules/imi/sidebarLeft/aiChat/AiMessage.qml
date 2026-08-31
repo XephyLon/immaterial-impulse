@@ -379,17 +379,20 @@ Rectangle {
             }
         }
 
-        Repeater {
-            // Every attachment of the message; old sessions carry only the
-            // single localFilePath and get a one-element list.
-            model: (root.messageData?.localFilePaths?.length ?? 0) > 0
-                ? root.messageData.localFilePaths
-                : (root.messageData?.localFilePath ? [root.messageData.localFilePath] : [])
-            delegate: AttachedFileIndicator {
-                required property string modelData
-                Layout.fillWidth: true
-                filePath: modelData
-                canRemove: false
+        Flow {
+            // Attachments as a compact grid: thumbs wrap instead of a
+            // stack of full-size cards that dwarfed (and escaped) the
+            // bubble; a click opens the fullscreen viewer.
+            Layout.fillWidth: true
+            spacing: Appearance.spacing.space50
+            Repeater {
+                model: (root.messageData?.localFilePaths?.length ?? 0) > 0
+                    ? root.messageData.localFilePaths
+                    : (root.messageData?.localFilePath ? [root.messageData.localFilePath] : [])
+                delegate: AttachmentThumb {
+                    required property string modelData
+                    path: modelData
+                }
             }
         }
 

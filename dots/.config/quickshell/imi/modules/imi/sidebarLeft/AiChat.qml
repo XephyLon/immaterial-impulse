@@ -1068,9 +1068,8 @@ Item {
                 }
             }
 
-            ColumnLayout {
-                // The attachment tray: one indicator per pending file, each
-                // with its own remove.
+            Flow {
+                // The attachment tray: compact removable thumbs, wrapping.
                 id: attachedFileIndicator
                 anchors {
                     top: parent.top
@@ -1082,10 +1081,10 @@ Item {
                 spacing: Appearance.spacing.space50
                 Repeater {
                     model: Ai.pendingFilePaths
-                    delegate: AttachedFileIndicator {
+                    delegate: AttachmentThumb {
                         required property string modelData
-                        Layout.fillWidth: true
-                        filePath: modelData
+                        path: modelData
+                        removable: true
                         onRemove: Ai.removeAttachment(modelData)
                     }
                 }
