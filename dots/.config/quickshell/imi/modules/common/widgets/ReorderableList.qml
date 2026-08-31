@@ -110,7 +110,14 @@ Item {
 
                 width: rowsArea.width
                 height: root.entryHeight
-                y: row.lifted ? row.y : row.slot * root.slotPitch
+                // The lifted position is its own PROPERTY, never an
+                // imperative write to y: assigning y from the pointer
+                // handler would destroy this binding on the first drag
+                // (the ConfigSwitch #158 shape), and the row would never
+                // follow its slot again - which drew two rows on one slot.
+                property real dragY: 0
+                onLiftedChanged: if (row.lifted) row.dragY = row.index * root.slotPitch
+                y: row.lifted ? row.dragY : row.slot * root.slotPitch
                 z: row.lifted ? 10 : 0
                 Behavior on y {
                     enabled: !row.lifted
@@ -126,7 +133,7 @@ Item {
                     function onScenePositionChanged() {
                         const local = rowsArea.mapFromItem(null,
                             reorder.scenePosition.x, reorder.scenePosition.y);
-                        row.y = local.y - root.entryHeight / 2;
+                        row.dragY = local.y - root.entryHeight / 2;
                     }
                 }
 
@@ -180,6 +187,18 @@ Item {
                             cursorShape: row.lifted ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                             pressAndHoldInterval: 200
                             onPressAndHold: if (root.dragIndex === -1) root.beginRow(row.index)
+                            // A hold that never became a drag must put the
+                            // row down again: the ReorderDragArea only ends
+                            // what it started, and a lift left standing
+                            // parts the siblings under a row going nowhere.
+                            function unliftIfIdle() {
+                                if (reorder.dragging) return;
+                                if (root.dragIndex !== row.index) return;
+                                root.dragIndex = -1;
+                                root.rowDragEnded();
+                            }
+                            onReleased: unliftIfIdle()
+                            onCanceled: unliftIfIdle()
                         }
                         ReorderDragArea {
                             id: reorder
