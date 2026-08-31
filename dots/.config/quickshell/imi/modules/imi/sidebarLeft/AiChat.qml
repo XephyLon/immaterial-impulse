@@ -69,6 +69,7 @@ Item {
     }
 
     function acceptComposer(inputText) {
+        AiDrafts.clear(AiSessions.currentId);
         root.promptHistoryState = PromptHistory.idle();
         if (root.editingMessageIndex >= 0) {
             const at = root.editingMessageIndex;
@@ -153,7 +154,25 @@ Item {
         root.emptyStateGreeting = configured.length > 0 ? configured
             : root.greetingLines[Math.floor(Math.random() * root.greetingLines.length)];
     }
-    Component.onCompleted: root.refreshGreeting()
+    Component.onCompleted: {
+        root.refreshGreeting();
+        if (messageInputField.text.length === 0)
+            messageInputField.text = AiDrafts.take(AiSessions.currentId);
+    }
+
+    Connections {
+        target: AiSessions
+        function onSessionOpened(id) {
+            // Only an EMPTY composer takes the stored draft - a half-typed
+            // thought is never clobbered by a stale one.
+            if (messageInputField.text.length === 0)
+                messageInputField.text = AiDrafts.take(id);
+        }
+        function onCurrentIdChanged() {
+            if (AiSessions.currentId === "" && messageInputField.text.length === 0)
+                messageInputField.text = AiDrafts.take("");
+        }
+    }
 
     property var suggestionQuery: ""
     property var suggestionList: []
@@ -635,7 +654,15 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 }
 
                 sourceComponent: root.activeView === "keys" ? keysViewComponent
-                    : root.activeView === "sessions" ? sessionsViewComponent : null
+                    : root.activeView === "sessions" ? sessionsViewComponent
+                    : root.activeView === "browse" ? browseViewComponent : null
+
+                Component {
+                    id: browseViewComponent
+                    BrowseModelsView {
+                        onClosed: root.activeView = ""
+                    }
+                }
 
                 Component {
                     id: sessionsViewComponent
@@ -733,6 +760,31 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
 
                                 AiProvidersEditor {
                                     Layout.fillWidth: true
+                                }
+
+                                RippleButton {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 40
+                                    buttonRadius: Appearance.rounding.normal
+                                    colBackground: "transparent"
+                                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                                    onClicked: root.activeView = "browse"
+                                    contentItem: RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: Appearance.spacing.space100
+                                        spacing: Appearance.spacing.space100
+                                        MaterialSymbol {
+                                            text: "travel_explore"
+                                            iconSize: Appearance.font.pixelSize.larger
+                                            color: Appearance.colors.colPrimary
+                                        }
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            text: Translation.tr("Browse OpenRouter models")
+                                            color: Appearance.colors.colOnLayer1
+                                            font.pixelSize: Appearance.font.pixelSize.small
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -915,6 +967,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         background: null
 
                         onTextChanged: {
+                            // The draft survives (spec 2026-08-31); the
+                            // takeback edit records nothing while active.
+                            if (root.editingMessageIndex < 0)
+                                AiDrafts.record(AiSessions.currentId, messageInputField.text);
                             // Handle suggestions
                             if (messageInputField.text.length === 0) {
                                 root.suggestionQuery = "";
@@ -1172,6 +1228,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     colBackgroundHover: Appearance.colors.colLayer2Hover
                     colBackgroundActive: Appearance.colors.colLayer2Active
                     model: Ai.pickerModelList.map(id => ({ name: Ai.models[id]?.name ?? id, value: id }))
+                        .concat([{ name: Translation.tr("Browse models…"), value: "__browse__" }])
                     currentIndex: Ai.pickerModelList.indexOf(Ai.currentModelId)
                     // First use / a stale persisted id: nothing selected, and
                     // a blank button reads as broken.
@@ -1180,7 +1237,13 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         : (modelPicker.model[modelPicker.currentIndex]?.name ?? "")
                     onActivated: index => {
                         const chosen = modelPicker.model[index];
-                        if (chosen) Ai.setModel(chosen.value);
+                        if (!chosen) return;
+                        if (chosen.value === "__browse__") {
+                            root.activeView = "browse";
+                            modelPicker.currentIndex = Ai.pickerModelList.indexOf(Ai.currentModelId);
+                            return;
+                        }
+                        Ai.setModel(chosen.value);
                     }
                     // A pick writes currentIndex and destroys the binding, so
                     // the /model command path resyncs it here.
