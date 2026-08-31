@@ -83,6 +83,7 @@ Item {
             }
 
             Lyrics {
+            player: root.player
                 id: lyricsComp
                 Layout.fillWidth: true
                 Layout.fillHeight: true

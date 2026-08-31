@@ -9,6 +9,16 @@ import QtQuick.Layouts
 Item {
     id: root
 
+    // The player this view is showing - forwarded to the service so the
+    // fetch follows the dropdown, not the global active player.
+    property var player: null
+    Binding {
+        target: LyricsService
+        property: "overridePlayer"
+        value: root.player
+        when: root.player !== null && root.player !== undefined
+    }
+
     property color textColor: "white"
     property color activeColor: "white"
     property color dimColor: Qt.rgba(1, 1, 1, 0.35)
@@ -54,6 +64,32 @@ Item {
             visible: LyricsService.status === "ok"
             spacing: Appearance.spacing.space100
 
+            // The advance: when the active line moves on, the column arrives
+            // shifted one line-height toward the reader and settles - the
+            // roles (size, opacity) already cross-fade through their own
+            // Behaviors, this is the travel that makes it read as motion
+            // instead of a swap.
+            readonly property real lineAdvance: Appearance.font.pixelSize.small + Appearance.spacing.space100
+            transform: Translate { id: lineShiftTransform; y: 0 }
+            NumberAnimation {
+                id: lineShiftSettle
+                target: lineShiftTransform
+                property: "y"
+                to: 0
+                duration: 350
+                easing.type: Easing.OutCubic
+            }
+            Connections {
+                target: LyricsService
+                function onActiveIndexChanged() {
+                    if (LyricsService.activeIndex < 0)
+                        return;
+                    lineShiftSettle.stop();
+                    lineShiftTransform.y = parent.lineAdvance;
+                    lineShiftSettle.start();
+                }
+            }
+
             Repeater {
                 model: 7
                 delegate: StyledText {
@@ -77,6 +113,7 @@ Item {
                     }
                     color: dist === 0 ? root.activeColor : root.textColor
                     Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                 }
             }
         }

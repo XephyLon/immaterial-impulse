@@ -11,7 +11,13 @@ import qs.modules.common.functions
 Singleton {
     id: root
 
-    readonly property MprisPlayer activePlayer: MprisController.activePlayer
+    // The player the lyrics follow. The sidebar view hands its own in: its
+    // dropdown can select a player other than the global active one, and
+    // lyrics fetched for the wrong player are wrong lyrics with perfect
+    // confidence.
+    property MprisPlayer overridePlayer: null
+    readonly property MprisPlayer activePlayer: root.overridePlayer ?? MprisController.activePlayer
+    onActivePlayerChanged: root.restartLyrics()
 
     property var lyricsLines: []
     property int activeIndex: -1
