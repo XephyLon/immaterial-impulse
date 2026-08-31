@@ -282,7 +282,19 @@ Singleton {
     // editAndResend) - which turned out to be reading an UNDEFINED name
     // since the reveal landed: undefined is falsy, so the guard was
     // silently inert. The requester process's lifetime is the answer.
-    readonly property bool isGenerating: requester.running
+    readonly property bool isGenerating: requester.running || simTimer.running
+
+    /** Ends the current generation - network or simulated - marking the
+        message done so every done-gated surface settles normally. */
+    function stopGeneration() {
+        if (simTimer.running) {
+            simTimer.stop();
+            root.simRemaining = "";
+            if (root.simMessage) root.simMessage.done = true;
+            AiSessions.scheduleSave();
+        }
+        if (requester.running) requester.running = false; // onExited marks done
+    }
 
     // TEMPORARY TRACER (remove when the provider-wipe is caught): the
     // maintainer's custom provider has twice been found blanked -
@@ -936,7 +948,6 @@ And a final paragraph after the math, so the stream does not end on a block boun
             /* Create extra setup when there's an attached file */
             let scriptFileSetupContent = ""
             if (root.pendingFilePath && root.pendingFilePath.length > 0) {
-                requester.message.localFilePath = root.pendingFilePath;
                 scriptFileSetupContent = requester.currentStrategy.buildScriptFileSetup(root.pendingFilePath);
                 root.pendingFilePath = ""
             }
@@ -1012,6 +1023,14 @@ And a final paragraph after the math, so the stream does not end on a block boun
         // lazily, so an empty chat never touches disk (spec 2026-08-31).
         AiSessions.mint(message);
         root.addMessage(message, "user");
+        // The attachment belongs to the message that SENDS it - it used to
+        // be stamped on the assistant's reply, which also lost it on every
+        // regenerate. pendingFilePath itself survives until makeRequest
+        // consumes it for the script.
+        if (root.pendingFilePath && root.pendingFilePath.length > 0) {
+            const uid = root.messageIDs[root.messageIDs.length - 1];
+            root.messageByID[uid].localFilePath = root.pendingFilePath;
+        }
         requester.makeRequest();
     }
 
@@ -1027,6 +1046,17 @@ And a final paragraph after the math, so the stream does not end on a block boun
         // Remove all messages after this one
         for (let i = root.messageIDs.length - 1; i >= messageIndex; i--) {
             root.removeMessage(i);
+        }
+        // The question being re-asked keeps its image: re-arm the script's
+        // file from the last user message so vision answers regenerate as
+        // vision answers.
+        for (let i = root.messageIDs.length - 1; i >= 0; i--) {
+            const m = root.messageByID[root.messageIDs[i]];
+            if (m?.role === "user") {
+                if (m.localFilePath && m.localFilePath.length > 0)
+                    root.pendingFilePath = m.localFilePath;
+                break;
+            }
         }
         requester.makeRequest();
     }
