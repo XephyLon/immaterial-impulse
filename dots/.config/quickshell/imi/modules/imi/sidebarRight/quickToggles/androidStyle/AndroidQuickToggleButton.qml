@@ -253,27 +253,27 @@ GroupButton {
             id: dragHandler
             target: null
 
-            // Every tile is a direct child of the one flat grid now, so this is
-            // a filter rather than a walk. The drop indicator and the Repeater
-            // itself are children too; a tile is what carries buttonData.
-            function getAllSiblings() {
+            // Every tile is a direct child of one flat page grid, so this
+            // is a filter rather than a walk - parameterised by GRID now,
+            // because a drag that crossed a page edge scores its drop
+            // against the page under the pointer, not the one it left.
+            function siblingsIn(grid) {
                 const siblings = [];
-                if (!root.gridRef) return siblings;
-                for (let i = 0; i < root.gridRef.children.length; i++) {
-                    const sib = root.gridRef.children[i];
+                if (!grid) return siblings;
+                for (let i = 0; i < grid.children.length; i++) {
+                    const sib = grid.children[i];
                     if (!sib || !sib.visible || !sib.buttonData) continue;
                     siblings.push(sib);
                 }
                 return siblings;
             }
 
-            // The dragged tile is a hole rather than a candidate: it stays
-            // where it was laid out for the whole gesture, so it would be its
-            // own nearest neighbour. Compared by id rather than by type,
-            // because a config naming one type twice would otherwise punch two
-            // holes and leave the drag unable to reach either.
-            function findNearest(sceneX, sceneY) {
-                const siblings = getAllSiblings();
+            // The dragged tile is a hole rather than a candidate on its own
+            // page; on another page it is simply absent. Compared by id
+            // rather than by type, because a config naming one type twice
+            // would otherwise punch two holes.
+            function findNearestIn(grid, sceneX, sceneY) {
+                const siblings = siblingsIn(grid);
                 const centres = siblings.map(sib =>
                     sib.buttonData.itemId === root.buttonData.itemId
                         ? null
@@ -282,43 +282,78 @@ GroupButton {
                 return nearest === -1 ? null : siblings[nearest];
             }
 
+            function crossingPages() {
+                return root.pagerRef && root.pagerRef.currentPage !== root.pageIndex;
+            }
+
             onActiveChanged: {
                 editModeInteraction.isDragging = active;
+                if (root.pagerRef) root.pagerRef.dragActive = active;
 
                 if (!active) {
                     if (root.dropIndicatorRef) root.dropIndicatorRef.visible = false;
+                    const landing = root.pagerRef?.currentIndicator() ?? null;
+                    if (landing) landing.visible = false;
                     const sceneX = centroid.scenePosition.x;
                     const sceneY = centroid.scenePosition.y;
-                    const nearest = findNearest(sceneX, sceneY);
-                    // The model carries each row's index in the stored
-                    // list, so the request addresses the entry the tile was
-                    // built from. Looking it up by type again asks a
-                    // question the list may answer twice.
-                    if (nearest)
-                        root.moveRequested(root.buttonIndex, nearest.buttonIndex);
+                    if (crossingPages()) {
+                        // The drop commits an insertion index into the page
+                        // under the pointer; an empty page takes index 0.
+                        const grid = root.pagerRef.currentGrid();
+                        const nearest = grid ? findNearestIn(grid, sceneX, sceneY) : null;
+                        let insertAt = 0;
+                        if (nearest) {
+                            const centre = nearest.mapToItem(null, nearest.width / 2, 0).x;
+                            insertAt = nearest.buttonIndex + (sceneX > centre ? 1 : 0);
+                        }
+                        root.moveAcrossRequested(root.buttonIndex,
+                            root.pagerRef.currentPage, insertAt);
+                    } else {
+                        // The model carries each row's index in the stored
+                        // list, so the request addresses the entry the tile
+                        // was built from.
+                        const nearest = findNearestIn(root.gridRef, sceneX, sceneY);
+                        if (nearest)
+                            root.moveRequested(root.buttonIndex, nearest.buttonIndex);
+                    }
+                    if (root.pagerRef) root.pagerRef.dragEnded();
                 }
             }
 
             onCentroidChanged: {
-                if (!active || !root.dropIndicatorRef || !root.gridRef) return;
+                if (!active) return;
                 const sceneX = centroid.scenePosition.x;
                 const sceneY = centroid.scenePosition.y;
-                const nearest = findNearest(sceneX, sceneY);
+                if (root.pagerRef) root.pagerRef.dragHoverAt(sceneX);
 
+                const crossing = crossingPages();
+                const grid = crossing ? root.pagerRef.currentGrid() : root.gridRef;
+                const indicator = crossing ? root.pagerRef.currentIndicator()
+                                           : root.dropIndicatorRef;
+                if (root.dropIndicatorRef && indicator !== root.dropIndicatorRef)
+                    root.dropIndicatorRef.visible = false;
+                if (!grid || !indicator) return;
+
+                const nearest = findNearestIn(grid, sceneX, sceneY);
                 if (nearest) {
-                    const nearestScene = nearest.mapToItem(null, 0, 0);
-                    const myScene = root.mapToItem(null, 0, 0);
-                    const goesAfter = nearestScene.x > myScene.x || nearestScene.y > myScene.y;
-                    const nearestLocal = nearest.mapToItem(root.gridRef, 0, 0);
-
-                    root.dropIndicatorRef.x = goesAfter
+                    const centre = nearest.mapToItem(null, nearest.width / 2, 0).x;
+                    const goesAfter = sceneX > centre;
+                    const nearestLocal = nearest.mapToItem(grid, 0, 0);
+                    indicator.x = goesAfter
                         ? nearestLocal.x + nearest.width + 1
                         : nearestLocal.x - 5;
-                    root.dropIndicatorRef.y = nearestLocal.y;
-                    root.dropIndicatorRef.height = nearest.height;
-                    root.dropIndicatorRef.visible = true;
+                    indicator.y = nearestLocal.y;
+                    indicator.height = nearest.height;
+                    indicator.visible = true;
+                } else if (crossing) {
+                    // An empty page: the indicator stands at its origin so
+                    // the drop has a visible home.
+                    indicator.x = 0;
+                    indicator.y = 0;
+                    indicator.height = root.baseCellHeight;
+                    indicator.visible = true;
                 } else {
-                    root.dropIndicatorRef.visible = false;
+                    indicator.visible = false;
                 }
             }
         }
