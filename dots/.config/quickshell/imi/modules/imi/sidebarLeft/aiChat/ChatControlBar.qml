@@ -128,6 +128,11 @@ Item {
             // rows show names only.
             model: Ai.modelList.map(id => ({ name: Ai.models[id]?.name ?? id, value: id }))
             currentIndex: Ai.modelList.indexOf(Ai.currentModelId)
+            // First use / a stale persisted id: nothing is selected, and a
+            // blank button reads as broken - say what the control is for.
+            displayText: modelPicker.currentIndex < 0
+                ? Translation.tr("Select model")
+                : (modelPicker.model[modelPicker.currentIndex]?.name ?? "")
             onActivated: index => {
                 const chosen = modelPicker.model[index];
                 if (chosen) Ai.setModel(chosen.value);
