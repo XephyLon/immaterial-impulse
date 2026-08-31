@@ -191,19 +191,24 @@ Item {
     property var suggestionQuery: ""
     property var suggestionList: []
 
+    // Inline message editing: the vacuum below yanked focus back to the
+    // composer after the first keystroke in a message's edit field.
+    property bool transcriptEditActive: false
+
     onFocusChanged: focus => {
         // Never while a canvas view covers the composer: stealing focus to
         // a hidden input routed the browse view's search typing into the
-        // chat box.
-        if (focus && root.activeView === "") {
+        // chat box. And never while a message is being edited in place.
+        if (focus && root.activeView === "" && !root.transcriptEditActive) {
             root.inputField.forceActiveFocus();
         }
     }
 
     Keys.onPressed: event => {
         // Same guard as onFocusChanged: with a view open, the composer is
-        // under an overlay and must not vacuum the keys.
-        if (root.activeView !== "") return;
+        // under an overlay and must not vacuum the keys - nor while a
+        // message edit field owns them.
+        if (root.activeView !== "" || root.transcriptEditActive) return;
         messageInputField.forceActiveFocus();
         if (event.modifiers === Qt.NoModifier) {
             if (event.key === Qt.Key_PageUp) {
@@ -611,6 +616,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     transcriptRevealDelay: index * 40
                     arrivalWindow: root.messageArrivalWindow
                     onEditResendRequested: (messageIndex, content) => root.beginEdit(messageIndex, content)
+                    onEditingChanged: root.transcriptEditActive = editing
                     messageIndex: index
                     messageData: {
                         Ai.messageByID[modelData];
