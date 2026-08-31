@@ -72,7 +72,10 @@ def test_the_tick_rate_is_declared_and_capped():
          "Raise MAX_TICK_HZ here only with a new measurement")
     assert re.search(r"interval:\s*Math\.round\(1000\s*/\s*root\.motionTickHz\)", text), \
         "the tick Timer's interval is not derived from `motionTickHz`"
-    assert re.search(r"running:\s*root\.constantlyRotate\s*&&\s*cookieBody\.visible", text), \
+    # The smooth second hand widened WHEN the tick runs (constantlyRotate,
+    # or a shown non-ticking hand gliding); what this pin protects is the
+    # visibility gate on whatever that condition is.
+    assert re.search(r"running:\s*\(.*\)\s*&&\s*cookieBody\.visible", text), \
         "the tick is not gated on the cookie being ON SCREEN - a desktop behind a fullscreen game would pay for it"
 
 
