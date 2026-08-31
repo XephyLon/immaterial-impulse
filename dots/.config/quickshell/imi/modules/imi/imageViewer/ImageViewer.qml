@@ -5,6 +5,7 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQuick
 
 /**
@@ -20,6 +21,11 @@ Scope {
 
         component: PanelWindow {
             id: viewerWindow
+            // The focused monitor, the OSD's grammar - without a screen the
+            // compositor picks whichever output was focused at creation and
+            // the surface contract rightly refuses the ambiguity (#297).
+            screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name)
+                ?? Quickshell.screens[0]
             visible: true
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.namespace: "quickshell:imageViewer"
