@@ -8,6 +8,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import qs.services.ai
+import "./ai/model_curation.js" as Curation
 import "AiModelsParser.js" as AiModelsParser
 
 /**
@@ -263,9 +264,16 @@ Singleton {
     // speak any of them.
     property var models: ({})
     property var modelList: Object.keys(root.models)
-    // Every model is a brought model now, so the picker shows them all;
-    // kept as its own name because the composer binds it.
-    readonly property var pickerModelList: root.modelList
+    // The picker's list: hand-rolled and imported models always surface;
+    // a provider-fetched model surfaces by its provider's curation - an
+    // empty selectedModels surfaces the lot (spec 2026-08-31).
+    readonly property var pickerModelList: root.modelList.filter(id => {
+        const m = root.models[id];
+        const idx = Curation.providerIndexOf(m?.key_id);
+        if (idx < 0) return true;
+        return Curation.isSurfaced(
+            Config.options.ai.customProviders?.[idx]?.selectedModels, m.model);
+    })
 
     // What the composer's Up key recalls: the prompts someone actually
     // typed into THIS chat - user role, visible, non-empty - in order.

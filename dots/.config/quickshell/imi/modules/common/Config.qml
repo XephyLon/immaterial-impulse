@@ -590,7 +590,11 @@ Singleton {
                     {
                         "enabled": false,
                         "name": "OpenRouter",
-                        "baseUrl": "https://openrouter.ai/api/v1"
+                        "baseUrl": "https://openrouter.ai/api/v1",
+                        // Curation: empty surfaces every fetched model;
+                        // name raw model ids to surface only those (the
+                        // Browse view's toggles write this).
+                        "selectedModels": []
                     }
                 ]
                 // No shipped example model (maintainer's call): models

@@ -36,7 +36,11 @@ function parseCustomProviderModels(responseJsonString, baseUrl, providerName, ke
         data.data.forEach(model => {
             if (!model.id) return;
             result.push({
-                name: guessModelName(model.id),
+                // "<ProviderName>: <Model>" (spec 2026-08-31): applied HERE
+                // so the picker, the message headers and the browse rows all
+                // agree without any of them re-deriving it.
+                name: providerName + ": " + guessModelName(model.id),
+                providerName: providerName,
                 model: model.id,
                 description: `Online | Custom (${providerName}) | ${model.id}`,
                 endpoint: sanitizedBaseUrl + "/chat/completions",
