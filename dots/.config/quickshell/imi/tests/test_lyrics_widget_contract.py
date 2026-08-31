@@ -12,7 +12,10 @@ class LyricsWidgetContractTests(unittest.TestCase):
     def test_service_declares_the_widget_activation_property(self):
         service = (ROOT / "services/LyricsService.qml").read_text(encoding="utf-8")
         self.assertIn("property bool desktopWidgetLyricsActive: false", service)
-        self.assertIn("onDesktopWidgetLyricsActiveChanged:", service)
+        # The widget's flag is one of two demands now: the sidebar view holds
+        # a refcount, and the union gate is what arms and disarms the fetch.
+        self.assertIn("property int sidebarLyricsRefs: 0", service)
+        self.assertIn("onLyricsWantedChanged:", service)
         self.assertIn('property var slots: []', service)
         self.assertIn('root.status = "idle"', service)
 
