@@ -12,12 +12,15 @@ ApiStrategy {
     // Placeholders the request JSON carries until the script substitutes
     // them with shell variables - the Gemini strategy's trick, because the
     // file's mime and base64 are only knowable in bash at send time.
-    readonly property string fileMimeSubstitutionString: "__IMI_OPENAI_FILE_MIME__"
-    readonly property string fileB64SubstitutionString: "__IMI_OPENAI_FILE_B64__"
-    readonly property string fileMimeVarName: "IMI_OPENAI_FILE_MIME"
-    readonly property string fileB64VarName: "IMI_OPENAI_FILE_B64"
+    // Indexed per attachment: file N's placeholders name shell variables
+    // the script setup defines for exactly the files of this request.
+    function fileMimeSubstitutionString(i) { return `__IMI_OPENAI_FILE_MIME_${i}__`; }
+    function fileB64SubstitutionString(i) { return `__IMI_OPENAI_FILE_B64_${i}__`; }
+    function fileMimeVarName(i) { return `IMI_OPENAI_FILE_MIME_${i}`; }
+    function fileB64VarName(i) { return `IMI_OPENAI_FILE_B64_${i}`; }
+    readonly property int maxAttachments: 16
 
-    function buildRequestData(model: AiModel, messages, systemPrompt: string, temperature: real, tools: list<var>, filePath: string) {
+    function buildRequestData(model: AiModel, messages, systemPrompt: string, temperature: real, tools: list<var>, filePaths) {
         const mapped = messages.map(message => {
             return {
                 "role": message.role,
@@ -28,12 +31,13 @@ ApiStrategy {
         // OpenAI vision content parts - a data URL whose mime and base64
         // the script substitutes in. Messages without a file stay plain
         // strings: some servers reject part-arrays they never needed.
-        if (filePath && filePath.length > 0 && mapped.length > 0) {
+        const files = (filePaths ?? []).slice(0, maxAttachments);
+        if (files.length > 0 && mapped.length > 0) {
             const last = mapped[mapped.length - 1];
             last.content = [
                 { "type": "text", "text": last.content },
-                { "type": "image_url", "image_url": {
-                    "url": `data:${fileMimeSubstitutionString};base64,${fileB64SubstitutionString}` } }
+                ...files.map((_, i) => ({ "type": "image_url", "image_url": {
+                    "url": `data:${fileMimeSubstitutionString(i)};base64,${fileB64SubstitutionString(i)}` } }))
             ];
         }
         let baseData = {
@@ -59,20 +63,27 @@ ApiStrategy {
         return `-H "Authorization: Bearer \$\{${apiKeyEnvVarName}\}"`;
     }
 
-    function buildScriptFileSetup(filePath) {
-        const trimmed = CF.FileUtils.trimFileProtocol(filePath);
+    function buildScriptFileSetup(filePaths) {
         let content = "";
-        content += `IMAGE_PATH='${CF.StringUtils.shellSingleQuoteEscape(trimmed)}'\n`;
-        content += `${fileMimeVarName}=$(file -b --mime-type "$IMAGE_PATH")\n`;
-        content += `${fileB64VarName}=$(base64 -w0 "$IMAGE_PATH")\n`;
+        (filePaths ?? []).slice(0, maxAttachments).forEach((filePath, i) => {
+            const trimmed = CF.FileUtils.trimFileProtocol(filePath);
+            content += `IMAGE_PATH_${i}='${CF.StringUtils.shellSingleQuoteEscape(trimmed)}'\n`;
+            content += `${fileMimeVarName(i)}=$(file -b --mime-type "$IMAGE_PATH_${i}")\n`;
+            content += `${fileB64VarName(i)}=$(base64 -w0 "$IMAGE_PATH_${i}")\n`;
+        });
         return content;
     }
 
     function finalizeScriptContent(scriptContent: string): string {
         // The '"$VAR"' splice closes the --data single quote, drops in the
         // shell variable double-quoted, and reopens - Gemini's exact shape.
-        return scriptContent.replace(fileMimeSubstitutionString, `'"\$${fileMimeVarName}"'`)
-                            .replace(fileB64SubstitutionString, `'"\$${fileB64VarName}"'`);
+        // One pass per attachment index actually present.
+        for (let i = 0; i < maxAttachments; i++) {
+            if (scriptContent.indexOf(fileMimeSubstitutionString(i)) === -1) break;
+            scriptContent = scriptContent.replace(fileMimeSubstitutionString(i), `'"\$${fileMimeVarName(i)}"'`)
+                                         .replace(fileB64SubstitutionString(i), `'"\$${fileB64VarName(i)}"'`);
+        }
+        return scriptContent;
     }
 
     function parseResponseLine(line, message) {

@@ -15,7 +15,11 @@ ApiStrategy {
         return result;
     }
 
-    function buildRequestData(model: AiModel, messages, systemPrompt: string, temperature: real, tools: list<var>, filePath: string) {
+    function buildRequestData(model: AiModel, messages, systemPrompt: string, temperature: real, tools: list<var>, filePaths) {
+        // The resumable-upload flow is single-file; this dialect takes the
+        // first attachment and the composer's tray still holds the rest
+        // for the transcript.
+        const filePath = (filePaths ?? [])[0] ?? "";
         let contents = messages.map(message => {
             // console.log("[AI] Building request data for message:", JSON.stringify(message, null, 2));
             const geminiApiRoleName = (message.role === "assistant") ? "model" : message.role;
@@ -200,7 +204,8 @@ ApiStrategy {
         buffer = "";
     }
 
-    function buildScriptFileSetup(filePath) {
+    function buildScriptFileSetup(filePaths) {
+        const filePath = (filePaths ?? [])[0] ?? "";
         const trimmedFilePath = CF.FileUtils.trimFileProtocol(filePath);
         let content = ""
 

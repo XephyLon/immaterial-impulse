@@ -1029,7 +1029,9 @@ Item {
                 }
             }
 
-            AttachedFileIndicator {
+            ColumnLayout {
+                // The attachment tray: one indicator per pending file, each
+                // with its own remove.
                 id: attachedFileIndicator
                 anchors {
                     top: parent.top
@@ -1037,8 +1039,17 @@ Item {
                     right: parent.right
                     margins: visible ? 5 : 0
                 }
-                filePath: Ai.pendingFilePath
-                onRemove: Ai.attachFile("")
+                visible: Ai.pendingFilePaths.length > 0
+                spacing: Appearance.spacing.space50
+                Repeater {
+                    model: Ai.pendingFilePaths
+                    delegate: AttachedFileIndicator {
+                        required property string modelData
+                        Layout.fillWidth: true
+                        filePath: modelData
+                        onRemove: Ai.removeAttachment(modelData)
+                    }
+                }
             }
 
             RowLayout { // Input field and send button
@@ -1264,7 +1275,7 @@ Item {
                                     // mean detach-file.
                                     root.cancelEdit();
                                     event.accepted = true;
-                                } else if (Ai.pendingFilePath.length > 0) {
+                                } else if (Ai.pendingFilePaths.length > 0) {
                                     Ai.attachFile("");
                                     event.accepted = true;
                                 } else {

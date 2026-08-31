@@ -10,6 +10,9 @@ QtObject {
     property string fileMimeType
     property string fileUri
     property string localFilePath
+    // Every attachment of the message; localFilePath stays as the first
+    // for old sessions and single-file consumers.
+    property list<string> localFilePaths: []
     property string model
     property bool thinking: true
     property bool done: false

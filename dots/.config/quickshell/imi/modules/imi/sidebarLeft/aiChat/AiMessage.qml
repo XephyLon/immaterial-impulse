@@ -379,11 +379,16 @@ Rectangle {
             }
         }
 
-        Loader {
-            Layout.fillWidth: true
-            active: root.messageData?.localFilePath && root.messageData?.localFilePath.length > 0
-            sourceComponent: AttachedFileIndicator {
-                filePath: root.messageData?.localFilePath
+        Repeater {
+            // Every attachment of the message; old sessions carry only the
+            // single localFilePath and get a one-element list.
+            model: (root.messageData?.localFilePaths?.length ?? 0) > 0
+                ? root.messageData.localFilePaths
+                : (root.messageData?.localFilePath ? [root.messageData.localFilePath] : [])
+            delegate: AttachedFileIndicator {
+                required property string modelData
+                Layout.fillWidth: true
+                filePath: modelData
                 canRemove: false
             }
         }

@@ -347,7 +347,7 @@ Singleton {
     }
 
     property string requestScriptFilePath: "/tmp/quickshell/ai/request.sh"
-    property string pendingFilePath: ""
+    property list<string> pendingFilePaths: []
 
     Component.onCompleted: {
         setModel(currentModelId, false, false); // Do necessary setup for model
@@ -910,7 +910,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
             const endpoint = root.currentApiStrategy.buildEndpoint(model);
             const messageArray = root.messageIDs.map(id => root.messageByID[id]);
             const filteredMessageArray = messageArray.filter(message => message.role !== Ai.interfaceRole);
-            const data = root.currentApiStrategy.buildRequestData(model, filteredMessageArray, root.systemPrompt, root.temperature, root.tools[model.api_format][root.currentTool], root.pendingFilePath);
+            const data = root.currentApiStrategy.buildRequestData(model, filteredMessageArray, root.systemPrompt, root.temperature, root.tools[model.api_format][root.currentTool], root.pendingFilePaths);
             // console.log("[Ai] Request data: ", JSON.stringify(data, null, 2));
 
             let requestHeaders = {
@@ -947,9 +947,9 @@ And a final paragraph after the math, so the stream does not end on a block boun
 
             /* Create extra setup when there's an attached file */
             let scriptFileSetupContent = ""
-            if (root.pendingFilePath && root.pendingFilePath.length > 0) {
-                scriptFileSetupContent = requester.currentStrategy.buildScriptFileSetup(root.pendingFilePath);
-                root.pendingFilePath = ""
+            if (root.pendingFilePaths.length > 0) {
+                scriptFileSetupContent = requester.currentStrategy.buildScriptFileSetup(root.pendingFilePaths);
+                root.pendingFilePaths = [];
             }
 
             /* Create command string */
@@ -1053,15 +1053,28 @@ And a final paragraph after the math, so the stream does not end on a block boun
         // be stamped on the assistant's reply, which also lost it on every
         // regenerate. pendingFilePath itself survives until makeRequest
         // consumes it for the script.
-        if (root.pendingFilePath && root.pendingFilePath.length > 0) {
+        if (root.pendingFilePaths.length > 0) {
             const uid = root.messageIDs[root.messageIDs.length - 1];
-            root.messageByID[uid].localFilePath = root.pendingFilePath;
+            root.messageByID[uid].localFilePaths = [...root.pendingFilePaths];
+            root.messageByID[uid].localFilePath = root.pendingFilePaths[0];
         }
         requester.makeRequest();
     }
 
     function attachFile(filePath: string) {
-        root.pendingFilePath = CF.FileUtils.trimFileProtocol(filePath);
+        // "" clears the tray (the historical calling convention); a path
+        // appends, once.
+        if (!filePath || filePath.length === 0) {
+            root.pendingFilePaths = [];
+            return;
+        }
+        const trimmed = CF.FileUtils.trimFileProtocol(filePath);
+        if (root.pendingFilePaths.indexOf(trimmed) !== -1) return;
+        root.pendingFilePaths = [...root.pendingFilePaths, trimmed];
+    }
+
+    function removeAttachment(filePath: string) {
+        root.pendingFilePaths = root.pendingFilePaths.filter(p => p !== filePath);
     }
 
     function regenerate(messageIndex) {
@@ -1079,8 +1092,10 @@ And a final paragraph after the math, so the stream does not end on a block boun
         for (let i = root.messageIDs.length - 1; i >= 0; i--) {
             const m = root.messageByID[root.messageIDs[i]];
             if (m?.role === "user") {
-                if (m.localFilePath && m.localFilePath.length > 0)
-                    root.pendingFilePath = m.localFilePath;
+                if (m.localFilePaths && m.localFilePaths.length > 0)
+                    root.pendingFilePaths = [...m.localFilePaths];
+                else if (m.localFilePath && m.localFilePath.length > 0)
+                    root.pendingFilePaths = [m.localFilePath];
                 break;
             }
         }
@@ -1212,6 +1227,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 "fileMimeType": message.fileMimeType,
                 "fileUri": message.fileUri,
                 "localFilePath": message.localFilePath,
+                "localFilePaths": message.localFilePaths ?? [],
                 "model": message.model,
                 "thinking": false,
                 "done": true,
@@ -1267,6 +1283,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 "fileMimeType": message.fileMimeType,
                 "fileUri": message.fileUri,
                 "localFilePath": message.localFilePath,
+                "localFilePaths": message.localFilePaths ?? [],
                 "model": message.model,
                 "thinking": message.thinking,
                 "done": message.done,
