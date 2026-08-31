@@ -91,8 +91,22 @@ Item {
     // "sessions". Closing any of them is an arrival, so the transcript
     // reveals; the step-back below reads the same emptiness.
     property string activeView: ""
+    // Where the open view's back arrow RETURNS to: the view it was opened
+    // from (the fork's viewReturnTo), not always the chat - browse opened
+    // from Providers & keys goes back there.
+    property string viewReturnTo: ""
     function toggleView(name) {
+        root.viewReturnTo = "";
         root.activeView = (root.activeView === name) ? "" : name;
+    }
+    function openView(name, from) {
+        root.viewReturnTo = from ?? "";
+        root.activeView = name;
+    }
+    function closeView() {
+        const back = root.viewReturnTo;
+        root.viewReturnTo = "";
+        root.activeView = back;
     }
     onActiveViewChanged: if (root.activeView === "") root.revealTranscript()
 
@@ -698,14 +712,14 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 Component {
                     id: browseViewComponent
                     BrowseModelsView {
-                        onClosed: root.activeView = ""
+                        onClosed: root.closeView()
                     }
                 }
 
                 Component {
                     id: sessionsViewComponent
                     SessionListView {
-                        onClosed: root.activeView = ""
+                        onClosed: root.closeView()
                     }
                 }
 
@@ -745,7 +759,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
                                 colRipple: Appearance.colors.colLayer2Active
-                                onClicked: root.activeView = ""
+                                onClicked: root.closeView()
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
                                     horizontalAlignment: Text.AlignHCenter
@@ -808,7 +822,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                     colBackground: "transparent"
                                     colBackgroundHover: Appearance.colors.colLayer2Hover
                                     colRipple: Appearance.colors.colLayer2Active
-                                    onClicked: root.activeView = "browse"
+                                    onClicked: root.openView("browse", "keys")
                                     contentItem: RowLayout {
                                         anchors.fill: parent
                                         anchors.leftMargin: Appearance.spacing.space100
@@ -1279,7 +1293,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         const chosen = modelPicker.model[index];
                         if (!chosen) return;
                         if (chosen.value === "__browse__") {
-                            root.activeView = "browse";
+                            root.openView("browse", "");
                             modelPicker.currentIndex = Ai.pickerModelList.indexOf(Ai.currentModelId);
                             return;
                         }
