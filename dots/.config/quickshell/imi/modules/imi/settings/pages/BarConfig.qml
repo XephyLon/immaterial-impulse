@@ -7,6 +7,7 @@ import qs.modules.common.widgets
 import qs.modules.common.plugins
 import Quickshell.Hyprland
 import "../../../common/functions/screenSelection.js" as ScreenSelection
+import "../../../common/functions/layout_ops.js" as LayoutOps
 import "../../dock/dock_geometry.js" as DockGeometry
 
 ContentPage {
@@ -169,33 +170,122 @@ ContentPage {
         }
 
         ContentSection {
+            id: barLayoutSection
             icon: "splitscreen_add"
             shape: MaterialShape.Shape.Cookie6Sided
             title: Translation.tr("Bar layout")
 
-            GroupedList {
-                LayoutSection {
-                    sectionTitle: Config.options.bar.vertical ? Translation.tr("Top") : Translation.tr("Left")
-                    layout: Config.options.bar.layouts.leftLayout
-                    availableWidgets: page.availableFor()
-                    getWidgetName: page.getWidgetName
-                    onUpdate: list => Config.options.bar.layouts.leftLayout = list
-                }
+            // The cross-group coordinator, BarEditController's shape at
+            // settings scale: buckets to layout_ops.dropTarget, literal
+            // stored paths, commits through layout_ops only. The settings
+            // lists are unfiltered, so visible == stored and only
+            // moveTargetForInsertion is needed.
+            property int dragBucket: -1
+            property int dragIndex: -1
+            readonly property var layoutLists: [leftList, centerList, rightList]
 
-                LayoutSection {
-                    sectionTitle: Translation.tr("Center")
-                    layout: Config.options.bar.layouts.middleLayout
-                    availableWidgets: page.availableFor()
-                    getWidgetName: page.getWidgetName
-                    onUpdate: list => Config.options.bar.layouts.middleLayout = list
+            function storedLayout(bucket) {
+                if (bucket === 0) return Config.options.bar.layouts.leftLayout;
+                if (bucket === 1) return Config.options.bar.layouts.middleLayout;
+                return Config.options.bar.layouts.rightLayout;
+            }
+            function writeLayout(bucket, list) {
+                if (bucket === 0) Config.options.bar.layouts.leftLayout = list;
+                else if (bucket === 1) Config.options.bar.layouts.middleLayout = list;
+                else Config.options.bar.layouts.rightLayout = list;
+            }
+            function dropBuckets() {
+                const buckets = [];
+                for (let b = 0; b < 3; b++)
+                    buckets.push(barLayoutSection.layoutLists[b].bucketFor(
+                        b === barLayoutSection.dragBucket ? barLayoutSection.dragIndex : -1));
+                return buckets;
+            }
+            function beginDrag(bucket, index) {
+                barLayoutSection.dragBucket = bucket;
+                barLayoutSection.dragIndex = index;
+            }
+            // Every pointer event: the gap opens in whichever list the drop
+            // would land in, and closes everywhere else - a foreign list
+            // parts too, which is what makes the drag legible before the
+            // drop.
+            function dragMoved(target) {
+                for (let b = 0; b < 3; b++)
+                    barLayoutSection.layoutLists[b].gapIndex =
+                        (target && target.bucket === b) ? target.index : -1;
+            }
+            function endDrag() {
+                barLayoutSection.dragBucket = -1;
+                barLayoutSection.dragIndex = -1;
+                for (let b = 0; b < 3; b++)
+                    barLayoutSection.layoutLists[b].gapIndex = -1;
+            }
+            // A null target (dropped outside every bucket) commits nothing -
+            // the ReorderDragArea cancel rule.
+            function commitDrop(bucket, index, target) {
+                if (!target) return;
+                if (target.bucket === bucket) {
+                    const dest = LayoutOps.moveTargetForInsertion(index, target.index);
+                    if (dest === index) return;
+                    barLayoutSection.writeLayout(bucket,
+                        LayoutOps.move(barLayoutSection.storedLayout(bucket), index, dest));
+                    return;
                 }
+                const source = barLayoutSection.storedLayout(bucket);
+                const id = source[index];
+                barLayoutSection.writeLayout(bucket, LayoutOps.remove(source, index));
+                barLayoutSection.writeLayout(target.bucket, LayoutOps.insert(
+                    barLayoutSection.storedLayout(target.bucket), id, target.index));
+            }
+            // A stale id (an uninstalled plugin's widget) keeps a readable
+            // row: nameFor already falls back to the raw id, and the icon
+            // falls back here.
+            function rowInfoFor(id) {
+                const found = BarWidgets.available.find(entry => entry.id === id);
+                return { icon: found?.icon ?? "widgets", title: BarWidgets.nameFor(id) };
+            }
 
-                LayoutSection {
-                    sectionTitle: Config.options.bar.vertical ? Translation.tr("Bottom") : Translation.tr("Right")
-                    layout: Config.options.bar.layouts.rightLayout
-                    availableWidgets: page.availableFor()
-                    getWidgetName: page.getWidgetName
-                    onUpdate: list => Config.options.bar.layouts.rightLayout = list
+            component BarLayoutList: ReorderableList {
+                id: layoutList
+                property int bucket: -1
+                Layout.fillWidth: true
+                rowFor: id => barLayoutSection.rowInfoFor(id)
+                available: page.availableFor()
+                addButtonText: Translation.tr("Add widget")
+                bucketsProvider: () => barLayoutSection.dropBuckets()
+                onRowDragStarted: index => barLayoutSection.beginDrag(layoutList.bucket, index)
+                onRowDragMoved: target => barLayoutSection.dragMoved(target)
+                onRowDropped: (index, target) => barLayoutSection.commitDrop(layoutList.bucket, index, target)
+                onRowDragEnded: barLayoutSection.endDrag()
+                onAddRequested: id => barLayoutSection.writeLayout(layoutList.bucket,
+                    LayoutOps.insert(barLayoutSection.storedLayout(layoutList.bucket),
+                        id, barLayoutSection.storedLayout(layoutList.bucket).length))
+                onRemoveRequested: index => barLayoutSection.writeLayout(layoutList.bucket,
+                    LayoutOps.remove(barLayoutSection.storedLayout(layoutList.bucket), index))
+            }
+
+            ContentSubsection {
+                title: Config.options.bar.vertical ? Translation.tr("Top") : Translation.tr("Left")
+                BarLayoutList {
+                    id: leftList
+                    bucket: 0
+                    model: Config.options.bar.layouts.leftLayout
+                }
+            }
+            ContentSubsection {
+                title: Translation.tr("Center")
+                BarLayoutList {
+                    id: centerList
+                    bucket: 1
+                    model: Config.options.bar.layouts.middleLayout
+                }
+            }
+            ContentSubsection {
+                title: Config.options.bar.vertical ? Translation.tr("Bottom") : Translation.tr("Right")
+                BarLayoutList {
+                    id: rightList
+                    bucket: 2
+                    model: Config.options.bar.layouts.rightLayout
                 }
             }
         }

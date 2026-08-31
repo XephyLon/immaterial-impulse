@@ -14,7 +14,7 @@ import "../functions/layout_ops.js" as LayoutOps
  * `bucketsProvider` is a function returning `layout_ops.dropTarget`'s buckets
  * (scene-space centres with holes, plus an anchor for an empty bucket),
  * called fresh per pointer event: positions are read off live items at the
- * moment they are compared, which is what LayoutSection already does and what
+ * moment they are compared, which is what the reorder surfaces already do and what
  * sidesteps the mapToItem-in-a-binding staleness trap.
  *
  * A cancel is a first-class end, not a missing commit: Edit Mode can end
