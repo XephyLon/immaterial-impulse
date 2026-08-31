@@ -1487,7 +1487,7 @@ Singleton {
                 }
                 
                 property JsonObject ai: JsonObject {
-                    property bool textFadeIn: false
+                    property bool textFadeIn: true
                     // Empty rolls a fresh hello per opening; set to pin one.
                     property string greeting: ""
                 }
