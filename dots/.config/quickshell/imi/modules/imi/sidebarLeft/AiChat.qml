@@ -554,9 +554,11 @@ Item {
                             return;
                         }
                         // ~1 - e^(-8dt): frame-rate independent damping.
+                        // Written past the wheel Behavior: smoothed writes
+                        // queue behind alwaysRunToEnd and the chase freezes.
                         const step = gap * Math.min(1, frameTime * 8);
                         messageListView.lastContentY = messageListView.contentY + step;
-                        messageListView.contentY += step;
+                        messageListView.setContentYImmediate(messageListView.contentY + step);
                     }
                 }
                 onContentHeightChanged: if (following) followToEnd()

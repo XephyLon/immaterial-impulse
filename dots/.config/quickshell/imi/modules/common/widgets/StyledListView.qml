@@ -51,7 +51,19 @@ ListView {
         }
     }
 
+    // A contentY write that must NOT be smoothed: the wheel Behavior below
+    // runs to end, so per-frame chase steps (AiChat's follow) queued one
+    // behind another and the view froze while content streamed past it.
+    // Chasers write through here; the wheel keeps its easing.
+    function setContentYImmediate(y) {
+        contentYBehavior.enabled = false;
+        contentY = y;
+        scrollTargetY = y;
+        contentYBehavior.enabled = true;
+    }
+
     Behavior on contentY {
+        id: contentYBehavior
         NumberAnimation {
             id: scrollAnim
             alwaysRunToEnd: true
