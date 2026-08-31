@@ -394,6 +394,34 @@ Item {
             }
         },
         {
+            name: "diagnose",
+            description: Translation.tr("Why didn't the chat respond?"),
+            execute: () => {
+                const model = Ai.models[Ai.currentModelId];
+                const keyLen = model?.requires_key
+                    ? String(Ai.apiKeys?.[model.key_id] ?? "").length : -1;
+                const lastExit = Ai.lastRequestExitCode;
+                const agoMin = Ai.lastRequestAt > 0
+                    ? Math.round((Date.now() - Ai.lastRequestAt) / 60000) : -1;
+                const yes = "✅", no = "❌";
+                const rows = [
+                    `| ${Translation.tr("Model")} | ${model ? `${model.name} (\`${model.model}\`)` : no + " " + Translation.tr("none selected")} |`,
+                    `| ${Translation.tr("Dialect")} | ${model?.api_format ?? "-"} |`,
+                    `| ${Translation.tr("Endpoint")} | \`${model?.endpoint ?? "-"}\` |`,
+                    `| ${Translation.tr("API key")} | ${keyLen === -1 ? Translation.tr("not needed") : keyLen > 0 ? yes + " " + Translation.tr("present (%1 chars)").arg(keyLen) : no + " " + Translation.tr("MISSING - set it in Providers & keys")} |`,
+                    `| ${Translation.tr("Keyring")} | ${KeyringStorage.loaded ? yes : no + " " + Translation.tr("not loaded yet")} |`,
+                    `| ${Translation.tr("Models fetched")} | ${Ai.modelList.length} |`,
+                    `| ${Translation.tr("Tool mode")} | ${Ai.currentTool} |`,
+                    `| ${Translation.tr("Persona")} | ${AiPersonas.active?.name ?? Translation.tr("Custom")} |`,
+                    `| ${Translation.tr("Last request")} | ${lastExit === -1 ? Translation.tr("none this session") : Translation.tr("exit %1, %2 min ago").arg(lastExit).arg(agoMin)} |`,
+                    `| ${Translation.tr("Generating now")} | ${Ai.isGenerating ? yes : no} |`,
+                ];
+                Ai.addMessage(Translation.tr("## Diagnosis") + "\n\n| | |\n|---|---|\n" + rows.join("\n")
+                    + "\n\n" + Translation.tr("Probing the endpoint…"), Ai.interfaceRole);
+                Ai.probeEndpoint();
+            }
+        },
+        {
             name: "export",
             description: Translation.tr("Export this chat to Downloads"),
             execute: () => {

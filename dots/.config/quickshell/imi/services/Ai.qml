@@ -850,6 +850,38 @@ And a final paragraph after the math, so the stream does not end on a block boun
         titler.running = true;
     }
 
+    // /diagnose's answers: the last request's exit, and an on-demand
+    // reachability probe of the current model's endpoint (no key attached -
+    // a 401 is still "reachable", which is the question being asked).
+    property int lastRequestExitCode: -1
+    property real lastRequestAt: 0
+    function probeEndpoint() {
+        const model = models[currentModelId];
+        if (!model || !model.endpoint) {
+            root.addMessage(Translation.tr("No model selected - nothing to probe."), root.interfaceRole);
+            return;
+        }
+        if (prober.running) return;
+        prober.endpoint = model.endpoint;
+        prober.command = ["bash", "-c",
+            `code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 6 '${CF.StringUtils.shellSingleQuoteEscape(model.endpoint)}' -X POST -H 'Content-Type: application/json' --data '{}'); echo "$code"`];
+        prober.running = true;
+    }
+    Process {
+        id: prober
+        property string endpoint: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const code = text.trim();
+                const reachable = code.length === 3 && code !== "000";
+                root.addMessage(reachable
+                    ? Translation.tr("Endpoint reachable: %1 answered HTTP %2.").arg(prober.endpoint).arg(code)
+                    : Translation.tr("Endpoint UNREACHABLE: %1 (no HTTP answer - server down, wrong URL, or no network).").arg(prober.endpoint),
+                    root.interfaceRole);
+            }
+        }
+    }
+
     Process {
         id: titler
         stdout: StdioCollector {
@@ -1145,6 +1177,8 @@ And a final paragraph after the math, so the stream does not end on a block boun
         }
 
         onExited: (exitCode, exitStatus) => {
+            root.lastRequestExitCode = exitCode;
+            root.lastRequestAt = Date.now();
             const result = requester.currentStrategy.onRequestFinished(requester.message);
 
             // The exit-time flush can still carry a tool call (a stream
