@@ -24,6 +24,9 @@ Singleton {
     // shown"; SidebarLeftContent consumes it on open and clears it, the way
     // GlobalStates.settingsPage is consumed.
     property string sidebarLeftTab: ""
+    // The icon of the left sidebar's CURRENT page, published live by
+    // SidebarLeftContent so the bar button's glyph can follow the page.
+    property string sidebarLeftTabIcon: ""
     property bool sidebarRightOpen: false
     property bool mediaControlsOpen: false
     property bool sysTrayOverflowOpen: false

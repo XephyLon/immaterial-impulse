@@ -164,6 +164,12 @@ Item {
                 anchors.fill: parent
                 spacing: Appearance.spacing.space150
 
+                // The bar button's glyph follows the open page.
+                onCurrentIndexChanged: GlobalStates.sidebarLeftTabIcon =
+                    root.tabButtonList[swipeView.currentIndex]?.icon ?? ""
+                Component.onCompleted: GlobalStates.sidebarLeftTabIcon =
+                    root.tabButtonList[swipeView.currentIndex]?.icon ?? ""
+
                 clip: true
                 layer.enabled: true
                 layer.effect: OpacityMask {
