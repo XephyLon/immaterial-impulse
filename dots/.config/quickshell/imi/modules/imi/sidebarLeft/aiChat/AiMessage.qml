@@ -142,13 +142,15 @@ Rectangle {
         anchors.margins: messagePadding
         spacing: root.contentSpacing
 
-        Rectangle {
+        Item {
+            // The attribution is a line, not a bar: icon and shimmering
+            // name over the message body, no fill, no buttons - those all
+            // live in the hover row under the content now, same as a
+            // bubble's.
             visible: !root.isUser
             Layout.fillWidth: true
             implicitWidth: headerRowLayout.implicitWidth + 4 * 2
             implicitHeight: headerRowLayout.implicitHeight + 4 * 2
-            color: Appearance.colors.colSecondaryContainer
-            radius: Appearance.rounding.small
         
             RowLayout { // Header
                 id: headerRowLayout
@@ -189,7 +191,7 @@ Rectangle {
                                     messageData?.role == 'user' ? 'arch-symbolic' : 'desktop-symbolic'
 
                                 colorize: true
-                                color: Appearance.m3colors.m3onSecondaryContainer
+                                color: Appearance.colors.colSubtext
                             }
 
                             MaterialSymbol {
@@ -197,7 +199,7 @@ Rectangle {
                                 anchors.centerIn: parent
                                 visible: !modelIcon.visible
                                 iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.m3colors.m3onSecondaryContainer
+                                color: Appearance.colors.colSubtext
                                 text: messageData?.role == 'user' ? 'person' : 
                                     messageData?.role == 'interface' ? 'settings' : 
                                     messageData?.role == 'assistant' ? 'neurology' : 
@@ -212,7 +214,7 @@ Rectangle {
                             // model - reasoning or not.
                             running: messageData?.role == 'assistant' && !(messageData?.done ?? true)
                             baseColor: Appearance.colors.colSubtext
-                            glowColor: Appearance.m3colors.m3onSecondaryContainer
+                            glowColor: Appearance.colors.colOnLayer1
                             font.pixelSize: Appearance.font.pixelSize.normal
                             text: messageData?.role == 'assistant' ? (Ai.models[messageData?.model]?.name ?? messageData?.model ?? "") :
                                 (messageData?.role == 'user' && SystemInfo.username) ? SystemInfo.username :
@@ -243,19 +245,12 @@ Rectangle {
                     }
                 }
 
-                Item {
-                    id: headerActionsSlot
-                    implicitWidth: childrenRect.width
-                    implicitHeight: childrenRect.height
-                }
-
                 ButtonGroup {
                     id: actionButtons
-                    // ONE set of controls with two homes: the header plate,
-                    // or - for a bubble that has no plate - a quiet hover
-                    // row under the bubble. Reparenting keeps the ids and
-                    // handlers single.
-                    parent: root.isUser ? userActionsSlot : headerActionsSlot
+                    // Declared here in the header's scope but living in the
+                    // hover row below the content for EVERY role - the
+                    // header is attribution only.
+                    parent: userActionsSlot
                     spacing: Appearance.spacing.space100
 
                     AiMessageControlButton {
@@ -422,7 +417,6 @@ Rectangle {
         }
 
         RowLayout {
-            visible: root.isUser
             Layout.fillWidth: true
             Item { Layout.fillWidth: true }
             Item {
