@@ -188,21 +188,13 @@ AbstractQuickPanel {
                 contentHeight: pager.height
                 flickableDirection: Flickable.HorizontalFlick
                 boundsBehavior: Flickable.StopAtBounds
-                // Edit mode navigates by dots and drag-past-edge: a
-                // horizontal flickable steals the tile DragHandler's
-                // gesture, so free swipe and edit cannot share the surface.
-                interactive: root.pageCount > 1 && !root.editMode
+                // Never its own input: the swipe is the DragHandler below,
+                // which writes contentX directly - so the pages follow the
+                // pointer 1:1 from the first threshold pixel, instead of
+                // depending on the flickable managing to steal the gesture
+                // from the tile buttons it is full of.
+                interactive: false
                 onWidthChanged: contentX = root.currentPage * width
-                onMovementEnded: {
-                    // One page per gesture: a hard fling must not sail past
-                    // the neighbour.
-                    const raw = Math.round(pager.contentX / pager.width);
-                    const step = Math.max(root.currentPage - 1,
-                        Math.min(root.currentPage + 1, raw));
-                    const page = QuickTogglePages.clampPage(root.pages, step);
-                    if (page === root.currentPage) pager.snapTo(page);
-                    else root.currentPage = page;
-                }
 
                 NumberAnimation {
                     id: snapAnim
@@ -317,6 +309,45 @@ AbstractQuickPanel {
                             }
                         }
                     }
+                }
+            }
+
+            // The page swipe. A drag moves contentX with the pointer, and
+            // the release resolves it: past a quarter page (or flung) the
+            // neighbour commits, else the current page springs back. Edit
+            // mode keeps the surface for the tile drag - dots and the edge
+            // band navigate there.
+            DragHandler {
+                id: swipeHandler
+                target: null
+                enabled: root.pageCount > 1 && !root.editMode
+                xAxis.enabled: true
+                yAxis.enabled: false
+                property real startX: 0
+
+                onActiveChanged: {
+                    if (active) {
+                        snapAnim.stop();
+                        startX = pager.contentX;
+                        return;
+                    }
+                    const moved = pager.contentX - startX;
+                    const flung = activeTranslation.x === 0 ? 0
+                        : (Math.abs(centroid.velocity.x) > 500
+                            ? (centroid.velocity.x < 0 ? 1 : -1) : 0);
+                    let step = root.currentPage;
+                    if (flung !== 0) step += flung;
+                    else if (moved > pager.width / 4) step += 1;
+                    else if (moved < -pager.width / 4) step -= 1;
+                    const page = QuickTogglePages.clampPage(root.pages, step);
+                    if (page === root.currentPage) pager.snapTo(page);
+                    else root.currentPage = page;
+                }
+                onTranslationChanged: {
+                    if (!active) return;
+                    const max = Math.max(0, pager.contentWidth - pager.width);
+                    pager.contentX = Math.max(0, Math.min(max,
+                        swipeHandler.startX - translation.x));
                 }
             }
         }
