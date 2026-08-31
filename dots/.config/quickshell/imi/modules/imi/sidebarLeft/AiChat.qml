@@ -183,7 +183,7 @@ Item {
     property var allCommands: [
         {
             name: "attach",
-            description: Translation.tr("Attach a file. Only works with Gemini."),
+            description: Translation.tr("Attach a file. Works with Gemini and vision-capable OpenAI-compatible models."),
             execute: args => {
                 Ai.attachFile(args.join(" ").trim());
             }
