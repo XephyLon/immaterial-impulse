@@ -5,6 +5,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import QtQuick
+import Quickshell
 import QtQuick.Layouts
 import Quickshell.Io
 
@@ -53,7 +54,17 @@ Item {
     readonly property list<string> clockNumbers: DateTime.time.split(/[: ]/)
     readonly property int clockHour: parseInt(clockNumbers[0]) % 12
     readonly property int clockMinute: DateTime.clock.minutes
-    readonly property int clockSecond: DateTime.clock.seconds
+    // The clock owns its seconds: DateTime's shared SystemClock ticks
+    // minutes unless the BAR asks for second precision, and a second hand
+    // gated on that knob is a hand the style row promises but a format
+    // setting silently hides - which is exactly how it shipped broken.
+    // Local, and at Seconds only while a hand is drawn, so a hidden hand
+    // costs nothing.
+    readonly property var secondsClock: SystemClock {
+        precision: root.secondHandStyle !== "hide" ? SystemClock.Seconds
+                                                   : SystemClock.Minutes
+    }
+    readonly property int clockSecond: root.secondsClock.seconds
 
     // Continuous motion - the body's spin and the second hand's sweep - is
     // sampled from the wall clock at this rate rather than animated per
@@ -248,7 +259,7 @@ Item {
     FadeLoader {
         id: secondHandLoader
         z: (root.secondHandStyle === "line") ? 2 : 3
-        shown: Config.options.time.secondPrecision && root.secondHandStyle !== "hide"
+        shown: root.secondHandStyle !== "hide"
         anchors.fill: parent
         sourceComponent: SecondHand {
             id: secondHand
