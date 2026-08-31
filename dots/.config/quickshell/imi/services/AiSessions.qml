@@ -86,12 +86,20 @@ Singleton {
         interval: 1000
         onTriggered: root.saveNow()
     }
+    // Dirty gates every flush: opening another chat used to saveNow() the
+    // previous one unconditionally, bumping its updatedAt - so the list
+    // REORDERED under the pointer on every switch (recorded). Only a chat
+    // that actually changed since its last flush earns a bump.
+    property bool dirty: false
     function scheduleSave() {
         if (root.currentId.length === 0) return;
+        root.dirty = true;
         flushTimer.restart();
     }
     function saveNow() {
         if (root.currentId.length === 0) return;
+        if (!root.dirty) return;
+        root.dirty = false;
         const entry = root.index.find(row => row.id === root.currentId);
         const now = Date.now();
         const meta = {
@@ -125,6 +133,7 @@ Singleton {
             const doc = JSON.parse(sessionFile.text());
             Ai.loadMessagesFromJson(doc.messages ?? []);
             root.currentId = id;
+            root.dirty = false;
             root.sessionOpened(id);
         } catch (e) {
             Ai.addMessage(Translation.tr("Could not open that session - its file is unreadable."), Ai.interfaceRole);

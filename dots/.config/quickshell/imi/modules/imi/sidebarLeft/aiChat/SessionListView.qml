@@ -228,6 +228,10 @@ Rectangle {
                 id: titleInput
                 Layout.fillWidth: true
                 readOnly: !row.renaming
+                // autoScroll chases the cursor, which sits at the END when
+                // the bound text lands - hovered rows showed their tails
+                // ("ently working on…"). At rest the head is the title.
+                autoScroll: row.renaming
                 // A readOnly TextInput still TAKES clicks (cursor and
                 // selection handling), so a click on the title never
                 // reached the row's open area - only clicks beside the
@@ -263,7 +267,9 @@ Rectangle {
             }
 
             StyledText {
-                visible: !row.renaming
+                // The hover actions take this label's room; both at once
+                // crushed the title.
+                visible: !row.renaming && !rowHover.hovered
                 text: Sessions.agoLabel(root.nowMs, row.modelData.updatedAt)
                 color: Appearance.colors.colSubtext
                 font.pixelSize: Appearance.font.pixelSize.smaller
