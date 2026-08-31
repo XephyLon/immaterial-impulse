@@ -22,8 +22,8 @@ Item {
     property real progress: 0
     property bool playing: false
 
-    // 0 = straight bar .. 1 = ring
-    property real bend: root.span === "3x2" ? 0 : 1
+    // 0 = straight bar .. 1 = ring; 1x1's compact bar is straight too.
+    property real bend: (root.span === "3x2" || root.span === "1x1") ? 0 : 1
     Behavior on bend { Expressive.SpanTravel {} }
     // 0 = circle .. 1 = cookie outline
     property real ringT: root.span === "2x1" ? 1 : 0

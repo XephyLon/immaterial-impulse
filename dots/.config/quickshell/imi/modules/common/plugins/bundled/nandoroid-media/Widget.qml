@@ -261,9 +261,9 @@ Item {
         progress: root.playbackProgress
         playing: MprisController.isPlaying
         behindSpecial: root.behindSpecial
-        // Null slot (the 1x1 shows no seek) parks it invisible, which is
-        // also what stops its wave clocks - a 0x0 seeker still ticking is a
-        // timer for nothing.
+        // A null slot parks it invisible, which is also what stops its
+        // wave clocks - a 0x0 seeker still ticking is a timer for nothing.
+        // (Every span carries a slot now; 1x1's is the compact straight bar.)
         opacity: (root.lyricsUp || root.progressSlot === null) ? 0 : 1
         Behavior on opacity { Expressive.SpanFade {} }
         visible: opacity > 0

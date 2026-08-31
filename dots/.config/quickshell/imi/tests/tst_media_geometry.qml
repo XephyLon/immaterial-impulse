@@ -126,23 +126,31 @@ TestCase {
 
     // ---- 1x1 -------------------------------------------------------------
 
-    function test_1x1_row_rides_low_and_centred_on_the_tile() {
+    function test_1x1_sides_flank_the_play_flush() {
+        // The redesign (2026-08-31): half-pill prev/next STUCK to the play
+        // button's sides - round edge outward, flat edge against it - the
+        // row lifted to make room for the seek bar below.
         const t = Geometry.transportRects("1x1", 132, 108, 1);
-        compare(t.prev.width, 24);
+        compare(t.prev.width, 22);
+        compare(t.prev.height, 34);
         compare(t.play.width, 48);
-        // row: 24 + 6 + 48 + 6 + 24 = 108, centred in 132 - a deliberate
-        // 12px of artwork on each side, where 6px read as flush.
-        compare(t.prev.x, 12);
-        compare(t.play.x, 42);
-        compare(t.next.x, 96);
-        compare(t.play.y, 108 - 12 - 48, "12 clear of the bottom edge");
-        compare(t.prev.y - t.play.y, (48 - 24) / 2, "sides centred on play");
+        compare(t.prev.x + t.prev.width, t.play.x, "prev is flush against play");
+        compare(t.play.x + t.play.width, t.next.x, "next is flush against play");
+        compare(t.prev.x, (132 - (22 + 48 + 22)) / 2, "the trio is centred");
+        compare(t.prev.y - t.play.y, (48 - 34) / 2, "sides centred on play");
     }
 
-    function test_1x1_shows_no_seek_no_time_no_button_artwork() {
-        // The card itself is the artwork at this span (Widget.qml's tiny art
-        // layer); the seek and the time yield the stage. Null is a fade.
-        compare(Geometry.progressRect("1x1", 132, 108, 1), null);
+    function test_1x1_row_sits_above_its_seek_bar() {
+        const t = Geometry.transportRects("1x1", 132, 108, 1);
+        const seek = Geometry.progressRect("1x1", 132, 108, 1);
+        compare(seek.height, 16);
+        compare(seek.y + seek.height, 108 - 8, "seek rides 8 above the bottom");
+        compare(seek.x, 16);
+        compare(seek.width, 132 - 32);
+        compare(t.play.y + t.play.height, seek.y - 8, "the row sits 8 above the seek");
+    }
+
+    function test_1x1_still_shows_no_time_no_button_artwork() {
         compare(Geometry.timeLabelRect("1x1", 132, 108, 1), null);
         compare(Geometry.artworkRect("1x1", 132, 108, 1), null);
     }

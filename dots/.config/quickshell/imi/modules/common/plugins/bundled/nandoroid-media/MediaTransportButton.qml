@@ -127,8 +127,21 @@ Item {
             // had. `scale` is centred by default and cannot miss.
             scale: root.motion.scale
 
+            // 1x1: a half-pill hugging the play button - round edge
+            // outward, near-flat edge against it. Drawn as its own body
+            // because MaterialShape has no per-corner radii.
+            Rectangle {
+                visible: root.span === "1x1"
+                anchors.fill: parent
+                color: root.controlColor
+                topLeftRadius: root.role === "prev" ? height / 2 : 3 * Appearance.effectiveScale
+                bottomLeftRadius: root.role === "prev" ? height / 2 : 3 * Appearance.effectiveScale
+                topRightRadius: root.role === "next" ? height / 2 : 3 * Appearance.effectiveScale
+                bottomRightRadius: root.role === "next" ? height / 2 : 3 * Appearance.effectiveScale
+            }
             Expressive.MaterialShape {
                 id: reelShape
+                visible: root.span !== "1x1"
                 anchors.fill: parent
                 shape: root.span === "3x2"
                     ? Expressive.MaterialShape.Shape.Cookie12Sided

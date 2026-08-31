@@ -49,11 +49,14 @@ var COMPACT_SPACING = 12;      // Appearance.spacing.space150
 // ---- 1x1 constants (designed against the maintainer's reference shot:
 // artwork fills the card, a small transport row sits low on it) -----------
 var TINY_PLAY = 48;            // the cookie play button
-var TINY_SIDE = 24;            // prev/next discs
-// Sized so the row keeps ~12px of artwork on each side of the 132px card:
-// at 26/10 the discs sat 6px off the edges, reading as flush.
-var TINY_GAP = 6;
-var TINY_BOTTOM = 12;          // the row's clearance from the card's bottom
+// The half-pill flankers (2026-08-31 redesign): stuck flush to the play
+// button's sides, round edge outward; the row lifted, a straight seek bar
+// riding below it.
+var TINY_SIDE_W = 22;
+var TINY_SIDE_H = 34;
+var TINY_SEEK_H = 16;
+var TINY_SEEK_BOTTOM = 8;      // seek's clearance from the card's bottom
+var TINY_ROW_GAP = 8;          // between the row and the seek
 
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150
@@ -110,20 +113,18 @@ function transportRects(span, width, height, scale) {
         };
     }
     if (span === "1x1") {
-        // The card is the artwork (Widget.qml's tiny art layer); the
-        // transport rides low across it, play centred, sides on its axis.
+        // The card is the artwork; the transport is a flush trio - half-pill
+        // sides against the play button - lifted above the seek bar.
         var tinyPlay = TINY_PLAY * scale;
-        var tinySide = TINY_SIDE * scale;
-        var tinyGap = TINY_GAP * scale;
-        var tinyW = 2 * tinySide + tinyPlay + 2 * tinyGap;
-        var tinyX = (width - tinyW) / 2;
-        var tinyPlayY = height - (TINY_BOTTOM * scale) - tinyPlay;
-        var tinySideY = tinyPlayY + (tinyPlay - tinySide) / 2;
+        var sideW = TINY_SIDE_W * scale;
+        var sideH = TINY_SIDE_H * scale;
+        var tinyX = (width - (2 * sideW + tinyPlay)) / 2;
+        var tinyPlayY = height - (TINY_SEEK_BOTTOM + TINY_SEEK_H + TINY_ROW_GAP) * scale - tinyPlay;
+        var tinySideY = tinyPlayY + (tinyPlay - sideH) / 2;
         return {
-            prev: _rect(tinyX, tinySideY, tinySide, tinySide),
-            play: _rect(tinyX + tinySide + tinyGap, tinyPlayY, tinyPlay, tinyPlay),
-            next: _rect(tinyX + tinySide + tinyGap + tinyPlay + tinyGap, tinySideY,
-                        tinySide, tinySide)
+            prev: _rect(tinyX, tinySideY, sideW, sideH),
+            play: _rect(tinyX + sideW, tinyPlayY, tinyPlay, tinyPlay),
+            next: _rect(tinyX + sideW + tinyPlay, tinySideY, sideW, sideH)
         };
     }
     if (span === "2x1") {
@@ -177,6 +178,12 @@ function progressRect(span, width, height, scale) {
         var inner = frame.size * 0.76;
         return _rect(frame.x + (frame.size - inner) / 2,
                      frame.y + (frame.size - inner) / 2, inner, inner);
+    }
+    if (span === "1x1") {
+        // The straight bar under the trio (the squiggle seeker at its
+        // smallest), inset from the card's sides.
+        return _rect(16 * scale, height - (TINY_SEEK_BOTTOM + TINY_SEEK_H) * scale,
+                     width - 32 * scale, TINY_SEEK_H * scale);
     }
     return null;
 }
