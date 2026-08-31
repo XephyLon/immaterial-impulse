@@ -169,6 +169,29 @@ ColumnLayout {
                     (enableMouseSelection || editing) ? Qt.IBeamCursor : Qt.ArrowCursor
             }
 
+            Rectangle {
+                // The soft leading edge: while this is the growing line of a
+                // streaming message, its last stretch sits under a gradient
+                // of the message surface, so appended text EMERGES as it
+                // pushes past the veil instead of popping in fully formed.
+                // Done (or losing last place) fades the veil away, which is
+                // also what reveals the final words.
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: Appearance.font.pixelSize.small * 2.4
+                opacity: (!root.done && textArea.index === textLinesRepeater.count - 1
+                    && !root.editing) ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: ColorUtils.transparentize(Appearance.colors.colLayer1, 1) }
+                    GradientStop { position: 1.0; color: ColorUtils.transparentize(Appearance.colors.colLayer1, 0.08) }
+                }
+            }
+
             // Rectangle {
             //     anchors.fill: parent
             //     color: "#22786378"
