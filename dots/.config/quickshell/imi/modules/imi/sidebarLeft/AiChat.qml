@@ -17,6 +17,47 @@ Item {
     property var inputField: messageInputField
     property string commandPrefix: "/"
 
+    // One number the opening choreography hangs off: the composer's
+    // rise/blur and the transcript reveal both fire when it bumps.
+    property int entranceTrigger: -1
+
+    // ---- transcript reveal ------------------------------------------------
+    // Delegates in view when this bumps run a short arrival; offscreen rows
+    // are created settled. Never mid-answer: a reveal is an opening
+    // transition, and replaying it over a turn still being written asks
+    // every settled turn to enter again around it.
+    property int transcriptRevealToken: -1
+    function revealTranscript() {
+        if (Ai.isGenerating) return;
+        root.transcriptRevealToken = Math.max(0, root.transcriptRevealToken + 1);
+        transcriptRevealWindow.restart();
+    }
+    Timer {
+        id: transcriptRevealWindow
+        // Covers the stagger while keeping delegates later created by
+        // scrolling settled - an opening transition, never a list-populate
+        // one.
+        interval: Appearance.animation.elementMoveEnter.duration
+            + Appearance.animation.elementMoveSmall.duration * 2
+        onTriggered: root.transcriptRevealToken = -1
+    }
+
+    // ---- the empty state's hello -------------------------------------------
+    property string emptyStateGreeting: ""
+    readonly property var greetingLines: [
+        Translation.tr("Hello"),
+        Translation.tr("What's on your mind?"),
+        Translation.tr("Ready when you are"),
+        Translation.tr("Ask away"),
+        Translation.tr("Where were we?")
+    ]
+    function refreshGreeting() {
+        const configured = String(Config.options.sidebar.ai.greeting ?? "").trim();
+        root.emptyStateGreeting = configured.length > 0 ? configured
+            : root.greetingLines[Math.floor(Math.random() * root.greetingLines.length)];
+    }
+    Component.onCompleted: root.refreshGreeting()
+
     property var suggestionQuery: ""
     property var suggestionList: []
 
@@ -234,50 +275,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         }
     }
 
-    component StatusItem: MouseArea {
-        id: statusItem
-        property string icon
-        property string statusText
-        property string description
-        hoverEnabled: true
-        implicitHeight: statusItemRowLayout.implicitHeight
-        implicitWidth: statusItemRowLayout.implicitWidth
-
-        RowLayout {
-            id: statusItemRowLayout
-            spacing: 0
-            MaterialSymbol {
-                text: statusItem.icon
-                iconSize: Appearance.font.pixelSize.huge
-                color: Appearance.colors.colSubtext
-            }
-            StyledText {
-                font.pixelSize: Appearance.font.pixelSize.small
-                text: statusItem.statusText
-                color: Appearance.colors.colSubtext
-                animateChange: true
-            }
-        }
-
-        StyledToolTip {
-            text: statusItem.description
-            extraVisibleCondition: false
-            alternativeVisibleCondition: statusItem.containsMouse
-        }
-    }
-
-    component StatusSeparator: Rectangle {
-        implicitWidth: 4
-        implicitHeight: 4
-        radius: implicitWidth / 2
-        color: Appearance.colors.colOutlineVariant
-    }
-
-    // The pane's members run their entrance UNDER the slide, ungated (see
-    // the right sidebar's comment for the twice-learned reason): content,
-    // hint, suggestions, composer, each individually, with the composer -
-    // last rank - as the visible tail after the panel lands, which is the
-    // fork's own left-pane look.
     Connections {
         target: GlobalStates
         function onSidebarLeftOpenChanged() {
@@ -289,6 +286,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     emptyStatePlaceholder.scale = 0.85;
                     glyphGrow.start();
                 }
+                root.entranceTrigger++;
+                root.revealTranscript();
+                if (emptyStatePlaceholder.shown)
+                    root.refreshGreeting();
             }
         }
     }
@@ -336,69 +337,39 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
             reference: root.width
         }
 
-        Item {
+        Rectangle { // Tools bar
+            id: toolsBarSurface
+            property real appear: 1   // wave member, first rank
+            Layout.fillWidth: true
+            implicitHeight: controlBar.implicitHeight + Appearance.spacing.space150
+            radius: Appearance.rounding.full
+            color: Appearance.colors.colLayer1
+            clip: true
+
+            ChatControlBar {
+                id: controlBar
+                anchors.fill: parent
+                anchors.leftMargin: Appearance.spacing.space100
+                anchors.rightMargin: Appearance.spacing.space100
+                inputField: messageInputField
+                commandPrefix: root.commandPrefix
+            }
+        }
+
+        Rectangle {
+            id: chatAreaSurface
             property real appear: 1
+            color: Appearance.colors.colLayer1
             // Messages
             Layout.fillWidth: true
             Layout.fillHeight: true
             layer.enabled: true
+            radius: Appearance.rounding.large
             layer.effect: OpacityMask {
                 maskSource: Rectangle {
                     width: swipeView.width
                     height: swipeView.height
-                    radius: Appearance.rounding.small
-                }
-            }
-
-            StyledRectangularShadow {
-                z: 1
-                target: statusBg
-                opacity: messageListView.atYBeginning ? 0 : 1
-                visible: opacity > 0
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                }
-            }
-            Rectangle {
-                id: statusBg
-                z: 2
-                anchors {
-                    horizontalCenter: parent.horizontalCenter
-                    top: parent.top
-                    topMargin: 0
-                }
-                implicitWidth: statusRowLayout.implicitWidth + 10 * 2
-                implicitHeight: Math.max(statusRowLayout.implicitHeight, 38)
-                radius: Appearance.rounding.normal - root.padding
-                color: messageListView.atYBeginning ? Appearance.colors.colLayer2 : Appearance.colors.colLayer2Base
-                Behavior on color {
-                    animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-                }
-                RowLayout {
-                    id: statusRowLayout
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space150
-
-                    StatusItem {
-                        icon: Ai.currentModelHasApiKey ? "key" : "key_off"
-                        statusText: ""
-                        description: Ai.currentModelHasApiKey ? Translation.tr("API key is set\nChange with /key YOUR_API_KEY") : Translation.tr("No API key\nSet it with /key YOUR_API_KEY")
-                    }
-                    StatusSeparator {}
-                    StatusItem {
-                        icon: "device_thermostat"
-                        statusText: Ai.temperature.toFixed(1)
-                        description: Translation.tr("Temperature\nChange with /temp VALUE")
-                    }
-                    StatusSeparator {
-                        visible: Ai.tokenCount.total > 0
-                    }
-                    StatusItem {
-                        visible: Ai.tokenCount.total > 0
-                        icon: "token"
-                        statusText: Ai.tokenCount.total
-                        description: Translation.tr("Total token count\nInput: %1\nOutput: %2").arg(Ai.tokenCount.input).arg(Ai.tokenCount.output)
-                    }
+                    radius: Appearance.rounding.large
                 }
             }
 
@@ -414,7 +385,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 anchors.fill: parent
                 spacing: Appearance.spacing.space150
                 popin: false
-                topMargin: statusBg.implicitHeight + statusBg.anchors.topMargin * 2
+                topMargin: Appearance.spacing.space100
+                bottomMargin: Appearance.spacing.space100
+                leftMargin: Appearance.spacing.space100
+                rightMargin: Appearance.spacing.space100
 
                 touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4
@@ -441,6 +415,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 delegate: AiMessage {
                     required property var modelData
                     required property int index
+                    transcriptRevealToken: root.transcriptRevealToken
+                    transcriptRevealDelay: index * 40
                     messageIndex: index
                     messageData: {
                         Ai.messageByID[modelData];
@@ -454,14 +430,45 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 z: 2
                 shown: Ai.messageIDs.length === 0
                 icon: "neurology"
-                title: Translation.tr("Large language models")
-                description: Translation.tr("Type /key to get started with online models\nCtrl+O to expand sidebar\nCtrl+P to pin sidebar\nCtrl+D to detach sidebar")
+                title: root.emptyStateGreeting
+                description: Translation.tr("Ask anything")
                 shape: MaterialShape.Shape.PixelCircle
             }
 
             ScrollToBottomButton {
                 z: 3
                 target: messageListView
+            }
+
+            Loader {
+                // The keys worth knowing before the first message.
+                z: 3
+                anchors {
+                    horizontalCenter: parent.horizontalCenter
+                    bottom: parent.bottom
+                    bottomMargin: Appearance.spacing.space200
+                }
+                width: Math.min(parent.width - Appearance.spacing.space200 * 2,
+                    Appearance.font.pixelSize.huge * 18)
+                active: Ai.messageIDs.length === 0
+                opacity: active ? 1 : 0
+                visible: opacity > 0.01
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                sourceComponent: ColumnLayout {
+                    spacing: Appearance.spacing.space25
+                    EmptyStateKey {
+                        Layout.fillWidth: true
+                        keys: ["/key"]
+                        label: Translation.tr("Set an API key to get started")
+                        actionable: true
+                        onTriggered: controlBar.prefill(root.commandPrefix + "key ")
+                    }
+                    EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "O"]; label: Translation.tr("Expand the sidebar") }
+                    EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "P"]; label: Translation.tr("Pin it open") }
+                    EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "D"]; label: Translation.tr("Detach it into its own window") }
+                }
             }
         }
 
@@ -529,7 +536,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         }
 
         Rectangle { // Input area
-            property real appear: 1
             id: inputWrapper
             property real spacing: Appearance.spacing.space100
             Layout.fillWidth: true
@@ -540,6 +546,36 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
 
             Behavior on implicitHeight {
                 animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+            }
+
+            // The fork's composer rise: fade + de-blur + rise as the
+            // choreography's last rank, after the pane's wave has landed.
+            // One writer per channel: this owns opacity, blur and the
+            // transform; the wave no longer dresses this surface.
+            transform: Translate { id: inputWrapperRise }
+            layer.enabled: inputBlur.radius > 0
+            layer.effect: FastBlur { radius: inputBlur.radius }
+            QtObject { id: inputBlur; property real radius: 0 }
+
+            Connections {
+                target: root
+                function onEntranceTriggerChanged() {
+                    if (root.entranceTrigger < 0) return;
+                    inputWrapperAnim.stop();
+                    inputWrapper.opacity = 0;
+                    inputBlur.radius = 20;
+                    inputWrapperRise.y = 40;
+                    inputWrapperAnim.start();
+                }
+            }
+            SequentialAnimation {
+                id: inputWrapperAnim
+                PauseAnimation { duration: Appearance.animation.scale(320) }
+                ParallelAnimation {
+                    NumberAnimation { target: inputWrapper; property: "opacity"; to: 1; duration: Appearance.animation.scale(320); easing.type: Easing.OutCubic }
+                    NumberAnimation { target: inputBlur; property: "radius"; to: 0; duration: Appearance.animation.scale(350); easing.type: Easing.OutCubic }
+                    NumberAnimation { target: inputWrapperRise; property: "y"; to: 0; duration: Appearance.animation.scale(450); easing.type: Easing.OutExpo }
+                }
             }
 
             AttachedFileIndicator {

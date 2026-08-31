@@ -1495,6 +1495,8 @@ Singleton {
                 
                 property JsonObject ai: JsonObject {
                     property bool textFadeIn: false
+                    // Empty rolls a fresh hello per opening; set to pin one.
+                    property string greeting: ""
                 }
                 property JsonObject booru: JsonObject {
                     property bool allowNsfw: false
