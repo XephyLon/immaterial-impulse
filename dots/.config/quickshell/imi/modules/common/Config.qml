@@ -1519,6 +1519,11 @@ Singleton {
                 property JsonObject quickToggles: JsonObject {
                     property string style: "android" // Options: classic, android
                     property JsonObject android: JsonObject {
+                        // The paged layout (spec 2026-08-31). Each page is a
+                        // list of {type, size}. Empty means "not migrated
+                        // yet": the panel then reads the legacy `toggles`
+                        // below as one page and writes this key back once.
+                        property list<var> pages: []
                         property int columns: 5
                         property list<var> toggles: [
                             { "size": 2, "type": "network" },

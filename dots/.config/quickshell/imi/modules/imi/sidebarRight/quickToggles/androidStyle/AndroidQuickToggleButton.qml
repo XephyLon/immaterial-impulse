@@ -20,6 +20,11 @@ GroupButton {
     property var dropIndicatorRef: null
     property bool isUnused: false 
     property var gridRef: null
+    // The pager protocol (spec 2026-08-31): the panel owning the pages, and
+    // which page this tile calls home. The drag's cross-page half lands in
+    // the follow-up commit; until then these only ride along.
+    property var pagerRef: null
+    property int pageIndex: 0
 
     signal openMenu()
     // What a tile asks of the panel that holds the stored toggle list: to be
@@ -29,6 +34,7 @@ GroupButton {
     signal addRequested(string type)
     signal removeRequested(int index)
     signal resizeRequested(int index, int size)
+    signal moveAcrossRequested(int fromIndex, int toPage, int toIndex)
     // Whether the sidebar this tile sits in is open, for the entrance: a
     // tile built while the panel is closed appears at once.
     property bool panelOpen: false

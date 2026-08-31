@@ -79,36 +79,55 @@ def test_the_model_writes_no_identity_role():
             f"place a row may be given one is an insert")
 
 
-def test_the_grid_is_one_flat_keyed_model_per_section():
-    """A per-row model cannot move a delegate between rows, and rows repack on
-    nearly every edit - which is how the original scrambling reached across row
-    boundaries. Both sections of the panel therefore draw from one keyed model
-    each, and a nested Repeater over a row's contents is the shape that would
-    bring the old behaviour back."""
+def test_the_grid_is_one_flat_keyed_model_per_page():
+    """A per-row model cannot move a delegate between rows; with pages the
+    same rule holds per page: each page draws from ONE keyed model declared
+    in its delegate, the unused shelf from its own, and no Repeater may draw
+    from the raw pages value - normalise returns a fresh array every
+    evaluation, so that Repeater would rebuild every delegate on every
+    edit."""
     body = PANEL.read_text(encoding="utf-8")
     models = [match.group("model") for match in REPEATER_MODEL.finditer(body)]
-    assert models == ["usedModel", "unusedModel"], (
-        f"the panel's Repeaters draw from {models}, expected one "
-        f"StableQuickToggleModel per section")
-    for name in models:
+    toggle_models = sorted(set(m for m in models if m in ("pageModel", "unusedModel")))
+    assert toggle_models == ["pageModel", "unusedModel"], (
+        f"the panel's toggle Repeaters draw from {models}, expected pageModel "
+        f"and unusedModel")
+    for name in ("pageModel", "unusedModel"):
         assert re.search(rf'StableQuickToggleModel\s*\{{\s*id:\s*{name}\b', body), (
             f"{name} is not a StableQuickToggleModel")
+    for model in models:
+        assert "pages" not in model, (
+            f"a Repeater draws from {model}; the raw pages value rebuilds "
+            f"every delegate on every edit")
 
 
 def test_the_panel_syncs_once_per_turn_and_not_per_notification():
-    """A live `list<var>` notifies per element written, so the splice-out and
-    splice-in a drop commits is observable in its intermediate states - lists
-    with a toggle duplicated or missing, each of which plans a rebuild rather
-    than a move. Syncing straight from the observer therefore destroys most of
-    the grid in the middle of the gesture the delegates exist to survive."""
+    """A burst of change notifications inside one gesture must land as one
+    sync - the signature handlers go through requestSync, which coalesces
+    the turn."""
     body = PANEL.read_text(encoding="utf-8")
-    for handler in re.finditer(r'^\s*on(Used|Unused)SignatureChanged:(?P<body>.*)$',
-                               body, re.MULTILINE):
-        assert "requestSync" in handler.group("body"), (
+    handlers = re.findall(r'^\s*on(?:Pages|Unused)SignatureChanged:(.*)$', body, re.MULTILINE)
+    assert len(handlers) == 2, "the panel no longer observes both signatures"
+    for handler in handlers:
+        assert "requestSync" in handler, (
             "a signature handler syncs a model directly; it must go through "
             "requestSync, which coalesces the turn")
     assert re.search(r'function requestSync\(\)[^}]*Qt\.callLater', body, re.DOTALL), (
         "requestSync no longer defers the sync to the end of the turn")
+
+
+def test_every_page_write_reassigns_the_store():
+    """An inner array of a nested list<var> mutated in place never notifies
+    the outer property, so the one legal write spelling is reassignment of
+    the pages key. moveInPlace on the store is the regression shape."""
+    chooser = CHOOSER.read_text(encoding="utf-8")
+    assert "moveInPlace" not in chooser, (
+        "the chooser mutates the stored list in place; nested pages must be "
+        "reassigned")
+    assert "Config.options.sidebar.quickToggles.android.pages =" in chooser
+    panel = PANEL.read_text(encoding="utf-8")
+    assert "Config.options.sidebar.quickToggles.android.toggles =" not in panel, (
+        "the legacy key is the migration source and is never written")
 
 
 if __name__ == "__main__":

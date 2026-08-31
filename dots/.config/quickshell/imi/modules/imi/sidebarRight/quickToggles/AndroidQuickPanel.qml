@@ -9,13 +9,18 @@ import Quickshell.Bluetooth
 
 import qs.modules.imi.sidebarRight.quickToggles.androidStyle
 import "../../../common/functions/quick_toggle_layout.js" as QuickToggleLayout
+import "../../../common/functions/quick_toggle_pages.js" as QuickTogglePages
 
 AbstractQuickPanel {
     id: root
     property bool editMode: false
     Layout.fillWidth: true
 
-    implicitHeight: (editMode ? contentItem.implicitHeight : usedGrid.implicitHeight) + root.padding * 2
+    // The pager's height is bound to the CURRENT page's packed rows, so the
+    // column's implicit height is right in both modes and one Behavior
+    // animates every cause: a page flip, an edit, edit mode's extra
+    // sections.
+    implicitHeight: contentItem.implicitHeight + root.padding * 2
     Behavior on implicitHeight {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
@@ -27,83 +32,139 @@ AbstractQuickPanel {
 
     readonly property list<string> availableToggleTypes: ["network", "bluetooth", "vpn", "tailscale", "phoneConnect", "idleInhibitor", "easyEffects", "nightLight", "darkMode", "cloudflareWarp", "gameMode", "screenSnip", "colorPicker", "onScreenKeyboard", "mic", "audio", "notifications", "powerProfile","musicRecognition", "antiFlashbang", "instantReplay"]
     readonly property int columns: Config.options.sidebar.quickToggles.android.columns
-    readonly property list<var> toggles: Config.ready ? Config.options.sidebar.quickToggles.android.toggles : []
+
+    // The pages, normalised through the one reader: the stored `pages` when
+    // it holds any, else the legacy flat `toggles` wrapped as one page.
+    readonly property list<var> pages: Config.ready
+        ? QuickTogglePages.normalise(
+              Config.options.sidebar.quickToggles.android.pages,
+              Config.options.sidebar.quickToggles.android.toggles)
+        : [[]]
+    readonly property int pageCount: root.pages.length
+    property int currentPage: 0
+    onPageCountChanged: root.currentPage = QuickTogglePages.clampPage(root.pages, root.currentPage)
+    onCurrentPageChanged: pager.snapTo(root.currentPage)
+
+    // Migration write-back, once: presets saved after this carry `pages`.
+    // The legacy key is left standing (downgrade path), and once `pages`
+    // holds anything this is permanently false.
+    readonly property bool needsMigration: Config.ready
+        && (Config.options.sidebar.quickToggles.android.pages?.length ?? 0) === 0
+        && (Config.options.sidebar.quickToggles.android.toggles?.length ?? 0) > 0
+    onNeedsMigrationChanged: if (root.needsMigration)
+        Config.options.sidebar.quickToggles.android.pages = root.pages
+
     readonly property list<var> unusedToggles: {
-        const types = availableToggleTypes.filter(type => !toggles.some(toggle => (toggle && toggle.type === type)))
+        const used = QuickTogglePages.usedTypes(root.pages)
+        const types = availableToggleTypes.filter(type => !used[type])
         return types.map(type => { return { type: type, size: 1 } })
     }
 
-    property alias dropIndicator: dropIndicator
-
-    // The models are poked from a SIGNATURE rather than bound to the lists,
-    // because neither list can be observed by identity. The quick toggles
-    // mutate the live `Config` array in place on purpose (26b625905), so that
-    // array is the same object before and after an edit, and `unusedToggles` is
-    // the opposite problem - a fresh array of fresh objects on every
-    // re-evaluation. A string that changes exactly when a sync would do
-    // something answers both, and `sync` is idempotent, so observing generously
-    // costs a compare.
-    readonly property string usedSignature: QuickToggleLayout.signatureOf(root.toggles, root.columns)
+    // The models are poked from a SIGNATURE rather than bound to the lists:
+    // `pages` is a fresh array of fresh objects on every re-evaluation, so
+    // its identity says nothing, and a string that changes exactly when a
+    // sync would do something is free to observe generously. `sync` is
+    // idempotent.
+    readonly property string pagesSignature: QuickTogglePages.signatureOf(root.pages, root.columns)
     readonly property string unusedSignature: QuickToggleLayout.signatureOf(root.unusedToggles, root.columns)
-    onUsedSignatureChanged: root.requestSync()
+    onPagesSignatureChanged: root.requestSync()
     onUnusedSignatureChanged: root.requestSync()
-    // The second arm mirrors SidebarRightContent's: with the keep-loaded
-    // toggle off this panel is created inside the open's own emission, and a
-    // connection made mid-emission never hears it - so a panel born open
-    // runs its wave itself, one turn later, after the sync scheduled above
-    // has built the tiles the wave walks.
-    Component.onCompleted: {
-        root.requestSync();
-        if (GlobalStates.sidebarRightOpen)
-            Qt.callLater(() => {
-                if (GlobalStates.sidebarRightOpen) {
-                    tileWave.park();
-                    tileWave.enter();
-                }
-            });
-    }
 
-    // ...and the sync itself waits for the turn to finish, because a live
-    // `list<var>` notifies per ELEMENT written. Measured: one
-    // `layout_ops.moveInPlace` on the stored list - the splice-out and
-    // splice-in a drop commits - was observed in nine intermediate states, each
-    // one a list with a toggle duplicated or missing, and each one a plan that
-    // removes and re-inserts rows rather than moving them. Syncing on every
-    // notification therefore destroys most of the grid's delegates in the
-    // middle of the one gesture they exist to survive; syncing once, after the
-    // stack that is mutating the array has unwound, sees the reorder the user
-    // performed and emits it as a move.
+    // Deferred a turn, same reason as before the pages: a burst of change
+    // notifications inside one gesture must land as one sync.
     property bool syncPending: false
     function requestSync() {
         if (root.syncPending) return;
         root.syncPending = true;
         Qt.callLater(() => {
             root.syncPending = false;
-            usedModel.sync(root.toggles, root.columns);
+            for (let i = 0; i < pageRepeater.count; i++)
+                pageRepeater.itemAt(i)?.syncNow();
             unusedModel.sync(root.unusedToggles, root.columns);
         });
     }
 
-    // The tiles' wave starts WITH the open, ungated: it runs under the
-    // panel's slide, so the grid is composed as the edge reveals it and only
-    // the last-ranked tiles visibly land after - the fork's grammar, read
-    // off its re-recorded sidebars (the gated version put the whole build on
-    // stage and was judged ruined twice).
+    // The second arm mirrors SidebarRightContent's: a panel born open runs
+    // its wave itself, one turn later, after the sync above has built the
+    // tiles the wave walks.
+    Component.onCompleted: {
+        if (root.needsMigration)
+            Config.options.sidebar.quickToggles.android.pages = root.pages;
+        root.requestSync();
+        if (GlobalStates.sidebarRightOpen)
+            Qt.callLater(() => {
+                if (GlobalStates.sidebarRightOpen) root.enterWave();
+            });
+    }
+
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
-            if (GlobalStates.sidebarRightOpen) {
-                tileWave.park();
-                tileWave.enter();
-            }
+            if (GlobalStates.sidebarRightOpen) root.enterWave();
         }
     }
 
-    StableQuickToggleModel { id: usedModel }
+    // The open's wave runs on the CURRENT page only - the others are off
+    // stage behind the clip and enter drawn when swiped to.
+    function enterWave() {
+        const page = pageRepeater.itemAt(root.currentPage);
+        if (!page) return;
+        page.wave.park();
+        page.wave.enter();
+    }
+
+    // ---- what a live tile drag asks of the pager ----
+    property bool dragActive: false
+    property int edgeDirection: 0
+    function currentGrid() { return pageRepeater.itemAt(root.currentPage)?.grid ?? null; }
+    function currentIndicator() { return pageRepeater.itemAt(root.currentPage)?.indicator ?? null; }
+    function dragHoverAt(sceneX) {
+        const localX = pager.mapFromItem(null, sceneX, 0).x;
+        const band = 28;
+        const direction = localX < band ? -1 : (localX > pager.width - band ? 1 : 0);
+        if (direction === root.edgeDirection) return;
+        root.edgeDirection = direction;
+        if (direction === 0) edgeHold.stop(); else edgeHold.restart();
+    }
+    function dragEnded() {
+        root.edgeDirection = 0;
+        edgeHold.stop();
+        root.dragActive = false;
+    }
+    Timer {
+        id: edgeHold
+        interval: 300
+        onTriggered: {
+            const next = root.currentPage + root.edgeDirection;
+            if (next < 0 || next >= root.pageCount) return;
+            root.currentPage = next;
+            // Held at the band, the drag keeps walking - one page per
+            // interval, stopping at the ends or when the pointer leaves it.
+            edgeHold.restart();
+        }
+    }
+
+    // Exiting edit mode sweeps the blanks the + created and nothing filled.
+    onEditModeChanged: if (!root.editMode) {
+        const pruned = QuickTogglePages.pruned(root.pages);
+        root.currentPage = QuickTogglePages.clampPage(pruned, root.currentPage);
+        Config.options.sidebar.quickToggles.android.pages = pruned;
+    }
+
     StableQuickToggleModel { id: unusedModel }
 
-    function gridHeight(model) {
-        return model.gridRows * root.baseCellHeight + Math.max(0, model.gridRows - 1) * root.spacing;
+    function gridHeight(rows) {
+        // An empty page keeps one row of height: it is a drop target, and a
+        // zero-height page under a drag is a target nothing can hit.
+        return Math.max(rows, 1) * root.baseCellHeight
+            + Math.max(0, Math.max(rows, 1) - 1) * root.spacing;
+    }
+    readonly property int currentRows: QuickToggleLayout.rowCount(
+        QuickToggleLayout.pack(root.pages[root.currentPage] ?? [], root.columns))
+
+    function unusedGridHeight() {
+        return unusedModel.gridRows * root.baseCellHeight
+            + Math.max(0, unusedModel.gridRows - 1) * root.spacing;
     }
 
     Column {
@@ -114,90 +175,211 @@ AbstractQuickPanel {
         }
         spacing: Appearance.spacing.space150
 
-        // One flat grid rather than a Column of row containers, because a row
-        // is not something a model can move a delegate between: an entry
-        // crossing a row boundary leaves one row's model and lands in
-        // another's, at an index some other toggle held. A row is a coordinate
-        // here, not a container.
         Item {
-            id: usedGrid
+            id: pagerArea
             width: contentItem.width
-            implicitHeight: root.gridHeight(usedModel)
-            // Read by a tile deciding whether its arrival is its own to
-            // animate: while this wave is running (or armed), the wave owns
-            // every arrival, and a tile fading itself under it would be a
-            // second writer on `appear`.
-            property StaggerWave entranceWave: tileWave
+            height: root.gridHeight(root.currentRows)
+            clip: true
 
-            // The tiles' own wave: convergent, so each tile arrives from its
-            // side of the grid - the leftmost third from the left, the
-            // rightmost from the right, alternating from above and below -
-            // with the overshoot settle. Delegates rooted on
-            // AndroidQuickToggleButton declare `appear`; the few widget-type
-            // toggles that do not are simply not members and arrive drawn.
-            StaggerWave {
-                id: tileWave
-                target: usedGrid
-                // The fork's tile cadence: an 80ms head start before ANY
-                // tile, then 25ms per tile. The head start is load-bearing:
-                // without it ranks 0-2 begin fading the instant the panel
-                // edge appears and are well-lit before anything else has
-                // started - three tiles reading as "always there, then the
-                // animation begins", which is exactly the pause the
-                // maintainer kept seeing. With it the whole grid rises as
-                // one shimmering field behind the slide's curtain.
-                leadIn: 80
-                step: 25
+            Flickable {
+                id: pager
+                anchors.fill: parent
+                contentWidth: root.pageCount * pager.width
+                contentHeight: pager.height
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                // Edit mode navigates by dots and drag-past-edge: a
+                // horizontal flickable steals the tile DragHandler's
+                // gesture, so free swipe and edit cannot share the surface.
+                interactive: root.pageCount > 1 && !root.editMode
+                onWidthChanged: contentX = root.currentPage * width
+                onMovementEnded: {
+                    // One page per gesture: a hard fling must not sail past
+                    // the neighbour.
+                    const raw = Math.round(pager.contentX / pager.width);
+                    const step = Math.max(root.currentPage - 1,
+                        Math.min(root.currentPage + 1, raw));
+                    const page = QuickTogglePages.clampPage(root.pages, step);
+                    if (page === root.currentPage) pager.snapTo(page);
+                    else root.currentPage = page;
+                }
+
+                NumberAnimation {
+                    id: snapAnim
+                    target: pager
+                    property: "contentX"
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Appearance.animationCurves.emphasizedDecel
+                }
+                function snapTo(page) {
+                    snapAnim.stop();
+                    snapAnim.to = page * pager.width;
+                    snapAnim.start();
+                }
+
+                Row {
+                    Repeater {
+                        id: pageRepeater
+                        // The COUNT, not the pages array: normalise returns
+                        // a fresh array every evaluation, and a Repeater
+                        // over it would rebuild every page's delegates on
+                        // every edit - the exact rebuild the keyed models
+                        // exist to avoid. Keyed by index, a page item
+                        // survives and its model diffs.
+                        model: root.pageCount
+                        delegate: Item {
+                            id: pageItem
+                            required property int index
+                            width: pager.width
+                            height: pagerArea.height
+
+                            property alias wave: tileWave
+                            property alias grid: pageGrid
+                            property alias indicator: pageDropIndicator
+
+                            function syncNow() {
+                                pageModel.sync(root.pages[pageItem.index] ?? [], root.columns);
+                            }
+                            Component.onCompleted: syncNow()
+
+                            StableQuickToggleModel { id: pageModel }
+
+                            Item {
+                                id: pageGrid
+                                width: pageItem.width
+                                height: pageItem.height
+                                property StaggerWave entranceWave: tileWave
+
+                                // The fork's tile cadence, per page: 80ms
+                                // head start, 25ms per tile (see the flat
+                                // panel's history for why the head start is
+                                // load-bearing).
+                                StaggerWave {
+                                    id: tileWave
+                                    target: pageGrid
+                                    leadIn: 80
+                                    step: 25
+                                }
+                                StaggerEntrance {
+                                    target: pageGrid
+                                    convergent: true
+                                }
+
+                                Repeater {
+                                    model: pageModel
+                                    delegate: AndroidToggleDelegateChooser {
+                                        editMode: root.editMode
+                                        gridRef: pageGrid
+                                        dropIndicatorRef: pageDropIndicator
+                                        pagerRef: root
+                                        pageIndex: pageItem.index
+                                        isUnused: false
+                                        baseCellWidth: root.baseCellWidth
+                                        baseCellHeight: root.baseCellHeight
+                                        spacing: root.spacing
+                                        onOpenAudioOutputDialog: root.openAudioOutputDialog()
+                                        onOpenAudioInputDialog: root.openAudioInputDialog()
+                                        onOpenBluetoothDialog: root.openBluetoothDialog()
+                                        onOpenNightLightDialog: root.openNightLightDialog()
+                                        onOpenWifiDialog: root.openWifiDialog()
+                                        onOpenTailscaleDialog: root.openTailscaleDialog()
+                                        onOpenPhoneTab: root.openPhoneTab()
+                                    }
+                                }
+
+                                Rectangle {
+                                    id: pageDropIndicator
+                                    visible: false
+                                    z: 99
+                                    width: 3
+                                    radius: Appearance.rounding.unsharpen
+                                    color: Appearance.colors.colPrimary
+
+                                    Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                                    Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+
+                                    Rectangle {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        anchors.top: parent.top
+                                        anchors.topMargin: -Appearance.spacing.space50
+                                        width: 8; height: 8; radius: Appearance.rounding.full
+                                        color: Appearance.colors.colPrimary
+                                    }
+                                    Rectangle {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        anchors.bottom: parent.bottom
+                                        anchors.bottomMargin: -Appearance.spacing.space50
+                                        width: 8; height: 8; radius: Appearance.rounding.full
+                                        color: Appearance.colors.colPrimary
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            StaggerEntrance {
-                target: usedGrid
-                convergent: true
-            }
+        }
+
+        // The dot rail: one dot per page, the current one stretched, a `+`
+        // while editing. Hidden entirely for the common one-page,
+        // not-editing case so nothing changes for a user who never pages.
+        Row {
+            visible: root.pageCount > 1 || root.editMode
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Appearance.spacing.space100
 
             Repeater {
-                model: usedModel
-                delegate: AndroidToggleDelegateChooser {
-                    editMode: root.editMode
-                    gridRef: usedGrid
-                    dropIndicatorRef: dropIndicator
-                    isUnused: false
-                    baseCellWidth: root.baseCellWidth
-                    baseCellHeight: root.baseCellHeight
-                    spacing: root.spacing
-                    onOpenAudioOutputDialog: root.openAudioOutputDialog()
-                    onOpenAudioInputDialog: root.openAudioInputDialog()
-                    onOpenBluetoothDialog: root.openBluetoothDialog()
-                    onOpenNightLightDialog: root.openNightLightDialog()
-                    onOpenWifiDialog: root.openWifiDialog()
-                    onOpenTailscaleDialog: root.openTailscaleDialog()
-                    onOpenPhoneTab: root.openPhoneTab()
+                model: root.pageCount
+                delegate: Rectangle {
+                    id: dot
+                    required property int index
+                    readonly property bool current: dot.index === root.currentPage
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: dot.current ? 18 : 6
+                    height: 6
+                    radius: Appearance.rounding.full
+                    color: dot.current ? Appearance.colors.colPrimary
+                                       : Appearance.colors.colOutlineVariant
+                    Behavior on width {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
+                    Behavior on color {
+                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -Appearance.spacing.space50
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.currentPage = dot.index
+                    }
                 }
             }
 
-            Rectangle {
-                id: dropIndicator
-                visible: false
-                z: 99
-                width: 3
-                radius: Appearance.rounding.unsharpen
-                color: Appearance.colors.colPrimary
-
-                Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-
-                Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.top: parent.top
-                    anchors.topMargin: -Appearance.spacing.space50
-                    width: 8; height: 8; radius: Appearance.rounding.full
-                    color: Appearance.colors.colPrimary
-                }
-                Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -Appearance.spacing.space50
-                    width: 8; height: 8; radius: Appearance.rounding.full
-                    color: Appearance.colors.colPrimary
+            FadeLoader {
+                shown: root.editMode
+                anchors.verticalCenter: parent.verticalCenter
+                sourceComponent: MaterialSymbol {
+                    text: "add"
+                    iconSize: 16
+                    color: addArea.containsMouse ? Appearance.colors.colPrimary
+                                                 : Appearance.colors.colOnLayer1
+                    Behavior on color {
+                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                    }
+                    MouseArea {
+                        id: addArea
+                        anchors.fill: parent
+                        anchors.margins: -Appearance.spacing.space50
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            const next = root.pageCount;
+                            Config.options.sidebar.quickToggles.android.pages =
+                                QuickTogglePages.withAddedPage(root.pages);
+                            root.currentPage = next;
+                        }
+                    }
                 }
             }
         }
@@ -221,7 +403,7 @@ AbstractQuickPanel {
             sourceComponent: Item {
                 id: unusedGrid
                 width: contentItem.width
-                implicitHeight: root.gridHeight(unusedModel)
+                implicitHeight: root.unusedGridHeight()
 
                 Repeater {
                     model: unusedModel
@@ -229,6 +411,9 @@ AbstractQuickPanel {
                         editMode: root.editMode
                         gridRef: unusedGrid
                         isUnused: true
+                        // The shelf inserts onto whichever page is showing.
+                        pagerRef: root
+                        pageIndex: root.currentPage
                         baseCellWidth: root.baseCellWidth
                         baseCellHeight: root.baseCellHeight
                         spacing: root.spacing

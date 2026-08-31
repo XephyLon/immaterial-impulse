@@ -3,7 +3,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
-import "../../../../common/functions/layout_ops.js" as LayoutOps
+import "../../../../common/functions/quick_toggle_pages.js" as QuickTogglePages
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -18,6 +18,10 @@ DelegateChooser {
     property var dropIndicatorRef: null 
     property bool isUnused: false
     property var gridRef: null 
+    // Which page this chooser's tiles live on, and the panel that owns the
+    // pager - handed down to every tile for the drag protocol.
+    property var pagerRef: null
+    property int pageIndex: 0
     signal openAudioOutputDialog()
     signal openAudioInputDialog()
     signal openBluetoothDialog()
@@ -26,32 +30,37 @@ DelegateChooser {
     signal openTailscaleDialog()
     signal openPhoneTab()
 
-    // The stored toggle list is written HERE, on a tile's request, not by the
-    // tile: a tile that edits Config cannot be shown anywhere the config is
-    // not the real one. The four bodies moved verbatim from the tile.
+    // The stored PAGES are written HERE, on a tile's request, not by the
+    // tile. Every edit REASSIGNS the pages key: the store is a nested
+    // list<var>, and an inner array mutated in place never notifies the
+    // outer property - the in-place spelling 26b625905 measured was a FLAT
+    // list and does not carry over. Delegates still survive: ids are stable
+    // and the keyed model diffs the reassigned value into moves.
+    function currentPages() {
+        return QuickTogglePages.normalise(
+            Config.options.sidebar.quickToggles.android.pages,
+            Config.options.sidebar.quickToggles.android.toggles);
+    }
+    function writePages(next) {
+        Config.options.sidebar.quickToggles.android.pages = next;
+    }
     function moveToggle(fromIndex, toIndex) {
-        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-        // Mutated in place, deliberately: 26b625905 measured that every
-        // mutation form notifies and reverted the copy-and-reassign
-        // indirection added on the belief that they do not. The dragged
-        // toggle travels to the tile it was dropped on and the ones it passed
-        // shift back one, instead of the two exchanging places.
-        LayoutOps.moveInPlace(toggleList, fromIndex, toIndex);
+        writePages(QuickTogglePages.withMove(currentPages(),
+            root.pageIndex, fromIndex, root.pageIndex, toIndex));
+    }
+    function moveToggleAcross(fromIndex, toPage, toIndex) {
+        writePages(QuickTogglePages.withMove(currentPages(),
+            root.pageIndex, fromIndex, toPage, toIndex));
     }
     function addToggle(type) {
-        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-        if (!toggleList.find(t => t.type === type))
-            toggleList.push({ type: type, size: 1 });
+        writePages(QuickTogglePages.withInsert(currentPages(),
+            root.pageIndex, { type: type, size: 1 }));
     }
     function removeToggle(index) {
-        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-        if (index >= 0 && index < toggleList.length)
-            toggleList.splice(index, 1);
+        writePages(QuickTogglePages.withRemove(currentPages(), root.pageIndex, index));
     }
     function resizeToggle(index, size) {
-        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-        if (index >= 0 && index < toggleList.length)
-            toggleList[index].size = size;
+        writePages(QuickTogglePages.withResize(currentPages(), root.pageIndex, index, size));
     }
 
     // The role a choice is picked by is the one `StableQuickToggleModel`
@@ -74,9 +83,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -96,9 +108,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -117,9 +132,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -139,9 +157,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -161,9 +182,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -183,9 +207,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -205,9 +232,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -226,9 +256,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -247,9 +280,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -268,9 +304,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -289,9 +328,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -310,9 +352,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -331,9 +376,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -354,10 +402,13 @@ DelegateChooser {
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         onOpenMenu: root.openAudioInputDialog()
     } }
 
@@ -374,9 +425,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -397,10 +451,13 @@ DelegateChooser {
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         onOpenMenu: root.openWifiDialog()
     } }
 
@@ -419,10 +476,13 @@ DelegateChooser {
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         onOpenMenu: root.openNightLightDialog()
     } }
 
@@ -439,9 +499,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -460,9 +523,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -481,9 +547,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
@@ -502,9 +571,12 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
         isUnused: root.isUnused
         panelOpen: GlobalStates.sidebarRightOpen
         onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
