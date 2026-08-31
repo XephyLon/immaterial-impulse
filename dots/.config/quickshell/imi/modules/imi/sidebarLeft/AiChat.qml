@@ -340,6 +340,43 @@ Item {
             }
         },
         {
+            name: "remember",
+            description: Translation.tr("Save a fact to assistant memory"),
+            execute: args => {
+                const fact = args.join(" ").trim();
+                if (fact.length === 0) {
+                    Ai.addMessage(Translation.tr("Usage: %1remember THE_FACT").arg(root.commandPrefix), Ai.interfaceRole);
+                } else if (AiMemory.remember(fact, "user")) {
+                    Ai.addMessage(Translation.tr("Remembered: %1").arg(fact), Ai.interfaceRole);
+                } else {
+                    Ai.addMessage(Translation.tr("Already known (or memory is disabled)."), Ai.interfaceRole);
+                }
+            }
+        },
+        {
+            name: "forget",
+            description: Translation.tr("Delete a fact by its id (see /memory)"),
+            execute: args => {
+                if (AiMemory.forget(args[0] ?? ""))
+                    Ai.addMessage(Translation.tr("Forgotten."), Ai.interfaceRole);
+                else
+                    Ai.addMessage(Translation.tr("No fact with that id - %1memory lists them.").arg(root.commandPrefix), Ai.interfaceRole);
+            }
+        },
+        {
+            name: "memory",
+            description: Translation.tr("List assistant memory"),
+            execute: () => {
+                if (AiMemory.facts.length === 0) {
+                    Ai.addMessage(Translation.tr("Memory is empty. %1remember adds a fact; the model can too, announced.").arg(root.commandPrefix), Ai.interfaceRole);
+                    return;
+                }
+                const lines = AiMemory.facts.map(f => `- \`${f.id}\` ${f.text} *(${f.source})*`);
+                Ai.addMessage(Translation.tr("## Assistant memory") + "\n\n" + lines.join("\n")
+                    + "\n\n" + Translation.tr("%1forget ID deletes one.").arg(root.commandPrefix), Ai.interfaceRole);
+            }
+        },
+        {
             name: "usage",
             description: Translation.tr("Show token usage"),
             execute: () => {

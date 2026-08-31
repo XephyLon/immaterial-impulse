@@ -33,9 +33,12 @@ Singleton {
     signal responseFinished()
 
     property string systemPrompt: {
-        // The active persona's prompt wins over the free-text card.
+        // The active persona's prompt wins over the free-text card; the
+        // memory block rides along either way.
         let prompt = PersonasFold.effectivePrompt(AiPersonas.active,
             Config.options?.ai?.systemPrompt ?? "");
+        if (AiMemory.promptBlock.length > 0)
+            prompt += "\n\n" + AiMemory.promptBlock;
         for (let key in root.promptSubstitutions) {
             // prompt = prompt.replaceAll(key, root.promptSubstitutions[key]);
             // QML/JS doesn't support replaceAll, so use split/join
@@ -117,6 +120,20 @@ Singleton {
                     }
                 },
                 {
+                    "name": "remember_fact",
+                    "description": "Save one short durable fact about the user for future conversations. Only for things worth knowing next week; every save is announced.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "fact": {
+                                "type": "string",
+                                "description": "The fact, one short sentence",
+                            },
+                        },
+                        "required": ["fact"]
+                    }
+                },
+                {
                     "name": "run_shell_command",
                     "description": "Run a shell command in bash and get its output. Use this only for quick commands that don't require user interaction. For commands that require interaction, ask the user to run manually instead.",
                     "parameters": {
@@ -181,6 +198,23 @@ Singleton {
                                 },
                             },
                             "required": ["command"]
+                        }
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "remember_fact",
+                        "description": "Save one short durable fact about the user for future conversations (preferences, environment, standing context). Only for things worth knowing next week; every save is announced to the user.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "fact": {
+                                    "type": "string",
+                                    "description": "The fact, one short sentence",
+                                },
+                            },
+                            "required": ["fact"]
                         }
                     },
                 },
@@ -308,11 +342,15 @@ Singleton {
     /** A generation the tool path queued while the chat stream was still
         running; launched by onExited once the requester is free. */
     property var pendingImageGeneration: null
+    /** A follow-up request queued the same way (a tool answered and the
+        model should continue). */
+    property bool pendingContinuation: false
 
     /** Ends the current generation - network or simulated - marking the
         message done so every done-gated surface settles normally. */
     function stopGeneration() {
         root.pendingImageGeneration = null;
+        root.pendingContinuation = false;
         if (simTimer.running) {
             simTimer.stop();
             root.simRemaining = "";
@@ -1342,6 +1380,9 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 const job = root.pendingImageGeneration;
                 root.pendingImageGeneration = null;
                 requester.makeImageRequest(job.model, job.prompt);
+            } else if (root.pendingContinuation) {
+                root.pendingContinuation = false;
+                requester.makeRequest();
             }
         }
     }
@@ -1546,6 +1587,22 @@ And a final paragraph after the math, so the stream does not end on a block boun
             message.rawContent += contentToAppend;
             message.content += contentToAppend;
             message.functionPending = true; // Use thinking to indicate the command is waiting for approval
+        }
+        else if (name === "remember_fact") {
+            const fact = String(args?.fact ?? "").trim();
+            if (fact.length === 0) {
+                addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `fact`."));
+            } else if (AiMemory.remember(fact, "model")) {
+                // Announced, never silent - and undoable by id via /memory.
+                root.addMessage(Translation.tr("Remembered: %1").arg(fact), root.interfaceRole);
+                addFunctionOutputMessage(name, "Saved.");
+            } else {
+                addFunctionOutputMessage(name, Translation.tr("Already known (or memory is disabled)."));
+            }
+            // NEVER makeRequest here: the call lands mid-stream and a
+            // running Process ignores running=true (the generate_image
+            // lesson). The exit handler continues the conversation.
+            root.pendingContinuation = true;
         }
         else if (name === "generate_image") {
             const prompt = String(args?.prompt ?? "").trim();

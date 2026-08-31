@@ -591,6 +591,12 @@ Singleton {
                 // systemPrompt,temperature}) shadow built-ins by id.
                 property string persona: ""
                 property list<var> personas: []
+                property JsonObject memory: JsonObject {
+                    // Facts the assistant keeps between chats (see
+                    // AiMemory); the list itself lives beside the chats.
+                    property bool enabled: true
+                    property int limit: 40
+                }
                 property list<var> customProviders: [
                     {
                         "enabled": false,
