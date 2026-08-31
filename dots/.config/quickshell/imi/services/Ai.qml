@@ -276,6 +276,20 @@ Singleton {
     // silently inert. The requester process's lifetime is the answer.
     readonly property bool isGenerating: requester.running
 
+    // TEMPORARY TRACER (remove when the provider-wipe is caught): the
+    // maintainer's custom provider has twice been found blanked -
+    // {enabled:true, name:"", baseUrl:""} - by an in-memory change some
+    // later config flush persisted. This logs every change of the list
+    // with a timestamp, so the wiping write self-identifies in the
+    // instance log instead of being reconstructed from guesses.
+    property Connections providerWipeTracer: Connections {
+        target: Config.options.ai
+        function onCustomProvidersChanged() {
+            console.log("[Ai][trace] customProviders ->",
+                JSON.stringify(Config.options.ai.customProviders));
+        }
+    }
+
     readonly property var ownPromptHistory: {
         const list = [];
         for (let i = 0; i < root.messageIDs.length; i++) {
