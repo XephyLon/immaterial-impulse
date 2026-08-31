@@ -42,29 +42,29 @@ StyledPopup {
     // the shaped icon's width plus the header row's gap.
     readonly property real rowIndent: 32 + Appearance.spacing.space100
 
-    // A section header: the glyph in its Material shape - the same treatment
-    // the clock and weather cards carry - with the label beside it. The
-    // shape varies per section, which is the design language's way of making
-    // a list of headers scannable; the error-toned pair is the title's.
+    // A section header: a bare glyph with the label beside it - no shape
+    // chip ("These do not need icon backgrounds. Just icons."). The glyph
+    // keeps the 32px slot the chip occupied, so the plate indent and the
+    // label column do not move. The title's shield keeps its shape: it is
+    // the card's identity, not a section marker.
     component SectionHeader: RowLayout {
         id: header
         required property string icon
         required property string label
-        property var shape: MaterialShape.Shape.Clover4Leaf
         property bool errorTone: false
         Layout.fillWidth: true
         spacing: Appearance.spacing.space100
-        MaterialShapeWrappedMaterialSymbol {
-            wrappedShape: header.shape
-            text: header.icon
-            iconSize: Appearance.font.pixelSize.normal
-            implicitSize: 32
-            color: header.errorTone
-                ? Appearance.colors.colErrorContainer
-                : Appearance.colors.colPrimaryContainer
-            colSymbol: header.errorTone
-                ? Appearance.colors.colError
-                : Appearance.colors.colPrimary
+        Item {
+            implicitWidth: 32
+            implicitHeight: 32
+            MaterialSymbol {
+                anchors.centerIn: parent
+                text: header.icon
+                iconSize: Appearance.font.pixelSize.larger
+                color: header.errorTone
+                    ? Appearance.colors.colError
+                    : Appearance.colors.colPrimary
+            }
         }
         StyledText {
             Layout.fillWidth: true
@@ -270,7 +270,6 @@ StyledPopup {
         id: section
         required property string icon
         required property string label
-        property var shape: MaterialShape.Shape.Clover4Leaf
         property var entries: []
         property var streams: []
         property string rowNote: ""
@@ -280,7 +279,6 @@ StyledPopup {
         SectionHeader {
             icon: section.icon
             label: section.label
-            shape: section.shape
         }
 
         SectionPlate {
@@ -360,7 +358,6 @@ StyledPopup {
                 visible: MediaCapture.micActive
                 icon: "mic"
                 label: Translation.tr("Microphone")
-                shape: MaterialShape.Shape.Cookie12Sided
                 streams: MediaCapture.micStreams
                 entries: MediaCapture.micApps.length > 0
                     ? MediaCapture.micApps
@@ -371,7 +368,6 @@ StyledPopup {
                 visible: MediaCapture.cameraActive
                 icon: "videocam"
                 label: Translation.tr("Camera")
-                shape: MaterialShape.Shape.Clover4Leaf
                 entries: MediaCapture.cameraApps.length > 0
                     ? MediaCapture.cameraApps
                     : [Translation.tr("In use")]
@@ -386,7 +382,6 @@ StyledPopup {
                 visible: MediaCapture.screencastActive
                 icon: "screen_share"
                 label: Translation.tr("Screen")
-                shape: MaterialShape.Shape.Slanted
                 // Portal casts carry their app identity through PipeWire;
                 // screencopy and kms captures are anonymous by nature, so
                 // the generic line survives as the honest fallback.
@@ -407,7 +402,6 @@ StyledPopup {
                     label: ScreenRecord.recording
                         ? Translation.tr("Recording")
                         : Translation.tr("Instant replay")
-                    shape: MaterialShape.Shape.Sunny
                 }
 
                 SectionPlate {
@@ -469,7 +463,6 @@ StyledPopup {
                 SectionHeader {
                     icon: "key"
                     label: Translation.tr("Granted permissions")
-                    shape: MaterialShape.Shape.Gem
                 }
 
                 SectionPlate {
