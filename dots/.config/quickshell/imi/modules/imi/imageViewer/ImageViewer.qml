@@ -73,6 +73,27 @@ Scope {
                     }
                     // Clicking the image itself must not close the viewer.
                     MouseArea { anchors.fill: parent; onClicked: {} }
+
+                    // Panning: drag moves the centered image by its anchor
+                    // offsets, accumulating across gestures; closing the
+                    // viewer unloads everything, so pan and zoom reset for
+                    // the next open.
+                    DragHandler {
+                        id: dragPan
+                        target: null
+                        property real baseX: 0
+                        property real baseY: 0
+                        onActiveChanged: {
+                            if (active) {
+                                baseX = viewerImage.anchors.horizontalCenterOffset;
+                                baseY = viewerImage.anchors.verticalCenterOffset;
+                            }
+                        }
+                        onActiveTranslationChanged: {
+                            viewerImage.anchors.horizontalCenterOffset = dragPan.baseX + activeTranslation.x;
+                            viewerImage.anchors.verticalCenterOffset = dragPan.baseY + activeTranslation.y;
+                        }
+                    }
                 }
             }
         }
