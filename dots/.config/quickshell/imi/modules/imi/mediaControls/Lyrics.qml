@@ -31,13 +31,22 @@ Item {
     function escapeMarkup(text) {
         return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     }
+    // Qt's rich-text HTML subset takes #rrggbb only; a QML color stringifies
+    // with its alpha in front (#aarrggbb) and the 8-digit form is ignored -
+    // which painted every word the same and hid the sweep entirely.
+    function cssColor(value) {
+        const s = String(value)
+        return s.length === 9 ? "#" + s.slice(3) : s
+    }
     // The active line as rich text: sung words in the active colour, the
     // rest dimmed - the word flips as the clock crosses its stamp.
     function karaokeMarkup(timeline, position) {
         let parts = []
         for (let i = 0; i < timeline.length; i++) {
             const word = timeline[i]
-            const tone = word.time <= position ? root.activeColor : root.dimColor
+            const tone = word.time <= position
+                ? root.cssColor(root.activeColor)
+                : root.cssColor(Qt.darker(root.textColor, 2.2))
             parts.push(`<font color="${tone}">${root.escapeMarkup(word.text)}</font>`)
         }
         return parts.join(" ")
@@ -83,6 +92,7 @@ Item {
         }
 
         ColumnLayout {
+            id: lyricsRoll
             Layout.fillWidth: true
             Layout.fillHeight: true
             visible: LyricsService.status === "ok"
@@ -109,7 +119,11 @@ Item {
                     if (LyricsService.activeIndex < 0)
                         return;
                     lineShiftSettle.stop();
-                    lineShiftTransform.y = parent.lineAdvance;
+                    // Named, not `parent`: inside a Connections handler an
+                    // unqualified parent resolves past the column entirely,
+                    // and the assignment of undefined aborted the handler -
+                    // which is exactly the snap this animation exists to end.
+                    lineShiftTransform.y = lyricsRoll.lineAdvance;
                     lineShiftSettle.start();
                 }
             }

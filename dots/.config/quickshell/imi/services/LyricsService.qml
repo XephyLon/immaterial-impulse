@@ -44,7 +44,9 @@ Singleton {
         }
     }
     function estimatedPosition() {
-        if (!root.playing)
+        // Unanchored (no position signal yet): extrapolating from wall zero
+        // computes hours and lights every word at once.
+        if (!root.playing || root.lastPositionWall === 0)
             return root.activePlayer?.position ?? root.lastKnownPosition
         return root.lastKnownPosition + (Date.now() - root.lastPositionWall) / 1000
     }
