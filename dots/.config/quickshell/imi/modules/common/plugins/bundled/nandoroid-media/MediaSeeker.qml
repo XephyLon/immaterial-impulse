@@ -194,8 +194,19 @@ Item {
             const freq = Math.round(6 + (12 - 6) * canvas.bendNow);
             const amp = stroke * 0.6 * root.waveLevel;
             const phase = root.phase, k = freq * 2 * Math.PI / N;
-            function px(i) { return bx[i] + nx[i] * amp * Math.sin(k * i + phase); }
-            function py(i) { return by[i] + ny[i] * amp * Math.sin(k * i + phase); }
+            const split = Math.round(canvas.progressNow * N);
+            // The wave lives BEHIND the handle only (the M3 grammar the
+            // review's reference shows): played waves, what is ahead lies
+            // straight - with a short taper into the handle so the wiggle
+            // dies there instead of chopping.
+            const taper = 8;
+            function waveAt(i) {
+                if (i >= split) return 0;
+                if (i >= split - taper) return (split - i) / taper;
+                return 1;
+            }
+            function px(i) { return bx[i] + nx[i] * amp * waveAt(i) * Math.sin(k * i + phase); }
+            function py(i) { return by[i] + ny[i] * amp * waveAt(i) * Math.sin(k * i + phase); }
             function strokeRun(from, to, colour) {
                 if (to <= from) return;
                 ctx.beginPath();
@@ -207,7 +218,6 @@ Item {
                 ctx.lineJoin = "round";
                 ctx.stroke();
             }
-            const split = Math.round(canvas.progressNow * N);
             strokeRun(split, N, canvas.trackColor);
             strokeRun(0, split, canvas.arcColor);
 
