@@ -83,6 +83,10 @@ Singleton {
     property string userActions: FileUtils.trimFileProtocol(`${Directories.shellConfig}/actions`)
     property string aiChats: FileUtils.trimFileProtocol(`${Directories.state}/user/ai/chats`)
     property string aiSessions: FileUtils.trimFileProtocol(`${Directories.state}/user/ai/chats/sessions`)
+    // Durable copies of chat attachments: cliphist's decode dir is a /tmp
+    // cache that vanishes underneath a message, which is how a request went
+    // out pointing at a file that no longer existed.
+    property string aiAttachments: FileUtils.trimFileProtocol(`${Directories.state}/user/ai/attachments`)
     property string aiTranslationScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/ai/gemini-translate.sh`)
     property string iconThemeScanScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/icons/scan-icon-themes.py`)
     property string iconThemeApplyScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/icons/apply-icon-theme.sh`)
@@ -128,6 +132,7 @@ Singleton {
         Quickshell.execDetached(["mkdir", "-p", `${root.shellConfig}`])
         Quickshell.execDetached(["mkdir", "-p", `${root.userPresetsPath}`])
         Quickshell.execDetached(["mkdir", "-p", `${root.userActions}`])
+        Quickshell.execDetached(["mkdir", "-p", `${root.aiAttachments}`])
     }
 
     // Cleanup on init

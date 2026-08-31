@@ -1040,6 +1040,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
             requester.running = true
         }
 
+        stderr: StdioCollector { id: requesterStderr }
         stdout: SplitParser {
             onRead: data => {
                 if (data.length === 0) return;
@@ -1086,9 +1087,14 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 root.addApiKeyAdvice(models[requester.message.model]);
             }
             // A dead endpoint fails with an empty transcript and no
-            // explanation; say what happened and name the retry.
+            // explanation; say what happened - stderr included, which is
+            // where bash and curl actually put the reason - and name the
+            // retry.
             if (exitCode !== 0 && requester.message.content.trim().length === 0) {
-                const note = Translation.tr("**Request failed** (curl exit %1). Check the provider's Base URL and key, then hit Regenerate.").arg(exitCode);
+                let note = Translation.tr("**Request failed** (curl exit %1). Check the provider's Base URL and key, then hit Regenerate.").arg(exitCode);
+                const err = String(requesterStderr.text ?? "").trim();
+                if (err.length > 0)
+                    note += `\n\n\`\`\`\n${err.slice(-400)}\n\`\`\``;
                 requester.message.content += note;
                 requester.message.rawContent += note;
             }
@@ -1140,8 +1146,18 @@ And a final paragraph after the math, so the stream does not end on a block boun
             return;
         }
         const trimmed = CF.FileUtils.trimFileProtocol(filePath);
-        if (root.pendingFilePaths.indexOf(trimmed) !== -1) return;
-        root.pendingFilePaths = [...root.pendingFilePaths, trimmed];
+        // Copy into the durable store: clipboard decodes live in a /tmp
+        // cache that can vanish before the request - or the regenerate -
+        // runs (a request went out pointing at nothing). Paths already in
+        // the store (a session re-arm) are kept as they are.
+        let kept = trimmed;
+        if (trimmed.indexOf(Directories.aiAttachments) !== 0) {
+            const base = trimmed.split("/").pop() || "file";
+            kept = `${Directories.aiAttachments}/${Date.now()}-${base}`;
+            Quickshell.execDetached(["cp", "-f", trimmed, kept]);
+        }
+        if (root.pendingFilePaths.indexOf(kept) !== -1) return;
+        root.pendingFilePaths = [...root.pendingFilePaths, kept];
     }
 
     function removeAttachment(filePath: string) {
