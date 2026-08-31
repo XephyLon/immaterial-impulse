@@ -656,8 +656,23 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 readonly property bool wanted: root.activeView.length > 0
                 property string shownView: ""
                 active: false
-                onWantedChanged: {
-                    if (wanted) {
+                Connections {
+                    target: root
+                    function onActiveViewChanged() {
+                        if (root.activeView.length === 0) return;
+                        if (overlayViewLoader.active) {
+                            // View-to-view (keys -> browse): the click that
+                            // asked lives in the OLD view - swap next turn,
+                            // never under the pressed surface. `wanted`
+                            // alone never fired here: it stays true across
+                            // the switch, which left shownView stale and
+                            // both in-view doors dead.
+                            Qt.callLater(() => {
+                                if (root.activeView.length > 0)
+                                    overlayViewLoader.shownView = root.activeView;
+                            });
+                            return;
+                        }
                         overlayViewLoader.shownView = root.activeView;
                         overlayViewLoader.active = true;
                     }
