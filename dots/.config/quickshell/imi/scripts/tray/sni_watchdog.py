@@ -120,12 +120,35 @@ def get_live_services():
             if line.strip().startswith(":")}
 
 
+XAPP_WATCHER = "/usr/lib/xapps/xapp-sn-watcher"
+
+
+def ensure_xapp():
+    """Keep xapp-sn-watcher present as the org.x watcher and fallback.
+
+    Measured 2026-08-31: it does NOT claim or queue for the org.kde
+    name - quickshell owns that when kded6 is out of the way. The
+    session's real stabilizer was removing kded6 (SIGSEGV-looping, its
+    user dbus activation masked, its zombie cgroup purged); this keeps
+    the org.x side served for xapp-expecting clients. Needs 'Hyprland'
+    in org.x.apps.statusicon status-notifier-enabled-desktops (set on
+    this machine)."""
+    if not os.path.exists(XAPP_WATCHER):
+        return False
+    probe = subprocess.run(["pgrep", "-x", "xapp-sn-watcher"],
+                           capture_output=True)
+    if probe.returncode != 0:
+        subprocess.Popen([XAPP_WATCHER], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return True
+
+
 def run_action(action):
     if action[0] == "activate":
-        # Loading kded6's module both spawns kded6 (dbus activation) and
-        # registers the watcher name.
-        busctl("call", "org.kde.kded6", "/kded", "org.kde.kded6",
-               "loadModule", "s", "statusnotifierwatcher")
+        if not ensure_xapp():
+            # Fallback where xapp is absent: kded6's module.
+            busctl("call", "org.kde.kded6", "/kded", "org.kde.kded6",
+                   "loadModule", "s", "statusnotifierwatcher")
     elif action[0] == "register":
         busctl("call", WATCHER, "/StatusNotifierWatcher", WATCHER,
                "RegisterStatusNotifierItem", "s", action[1])
@@ -140,6 +163,7 @@ def main():
         return 0  # a watchdog is already on duty
 
     state = {"owner": None, "absent_since": None, "remembered": {}}
+    ensure_xapp()  # a queue-holder from the start
     while True:
         try:
             owner = get_owner()
