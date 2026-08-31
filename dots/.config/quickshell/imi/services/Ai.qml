@@ -318,6 +318,11 @@ Singleton {
     Component.onCompleted: {
         setModel(currentModelId, false, false); // Do necessary setup for model
         root.addUserModels() // Config onReadyChanged above might not fire if config is loaded before this service
+        // Same creation-order gap as the line above: wantsCustomModels can
+        // be TRUE from birth (Config already ready), and a binding that is
+        // born true never fires its change handler - so the auto-fetch
+        // needs this kick as well as the handler.
+        if (root.wantsCustomModels) root.fetchCustomModels()
     }
 
     function guessModelLogo(model) {
