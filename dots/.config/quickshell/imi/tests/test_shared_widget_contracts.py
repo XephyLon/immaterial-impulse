@@ -69,8 +69,8 @@ class SharedWidgetContractsTest(unittest.TestCase):
                       "the notification list's placeholder no longer opts in, so "
                       "its shape draws outside the container again.")
         self.assertRegex(
-            source, r"anchors\.fill:\s*listview",
-            "the placeholder must be given the list's area, not the whole "
+            source, r"anchors\.fill:\s*listClip",
+            "the placeholder must be given the list's area (listClip since the OpacityMask fix wrapped the view - same rect, clipped), not the whole "
             "column - otherwise it measures the status row's height as free.")
 
 
