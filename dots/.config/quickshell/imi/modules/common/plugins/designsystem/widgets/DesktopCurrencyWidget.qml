@@ -692,6 +692,7 @@ Item {
                     // above the number it describes, tiny and adrift.
                     ColumnLayout {
                         id: movementColumn
+                        objectName: "currencyMovementColumn"
                         visible: opacity > 0
                         opacity: quoteCell.movement !== null ? 1 : 0
                         Behavior on opacity { SpanFade {} }
@@ -767,6 +768,7 @@ Item {
 
                     StyledText {
                         id: valueText
+                        objectName: "currencyQuoteValue"
                         // the value: under the code when stacked, right-aligned
                         // in a row
                         width: (quoteCell.lastSlot.detailed ?? false)
