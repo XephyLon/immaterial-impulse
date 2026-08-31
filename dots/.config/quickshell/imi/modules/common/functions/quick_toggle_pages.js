@@ -19,7 +19,9 @@
 // `move`.
 
 function _isList(value) {
-    return !!value && typeof value.length === "number";
+    // Not a typeof-array shortcut: a STRING also has a numeric length, and a
+    // "junk" page would otherwise pass and land as an empty page.
+    return !!value && typeof value !== "string" && typeof value.length === "number";
 }
 
 // One page's entries, cleaned: malformed entries dropped, sizes normalised
