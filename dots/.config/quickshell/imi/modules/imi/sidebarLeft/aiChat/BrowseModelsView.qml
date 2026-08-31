@@ -23,7 +23,7 @@ Rectangle {
     Component.onCompleted: {
         slideIn.x = 24;
         slideAnim.start();
-        OpenRouterModels.refresh();
+        if (root.openRouterMode) OpenRouterModels.refresh();
         if (!KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
     }
     NumberAnimation {
@@ -36,6 +36,10 @@ Rectangle {
     }
 
     property string query: ""
+    // With providers of your own, browse IS your providers; the OpenRouter
+    // index (and its fetch, refresh, key) only exists while the provider
+    // list is empty and importing is the sole way in.
+    readonly property bool openRouterMode: (Config.options.ai.customProviders ?? []).length === 0
     // The merged list (spec 2026-08-31): every provider's fetched models
     // first - each with a surfaced toggle bound to its provider's curation
     // - then the OpenRouter index. One search across both.
@@ -58,8 +62,9 @@ Rectangle {
         }
         return rows;
     }
-    readonly property var filtered: OR.filterRows(root.providerRows, root.query)
-        .concat(OR.filterRows(OpenRouterModels.models, root.query))
+    readonly property var filtered: root.openRouterMode
+        ? OR.filterRows(OpenRouterModels.models, root.query)
+        : OR.filterRows(root.providerRows, root.query)
     readonly property int shownCap: 60
 
     function toggleSurfaced(row) {
@@ -113,6 +118,7 @@ Rectangle {
             }
             Item { Layout.fillWidth: true }
             RippleButton {
+                visible: root.openRouterMode
                 implicitWidth: 32
                 implicitHeight: 32
                 buttonRadius: Appearance.rounding.full
@@ -160,7 +166,7 @@ Rectangle {
         }
 
         StyledText {
-            visible: OpenRouterModels.loading
+            visible: root.openRouterMode && OpenRouterModels.loading
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             text: Translation.tr("Fetching the index…")
@@ -168,7 +174,7 @@ Rectangle {
             font.pixelSize: Appearance.font.pixelSize.small
         }
         StyledText {
-            visible: OpenRouterModels.error.length > 0 && !OpenRouterModels.loading
+            visible: root.openRouterMode && OpenRouterModels.error.length > 0 && !OpenRouterModels.loading
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
