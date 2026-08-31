@@ -26,7 +26,7 @@ function normalizeBaseUrl(url) {
     return base.replace(/\/+$/, "");
 }
 
-function parseCustomProviderModels(responseJsonString, baseUrl, providerName, keyId) {
+function parseCustomProviderModels(responseJsonString, baseUrl, providerName, keyId, apiFormat) {
     try {
         if (!responseJsonString || responseJsonString.trim() === "") return [];
         const data = JSON.parse(responseJsonString);
@@ -49,7 +49,7 @@ function parseCustomProviderModels(responseJsonString, baseUrl, providerName, ke
                 endpoint: sanitizedBaseUrl + "/chat/completions",
                 requires_key: true,
                 key_id: keyId,
-                api_format: "openai"
+                api_format: apiFormat || "openai"
             });
         });
         return result;
@@ -79,6 +79,42 @@ function parseAnthropicProviderModels(responseJsonString, baseUrl, providerName,
                 key_id: keyId,
                 api_format: "anthropic",
                 thinking: true
+            });
+        });
+        return result;
+    } catch (e) {
+        return [];
+    }
+}
+
+// Google AI listing: GET {base}/models?key=... ->
+// {models:[{name:"models/gemini-...", displayName, supportedGenerationMethods}]}.
+// Only generateContent-capable entries become chat models; the endpoint is
+// model-in-path with :streamGenerateContent, the gemini dialect appends the
+// key itself.
+function parseGeminiProviderModels(responseJsonString, baseUrl, providerName, keyId) {
+    try {
+        if (!responseJsonString || responseJsonString.trim() === "") return [];
+        const data = JSON.parse(responseJsonString);
+        if (!data || !Array.isArray(data.models)) return [];
+        const sanitizedBaseUrl = normalizeBaseUrl(baseUrl);
+        let result = [];
+        data.models.forEach(model => {
+            const raw = String(model.name || "");
+            if (!raw) return;
+            const methods = model.supportedGenerationMethods || [];
+            if (methods.indexOf("generateContent") === -1) return;
+            const id = raw.replace(/^models\//, "");
+            result.push({
+                name: providerName + ": " + (model.displayName || guessModelName(id)),
+                providerName: providerName,
+                model: id,
+                description: `Online | ${providerName} | ${id}`,
+                endpoint: sanitizedBaseUrl + "/models/" + id + ":streamGenerateContent",
+                requires_key: true,
+                key_id: keyId,
+                api_format: "gemini",
+                thinking: /thinking/i.test(id)
             });
         });
         return result;

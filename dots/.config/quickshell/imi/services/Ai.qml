@@ -281,6 +281,8 @@ Singleton {
             // none of them.
             command: providerType === "anthropic"
                 ? ["bash", "-c", 'curl -sL --max-time 10 -H "x-api-key: $1" -H "anthropic-version: 2023-06-01" -w "\n%{http_code}" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
+                : providerType === "gemini"
+                ? ["bash", "-c", 'curl -sL --max-time 10 -w "\n%{http_code}" "$2/models?key=$1&pageSize=200" 2>/dev/null', "bash", apiKey, baseUrl]
                 : ["bash", "-c", 'curl -sL --max-time 10 -H "Authorization: Bearer $1" -w "\n%{http_code}" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
             stdout: StdioCollector {
                 onStreamFinished: {
@@ -304,9 +306,13 @@ Singleton {
                         root.customProviderFeedbackText = Translation.tr("HTTP %2 from %1 at %3.").arg(fetcherProcess.providerName).arg(status).arg(where);
                         return;
                     }
+                    const keyId = `custom_provider_${fetcherProcess.providerIndex}`;
                     const parsedModels = fetcherProcess.providerType === "anthropic"
-                        ? AiModelsParser.parseAnthropicProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`)
-                        : AiModelsParser.parseCustomProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`);
+                        ? AiModelsParser.parseAnthropicProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, keyId)
+                        : fetcherProcess.providerType === "gemini"
+                        ? AiModelsParser.parseGeminiProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, keyId)
+                        : AiModelsParser.parseCustomProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, keyId,
+                            fetcherProcess.providerType === "mistral" ? "mistral" : "openai");
                     if (parsedModels.length > 0) {
                         parsedModels.forEach(model => {
                             const safeModelName = root.safeModelName(model.model);

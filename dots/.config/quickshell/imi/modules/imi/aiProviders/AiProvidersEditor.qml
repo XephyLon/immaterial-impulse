@@ -109,8 +109,12 @@ ColumnLayout {
                     StyledText {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
-                        text: (Config.options.ai.customProviders[providerCard.index].type ?? "openai") === "anthropic"
-                            ? "Anthropic" : Translation.tr("OpenAI-compatible")
+                        text: ({
+                            "anthropic": "Anthropic",
+                            "gemini": "Google Gemini",
+                            "mistral": "Mistral",
+                        })[Config.options.ai.customProviders[providerCard.index].type ?? "openai"]
+                            ?? Translation.tr("OpenAI-compatible")
                         font.pixelSize: Appearance.font.pixelSize.smaller
                         color: Appearance.colors.colSubtext
                     }
@@ -192,9 +196,9 @@ ColumnLayout {
                 }
 
                 ConfigTextArea {
-                    // Anthropic's endpoint is fixed; the card asks for a
-                    // key and nothing else.
-                    visible: (Config.options.ai.customProviders[providerCard.index].type ?? "openai") !== "anthropic"
+                    // Vendor types carry fixed endpoints; only the
+                    // OpenAI-compatible card asks where the server is.
+                    visible: (Config.options.ai.customProviders[providerCard.index].type ?? "openai") === "openai"
                     buttonIcon: "link"
                     text: Translation.tr("Base URL")
                     placeholderText: Translation.tr("e.g. https://openrouter.ai/api/v1")
@@ -246,7 +250,7 @@ ColumnLayout {
         Layout.leftMargin: Appearance.spacing.space100
         Layout.rightMargin: Appearance.spacing.space100
         Layout.topMargin: Appearance.spacing.space100
-        implicitHeight: 44
+        implicitHeight: choosing ? 84 : 44
 
         function plant(type, name, baseUrl) {
             let providers = [...(Config.options.ai.customProviders || [])];
@@ -305,11 +309,13 @@ ColumnLayout {
             }
         }
 
-        RowLayout {
+        GridLayout {
             anchors.fill: parent
             anchors.margins: 4
             visible: addSlot.choosing
-            spacing: Appearance.spacing.space50
+            columns: 3
+            rowSpacing: Appearance.spacing.space50
+            columnSpacing: Appearance.spacing.space50
 
             component TypeChoice: RippleButton {
                 property string label
@@ -350,7 +356,18 @@ ColumnLayout {
                 glyph: "psychology_alt"
                 onClicked: addSlot.plant("anthropic", "Anthropic", "https://api.anthropic.com/v1")
             }
+            TypeChoice {
+                label: "Google Gemini"
+                glyph: "auto_awesome"
+                onClicked: addSlot.plant("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta")
+            }
+            TypeChoice {
+                label: "Mistral"
+                glyph: "air"
+                onClicked: addSlot.plant("mistral", "Mistral", "https://api.mistral.ai/v1")
+            }
             RippleButton {
+                Layout.rowSpan: 2
                 implicitWidth: 32
                 Layout.fillHeight: true
                 buttonRadius: Appearance.rounding.small
