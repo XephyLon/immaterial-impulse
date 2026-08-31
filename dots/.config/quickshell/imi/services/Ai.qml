@@ -1058,6 +1058,11 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 + (authHeader ? ` ${authHeader}` : "")
                 + ` --data @"$BODY_FILE"`
                 + "\n"
+            // A server that answers in ONE json blob (a proxy handling a
+            // tool call, an error body) ends without a newline, and
+            // SplitParser drops an unterminated final line on the floor -
+            // the reply parsed as nothing at all. Terminate it ourselves.
+            scriptRequestContent += `printf '\\n'\n`
             scriptRequestContent += `rm -f "$BODY_FILE"\n`
             
             /* Send the request */
