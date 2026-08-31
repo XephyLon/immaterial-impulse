@@ -264,4 +264,20 @@ TestCase {
             LayoutOps.nthVisible(flags, visibleDest));
         compare(result.join(","), "hidden,b,a,c");
     }
+
+    function test_parted_slot_closes_the_hole_and_opens_the_gap() {
+        // No drag, no gap: identity.
+        compare(LayoutOps.partedSlot(2, -1, -1), 2);
+        // The dragged row's hole closes: rows past it shift up one.
+        compare(LayoutOps.partedSlot(3, 1, -1), 2);
+        compare(LayoutOps.partedSlot(0, 1, -1), 0);
+        // The insertion gap opens: rows at/past it shift down one.
+        compare(LayoutOps.partedSlot(2, -1, 2), 3);
+        compare(LayoutOps.partedSlot(1, -1, 2), 1);
+        // Both, in one list: hole first, then the gap against the PARTED
+        // slot - dragging row 0 toward a gap at 2 leaves row 3 at 3
+        // (3 -> 2 for the hole, 2 >= 2 so back down one).
+        compare(LayoutOps.partedSlot(3, 0, 2), 3);
+        compare(LayoutOps.partedSlot(1, 0, 0), 1);
+    }
 }

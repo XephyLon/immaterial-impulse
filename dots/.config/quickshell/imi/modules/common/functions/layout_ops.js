@@ -201,3 +201,16 @@ function insertionForVisible(flags, insertion) {
 function moveTargetForInsertion(from, insertion) {
     return insertion > from ? insertion - 1 : insertion;
 }
+
+// Where row `index` DRAWS while a drag is in flight: the dragged row's own
+// slot is a hole that closes under it, and the would-be insertion opens a
+// gap. `dragIndex` is this list's dragged row (-1 when the drag is another
+// list's), `gapIndex` the insertion slot among the REMAINING rows (-1 for
+// no gap here). The gap compares against the parted slot, not the stored
+// index - the hole has already closed by the time the gap opens.
+function partedSlot(index, dragIndex, gapIndex) {
+    var slot = index;
+    if (dragIndex >= 0 && index > dragIndex) slot -= 1;
+    if (gapIndex >= 0 && slot >= gapIndex) slot += 1;
+    return slot;
+}
