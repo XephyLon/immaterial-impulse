@@ -13,6 +13,13 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Apply a preset selectively.** Apply opens a dialog: six groups -
+  wallpaper, theming, fonts, panels, widgets, everything else - all
+  preselected so Enter still applies the whole preset, each showing how
+  many sections the preset holds. App launch commands sit apart and are
+  never preselected: a preset's apps.* strings are shell-executed, and
+  with online presets planned they only ever apply when deliberately
+  ticked.
 - **The currency widget takes a 3x2: a month of real closes.** The
   maintainer's design grown from the 3x1: the hero corner holds still,
   the base gains its full name and a filled 30-day chart beneath, and
