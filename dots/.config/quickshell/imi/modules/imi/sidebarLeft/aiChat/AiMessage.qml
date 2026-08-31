@@ -21,6 +21,34 @@ Rectangle {
     property bool renderMarkdown: true
     property bool editing: false
 
+    // The opening reveal (spec 2026-08-31): the sidebar bumps the token on
+    // arrival and each delegate in view runs one short entrance, ordered by
+    // its visible index. handledRevealToken is what keeps a recycled
+    // delegate from replaying it, and -1 outside the reveal window keeps
+    // scroll-created delegates settled.
+    property int transcriptRevealToken: -1
+    property int transcriptRevealDelay: 0
+    property int handledRevealToken: -1
+
+    transform: Translate { id: arrivalRise }
+    onTranscriptRevealTokenChanged: {
+        if (root.transcriptRevealToken < 0) return;
+        if (root.transcriptRevealToken === root.handledRevealToken) return;
+        root.handledRevealToken = root.transcriptRevealToken;
+        arrivalAnimation.stop();
+        root.opacity = 0;
+        arrivalRise.y = Appearance.rounding.verysmall;
+        arrivalAnimation.start();
+    }
+    SequentialAnimation {
+        id: arrivalAnimation
+        PauseAnimation { duration: root.transcriptRevealDelay }
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "opacity"; to: 1; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutCubic }
+            NumberAnimation { target: arrivalRise; property: "y"; to: 0; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutExpo }
+        }
+    }
+
     property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.messageData?.content)
 
     anchors.left: parent?.left
