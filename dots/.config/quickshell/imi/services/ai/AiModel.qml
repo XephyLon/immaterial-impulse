@@ -17,6 +17,9 @@ import QtQuick;
 
 QtObject {
     property string name
+    // Which custom provider fetched this model - the parser stamps it so
+    // browse rows and headers can say "CLIP: ..." without re-deriving.
+    property string providerName: ""
     property string icon
     property string description
     property string homepage
