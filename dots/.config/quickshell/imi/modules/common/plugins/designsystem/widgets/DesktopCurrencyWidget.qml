@@ -697,11 +697,14 @@ Item {
                         Behavior on opacity { SpanFade {} }
                         anchors.right: parent.right
                         anchors.rightMargin: 2 * Appearance.effectiveScale
-                        // Anchored, not computed: the y formula read
-                        // implicitHeight at a moment the layout had not
-                        // settled it, and the two-line block hung below the
-                        // value it describes.
-                        anchors.verticalCenter: valueText.verticalCenter
+                        // Bottom-aligned to the value, not centred on it:
+                        // centred, the absolute line still dangled under the
+                        // value's baseline into the chart's zone, which read
+                        // as the block sitting below the currency twice over.
+                        // Sharing the value's bottom puts the absolute delta
+                        // on the currency's own line and stacks the percent
+                        // above it.
+                        anchors.bottom: valueText.bottom
                         spacing: -2 * Appearance.effectiveScale
                         StyledText {
                             Layout.alignment: Qt.AlignRight
