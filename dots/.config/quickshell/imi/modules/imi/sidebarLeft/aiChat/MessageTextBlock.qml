@@ -119,17 +119,25 @@ ColumnLayout {
             required property int index
             required property string modelData
 
-            // The append fade. The base shows COMMITTED text; a stacked twin
-            // renders the full text and fades in over each flush, so only
-            // the appended words fade - identical glyphs overlap invisibly.
-            // The commit lands when the fade does.
+            // The append fade, as a ROTATING ring of snapshots. One ghost
+            // restarted per flush never finished its fade before the next
+            // flush reset it - text hung near-invisible and popped on
+            // pauses. Now each flush claims the oldest of four stacked
+            // twins: its previous snapshot (fade long done) commits into
+            // the base, and it fades its new full-text snapshot in over
+            // its own 200ms, overlapping the other ghosts' fades.
+            // Identical glyphs overlap invisibly at every layer, so only
+            // appended words read as fading.
             readonly property bool liveTail: !root.done && index === textLinesRepeater.count - 1 && !root.editing
             property string committedText: ""
+            property int ghostHead: 0
             onModelDataChanged: {
                 if (!liveTail) return;
-                ghostFade.stop();
-                ghost.opacity = 0;
-                ghostFade.start();
+                const g = ghostRepeater.itemAt(ghostHead % 4);
+                if (!g) return;
+                if (g.text.length > committedText.length) committedText = g.text;
+                g.launch(modelData);
+                ghostHead++;
             }
 
             // A NEW paragraph fades in the moment it is born. The previous
@@ -183,34 +191,36 @@ ColumnLayout {
                     (enableMouseSelection || editing) ? Qt.IBeamCursor : Qt.ArrowCursor
             }
 
-            TextArea {
-                id: ghost
-                anchors.fill: parent
-                visible: textArea.liveTail && opacity > 0
-                opacity: 0
-                enabled: false
-                readOnly: true
-                background: null
-                renderType: Text.NativeRendering
-                font: textArea.font
-                wrapMode: textArea.wrapMode
-                color: textArea.color
-                textFormat: textArea.textFormat
-                text: textArea.liveTail ? textArea.modelData : ""
-            }
-            SequentialAnimation {
-                id: ghostFade
-                NumberAnimation {
-                    target: ghost
-                    property: "opacity"
-                    to: 1
-                    duration: 200
-                    easing.type: Easing.OutQuad
-                }
-                ScriptAction {
-                    script: {
-                        textArea.committedText = textArea.modelData;
-                        ghost.opacity = 0;
+            Repeater {
+                id: ghostRepeater
+                model: 4
+                delegate: TextArea {
+                    id: ghost
+                    anchors.fill: parent
+                    visible: textArea.liveTail && opacity > 0 && text.length > 0
+                    opacity: 0
+                    enabled: false
+                    readOnly: true
+                    background: null
+                    renderType: Text.NativeRendering
+                    font: textArea.font
+                    wrapMode: textArea.wrapMode
+                    color: textArea.color
+                    textFormat: textArea.textFormat
+                    text: ""
+                    function launch(snapshot) {
+                        ghostAnim.stop();
+                        text = snapshot;
+                        opacity = 0;
+                        ghostAnim.start();
+                    }
+                    NumberAnimation {
+                        id: ghostAnim
+                        target: ghost
+                        property: "opacity"
+                        to: 1
+                        duration: 200
+                        easing.type: Easing.OutQuad
                     }
                 }
             }
