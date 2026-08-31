@@ -27,10 +27,12 @@ import "modules/common/functions/layout_ops.js" as LayoutOps
  * new slot rather than arriving there. A settled position is what a snap and an
  * animation agree on, so the sample is taken mid-flight.
  *
- * The reorder is spelled the way a drop spells it - an in-place splice of the
- * live `Config` array (26b625905) - because that is the path the panel is
- * observed through, and an edit that reassigns the array would exercise a
- * trigger the user never takes.
+ * The reorder is spelled the way a drop spells it NOW: a reassignment of
+ * the nested pages key - the store went nested, and an inner array mutated
+ * in place never notifies the outer property - applied to a copy of page
+ * one. The seed config still writes the legacy `toggles` key on purpose:
+ * the panel migrates it on startup, so the harness exercises the migration
+ * wrap for free.
  *
  * Launched by tests/test_quick_toggles_layout_runtime.py against a throwaway
  * XDG_CONFIG_HOME. Never point it at a real config dir - it rewrites the toggle
@@ -76,9 +78,9 @@ ShellRoot {
 
     function editToggles(fn) {
         const cfg = Config.options.sidebar.quickToggles.android;
-        const next = cfg.toggles.map(entry => Object.assign({}, entry));
+        const next = (cfg.pages[0] ?? []).map(entry => Object.assign({}, entry));
         fn(next);
-        cfg.toggles = next;
+        cfg.pages = [next];
     }
 
     function typeIndex(list, type) { return list.findIndex(entry => entry.type === type); }
@@ -160,8 +162,8 @@ ShellRoot {
         harness.movedFromX = harness.movedTile ? harness.movedTile.x : -1;
         harness.check("the toggle to be moved is not already in the first slot",
                       harness.movedFromX > 0, `it starts at x ${harness.movedFromX}`);
-        const list = Config.options.sidebar.quickToggles.android.toggles;
-        LayoutOps.moveInPlace(list, harness.typeIndex(list, "nightLight"), 0);
+        harness.editToggles(list =>
+            LayoutOps.moveInPlace(list, harness.typeIndex(list, "nightLight"), 0));
         Qt.callLater(() => {
             harness.verify("a reorder keeps every icon");
             harness.check("a reorder moves the delegate instead of rebuilding it",
