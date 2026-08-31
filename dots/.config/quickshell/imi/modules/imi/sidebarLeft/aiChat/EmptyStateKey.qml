@@ -51,14 +51,40 @@ Rectangle {
                 values: root.keys
             }
 
-            // The cheatsheet's keycap, not a flat colLayer2 chip: on the
-            // empty state's own layer the chip was a tone-on-tone rectangle
-            // that read as plain text ("These key combinations should be
-            // styled as keys").
-            delegate: KeyboardKey {
+            // Two kinds of token, two dressings. A real key wears the
+            // cheatsheet's keycap (face, border, weighted bottom edge - the
+            // flat colLayer2 chip read as plain text on this ground). A
+            // COMMAND is not a key ("this isn't a key"): actionable rows
+            // carry /key and +, pressed as a row rather than held as a
+            // chord, and their token wears a quiet pill instead.
+            delegate: Item {
+                id: tokenSlot
                 required property var modelData
-                key: modelData
-                pixelSize: Appearance.font.pixelSize.smaller
+                implicitWidth: root.actionable ? commandChip.implicitWidth : keyFace.implicitWidth
+                implicitHeight: root.actionable ? commandChip.implicitHeight : keyFace.implicitHeight
+
+                Rectangle {
+                    id: commandChip
+                    visible: root.actionable
+                    implicitWidth: chipLabel.implicitWidth + Appearance.spacing.space100 * 2
+                    implicitHeight: chipLabel.implicitHeight + Appearance.spacing.space25 * 2
+                    radius: Appearance.rounding.full
+                    color: Appearance.colors.colSecondaryContainer
+                    StyledText {
+                        id: chipLabel
+                        anchors.centerIn: parent
+                        text: tokenSlot.modelData
+                        font.family: Appearance.font.family.monospace
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colOnSecondaryContainer
+                    }
+                }
+                KeyboardKey {
+                    id: keyFace
+                    visible: !root.actionable
+                    key: tokenSlot.modelData
+                    pixelSize: Appearance.font.pixelSize.smaller
+                }
             }
         }
 
