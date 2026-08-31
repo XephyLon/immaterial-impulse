@@ -194,7 +194,7 @@ PanelWindow {
             // somewhere other than where the click was sent, which is the one
             // thing that would make this gesture unteachable.
             Repeater {
-                model: root.points
+                model: root.points.filter(entry => !entry.lasso)
 
                 Item {
                     id: marker
@@ -229,6 +229,58 @@ PanelWindow {
             }
         }
 
+        // The loops, live and committed - drawn in screen space through the
+        // cutout's own mask rectangle, exactly as the discs are placed, so a
+        // loop renders where it was drawn. Committed loops are dashed (white
+        // over black for an include, black over white for a cut, the same
+        // any-image palette as the discs); the trace being drawn is solid.
+        // A Canvas takes no input, so the gesture area behind it still sees
+        // every event.
+        Canvas {
+            id: lassoCanvas
+            anchors.fill: parent
+            visible: root.viewport !== null
+            readonly property rect frame: cutout.maskRect
+            onFrameChanged: requestPaint()
+            Connections {
+                target: ClockDepth
+                function onPointsChanged() { lassoCanvas.requestPaint() }
+            }
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.reset();
+                const frameRect = lassoCanvas.frame;
+                const stroke = (include, dashed) => {
+                    ctx.setLineDash(dashed ? [6, 4] : []);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = include ? "#101010" : "#ffffff";
+                    ctx.stroke();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = include ? "#ffffff" : "#101010";
+                    ctx.stroke();
+                };
+                root.points.forEach(entry => {
+                    if (!entry.lasso)
+                        return;
+                    ctx.beginPath();
+                    entry.lasso.forEach((v, i) => {
+                        const x = pictureFrame.x + frameRect.x + v[0] * frameRect.width;
+                        const y = pictureFrame.y + frameRect.y + v[1] * frameRect.height;
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    });
+                    ctx.closePath();
+                    stroke((entry.label ?? 1) === 1, true);
+                });
+                if (pointArea.lassoTrace.length > 1) {
+                    ctx.beginPath();
+                    pointArea.lassoTrace.forEach((sample, i) => {
+                        if (i === 0) ctx.moveTo(sample.x, sample.y); else ctx.lineTo(sample.x, sample.y);
+                    });
+                    stroke(pointArea.pressButton === Qt.LeftButton, false);
+                }
+            }
+        }
+
         // The gesture. Screen-sized rather than box-sized because the box
         // overflows the screen and a click can only ever arrive inside it
         // anyway; the conversion takes the box as its origin.
@@ -244,7 +296,69 @@ PanelWindow {
             enabled: root.viewport !== null && cutout.wallpaperStatus === Image.Ready
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.CrossCursor
+
+            // A drag is a lasso, a click is a point - no mode to switch,
+            // because the two gestures cannot be confused: a lasso only
+            // starts once the press has travelled, and a completed lasso
+            // swallows the click its release would otherwise plant.
+            property var lassoTrace: []
+            property bool lassoing: false
+            property int pressButton: Qt.LeftButton
+            property real pressX: 0
+            property real pressY: 0
+
+            onPressed: mouse => {
+                pointArea.pressButton = mouse.button;
+                pointArea.pressX = mouse.x;
+                pointArea.pressY = mouse.y;
+                pointArea.lassoing = false;
+                pointArea.lassoTrace = [];
+            }
+            onPositionChanged: mouse => {
+                if (!pointArea.pressed)
+                    return;
+                if (!pointArea.lassoing) {
+                    // The same slack a click's own jitter gets: a press that
+                    // has moved less than this is still a click.
+                    const dx = mouse.x - pointArea.pressX;
+                    const dy = mouse.y - pointArea.pressY;
+                    if (dx * dx + dy * dy < 144)
+                        return;
+                    pointArea.lassoing = true;
+                    pointArea.lassoTrace = [{ x: pointArea.pressX, y: pointArea.pressY }];
+                }
+                const trace = pointArea.lassoTrace;
+                const last = trace[trace.length - 1];
+                const gx = mouse.x - last.x;
+                const gy = mouse.y - last.y;
+                if (gx * gx + gy * gy < 16)
+                    return;
+                pointArea.lassoTrace = trace.concat([{ x: mouse.x, y: mouse.y }]);
+                lassoCanvas.requestPaint();
+            }
+            onReleased: {
+                if (!pointArea.lassoing)
+                    return;
+                const box = Qt.rect(pictureFrame.x, pictureFrame.y,
+                    pictureFrame.width, pictureFrame.height);
+                const vertices = [];
+                pointArea.lassoTrace.forEach(sample => {
+                    const point = ClockDepthLogic.promptFromScreen(
+                        box, cutout.maskRect, sample.x, sample.y);
+                    if (point)
+                        vertices.push([point.x, point.y]);
+                });
+                pointArea.lassoTrace = [];
+                lassoCanvas.requestPaint();
+                if (vertices.length >= 3)
+                    ClockDepth.addLasso(vertices, pointArea.pressButton === Qt.LeftButton);
+            }
             onClicked: mouse => {
+                if (pointArea.lassoing) {
+                    // The release that finished a lasso, not a click.
+                    pointArea.lassoing = false;
+                    return;
+                }
                 const point = ClockDepthLogic.promptFromScreen(
                     Qt.rect(pictureFrame.x, pictureFrame.y,
                         pictureFrame.width, pictureFrame.height),
@@ -319,7 +433,7 @@ PanelWindow {
                                 return Translation.tr("Left-click the thing that should stand in front of your widgets.")
                             if (root.maskPath === "")
                                 return Translation.tr("Nothing there — click on the subject itself.")
-                            return Translation.tr("Right-click anything it grabbed that it should not have.")
+                            return Translation.tr("Right-click anything it grabbed that it should not have. Drag a loop to add or cut a region by hand.")
                         }
                         font.pixelSize: Appearance.font.pixelSize.smaller
                         color: ClockDepth.lastError !== ""

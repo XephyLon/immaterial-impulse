@@ -197,6 +197,17 @@ Singleton {
         root.points = next
     }
 
+    // A hand-drawn loop, as [x, y] pairs in the picture's normalised frame.
+    // Same history as the clicks: a lasso is one more step in the same
+    // gesture, so undo walks back through loops and points alike.
+    function addLasso(vertices, include: bool): void {
+        if (root.promptedModel === "")
+            return
+        if (!root.looksLikeList(vertices) || vertices.length < 3)
+            return
+        root.commitPoints(root.points.concat([{ "lasso": vertices, "label": include ? 1 : 0 }]))
+    }
+
     function addPoint(x: real, y: real, include: bool): void {
         if (root.promptedModel === "")
             return
@@ -237,8 +248,13 @@ Singleton {
         root.lastError = ""
         root.selectPending = false
         root.running = root.promptedModel
-        const args = root.points.map(point =>
-            `--point ${point.x.toFixed(4)},${point.y.toFixed(4)},${point.label}`).join(" ")
+        const args = root.points.map(entry => {
+            if (root.looksLikeList(entry.lasso)) {
+                const path = entry.lasso.map(v => `${v[0].toFixed(4)},${v[1].toFixed(4)}`).join(";")
+                return `--lasso ${entry.label ?? 1}:${path}`
+            }
+            return `--point ${entry.x.toFixed(4)},${entry.y.toFixed(4)},${entry.label}`
+        }).join(" ")
         selectProcess.command = ["bash", "-c",
             `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
             `python3 '${Directories.scriptPath}/background/subject_mask.py' select ` +

@@ -526,7 +526,7 @@ class TheClickHistoryIsWholeStates(unittest.TestCase):
     def test_every_edit_goes_through_one_commit(self):
         # If an edit writes root.points directly it is invisible to undo, and
         # the failure is silent - the button simply skips a step.
-        for name in ("addPoint", "clearPoints"):
+        for name in ("addPoint", "addLasso", "clearPoints"):
             body = re.search(r"function %s\(.*?\n    \}" % name, self.service, re.DOTALL)
             self.assertIsNotNone(body, "%s is gone" % name)
             self.assertIn("commitPoints", body.group(0),

@@ -279,6 +279,68 @@ def parse_point(text):
     return {"x": x, "y": y, "label": label}
 
 
+def parse_lasso(text):
+    """One `--lasso LABEL:x1,y1;x2,y2;...` argument - a hand-drawn loop in the
+    image's own normalised frame, closed implicitly.
+
+    LABEL is 1 for a region the subject must include and 0 for one it must
+    not. One shell token on purpose: the caller splices it into the same
+    bash -c line as `--point`, and a format with spaces in it would need a
+    second quoting discipline where the first one is already easy to get
+    wrong silently.
+    """
+    head, sep, body = text.partition(":")
+    if not sep:
+        raise ValueError(f"lasso {text!r} is not LABEL:x,y;x,y;...")
+    label = int(head)
+    if label not in (0, 1):
+        raise ValueError(f"lasso {text!r} has label {label}; expected 1 (include) "
+                         f"or 0 (exclude)")
+    vertices = []
+    for token in body.split(";"):
+        parts = token.split(",")
+        if len(parts) != 2:
+            raise ValueError(f"lasso vertex {token!r} is not x,y")
+        x, y = float(parts[0]), float(parts[1])
+        if not (0.0 <= x <= 1.0 and 0.0 <= y <= 1.0):
+            raise ValueError(f"lasso vertex {token!r} is outside the picture")
+        vertices.append([x, y])
+    if len(vertices) < 3:
+        raise ValueError(f"lasso {text!r} has {len(vertices)} vertices; a loop "
+                         f"needs at least 3")
+    return {"lasso": vertices, "label": label}
+
+
+def apply_lassos(mask, lassos):
+    """Hand-drawn loops over a mask: label 1 unions, label 0 subtracts.
+
+    Applied at the mask's own storage resolution, AFTER the model's answer has
+    been prepared, in the order the loops were drawn - so a subtract after an
+    add wins where they overlap, which is exactly how the gesture reads on
+    screen. The polygon is rasterised crisp rather than fed through the
+    hardening curve: a hand-drawn edge IS the decision, there is no soft matte
+    to sharpen.
+    """
+    if not lassos:
+        return mask
+    import numpy as np
+    from PIL import Image, ImageDraw
+
+    height, width = mask.shape
+    out = mask
+    for entry in lassos:
+        polygon = Image.new("L", (width, height), 0)
+        vertices = [(v[0] * (width - 1), v[1] * (height - 1))
+                    for v in entry["lasso"]]
+        ImageDraw.Draw(polygon).polygon(vertices, fill=255, outline=255)
+        plane = np.asarray(polygon, dtype="float32") / 255.0
+        if entry.get("label", 1) == 1:
+            out = np.maximum(out, plane)
+        else:
+            out = np.minimum(out, 1.0 - plane)
+    return out
+
+
 def encode_prompt(points, resized_size):
     """The clicks, as the two arrays SAM's decoder takes.
 
@@ -727,7 +789,7 @@ def decode_mask(root, model, embedding, resized, points):
     return 1.0 / (1.0 + np.exp(-masks[0][best].astype(np.float32)))
 
 
-def select(root, wallpaper, model, points, identity=None):
+def select(root, wallpaper, model, points, lassos=None, identity=None):
     """Cut a mask from clicks, or clear the one that is there.
 
     No `.none` marker is ever written here, and that is the difference between a
@@ -744,25 +806,34 @@ def select(root, wallpaper, model, points, identity=None):
     root.mkdir(parents=True, exist_ok=True)
     candidate = root / f"{key}.{model}.png"
 
-    if not points:
+    lassos = lassos or []
+    if not points and not lassos:
         candidate.unlink(missing_ok=True)
         return {"state": "cleared", "key": key, "model": model}
 
-    embedding, resized = image_embedding(root, wallpaper, model, key)
-    mask = decode_mask(root, model, embedding, resized, points)
-    foreground = float((mask > 0.5).mean())
+    size = storage_size(*image_size(wallpaper))
+    if points:
+        embedding, resized = image_embedding(root, wallpaper, model, key)
+        # Resampled and hardened exactly as a salient mask is
+        # (`prepare_mask`), so both kinds of file have the same edge.
+        base = prepare_mask(decode_mask(root, model, embedding, resized, points), size)
+    else:
+        # A lasso-only mask never touches the model at all - the loop is the
+        # whole answer, so the base it edits is empty.
+        import numpy as np
+        base = np.zeros((size[1], size[0]), dtype="float32")
+    base = apply_lassos(base, lassos)
+    foreground = float((base > 0.5).mean())
+    prompt = list(points) + list(lassos)
 
     if foreground < EMPTY_PROMPTED_FOREGROUND:
         candidate.unlink(missing_ok=True)
         return {"state": "empty", "key": key, "model": model,
-                "foreground": foreground, "prompt": points}
+                "foreground": foreground, "prompt": prompt}
 
-    # Resampled and hardened exactly as a salient mask is (`prepare_mask`),
-    # so both kinds of file have the same edge.
-    write_mask(candidate, prepare_mask(mask, storage_size(*image_size(wallpaper))),
-               prompt=points)
+    write_mask(candidate, base, prompt=prompt)
     return {"state": "produced", "key": key, "model": model,
-            "mask": str(candidate), "foreground": foreground, "prompt": points}
+            "mask": str(candidate), "foreground": foreground, "prompt": prompt}
 
 
 def run(root, wallpaper, model, force=False, identity=None):
@@ -965,8 +1036,14 @@ def main(argv=None):
                           help="a click, normalised to the picture: 0,0 is the top "
                                "left and 1,1 the bottom right. LABEL is 1 for a "
                                "point the subject must contain (the default) and 0 "
-                               "for one it must not. Repeatable; no points at all "
-                               "clears the candidate.")
+                               "for one it must not. Repeatable; no points and "
+                               "no lassos at all clears the candidate.")
+    p_select.add_argument("--lasso", action="append", default=[],
+                          metavar="LABEL:X,Y;X,Y;...",
+                          help="a hand-drawn loop, closed implicitly, in the "
+                               "same normalised frame. LABEL 1 adds the region "
+                               "to the mask, 0 cuts it out. Applied in order, "
+                               "after the points' model answer.")
 
     p_accept = with_identity(sub.add_parser("accept", help="draw this model's candidate from now on"))
     p_accept.add_argument("wallpaper")
@@ -990,6 +1067,7 @@ def main(argv=None):
         elif args.command == "select":
             result = select(root, args.wallpaper, args.model,
                             [parse_point(p) for p in args.point],
+                            lassos=[parse_lasso(l) for l in args.lasso],
                             identity=args.identity)
         elif args.command == "accept":
             result = accept(root, args.wallpaper, args.model, identity=args.identity)
