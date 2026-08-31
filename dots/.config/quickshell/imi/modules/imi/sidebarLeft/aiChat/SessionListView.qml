@@ -225,6 +225,12 @@ Rectangle {
                 id: titleInput
                 Layout.fillWidth: true
                 readOnly: !row.renaming
+                // A readOnly TextInput still TAKES clicks (cursor and
+                // selection handling), so a click on the title never
+                // reached the row's open area - only clicks beside the
+                // text opened the chat. Disabled outside a rename, the
+                // whole row is one target.
+                enabled: row.renaming
                 text: row.modelData.title.length > 0 ? row.modelData.title
                                                      : Translation.tr("Untitled chat")
                 font.family: Appearance.font.family.main
