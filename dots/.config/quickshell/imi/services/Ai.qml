@@ -90,206 +90,24 @@ Singleton {
     // Gemini: https://ai.google.dev/gemini-api/docs/function-calling
     // OpenAI: https://platform.openai.com/docs/guides/function-calling
     property string currentTool: Config?.options.ai.tool ?? "search"
+    // Rendered from ONE declaration per tool (AiToolRegistry) instead of
+    // three hand-kept copies that had already drifted - gemini never
+    // learned generate_image until this landed.
     property var tools: {
         "gemini": {
-            "functions": [{"functionDeclarations": [
-                {
-                    "name": "switch_to_search_mode",
-                    "description": "Search the web",
-                },
-                {
-                    "name": "get_shell_config",
-                    "description": "Get the desktop shell config file contents",
-                },
-                {
-                    "name": "set_shell_config",
-                    "description": "Set a field in the desktop graphical shell config file. Must only be used after `get_shell_config`.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "key": {
-                                "type": "string",
-                                "description": "The key to set, e.g. `bar.borderless`. MUST NOT BE GUESSED, use `get_shell_config` to see what keys are available before setting.",
-                            },
-                            "value": {
-                                "type": "string",
-                                "description": "The value to set, e.g. `true`"
-                            }
-                        },
-                        "required": ["key", "value"]
-                    }
-                },
-                {
-                    "name": "remember_fact",
-                    "description": "Save one short durable fact about the user for future conversations. Only for things worth knowing next week; every save is announced.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "fact": {
-                                "type": "string",
-                                "description": "The fact, one short sentence",
-                            },
-                        },
-                        "required": ["fact"]
-                    }
-                },
-                {
-                    "name": "run_shell_command",
-                    "description": "Run a shell command in bash and get its output. Use this only for quick commands that don't require user interaction. For commands that require interaction, ask the user to run manually instead.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "command": {
-                                "type": "string",
-                                "description": "The bash command to run",
-                            },
-                        },
-                        "required": ["command"]
-                    }
-                },
-            ]}],
-            "search": [{
-                "google_search": {}
-            }],
+            "functions": [{ "functionDeclarations": AiToolRegistry.geminiDeclarations }],
+            "search": [{ "google_search": {} }],
             "none": []
         },
         "openai": {
-            "functions": [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "get_shell_config",
-                        "description": "Get the desktop shell config file contents",
-                        "parameters": {}
-                    },
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "set_shell_config",
-                        "description": "Set a field in the desktop graphical shell config file. Must only be used after `get_shell_config`.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "key": {
-                                    "type": "string",
-                                    "description": "The key to set, e.g. `bar.borderless`. MUST NOT BE GUESSED, use `get_shell_config` to see what keys are available before setting.",
-                                },
-                                "value": {
-                                    "type": "string",
-                                    "description": "The value to set, e.g. `true`"
-                                }
-                            },
-                            "required": ["key", "value"]
-                        }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "run_shell_command",
-                        "description": "Run a shell command in bash and get its output. Use this only for quick commands that don't require user interaction. For commands that require interaction, ask the user to run manually instead.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "command": {
-                                    "type": "string",
-                                    "description": "The bash command to run",
-                                },
-                            },
-                            "required": ["command"]
-                        }
-                    },
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "remember_fact",
-                        "description": "Save one short durable fact about the user for future conversations (preferences, environment, standing context). Only for things worth knowing next week; every save is announced to the user.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "fact": {
-                                    "type": "string",
-                                    "description": "The fact, one short sentence",
-                                },
-                            },
-                            "required": ["fact"]
-                        }
-                    },
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "generate_image",
-                        "description": "Generate an image from a text prompt using the user's image-generation model. Use when the user asks to draw, render, paint or generate a picture.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "prompt": {
-                                    "type": "string",
-                                    "description": "The image prompt - detailed and self-contained, since the generator sees nothing else",
-                                },
-                            },
-                            "required": ["prompt"]
-                        }
-                    },
-                },
-            ],
+            "functions": AiToolRegistry.openAiTools("openai"),
             "search": [],
-            "none": [],
+            "none": []
         },
         "mistral": {
-            "functions": [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "get_shell_config",
-                        "description": "Get the desktop shell config file contents",
-                        "parameters": {}
-                    },
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "set_shell_config",
-                        "description": "Set a field in the desktop graphical shell config file. Must only be used after `get_shell_config`.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "key": {
-                                    "type": "string",
-                                    "description": "The key to set, e.g. `bar.borderless`. MUST NOT BE GUESSED, use `get_shell_config` to see what keys are available before setting.",
-                                },
-                                "value": {
-                                    "type": "string",
-                                    "description": "The value to set, e.g. `true`"
-                                }
-                            },
-                            "required": ["key", "value"]
-                        }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "run_shell_command",
-                        "description": "Run a shell command in bash and get its output. Use this only for quick commands that don't require user interaction. For commands that require interaction, ask the user to run manually instead.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "command": {
-                                    "type": "string",
-                                    "description": "The bash command to run",
-                                },
-                            },
-                            "required": ["command"]
-                        }
-                    },
-                },
-            ],
+            "functions": AiToolRegistry.openAiTools("mistral"),
             "search": [],
-            "none": [],
+            "none": []
         }
     }
     // models is empty until the model list finishes loading, so the tool table

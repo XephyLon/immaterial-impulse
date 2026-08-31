@@ -114,6 +114,20 @@ def test_edit_and_resend_forks_and_never_truncates_in_place():
     assert "editResendRequested" in (ROOT / "modules/imi/sidebarLeft/aiChat/AiMessage.qml").read_text(encoding="utf-8")
 
 
+def test_the_tool_registry_and_the_dispatcher_agree():
+    """One declaration per tool: a registry row without a dispatcher case
+    (or a case without a row) fails here instead of silently at runtime."""
+    import re as _re
+    registry = (ROOT / "services/AiToolRegistry.qml").read_text(encoding="utf-8")
+    declared = set(_re.findall(r'"name":\s*"([a-z_]+)"', registry))
+    ai = (ROOT / "services/Ai.qml").read_text(encoding="utf-8")
+    handled = set(_re.findall(r'name === "([a-z_]+)"', ai))
+    assert declared, "the registry declares nothing?"
+    assert declared == handled, (
+        f"registry vs dispatcher drift: only-declared={sorted(declared - handled)}"
+        f" only-handled={sorted(handled - declared)}")
+
+
 def test_the_providers_editor_guards_against_teardown_ghosts():
     """A focused field being destroyed emits valueChanged("") - the wipe.
 
