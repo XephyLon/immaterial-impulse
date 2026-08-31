@@ -95,8 +95,7 @@ Rectangle {
         ConfigTextArea {
             Layout.fillWidth: true
             buttonIcon: "key"
-            text: Translation.tr("OpenRouter key")
-            placeholderText: Translation.tr("Enter API key")
+            placeholderText: Translation.tr("OpenRouter API key")
             password: true
             value: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.openrouter || "") : ""
             onValueChanged: {
@@ -113,8 +112,7 @@ Rectangle {
         ConfigTextArea {
             Layout.fillWidth: true
             buttonIcon: "search"
-            text: Translation.tr("Search")
-            placeholderText: Translation.tr("Model, provider…")
+            placeholderText: Translation.tr("Search model, provider…")
             value: root.query
             onValueChanged: root.query = value
         }
@@ -182,19 +180,21 @@ Rectangle {
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                 }
                             }
+                            // Bare glyphs, no tooltips: a StyledToolTip
+                            // needs a host with `hovered` (a Text has none),
+                            // so these showed unconditionally and leaked
+                            // popup windows past the view's close.
                             MaterialSymbol {
                                 visible: modelRow.modelData.reasoning
                                 text: "star_shine"
                                 iconSize: Appearance.font.pixelSize.normal
                                 color: Appearance.colors.colPrimary
-                                StyledToolTip { text: Translation.tr("Reasoning") }
                             }
                             MaterialSymbol {
                                 visible: modelRow.modelData.vision
                                 text: "visibility"
                                 iconSize: Appearance.font.pixelSize.normal
                                 color: Appearance.colors.colSubtext
-                                StyledToolTip { text: Translation.tr("Vision") }
                             }
                         }
                     }
