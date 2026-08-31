@@ -520,7 +520,7 @@ Item {
                 onContentYChanged: {
                     if (contentY < lastContentY - 2) {
                         following = false;
-                        followAnim.stop();
+                        chasing = false;
                     }
                     lastContentY = contentY;
                 }
@@ -533,23 +533,31 @@ Item {
                 // motion; the detector above still stops it the moment the
                 // user scrolls up, because an upward wheel is the one thing
                 // that moves contentY down mid-chase.
-                function followToEnd() {
-                    const end = messageListView.originY + messageListView.contentHeight
-                        + messageListView.bottomMargin - messageListView.height;
-                    if (end - messageListView.contentY < 1) return;
-                    // Retarget, never restart: a restarted NumberAnimation
-                    // re-eased from zero velocity on every chunk, which
-                    // pulsed. SmoothedAnimation re-aims mid-flight and
-                    // keeps its speed.
-                    followAnim.to = end;
-                    if (!followAnim.running) followAnim.start();
-                }
-                SmoothedAnimation {
-                    id: followAnim
-                    target: messageListView
-                    property: "contentY"
-                    velocity: 1200
-                    maximumEasingTime: 250
+                // The chase is a per-frame exponential approach: every
+                // frame closes a fixed fraction of the remaining gap, so
+                // velocity is proportional to distance and there is no
+                // easing cycle to restart. The recorded SmoothedAnimation
+                // version ran its short hop to completion, stopped, and
+                // re-eased on the next chunk - scroll advanced on every
+                // other frame in bursts, which was the remaining stutter.
+                property bool chasing: false
+                function followToEnd() { chasing = true; }
+                FrameAnimation {
+                    id: followTick
+                    running: messageListView.chasing && messageListView.following
+                    onTriggered: {
+                        const end = messageListView.originY + messageListView.contentHeight
+                            + messageListView.bottomMargin - messageListView.height;
+                        const gap = end - messageListView.contentY;
+                        if (gap <= 0.5) {
+                            messageListView.chasing = false;
+                            return;
+                        }
+                        // ~1 - e^(-8dt): frame-rate independent damping.
+                        const step = gap * Math.min(1, frameTime * 8);
+                        messageListView.lastContentY = messageListView.contentY + step;
+                        messageListView.contentY += step;
+                    }
                 }
                 onContentHeightChanged: if (following) followToEnd()
                 onCountChanged: if (following) followToEnd()
