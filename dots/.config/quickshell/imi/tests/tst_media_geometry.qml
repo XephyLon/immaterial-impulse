@@ -131,19 +131,20 @@ TestCase {
         // button's sides - round edge outward, flat edge against it - the
         // row lifted to make room for the seek bar below.
         const t = Geometry.transportRects("1x1", 132, 108, 1);
-        // Flankers thin on the OTHER axis (round four): wide, short
-        // half-pills - thin top-to-bottom - beside the circular cookie.
+        // Round five: thinner still (22), and the tuck deepened to 10 -
+        // the cookie's valleys cut deeper than the old 4, which left a
+        // visible gap at the meeting point.
         compare(t.prev.width, 26);
-        compare(t.prev.height, 28);
+        compare(t.prev.height, 22);
         compare(t.play.width, 46);
         // Tucked INTO the play rect: the cookie's scalloped body is
         // visually narrower than its rect, so rect-flush read as a gap.
         // The badges draw above play (z 4 over 1), so the tuck shows as
         // the flat edge meeting the cookie.
-        compare(t.prev.x + t.prev.width, t.play.x + 4, "prev tucks under play");
-        compare(t.play.x + t.play.width, t.next.x + 4, "next tucks under play");
-        compare(t.prev.x, (132 - (26 + 46 + 26 - 8)) / 2, "the visual trio is centred");
-        compare(t.prev.y - t.play.y, (46 - 28) / 2, "sides centred on play");
+        compare(t.prev.x + t.prev.width, t.play.x + 10, "prev tucks under play");
+        compare(t.play.x + t.play.width, t.next.x + 10, "next tucks under play");
+        compare(t.prev.x, (132 - (26 + 46 + 26 - 20)) / 2, "the visual trio is centred");
+        compare(t.prev.y - t.play.y, (46 - 22) / 2, "sides centred on play");
     }
 
     function test_1x1_row_sits_above_its_seek_bar() {

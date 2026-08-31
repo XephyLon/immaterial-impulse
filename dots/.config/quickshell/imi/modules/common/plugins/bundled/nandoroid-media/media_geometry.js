@@ -53,11 +53,11 @@ var TINY_PLAY = 46;            // the cookie play button
 // button's sides, round edge outward; the row lifted, a straight seek bar
 // riding below it.
 var TINY_SIDE_W = 26;
-var TINY_SIDE_H = 28;
+var TINY_SIDE_H = 22;
 var TINY_SEEK_H = 16;
 var TINY_SEEK_BOTTOM = 8;      // seek's clearance from the card's bottom
 var TINY_ROW_GAP = 8;          // between the row and the seek
-var TINY_SIDE_TUCK = 4;        // how far a flanker reaches INTO the play rect
+var TINY_SIDE_TUCK = 10;       // past the cookie's valleys, so they MEET
 
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150
