@@ -29,4 +29,12 @@ QtObject {
     property string api_format: "openai"
     property var tools
     property var extraParams: ({})
+    // Capability metadata (spec 2026-08-31): `thinking` is what the
+    // reasoning ask reads; `vision` and `contextWindow` are stored and
+    // shown (browse rows) but not enforced yet - provider-fetched models
+    // cannot declare them, and a false "can't see images" is worse than
+    // no gate. `tools` above is the request schema list, not a capability.
+    property bool thinking: false
+    property bool vision: false
+    property int contextWindow: 0
 }
