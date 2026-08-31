@@ -404,6 +404,26 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 }
             }
 
+            // The page under the providers view: it fades and zooms INWARD as
+            // the view arrives - the M3 container step-back - and gives its
+            // input up while covered. One wrapper drives every transcript-side
+            // child; the keys view stays a sibling above it. (The children
+            // keep their original indentation: re-indenting them all would
+            // bury this change's actual diff.)
+            Item {
+                id: transcriptPage
+                anchors.fill: parent
+                scale: root.keysViewOpen ? 0.95 : 1
+                opacity: root.keysViewOpen ? 0 : 1
+                visible: opacity > 0.01
+                enabled: !root.keysViewOpen
+                Behavior on scale {
+                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+                }
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+
             ScrollEdgeFade {
                 z: 1
                 target: messageListView
@@ -501,6 +521,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "P"]; label: Translation.tr("Pin it open") }
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "D"]; label: Translation.tr("Detach it into its own window") }
                 }
+            }
             }
 
             Loader {
