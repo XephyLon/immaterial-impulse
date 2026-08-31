@@ -1852,6 +1852,12 @@ if ! python3 "$SCRIPT_DIR/test_media_art_trim.py"; then
     exit 1
 fi
 
+echo "Running lyrics provider tests..."
+if ! python3 "$SCRIPT_DIR/test_lyrics_providers.py"; then
+    echo "Lyrics provider tests failed."
+    exit 1
+fi
+
 echo "Running clock depth model list tests..."
 if ! python3 "$SCRIPT_DIR/test_clock_depth_models.py"; then
     echo "Clock depth model list tests failed."
