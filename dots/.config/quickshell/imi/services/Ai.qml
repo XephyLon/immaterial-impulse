@@ -920,6 +920,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
         }
         const comma = url.indexOf(",");
         if (comma === -1) return;
+        message.generatingImage = true; // skeleton through the decode
         root.inlineImageQueue = [...root.inlineImageQueue, { "b64": url.slice(comma + 1), "message": message }];
         Qt.callLater(root.drainInlineImages);
     }
@@ -948,6 +949,12 @@ And a final paragraph after the math, so the stream does not end on a block boun
                     inlineImageSaver.message.content += md;
                     inlineImageSaver.message.rawContent += md;
                     AiSessions.scheduleSave();
+                }
+                // The skeleton comes down once no queued job still feeds
+                // this message.
+                if (inlineImageSaver.message
+                        && !root.inlineImageQueue.some(j => j.message === inlineImageSaver.message)) {
+                    inlineImageSaver.message.generatingImage = false;
                 }
                 Qt.callLater(root.drainInlineImages);
             }
@@ -1068,14 +1075,23 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 "Content-Type": "application/json",
             }
             
-            /* Create local message object */
+            /* Create local message object. Whether the server will answer
+               with an inline image is unknowable up front, so a prompt that
+               reads like an image ask pre-arms the image skeleton; the
+               first TEXT that arrives clears it instantly (onRead), while
+               an inline image keeps it up to the moment the file lands. */
+            const lastUser = [...root.messageIDs].reverse()
+                .map(id => root.messageByID[id]).find(m => m?.role === "user");
+            const looksLikeImageAsk = /\b(generate|draw|paint|render|create|make)\b[\s\S]{0,80}\b(image|picture|photo|logo|icon|drawing|art)\b|\bimage of\b/i
+                .test(String(lastUser?.rawContent ?? ""));
             requester.message = root.aiMessageComponent.createObject(root, {
                 "role": "assistant",
                 "model": currentModelId,
                 "content": "",
                 "rawContent": "",
-                "thinking": true,
+                "thinking": !looksLikeImageAsk,
                 "done": false,
+                "generatingImage": looksLikeImageAsk,
             });
             const id = idForMessage(requester.message);
             root.messageIDs = [...root.messageIDs, id];
@@ -1233,6 +1249,12 @@ And a final paragraph after the math, so the stream does not end on a block boun
                     const result = requester.currentStrategy.parseResponseLine(data, requester.message);
                     // console.log("[Ai] Parsed response result: ", JSON.stringify(result, null, 2));
 
+                    // A pre-armed skeleton stands down as soon as the
+                    // answer turns out to be text.
+                    if (requester.message.generatingImage
+                            && requester.message.content.trim().length > 0) {
+                        requester.message.generatingImage = false;
+                    }
                     if (result.inlineImages) {
                         for (const url of result.inlineImages)
                             root.saveInlineImage(url, requester.message);
