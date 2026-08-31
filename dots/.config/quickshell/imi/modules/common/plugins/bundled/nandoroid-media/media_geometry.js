@@ -57,7 +57,7 @@ var TINY_SIDE_H = 22;
 var TINY_SEEK_H = 16;
 var TINY_SEEK_BOTTOM = 8;      // seek's clearance from the card's bottom
 var TINY_ROW_GAP = 8;          // between the row and the seek
-var TINY_SIDE_TUCK = 10;       // past the cookie's valleys, so they MEET
+var TINY_SIDE_TUCK = 0;        // bare icons: beside the cookie, no tuck
 
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150

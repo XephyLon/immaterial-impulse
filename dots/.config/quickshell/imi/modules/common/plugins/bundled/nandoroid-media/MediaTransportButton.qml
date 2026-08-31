@@ -127,18 +127,9 @@ Item {
             // had. `scale` is centred by default and cannot miss.
             scale: root.motion.scale
 
-            // 1x1: a half-pill hugging the play button - round edge
-            // outward, near-flat edge against it. Drawn as its own body
-            // because MaterialShape has no per-corner radii.
-            Rectangle {
-                visible: root.span === "1x1"
-                anchors.fill: parent
-                color: root.controlColor
-                topLeftRadius: root.role === "prev" ? height / 2 : 3 * Appearance.effectiveScale
-                bottomLeftRadius: root.role === "prev" ? height / 2 : 3 * Appearance.effectiveScale
-                topRightRadius: root.role === "next" ? height / 2 : 3 * Appearance.effectiveScale
-                bottomRightRadius: root.role === "next" ? height / 2 : 3 * Appearance.effectiveScale
-            }
+            // 1x1: NO body at all - pure icon over the scrim (the
+            // half-pill experiment ended 2026-08-31; the shape war with
+            // the cookie's scallops was unwinnable).
             Expressive.MaterialShape {
                 id: reelShape
                 visible: root.span !== "1x1"
@@ -170,13 +161,16 @@ Item {
                 text: root.role === "prev" ? "skip_previous" : "skip_next"
                 iconSize: root.span === "3x2" ? 28 * Appearance.effectiveScale
                     : root.span === "2x2" ? parent.height * 0.46
-                    : root.span === "1x1" ? 16 * Appearance.effectiveScale
+                    : root.span === "1x1" ? 20 * Appearance.effectiveScale
                     : 26 * Appearance.effectiveScale
                 fill: 0
+                // Bare over the artwork at 1x1, the glyph borrows the
+                // cookie body's own light tone so the trio stays one family.
                 color: root.hoveredNow
                     ? (root.span === "3x2" && Appearance.m3colors.darkmode
                         ? Appearance.colors.colTertiaryContainer
                         : Appearance.colors.colPrimary)
+                    : root.span === "1x1" ? root.controlColor
                     : root.controlIconColor
                 Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
             }
