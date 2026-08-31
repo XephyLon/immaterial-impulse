@@ -297,6 +297,13 @@ ColumnLayout {
                 ConfigSelectionShapeArray {
                     options: (optionLoader.optionData.choices || [])
                         .map(choice => choice.value ?? choice)
+                    // A choice may carry its own enabledWhen (the same rule
+                    // spelling option_visibility.js evaluates for rows):
+                    // offered always, pickable only while the rule holds.
+                    disabledOptions: (optionLoader.optionData.choices || [])
+                        .filter(choice => choice && choice.enabledWhen !== undefined
+                            && !OptionVisibility.rule(choice.enabledWhen, key => root.readOption(key)))
+                        .map(choice => choice.value)
                     currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
                     onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
                 }

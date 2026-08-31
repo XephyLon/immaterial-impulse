@@ -202,5 +202,39 @@ class TheHostBooleansAreAToggleBar(unittest.TestCase):
             "else if (behaviourSection.hoveredLabel === toggle.label)", self.source)
 
 
+
+class ChoiceGatingTests(unittest.TestCase):
+    """A shape choice may be offered and not pickable at once.
+
+    Custom Image's "None" exists only while the background is transparent -
+    an opaque plate with no mask is a bare rectangle nothing else in the
+    grid can produce. The gate is the choice's own `enabledWhen`, evaluated
+    with the same rule spelling rows use, and the widget restores the last
+    real shape when transparency goes away under a picked "None"."""
+
+    def test_the_renderer_derives_disabled_choices_from_the_rule(self):
+        src = (ROOT / "modules/common/plugins/PluginOptions.qml").read_text(encoding="utf-8")
+        self.assertIn("disabledOptions:", src)
+        self.assertRegex(src, r"disabledOptions:[\s\S]{0,400}OptionVisibility\.rule\(choice\.enabledWhen")
+
+    def test_the_shape_array_dims_and_ignores_disabled_choices(self):
+        src = (ROOT / "modules/common/widgets/ConfigSelectionShapeArray.qml").read_text(encoding="utf-8")
+        self.assertIn("property list<string> disabledOptions", src)
+        self.assertRegex(src, r"enabled:\s*!choiceDisabled")
+
+    def test_none_is_gated_on_transparency_in_the_manifest(self):
+        import json as _json
+        manifest = _json.loads((ROOT / "modules/common/plugins/bundled/custom-image/manifest.json").read_text(encoding="utf-8"))
+        shape = next(o for o in manifest["options"] if o["key"] == "shape")
+        none = next(c for c in shape["choices"] if c["value"] == "None")
+        self.assertEqual(none["enabledWhen"], {"key": "transparentBackground", "equals": True})
+
+    def test_the_widget_drops_none_when_opacity_returns(self):
+        src = (ROOT / "modules/common/plugins/bundled/custom-image/Widget.qml").read_text(encoding="utf-8")
+        self.assertIn("dropNoneIfOpaque", src)
+        self.assertIn("shapeBeforeNone", src)
+        self.assertRegex(src, r"Component\.onCompleted:\s*root\.dropNoneIfOpaque\(\)")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

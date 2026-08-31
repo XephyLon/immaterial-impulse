@@ -11,6 +11,10 @@ Flow {
     spacing: Appearance.spacing.space25
 
     property list<string> options: []
+    // Choices offered but not currently pickable - drawn dimmed, clicks
+    // ignored. The caller decides why (the plugin options page derives it
+    // from a choice's own enabledWhen rule).
+    property list<string> disabledOptions: []
     property var currentValue: null
     // colPrimaryContainer is near-identical to the chip's colSecondaryContainer
     // background, so the default rendered every unselected shape invisible.
@@ -71,6 +75,11 @@ Flow {
             property bool leftmost: index === 0
             property bool rightmost: index === root.options.length - 1
 
+            readonly property bool choiceDisabled: root.disabledOptions.includes(modelData)
+            enabled: !choiceDisabled
+            opacity: choiceDisabled ? 0.35 : 1
+            Behavior on opacity { NumberAnimation { duration: 180 } }
+
             bounce: false
             toggled: root.currentValue === modelData
             leftRadius: (toggled || leftmost) ? (height / 2) : Appearance.rounding.unsharpenmore
@@ -92,18 +101,37 @@ Flow {
                 }
             }
 
-            contentItem: MaterialShape {
-                implicitSize: Appearance.font.pixelSize.larger
-                shape: root.getShape(shapeButton.modelData)
-                color: shapeButton.toggled
-                    ? Appearance.colors.colOnPrimary
-                    : root.shapeColor
-                Behavior on color {
-                    ColorAnimation { duration: 180 }
+            contentItem: Item {
+                implicitWidth: Appearance.font.pixelSize.larger
+                implicitHeight: Appearance.font.pixelSize.larger
+                // "None" is a real choice (no mask at all), not a shape, so
+                // it draws the blocked-circle glyph instead of a silhouette.
+                MaterialShape {
+                    anchors.fill: parent
+                    visible: shapeButton.modelData !== "None"
+                    shape: root.getShape(shapeButton.modelData)
+                    color: shapeButton.toggled
+                        ? Appearance.colors.colOnPrimary
+                        : root.shapeColor
+                    Behavior on color {
+                        ColorAnimation { duration: 180 }
+                    }
+                }
+                MaterialSymbol {
+                    anchors.fill: parent
+                    visible: shapeButton.modelData === "None"
+                    text: "block"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    iconSize: Appearance.font.pixelSize.larger
+                    color: shapeButton.toggled
+                        ? Appearance.colors.colOnPrimary
+                        : root.shapeColor
                 }
             }
 
             onClicked: root.selected(shapeButton.modelData)
+
         }
     }
 }
