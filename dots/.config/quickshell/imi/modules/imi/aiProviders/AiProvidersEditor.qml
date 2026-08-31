@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../../services/ai_provider_keys.js" as ProviderKeys
 
 /**
  * The custom OpenAI-compatible providers editor, extracted from
