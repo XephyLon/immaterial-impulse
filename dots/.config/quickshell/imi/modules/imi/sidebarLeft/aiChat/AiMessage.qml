@@ -91,7 +91,10 @@ Rectangle {
             root.shownContent = root.messageData?.content ?? "";
         }
     }
-    onMessageDataChanged: root.shownContent = root.messageData?.content ?? ""
+    onMessageDataChanged: {
+        root.grownHeight = 0;
+        root.shownContent = root.messageData?.content ?? "";
+    }
 
     property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.shownContent)
     // The streaming tail re-parses on every chunk, and a Repeater over the
@@ -114,7 +117,18 @@ Rectangle {
     anchors.left: parent?.left
     anchors.right: parent?.right
     anchors.leftMargin: root.isUser ? Appearance.spacing.space600 * 2 : 0
-    implicitHeight: columnLayout.implicitHeight + root.messagePadding * 2
+    // While streaming, height is MONOTONIC. Each coalesced re-render swaps
+    // the block Repeater models, and for a frame the content is empty - the
+    // transcript's contentHeight dipped, the Flickable clamped contentY
+    // toward zero, and the follow had to re-climb hundreds of pixels: the
+    // recorded backward yanks. A growing message never reports shrinkage;
+    // done releases the floor.
+    property real liveHeight: columnLayout.implicitHeight + root.messagePadding * 2
+    property real grownHeight: 0
+    onLiveHeightChanged: if (liveHeight > grownHeight) grownHeight = liveHeight
+    implicitHeight: (root.messageData?.done ?? true)
+        ? root.liveHeight
+        : Math.max(root.liveHeight, root.grownHeight)
 
     radius: root.isUser ? Appearance.rounding.large : Appearance.rounding.normal
     color: root.isUser ? Appearance.colors.colSecondaryContainer : Appearance.colors.colLayer1
