@@ -584,6 +584,49 @@ Singleton {
         promptLoader.reload();
     }
 
+    // /test's streamer: feeds a canned response through the same
+    // message-object append path a network stream uses, so streaming
+    // rendering is testable without a model on the other end.
+    property AiMessageData simMessage
+    property string simRemaining: ""
+    property int simTick: 0
+    function simulateStream(content) {
+        simTimer.stop();
+        const msg = aiMessageComponent.createObject(root, {
+            "role": "assistant",
+            "model": currentModelId,
+            "content": "",
+            "rawContent": "",
+            "thinking": false,
+            "done": false,
+        });
+        const id = idForMessage(msg);
+        root.messageIDs = [...root.messageIDs, id];
+        root.messageByID[id] = msg;
+        root.simMessage = msg;
+        root.simRemaining = String(content);
+        root.simTick = 0;
+        simTimer.start();
+    }
+    property Timer simTimer: Timer {
+        interval: 45
+        repeat: true
+        onTriggered: {
+            if (root.simRemaining.length === 0) {
+                stop();
+                root.simMessage.done = true;
+                AiSessions.scheduleSave();
+                return;
+            }
+            // Chunk sizes cycle 4..22 chars - lumpy like a real stream.
+            const n = 4 + (root.simTick++ % 7) * 3;
+            const chunk = root.simRemaining.slice(0, n);
+            root.simRemaining = root.simRemaining.slice(n);
+            root.simMessage.rawContent += chunk;
+            root.simMessage.content += chunk;
+        }
+    }
+
     function addMessage(message, role) {
         if (message.length === 0) return;
         const aiMessage = aiMessageComponent.createObject(root, {

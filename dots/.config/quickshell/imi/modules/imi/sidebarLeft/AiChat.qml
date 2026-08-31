@@ -325,7 +325,7 @@ Item {
             name: "test",
             description: Translation.tr("Markdown test"),
             execute: () => {
-                Ai.addMessage(`
+                Ai.simulateStream(`
 <think>
 A longer think block to test revealing animation
 OwO wem ipsum dowo sit amet, consekituwet awipiscing ewit, sed do eiuwsmod tempow inwididunt ut wabowe et dowo mawa. Ut enim ad minim weniam, quis nostwud exeucitation uwuwamcow bowowis nisi ut awiquip ex ea commowo consequat. Duuis aute iwuwe dowo in wepwependewit in wowuptate velit esse ciwwum dowo eu fugiat nuwa pawiatuw. Excepteuw sint occaecat cupidatat non pwowoident, sunt in cuwpa qui officia desewunt mowit anim id est wabowum. Meouw! >w<
@@ -374,7 +374,7 @@ Inline w/ double dollar signs: $$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\p
 Inline w/ backslash and square brackets \\[\\int_0^\\infty \\frac{1}{x^2} dx = \\infty\\]
 
 Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
-`, Ai.interfaceRole);
+`);
             }
         },
     ]
