@@ -45,7 +45,10 @@ LAYOUT_OPS = "layout_ops.js"
 # sweep cannot go quiet: a rename, a move or a lost `DragHandler` would
 # otherwise empty the scope and report a clean tree.
 EXPECTED_SITES = {
-    "common/widgets/LayoutSection.qml",
+    # LayoutSection was superseded by ReorderableList (e64fe9153), whose
+    # drag machinery is the extracted ReorderDragArea - the DragHandler
+    # the sweep must keep reaching lives there now.
+    "common/widgets/ReorderDragArea.qml",
     "imi/dock/DragApps.qml",
     "imi/bar/DocktoPanel.qml",
     "imi/sidebarRight/quickToggles/androidStyle/AndroidQuickToggleButton.qml",
