@@ -18,6 +18,11 @@ Singleton {
     property string status: "idle"
     property var slots: []
     property bool desktopWidgetLyricsActive: false
+    // The media sidebar's lyrics view, as a refcount: the desktop widget's
+    // flag only ever had one writer, and the sidebar view silently never
+    // armed the service - its spinner span forever over an idle fetcher.
+    property int sidebarLyricsRefs: 0
+    readonly property bool lyricsWanted: root.desktopWidgetLyricsActive || root.sidebarLyricsRefs > 0
 
     readonly property int before: 3
     readonly property int after:  3
@@ -57,6 +62,15 @@ Singleton {
     Process {
         id: lyricsProc
         running: false
+        // A fetch that dies without printing - a network failure, a python
+        // stack trace - used to strand the view on "loading" forever.
+        onExited: (exitCode, exitStatus) => {
+            if (root.status === "loading")
+                root.status = "not_found"
+        }
+        stderr: SplitParser {
+            onRead: line => console.warn("[Lyrics]", line)
+        }
         stdout: SplitParser {
             onRead: data => {
                 const trimmed = data.trim()
@@ -90,7 +104,7 @@ Singleton {
         root.activeIndex = -1
         root.slots = []
 
-        if (!root.desktopWidgetLyricsActive) {
+        if (!root.lyricsWanted) {
             root.status = "idle"
             return
         }
@@ -117,8 +131,8 @@ Singleton {
         function onTrackArtistChanged() { root.restartLyrics() }
     }
 
-    onDesktopWidgetLyricsActiveChanged: {
-        if (root.desktopWidgetLyricsActive) root.restartLyrics()
+    onLyricsWantedChanged: {
+        if (root.lyricsWanted) root.restartLyrics()
         else {
             lyricsProc.running = false
             root.lyricsLines = []

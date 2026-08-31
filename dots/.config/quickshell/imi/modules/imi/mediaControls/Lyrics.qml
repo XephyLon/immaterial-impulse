@@ -19,6 +19,12 @@ Item {
     implicitWidth: 200
     implicitHeight: 200
 
+    // This view existing IS the demand: it is created when the player flips
+    // to lyrics and destroyed when it flips back, so its lifetime is the
+    // refcount's.
+    Component.onCompleted: LyricsService.sidebarLyricsRefs++
+    Component.onDestruction: LyricsService.sidebarLyricsRefs--
+
     ColumnLayout {
         anchors.fill: parent
         spacing: Appearance.spacing.space50
