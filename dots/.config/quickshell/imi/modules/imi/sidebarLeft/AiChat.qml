@@ -834,7 +834,9 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                         }
                                         StyledText {
                                             Layout.fillWidth: true
-                                            text: Translation.tr("Browse OpenRouter models")
+                                            text: (Config.options.ai.customProviders ?? []).length > 0
+                                                ? Translation.tr("Browse models")
+                                                : Translation.tr("Browse OpenRouter models")
                                             color: Appearance.colors.colOnLayer1
                                             font.pixelSize: Appearance.font.pixelSize.small
                                         }

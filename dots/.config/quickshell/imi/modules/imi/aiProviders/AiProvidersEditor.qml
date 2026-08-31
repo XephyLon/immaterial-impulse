@@ -71,90 +71,66 @@ ColumnLayout {
     Repeater {
         model: Config.options.ai.customProviders ? Config.options.ai.customProviders.length : 0
 
-        delegate: ColumnLayout {
+        delegate: Rectangle {
+            id: providerCard
+            required property int index
             Layout.fillWidth: true
-            spacing: Appearance.spacing.space150
+            radius: Appearance.rounding.normal
+            color: Appearance.colors.colLayer2
+            border.width: 1
+            border.color: Appearance.colors.colOutlineVariant
+            implicitHeight: cardColumn.implicitHeight + Appearance.spacing.space200 * 2
 
-            GroupedList {
-                cohesive: true
-
-                ConfigSwitch {
-                    text: Config.options.ai.customProviders[index].name
-                        ? Translation.tr("Enable %1").arg(Config.options.ai.customProviders[index].name)
-                        : Translation.tr("Enable provider %1").arg(index + 1)
-                    checked: Config.options.ai.customProviders[index].enabled
-                    onToggleRequested: {
-                        // Whole-list assignment: JsonAdapter
-                        // lists only persist when replaced.
-                        let providers = [...Config.options.ai.customProviders];
-                        providers[index].enabled = !providers[index].enabled;
-                        Config.options.ai.customProviders = providers;
-                    }
-                }
-
-                ConfigTextArea {
-                    buttonIcon: "badge"
-                    text: Translation.tr("Name")
-                    placeholderText: Translation.tr("Provider Name (e.g. OpenRouter)")
-                    value: Config.options.ai.customProviders[index].name
-                    onValueChanged: {
-                        // Only a keystroke may write - see the header note.
-                        if (!textArea.activeFocus) return;
-                        let providers = [...Config.options.ai.customProviders];
-                        if (providers[index].name !== value) {
-                            providers[index].name = value;
-                            Config.options.ai.customProviders = providers;
-                        }
-                    }
-                }
-
-                ConfigTextArea {
-                    buttonIcon: "link"
-                    text: Translation.tr("Base URL")
-                    placeholderText: Translation.tr("e.g. https://openrouter.ai/api/v1")
-                    fieldWidth: 240
-                    value: Config.options.ai.customProviders[index].baseUrl
-                    onValueChanged: {
-                        if (!textArea.activeFocus) return;
-                        let providers = [...Config.options.ai.customProviders];
-                        if (providers[index].baseUrl !== value) {
-                            providers[index].baseUrl = value;
-                            Config.options.ai.customProviders = providers;
-                        }
-                    }
-                }
-
-                ConfigTextArea {
-                    buttonIcon: "key"
-                    text: Translation.tr("API Key")
-                    placeholderText: Translation.tr("Enter API key")
-                    password: true
-                    value: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${index}`] || "") : ""
-                    onValueChanged: {
-                        let currentText = value;
-                        Qt.callLater(() => {
-                            if (KeyringStorage.loaded) {
-                                KeyringStorage.setNestedField(["apiKeys", `custom_provider_${index}`], currentText);
-                            }
-                        });
-                    }
-                }
+            ColumnLayout {
+                id: cardColumn
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Appearance.spacing.space200
+                spacing: Appearance.spacing.space100
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: Appearance.spacing.space100
 
-                    Item {
-                        Layout.fillWidth: true
+                    MaterialSymbol {
+                        text: "cloud"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colPrimary
                     }
-
-                    IconButton {
-                        toggled: false
-                        textString: Translation.tr("Remove Provider")
-                        iconName: "delete"
-                        textColor: Appearance.colors.colError
+                    StyledText {
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                        text: Config.options.ai.customProviders[providerCard.index].name
+                            || Translation.tr("Provider %1").arg(providerCard.index + 1)
+                        font.pixelSize: Appearance.font.pixelSize.normal
+                        font.weight: Font.DemiBold
+                        color: Appearance.colors.colOnLayer2
+                    }
+                    StyledSwitch {
+                        // Non-checkable: the click is an INTENT and the write
+                        // below is what flips the picture - a Switch moving
+                        // its own `checked` destroys this binding (see
+                        // lint_config_switch_intent.py's history).
+                        checkable: false
+                        checked: Config.options.ai.customProviders[providerCard.index].enabled === true
+                        onClicked: {
+                            // Whole-list assignment: JsonAdapter lists only
+                            // persist when replaced.
+                            let providers = [...Config.options.ai.customProviders];
+                            providers[providerCard.index].enabled = !providers[providerCard.index].enabled;
+                            Config.options.ai.customProviders = providers;
+                        }
+                    }
+                    RippleButton {
+                        implicitWidth: 32
+                        implicitHeight: 32
+                        buttonRadius: Appearance.rounding.full
+                        colBackground: "transparent"
+                        colBackgroundHover: Appearance.colors.colLayer2Hover
                         colRipple: Appearance.colors.colErrorActive
                         onClicked: {
-                            const removedIndex = index;
+                            const removedIndex = providerCard.index;
                             const count = Config.options.ai.customProviders.length;
                             let providers = [...Config.options.ai.customProviders];
                             providers.splice(removedIndex, 1);
@@ -172,6 +148,62 @@ ColumnLayout {
                                     KeyringStorage.setNestedField(["apiKeys", id], after[id]);
                             }
                         }
+                        contentItem: MaterialSymbol {
+                            anchors.centerIn: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            text: "delete"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colError
+                        }
+                        StyledToolTip { text: Translation.tr("Remove provider") }
+                    }
+                }
+
+                ConfigTextArea {
+                    buttonIcon: "badge"
+                    text: Translation.tr("Name")
+                    placeholderText: Translation.tr("Provider Name (e.g. OpenRouter)")
+                    value: Config.options.ai.customProviders[providerCard.index].name
+                    onValueChanged: {
+                        // Only a keystroke may write - see the header note.
+                        if (!textArea.activeFocus) return;
+                        let providers = [...Config.options.ai.customProviders];
+                        if (providers[providerCard.index].name !== value) {
+                            providers[providerCard.index].name = value;
+                            Config.options.ai.customProviders = providers;
+                        }
+                    }
+                }
+
+                ConfigTextArea {
+                    buttonIcon: "link"
+                    text: Translation.tr("Base URL")
+                    placeholderText: Translation.tr("e.g. https://openrouter.ai/api/v1")
+                    fieldWidth: 240
+                    value: Config.options.ai.customProviders[providerCard.index].baseUrl
+                    onValueChanged: {
+                        if (!textArea.activeFocus) return;
+                        let providers = [...Config.options.ai.customProviders];
+                        if (providers[providerCard.index].baseUrl !== value) {
+                            providers[providerCard.index].baseUrl = value;
+                            Config.options.ai.customProviders = providers;
+                        }
+                    }
+                }
+
+                ConfigTextArea {
+                    buttonIcon: "key"
+                    text: Translation.tr("API Key")
+                    placeholderText: Translation.tr("Enter API key")
+                    password: true
+                    value: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${providerCard.index}`] || "") : ""
+                    onValueChanged: {
+                        let currentText = value;
+                        Qt.callLater(() => {
+                            if (KeyringStorage.loaded) {
+                                KeyringStorage.setNestedField(["apiKeys", `custom_provider_${providerCard.index}`], currentText);
+                            }
+                        });
                     }
                 }
             }

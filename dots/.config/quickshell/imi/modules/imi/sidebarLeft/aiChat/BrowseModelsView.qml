@@ -131,6 +131,10 @@ Rectangle {
         }
 
         ConfigTextArea {
+            // With providers of your own, OpenRouter is just one of them and
+            // its key lives in the editor; this field only earns its row when
+            // the list is empty and importing is the sole way in.
+            visible: (Config.options.ai.customProviders ?? []).length === 0
             Layout.fillWidth: true
             buttonIcon: "key"
             placeholderText: Translation.tr("OpenRouter API key")
