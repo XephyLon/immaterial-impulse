@@ -145,9 +145,16 @@ Item {
         ControlChip {
             visible: Ai.tokenCount.total > 0
             inert: true
+            // The context window finally earns its keep: past 80% of the
+            // model's declared window the chip turns error-inked.
+            readonly property int ctx: Ai.models[Ai.currentModelId]?.contextWindow ?? 0
+            readonly property bool nearLimit: ctx > 0 && Ai.tokenCount.total > ctx * 0.8
+            chipInk: nearLimit ? Appearance.m3colors.m3error : Appearance.colors.colOnLayer1
             chipIcon: "token"
             value: `${Ai.tokenCount.total}`
             hint: Translation.tr("Total token count\nInput: %1\nOutput: %2").arg(Ai.tokenCount.input).arg(Ai.tokenCount.output)
+                + (ctx > 0 ? "\n" + Translation.tr("Context window: %1").arg(ctx)
+                    + (nearLimit ? "\n" + Translation.tr("Running out - consider a new chat") : "") : "")
         }
 
         Item { Layout.fillWidth: true }
