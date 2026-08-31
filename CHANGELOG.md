@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The Bar layout section is a draggable list.** The chip flows become
+  grouped rows - drag handle, icon, name, remove - that lift on hold and
+  part live as you drag, including across Left/Center/Right. Adding a
+  widget is a dropdown and an Add button at each group's foot.
 - **The quick toggles take pages.** The android grid becomes swipeable
   pages with a dot rail - compose each page deliberately in edit mode,
   add one with the + beside the dots, and empty pages sweep themselves
