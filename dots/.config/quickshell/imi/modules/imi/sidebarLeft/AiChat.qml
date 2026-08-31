@@ -513,14 +513,31 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4
 
                 property int lastResponseLength: 0
+                // FOLLOW is a state, not a per-chunk atYEnd check: every
+                // chunk grows the content past the viewport, so atYEnd
+                // flickers false mid-stream, the scroll pill strobed and the
+                // late reposition yanked the view (the recorded jitter).
+                // Only the USER breaks follow - contentY moving UP, which
+                // growth and positionViewAtEnd never do - and reaching the
+                // bottom re-arms it.
+                property bool following: true
+                property real lastContentY: 0
+                onContentYChanged: {
+                    if (contentY < lastContentY - 2) following = false;
+                    lastContentY = contentY;
+                }
+                onAtYEndChanged: if (atYEnd) following = true
                 onContentHeightChanged: {
-                    if (atYEnd)
+                    if (following) {
+                        positionViewAtEnd();
                         Qt.callLater(positionViewAtEnd);
+                    }
                 }
                 onCountChanged: {
-                    // Auto-scroll when new messages are added
-                    if (atYEnd)
+                    if (following) {
+                        positionViewAtEnd();
                         Qt.callLater(positionViewAtEnd);
+                    }
                 }
 
                 add: null // Prevent function calls from being janky
