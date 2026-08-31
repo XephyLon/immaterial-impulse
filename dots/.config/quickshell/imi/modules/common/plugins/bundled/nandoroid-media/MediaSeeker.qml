@@ -221,14 +221,19 @@ Item {
             strokeRun(split, N, canvas.trackColor);
             strokeRun(0, split, canvas.arcColor);
 
-            // the bar's handle dot, dissolving as the bar curls up
+            // the bar's handle - a vertical tick (the M3 reference), laid
+            // along the baseline's normal, dissolving as the bar curls up
             if (canvas.bendNow < 1) {
                 const at = Math.min(split, N);
+                const half = 7 * Appearance.effectiveScale;
                 ctx.beginPath();
                 ctx.globalAlpha = 1 - canvas.bendNow;
-                ctx.arc(px(at), py(at), 7 * Appearance.effectiveScale, 0, Math.PI * 2);
-                ctx.fillStyle = Appearance.colors.colPrimary;
-                ctx.fill();
+                ctx.moveTo(px(at) - nx[at] * half, py(at) - ny[at] * half);
+                ctx.lineTo(px(at) + nx[at] * half, py(at) + ny[at] * half);
+                ctx.strokeStyle = Appearance.colors.colPrimary;
+                ctx.lineWidth = 4 * Appearance.effectiveScale;
+                ctx.lineCap = "round";
+                ctx.stroke();
                 ctx.globalAlpha = 1;
             }
         }

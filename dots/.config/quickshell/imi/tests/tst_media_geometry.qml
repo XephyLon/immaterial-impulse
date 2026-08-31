@@ -131,18 +131,18 @@ TestCase {
         // button's sides - round edge outward, flat edge against it - the
         // row lifted to make room for the seek bar below.
         const t = Geometry.transportRects("1x1", 132, 108, 1);
-        // Roomier flankers ("the buttons feel squished"): wider and taller
-        // sides, a lighter tuck, the cookie a touch slimmer.
-        compare(t.prev.width, 26);
+        // THIN flankers (round three of the eyeball): narrow tall pills
+        // beside a cookie that must read as a circle, so the tuck is small.
+        compare(t.prev.width, 20);
         compare(t.prev.height, 40);
         compare(t.play.width, 46);
         // Tucked INTO the play rect: the cookie's scalloped body is
         // visually narrower than its rect, so rect-flush read as a gap.
         // The badges draw above play (z 4 over 1), so the tuck shows as
         // the flat edge meeting the cookie.
-        compare(t.prev.x + t.prev.width, t.play.x + 6, "prev tucks under play");
-        compare(t.play.x + t.play.width, t.next.x + 6, "next tucks under play");
-        compare(t.prev.x, (132 - (26 + 46 + 26 - 12)) / 2, "the visual trio is centred");
+        compare(t.prev.x + t.prev.width, t.play.x + 4, "prev tucks under play");
+        compare(t.play.x + t.play.width, t.next.x + 4, "next tucks under play");
+        compare(t.prev.x, (132 - (20 + 46 + 20 - 8)) / 2, "the visual trio is centred");
         compare(t.prev.y - t.play.y, (46 - 40) / 2, "sides centred on play");
     }
 
