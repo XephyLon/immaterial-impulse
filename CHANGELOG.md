@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Browse is every provider now.** The browse view leads with your own
+  providers' models - each named "Provider: Model" and carrying a
+  show/hide toggle that curates what the picker surfaces - followed by
+  the OpenRouter index, one search across both. An empty curation
+  surfaces everything, so small providers need no ceremony.
 - **Browse OpenRouter, import with one click.** The picker's "Browse
   models…" row (and a door in Providers & keys) opens a searchable index
   of OpenRouter's catalogue - context, pricing, reasoning and vision at
