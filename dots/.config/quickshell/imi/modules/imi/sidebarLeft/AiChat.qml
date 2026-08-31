@@ -768,6 +768,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                     buttonRadius: Appearance.rounding.normal
                                     colBackground: "transparent"
                                     colBackgroundHover: Appearance.colors.colLayer2Hover
+                                    colRipple: Appearance.colors.colLayer2Active
                                     onClicked: root.activeView = "browse"
                                     contentItem: RowLayout {
                                         anchors.fill: parent

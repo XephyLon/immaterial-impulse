@@ -156,6 +156,7 @@ Rectangle {
                         buttonRadius: Appearance.rounding.normal
                         colBackground: "transparent"
                         colBackgroundHover: Appearance.colors.colLayer2Hover
+                        colRipple: Appearance.colors.colLayer2Active
                         onClicked: root.importRow(modelRow.modelData)
                         contentItem: RowLayout {
                             anchors.fill: parent

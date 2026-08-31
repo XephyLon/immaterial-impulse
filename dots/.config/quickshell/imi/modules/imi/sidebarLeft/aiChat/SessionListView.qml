@@ -127,6 +127,7 @@ Rectangle {
                         buttonRadius: Appearance.rounding.normal
                         colBackground: "transparent"
                         colBackgroundHover: Appearance.colors.colLayer2Hover
+                        colRipple: Appearance.colors.colLayer2Active
                         onClicked: {
                             AiSessions.importLegacy(legacyRow.modelData.path);
                             root.closed();
