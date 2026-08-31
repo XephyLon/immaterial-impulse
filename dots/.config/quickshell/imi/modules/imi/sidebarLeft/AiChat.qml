@@ -645,17 +645,34 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 id: overlayViewLoader
                 z: 10
                 anchors.fill: parent
-                active: root.activeView.length > 0
-                onLoaded: if (root.activeView === "keys" && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData()
-                opacity: active ? 1 : 0
+                // LATCHED, never bound to activeView directly: a row's click
+                // closes the view, and a binding that unloads on close
+                // destroys the very MouseArea still holding the pointer
+                // grab - the next click then misdelivered until the pointer
+                // state reset (the "can't click Chats until I scroll" bug).
+                // The view now outlives the close through its fade and
+                // unloads only once invisible, the SettingsContent dialog
+                // hosts' shape.
+                readonly property bool wanted: root.activeView.length > 0
+                property string shownView: ""
+                active: false
+                onWantedChanged: {
+                    if (wanted) {
+                        overlayViewLoader.shownView = root.activeView;
+                        overlayViewLoader.active = true;
+                    }
+                }
+                onLoaded: if (overlayViewLoader.shownView === "keys" && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData()
+                opacity: wanted ? 1 : 0
                 visible: opacity > 0.01
+                onVisibleChanged: if (!visible && !wanted) overlayViewLoader.active = false
                 Behavior on opacity {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
 
-                sourceComponent: root.activeView === "keys" ? keysViewComponent
-                    : root.activeView === "sessions" ? sessionsViewComponent
-                    : root.activeView === "browse" ? browseViewComponent : null
+                sourceComponent: overlayViewLoader.shownView === "keys" ? keysViewComponent
+                    : overlayViewLoader.shownView === "sessions" ? sessionsViewComponent
+                    : overlayViewLoader.shownView === "browse" ? browseViewComponent : null
 
                 Component {
                     id: browseViewComponent
