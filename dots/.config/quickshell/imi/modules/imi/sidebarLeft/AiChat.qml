@@ -516,14 +516,21 @@ Item {
                 // growth and positionViewAtEnd never do - and reaching the
                 // bottom re-arms it.
                 property bool following: true
-                property real lastContentY: 0
-                onContentYChanged: {
-                    if (contentY < lastContentY - 2) {
-                        following = false;
-                        chasing = false;
+                // Follow breaks on EXPLICIT user input only. The old
+                // contentY-decrease detector also fired on the ListView's
+                // own layout adjustments mid-stream, silently killing the
+                // follow partway through every long answer (both recorded
+                // runs show it dead in their late windows).
+                Connections {
+                    target: messageListView
+                    function onUserWheeled(delta) {
+                        if (delta > 0) {
+                            messageListView.following = false;
+                            messageListView.chasing = false;
+                        }
                     }
-                    lastContentY = contentY;
                 }
+                onMovingChanged: if (moving) { following = false; chasing = false; }
                 onAtYEndChanged: if (atYEnd) following = true
 
                 // The chase, not the snap: positionViewAtEnd() per chunk
@@ -557,7 +564,6 @@ Item {
                         // Written past the wheel Behavior: smoothed writes
                         // queue behind alwaysRunToEnd and the chase freezes.
                         const step = gap * Math.min(1, frameTime * 8);
-                        messageListView.lastContentY = messageListView.contentY + step;
                         messageListView.setContentYImmediate(messageListView.contentY + step);
                     }
                 }

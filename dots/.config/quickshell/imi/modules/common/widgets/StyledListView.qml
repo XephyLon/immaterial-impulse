@@ -17,6 +17,11 @@ ListView {
     property bool animateMovement: false
     // Accumulated scroll destination so wheel deltas stack while animating
     property real scrollTargetY: 0
+    /** The user turned the wheel: positive delta is upward. Emitted by the
+        fast-scroll path, which writes contentY directly and is therefore
+        invisible to `moving` - followers listen here instead of trying to
+        infer intent from contentY deltas. */
+    signal userWheeled(real delta)
 
     property real touchpadScrollFactor: Config?.options.interactions.scrolling.touchpadScrollFactor ?? 100
     property real mouseScrollFactor: Config?.options.interactions.scrolling.mouseScrollFactor ?? 50
@@ -47,6 +52,7 @@ ListView {
 
             root.scrollTargetY = targetY;
             root.contentY = targetY;
+            root.userWheeled(delta);
             wheelEvent.accepted = true;
         }
     }
