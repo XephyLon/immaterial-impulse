@@ -911,14 +911,19 @@ Item {
                         }
 
                         StyledFlickable {
+                            id: keysScroll
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             clip: true
+                            // Pinned, or one unwrapped label inflates the
+                            // content item and the whole column slides past
+                            // the sidebar's edge (the persona hint did).
+                            contentWidth: keysScroll.width
                             contentHeight: keysColumn.implicitHeight
 
                             ColumnLayout {
                                 id: keysColumn
-                                width: parent.width
+                                width: keysScroll.width
                                 spacing: Appearance.spacing.space150
 
                                 AiProvidersEditor {
@@ -997,6 +1002,8 @@ Item {
                                     }
                                     StyledText {
                                         visible: AiPersonas.activeId !== ""
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
                                         text: Translation.tr("(the persona above speaks; typing here switches to Custom)")
                                         color: Appearance.colors.colSubtext
                                         font.pixelSize: Appearance.font.pixelSize.smaller
