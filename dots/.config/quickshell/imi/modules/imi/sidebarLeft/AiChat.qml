@@ -527,10 +527,11 @@ Item {
                         if (delta > 0) {
                             messageListView.following = false;
                             messageListView.chasing = false;
+                            messageListView.followVel = 0;
                         }
                     }
                 }
-                onMovingChanged: if (moving) { following = false; chasing = false; }
+                onMovingChanged: if (moving) { following = false; chasing = false; followVel = 0; }
                 onAtYEndChanged: if (atYEnd) following = true
 
                 // The chase, not the snap: positionViewAtEnd() per chunk
@@ -548,23 +549,38 @@ Item {
                 // re-eased on the next chunk - scroll advanced on every
                 // other frame in bursts, which was the remaining stutter.
                 property bool chasing: false
+                property real followVel: 0
                 function followToEnd() { chasing = true; }
                 FrameAnimation {
                     id: followTick
                     running: messageListView.chasing && messageListView.following
                     onTriggered: {
+                        // SmoothDamp: velocity is STATE, so it stays
+                        // continuous while the target jumps with every
+                        // chunk. The previous gap-proportional step made
+                        // speed track the gap directly - measured on video
+                        // as a 0..79px/frame sawtooth (decay, stall, jump).
                         const end = messageListView.originY + messageListView.contentHeight
                             + messageListView.bottomMargin - messageListView.height;
-                        const gap = end - messageListView.contentY;
-                        if (gap <= 0.5) {
+                        const y = messageListView.contentY;
+                        const gap = end - y;
+                        if (gap <= 0.5 && Math.abs(messageListView.followVel) < 8) {
                             messageListView.chasing = false;
+                            messageListView.followVel = 0;
                             return;
                         }
-                        // ~1 - e^(-8dt): frame-rate independent damping.
+                        const dt = Math.min(frameTime, 0.05);
+                        const omega = 2 / 0.35;   // smoothTime 350ms
+                        const x = omega * dt;
+                        const damp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+                        const change = y - end;
+                        const temp = (messageListView.followVel + omega * change) * dt;
+                        messageListView.followVel = (messageListView.followVel - omega * temp) * damp;
+                        let next = end + (change + temp) * damp;
+                        if (next > end) { next = end; messageListView.followVel = 0; }
                         // Written past the wheel Behavior: smoothed writes
                         // queue behind alwaysRunToEnd and the chase freezes.
-                        const step = gap * Math.min(1, frameTime * 8);
-                        messageListView.setContentYImmediate(messageListView.contentY + step);
+                        messageListView.setContentYImmediate(next);
                     }
                 }
                 onContentHeightChanged: if (following) followToEnd()
