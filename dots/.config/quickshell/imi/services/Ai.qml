@@ -270,6 +270,12 @@ Singleton {
     // What the composer's Up key recalls: the prompts someone actually
     // typed into THIS chat - user role, visible, non-empty - in order.
     // Hidden carriers (tool outputs, silent instructions) are not prompts.
+    // The busy signal two guards already read (the transcript reveal and
+    // editAndResend) - which turned out to be reading an UNDEFINED name
+    // since the reveal landed: undefined is falsy, so the guard was
+    // silently inert. The requester process's lifetime is the answer.
+    readonly property bool isGenerating: requester.running
+
     readonly property var ownPromptHistory: {
         const list = [];
         for (let i = 0; i < root.messageIDs.length; i++) {
