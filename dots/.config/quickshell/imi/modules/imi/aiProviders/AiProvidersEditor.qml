@@ -167,7 +167,16 @@ ColumnLayout {
                     onValueChanged: {
                         // Only a keystroke may write - see the header note.
                         if (!textArea.activeFocus) return;
+                        // Teardown ghosts: a field being destroyed with focus
+                        // still on it emits one last valueChanged("") - the
+                        // signature of every provider wipe so far (only the
+                        // fields the user had focused came back blank). A
+                        // dying view must not write, and an empty value never
+                        // overwrites a real one - clearing a name is done by
+                        // typing its replacement.
+                        if (!root.visible) return;
                         let providers = [...Config.options.ai.customProviders];
+                        if (value === "" && providers[providerCard.index].name) return;
                         if (providers[providerCard.index].name !== value) {
                             providers[providerCard.index].name = value;
                             Config.options.ai.customProviders = providers;
@@ -183,7 +192,9 @@ ColumnLayout {
                     value: Config.options.ai.customProviders[providerCard.index].baseUrl
                     onValueChanged: {
                         if (!textArea.activeFocus) return;
+                        if (!root.visible) return; // teardown ghost - see Name
                         let providers = [...Config.options.ai.customProviders];
+                        if (value === "" && providers[providerCard.index].baseUrl) return;
                         if (providers[providerCard.index].baseUrl !== value) {
                             providers[providerCard.index].baseUrl = value;
                             Config.options.ai.customProviders = providers;
@@ -198,6 +209,10 @@ ColumnLayout {
                     password: true
                     value: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${providerCard.index}`] || "") : ""
                     onValueChanged: {
+                        // This write was never focus-guarded at all - the
+                        // same teardown ghost could blank a keyring entry.
+                        if (!textArea.activeFocus) return;
+                        if (!root.visible) return;
                         let currentText = value;
                         Qt.callLater(() => {
                             if (KeyringStorage.loaded) {

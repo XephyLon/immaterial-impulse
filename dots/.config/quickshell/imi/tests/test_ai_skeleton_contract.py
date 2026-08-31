@@ -114,6 +114,20 @@ def test_edit_and_resend_forks_and_never_truncates_in_place():
     assert "editResendRequested" in (ROOT / "modules/imi/sidebarLeft/aiChat/AiMessage.qml").read_text(encoding="utf-8")
 
 
+def test_the_providers_editor_guards_against_teardown_ghosts():
+    """A focused field being destroyed emits valueChanged("") - the wipe.
+
+    Every write handler in the editor must refuse a write from a dying view
+    (root.visible) and refuse an empty value over a real one; the key write
+    must be focus-guarded like the rest.
+    """
+    editor = (ROOT / "modules/imi/aiProviders/AiProvidersEditor.qml").read_text(encoding="utf-8")
+    assert editor.count("if (!root.visible) return;") >= 3, "a teardown guard went missing"
+    assert editor.count("if (!textArea.activeFocus) return;") >= 3, "a focus guard went missing"
+    assert 'if (value === "" && providers[providerCard.index].name) return;' in editor
+    assert 'if (value === "" && providers[providerCard.index].baseUrl) return;' in editor
+
+
 def test_the_browse_view_rides_the_switcher_and_writes_only_extra_models():
     chat = CHAT.read_text(encoding="utf-8")
     assert '"browse"' in chat and "BrowseModelsView" in chat
