@@ -52,6 +52,11 @@ ShellRoot {
         AutoTheme.load()
         FirstRunExperience.load()
         ConflictKiller.load()
+        // The tray watchdog (scripts/tray/sni_watchdog.py): keeps a
+        // persistent SNI watcher alive and resurrects Electron items after
+        // a watcher flap - see the script's header. flock-guarded, so
+        // shell restarts never stack copies.
+        Quickshell.execDetached(["python3", Quickshell.shellPath("scripts/tray/sni_watchdog.py")])
         Cliphist.refresh()
         Wallpapers.load()
         WallpaperEngine.load()
