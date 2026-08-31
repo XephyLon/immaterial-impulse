@@ -15,6 +15,10 @@ Rectangle {
     property var messageInputField
 
     property real messagePadding: Appearance.spacing.space100
+    // A user turn reads as a chat bubble - inset from the left, tinted,
+    // no header plate - while assistant/interface turns keep the document
+    // layout their content needs.
+    readonly property bool isUser: messageData?.role === 'user'
     property real contentSpacing: Appearance.spacing.space50
 
     property bool enableMouseSelection: false
@@ -82,10 +86,13 @@ Rectangle {
 
     anchors.left: parent?.left
     anchors.right: parent?.right
+    anchors.leftMargin: root.isUser ? Appearance.spacing.space600 * 2 : 0
     implicitHeight: columnLayout.implicitHeight + root.messagePadding * 2
 
-    radius: Appearance.rounding.normal
-    color: Appearance.colors.colLayer1
+    radius: root.isUser ? Appearance.rounding.large : Appearance.rounding.normal
+    color: root.isUser ? Appearance.colors.colSecondaryContainer : Appearance.colors.colLayer1
+
+    HoverHandler { id: bubbleHover }
 
     function saveMessage() {
         if (!root.editing) return;
@@ -136,6 +143,7 @@ Rectangle {
         spacing: root.contentSpacing
 
         Rectangle {
+            visible: !root.isUser
             Layout.fillWidth: true
             implicitWidth: headerRowLayout.implicitWidth + 4 * 2
             implicitHeight: headerRowLayout.implicitHeight + 4 * 2
@@ -235,7 +243,19 @@ Rectangle {
                     }
                 }
 
+                Item {
+                    id: headerActionsSlot
+                    implicitWidth: childrenRect.width
+                    implicitHeight: childrenRect.height
+                }
+
                 ButtonGroup {
+                    id: actionButtons
+                    // ONE set of controls with two homes: the header plate,
+                    // or - for a bubble that has no plate - a quiet hover
+                    // row under the bubble. Reparenting keeps the ids and
+                    // handlers single.
+                    parent: root.isUser ? userActionsSlot : headerActionsSlot
                     spacing: Appearance.spacing.space100
 
                     AiMessageControlButton {
@@ -341,10 +361,15 @@ Rectangle {
                 }
                 FadeLoader {
                     id: loadingIndicatorLoader
-                    anchors.centerIn: parent
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
                     shown: (root.messageBlocks.length < 1) && (!root.messageData.done)
-                    sourceComponent: MaterialLoadingIndicator {
-                        loading: true
+                    sourceComponent: ShimmerLabel {
+                        running: true
+                        text: Translation.tr("Thinking…")
+                        baseColor: Appearance.colors.colSubtext
+                        glowColor: Appearance.colors.colOnLayer1
+                        font.pixelSize: Appearance.font.pixelSize.small
                     }
                 }
             }
@@ -393,6 +418,22 @@ Rectangle {
                         done: root.messageData?.done ?? false
                         forceDisableChunkSplitting: root.messageData?.content.includes("```") ?? true
                     } }
+            }
+        }
+
+        RowLayout {
+            visible: root.isUser
+            Layout.fillWidth: true
+            Item { Layout.fillWidth: true }
+            Item {
+                id: userActionsSlot
+                implicitWidth: childrenRect.width
+                implicitHeight: childrenRect.height
+                opacity: bubbleHover.hovered ? 1 : 0
+                enabled: bubbleHover.hovered
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
             }
         }
 
