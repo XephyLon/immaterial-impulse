@@ -41,8 +41,11 @@ def test_the_chips_carry_the_pills_command_hints():
     assert "temp VALUE" in body, "the temp chip lost its command hint"
     assert "keysRequested" in body, (
         "the key chip must open the keys view, not pre-fill a command")
-    assert "StyledComboBox" in body and "setModel" in body, (
-        "the model control must be a real picker, not a pre-fill")
+    assert "StyledComboBox" not in body, (
+        "the model picker lives at the composer, not in the tools bar")
+    chat = CHAT.read_text(encoding="utf-8")
+    assert "StyledComboBox" in chat and "setModel" in chat, (
+        "the composer must carry the real model picker")
     assert "StyledToolTip" in body
     assert "newSession" in body, (
         "the new-chat chip must finalize the session, not just clear")

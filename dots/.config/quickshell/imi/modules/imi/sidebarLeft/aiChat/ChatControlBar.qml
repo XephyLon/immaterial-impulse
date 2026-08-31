@@ -116,39 +116,12 @@ Item {
         anchors.fill: parent
         spacing: Appearance.spacing.space50
 
-        StyledComboBox { // Model: a real picker, not a pre-fill.
-            id: modelPicker
-            Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: Math.min(implicitWidth, 210)
-            implicitHeight: 32
-            buttonIcon: "network_intelligence"
-            textRole: "name"
-            colBackground: Appearance.colors.colLayer2
-            colBackgroundHover: Appearance.colors.colLayer2Hover
-            colBackgroundActive: Appearance.colors.colLayer2Active
-            // The model's own `icon` is a symbolic asset name, not a
-            // material glyph, so the picker carries its own glyph and the
-            // rows show names only.
-            model: Ai.modelList.map(id => ({ name: Ai.models[id]?.name ?? id, value: id }))
-            currentIndex: Ai.modelList.indexOf(Ai.currentModelId)
-            // First use / a stale persisted id: nothing is selected, and a
-            // blank button reads as broken - say what the control is for.
-            displayText: modelPicker.currentIndex < 0
-                ? Translation.tr("Select model")
-                : (modelPicker.model[modelPicker.currentIndex]?.name ?? "")
-            onActivated: index => {
-                const chosen = modelPicker.model[index];
-                if (chosen) Ai.setModel(chosen.value);
-            }
-            // A pick writes currentIndex and destroys the binding above, so
-            // an external change (the /model command) resyncs it here.
-            Connections {
-                target: Ai
-                function onCurrentModelIdChanged() {
-                    modelPicker.currentIndex = Ai.modelList.indexOf(Ai.currentModelId);
-                }
-            }
+        ControlChip { // Chats first: the leftmost verb (maintainer's order).
+            chipIcon: "forum"
+            hint: Translation.tr("Chats")
+            onClicked: root.sessionsRequested()
         }
+
         InlineEditChip {
             chipIcon: "device_thermostat"
             value: Ai.temperature.toFixed(1)
@@ -178,12 +151,6 @@ Item {
         }
 
         Item { Layout.fillWidth: true }
-
-        ControlChip {
-            chipIcon: "forum"
-            hint: Translation.tr("Chats")
-            onClicked: root.sessionsRequested()
-        }
 
         ControlChip {
             chipIcon: "edit_square"
