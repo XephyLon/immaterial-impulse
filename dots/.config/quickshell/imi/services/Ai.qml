@@ -299,6 +299,29 @@ Singleton {
         }),
     }
     property var modelList: Object.keys(root.models)
+    // The PICKER's list (maintainer's rule): once the user has brought
+    // their own models - a custom provider's, a local ollama's - the
+    // built-in defaults still sitting there without an API key are dead
+    // rows and hide. Out of the box nothing is brought, so the defaults
+    // stay: they are the first-run experience. /model keeps the full
+    // list either way, and nothing hides before the keyring can say
+    // which keys exist.
+    readonly property var pickerModelList: {
+        const ids = root.modelList;
+        if (!root.apiKeysLoaded) return ids;
+        const brought = ids.some(id => {
+            const m = root.models[id];
+            return m && (m.requires_key === false
+                || String(m.key_id ?? "").startsWith("custom_provider_"));
+        });
+        if (!brought) return ids;
+        return ids.filter(id => {
+            const m = root.models[id];
+            if (!m || m.requires_key === false) return true;
+            if (String(m.key_id ?? "").startsWith("custom_provider_")) return true;
+            return (root.apiKeys[m.key_id]?.length ?? 0) > 0;
+        });
+    }
     property var currentModelId: Persistent.states?.ai?.model || modelList[0]
 
     property var apiStrategies: {

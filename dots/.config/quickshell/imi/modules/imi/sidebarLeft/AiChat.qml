@@ -1022,8 +1022,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     colBackground: "transparent"
                     colBackgroundHover: Appearance.colors.colLayer2Hover
                     colBackgroundActive: Appearance.colors.colLayer2Active
-                    model: Ai.modelList.map(id => ({ name: Ai.models[id]?.name ?? id, value: id }))
-                    currentIndex: Ai.modelList.indexOf(Ai.currentModelId)
+                    model: Ai.pickerModelList.map(id => ({ name: Ai.models[id]?.name ?? id, value: id }))
+                    currentIndex: Ai.pickerModelList.indexOf(Ai.currentModelId)
                     // First use / a stale persisted id: nothing selected, and
                     // a blank button reads as broken.
                     displayText: modelPicker.currentIndex < 0
@@ -1038,7 +1038,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     Connections {
                         target: Ai
                         function onCurrentModelIdChanged() {
-                            modelPicker.currentIndex = Ai.modelList.indexOf(Ai.currentModelId);
+                            modelPicker.currentIndex = Ai.pickerModelList.indexOf(Ai.currentModelId);
                         }
                     }
                 }
