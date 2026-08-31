@@ -1082,8 +1082,18 @@ And a final paragraph after the math, so the stream does not end on a block boun
                an inline image keeps it up to the moment the file lands. */
             const lastUser = [...root.messageIDs].reverse()
                 .map(id => root.messageByID[id]).find(m => m?.role === "user");
-            const looksLikeImageAsk = /\b(generate|draw|paint|render|create|make)\b[\s\S]{0,80}\b(image|picture|photo|logo|icon|drawing|art)\b|\bimage of\b/i
-                .test(String(lastUser?.rawContent ?? ""));
+            // Arm on an image-sounding prompt OR in any chat where this
+            // model has already painted inline - follow-ups ("make it
+            // blue") never repeat the word "image". A wrong guess costs
+            // one blink: the first text stands the skeleton down.
+            const chatPaintsInline = root.messageIDs.some(id => {
+                const m = root.messageByID[id];
+                return m?.role === "assistant"
+                    && String(m.rawContent ?? "").includes("/attachments/inline-");
+            });
+            const looksLikeImageAsk = chatPaintsInline
+                || /\b(generate|draw|paint|render|create|make)\b[\s\S]{0,80}\b(image|picture|photo|logo|icon|drawing|art)\b|\bimage of\b/i
+                    .test(String(lastUser?.rawContent ?? ""));
             requester.message = root.aiMessageComponent.createObject(root, {
                 "role": "assistant",
                 "model": currentModelId,
