@@ -210,9 +210,22 @@ ContentPage {
             // parts too, which is what makes the drag legible before the
             // drop.
             function dragMoved(target) {
-                for (let b = 0; b < 3; b++)
+                for (let b = 0; b < 3; b++) {
+                    if (!target || target.bucket !== b) {
+                        barLayoutSection.layoutLists[b].gapIndex = -1;
+                        continue;
+                    }
+                    // dropTarget's insertion index counts STORED slots - the
+                    // dragged hole included - while gapIndex speaks in the
+                    // REMAINING rows the list actually draws. In the drag's
+                    // own list those differ by one past the hole, which drew
+                    // the gap a slot below the pointer; the conversion is
+                    // the same one the commit already uses.
                     barLayoutSection.layoutLists[b].gapIndex =
-                        (target && target.bucket === b) ? target.index : -1;
+                        (b === barLayoutSection.dragBucket)
+                            ? LayoutOps.moveTargetForInsertion(barLayoutSection.dragIndex, target.index)
+                            : target.index;
+                }
             }
             function endDrag() {
                 barLayoutSection.dragBucket = -1;
