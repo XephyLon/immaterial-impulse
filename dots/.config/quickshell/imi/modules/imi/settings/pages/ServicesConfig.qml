@@ -28,6 +28,14 @@ ContentPage {
         padding: Appearance.spacing.space200
         implicitWidth: layoutItem.implicitWidth + padding * 2
         buttonRadius: Appearance.rounding.full
+        // The press tones follow each state's own fill family: the filled
+        // pill ripples in its container's Active, and the flat variant -
+        // whose colLayer1 default reads as no background at all on this
+        // page - ripples in the Layer2 family it hovers in.
+        colRippleToggled: Appearance.colors.colSecondaryContainerActive
+        colBackground: "transparent"
+        colBackgroundHover: Appearance.colors.colLayer2Hover
+        colRipple: Appearance.colors.colLayer2Active
 
         contentItem: Item {
             implicitWidth: layoutItem.implicitWidth
