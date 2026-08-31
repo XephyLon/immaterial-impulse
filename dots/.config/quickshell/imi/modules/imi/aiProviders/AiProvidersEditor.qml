@@ -75,6 +75,20 @@ ColumnLayout {
             id: providerCard
             required property int index
             Layout.fillWidth: true
+            // A planted card ARRIVES - fade and a small rise - instead of
+            // popping into the column.
+            opacity: 1
+            transform: Translate { id: cardRise }
+            Component.onCompleted: {
+                opacity = 0;
+                cardRise.y = 8;
+                cardEntrance.start();
+            }
+            ParallelAnimation {
+                id: cardEntrance
+                NumberAnimation { target: providerCard; property: "opacity"; to: 1; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutCubic }
+                NumberAnimation { target: cardRise; property: "y"; to: 0; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutExpo }
+            }
             radius: Appearance.rounding.normal
             color: Appearance.colors.colLayer2
             border.width: 1
@@ -251,6 +265,10 @@ ColumnLayout {
         Layout.rightMargin: Appearance.spacing.space100
         Layout.topMargin: Appearance.spacing.space100
         implicitHeight: choosing ? chooserColumn.implicitHeight + 16 : 44
+        Behavior on implicitHeight {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        clip: true
 
         function plant(type, name, baseUrl) {
             let providers = [...(Config.options.ai.customProviders || [])];
@@ -283,7 +301,11 @@ ColumnLayout {
 
         RippleButton {
             anchors.fill: parent
-            visible: !addSlot.choosing
+            opacity: addSlot.choosing ? 0 : 1
+            visible: opacity > 0
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
             buttonRadius: Appearance.rounding.normal
             colBackground: "transparent"
             colBackgroundHover: Appearance.colors.colLayer2Hover
@@ -315,7 +337,17 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.margins: 8
-            visible: addSlot.choosing
+            opacity: addSlot.choosing ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+            transform: Translate {
+                y: addSlot.choosing ? 0 : -8
+                Behavior on y {
+                    animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+                }
+            }
             spacing: 2
 
             RowLayout {
