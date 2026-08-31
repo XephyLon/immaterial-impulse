@@ -391,17 +391,19 @@ StyledPopup {
                 rowNote: Translation.tr("stop it from that app")
             }
 
-            // The shell's own captures, which it CAN act on.
+            // The shell's own captures, which it CAN act on. TWO sections,
+            // not one that renames itself: a recording started while the
+            // replay buffer runs used to land under the replay's header
+            // with both stop buttons side by side and nothing saying which
+            // stopped what.
             ColumnLayout {
-                visible: ScreenRecord.recording || ScreenRecord.replaying
+                visible: ScreenRecord.recording
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.space25
 
                 SectionHeader {
-                    icon: ScreenRecord.recording ? "screen_record" : "replay"
-                    label: ScreenRecord.recording
-                        ? Translation.tr("Recording")
-                        : Translation.tr("Instant replay")
+                    icon: "screen_record"
+                    label: Translation.tr("Recording")
                 }
 
                 SectionPlate {
@@ -411,9 +413,7 @@ StyledPopup {
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: ScreenRecord.recording
-                            ? (ScreenRecord.recordPaused ? Translation.tr("Paused") : Translation.tr("Recording the screen"))
-                            : Translation.tr("Buffering the last moments")
+                        text: ScreenRecord.recordPaused ? Translation.tr("Paused") : Translation.tr("Recording the screen")
                         wrapMode: Text.Wrap
                         color: Appearance.colors.colOnSurfaceVariant
                         opacity: 0.75
@@ -435,6 +435,34 @@ StyledPopup {
                             releaseAction: () => ScreenRecord.stopRecord()
                         }
                     }
+                }
+                }
+            }
+
+            ColumnLayout {
+                visible: ScreenRecord.replaying
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space25
+
+                SectionHeader {
+                    icon: "replay"
+                    label: Translation.tr("Instant replay")
+                }
+
+                SectionPlate {
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space50
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: Translation.tr("Buffering the last moments")
+                        wrapMode: Text.Wrap
+                        color: Appearance.colors.colOnSurfaceVariant
+                        opacity: 0.75
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                    }
+
                     ActionSlot {
                         // The replay buffer's whole point: keep what just
                         // happened. Saving does not disarm it.
