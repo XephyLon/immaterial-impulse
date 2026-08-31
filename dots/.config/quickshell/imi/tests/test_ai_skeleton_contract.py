@@ -114,6 +114,24 @@ def test_edit_and_resend_forks_and_never_truncates_in_place():
     assert "editResendRequested" in (ROOT / "modules/imi/sidebarLeft/aiChat/AiMessage.qml").read_text(encoding="utf-8")
 
 
+def test_the_browse_view_rides_the_switcher_and_writes_only_extra_models():
+    chat = CHAT.read_text(encoding="utf-8")
+    assert '"browse"' in chat and "BrowseModelsView" in chat
+    view = (ROOT / "modules/imi/sidebarLeft/aiChat/BrowseModelsView.qml").read_text(encoding="utf-8")
+    assert "Config.options.ai.extraModels" in view
+    assert "customProviders" not in view, "the browse import must not touch providers"
+    model = (ROOT / "services/ai/AiModel.qml").read_text(encoding="utf-8")
+    for field in ("property bool thinking", "property bool vision", "property int contextWindow"):
+        assert field in model, f"AiModel lost {field}"
+
+
+def test_drafts_stay_beside_the_sessions_never_inside():
+    drafts = (ROOT / "services/AiDrafts.qml").read_text(encoding="utf-8")
+    assert "sessions-index" not in drafts, "drafts must never touch the sessions index"
+    chat = CHAT.read_text(encoding="utf-8")
+    assert "AiDrafts.record" in chat and "AiDrafts.clear" in chat
+
+
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from contract_runner import run
