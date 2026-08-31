@@ -168,15 +168,23 @@ ColumnLayout {
             // pops; a delegate created mid-stream now announces itself and
             // an updated one just keeps its text.
             opacity: 1
+            // An explicit from-0 animation, not write-then-deferred-write:
+            // the start-write lint is right that a Behavior swallows the
+            // first write and animates destination-to-destination.
             Component.onCompleted: {
                 committedText = modelData;
-                if (root.fadeChunkSplitting && !(root.messageData?.done ?? true)) {
-                    opacity = 0;
-                    Qt.callLater(() => textArea.opacity = 1);
-                }
+                if (root.fadeChunkSplitting && !(root.messageData?.done ?? true))
+                    lineAppear.start();
             }
-            Behavior on opacity {
-                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            NumberAnimation {
+                id: lineAppear
+                target: textArea
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Appearance.animation.elementMoveFast.type
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
             }
 
             Layout.fillWidth: true
