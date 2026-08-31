@@ -48,16 +48,16 @@ var COMPACT_SPACING = 12;      // Appearance.spacing.space150
 
 // ---- 1x1 constants (designed against the maintainer's reference shot:
 // artwork fills the card, a small transport row sits low on it) -----------
-var TINY_PLAY = 48;            // the cookie play button
+var TINY_PLAY = 46;            // the cookie play button
 // The half-pill flankers (2026-08-31 redesign): stuck flush to the play
 // button's sides, round edge outward; the row lifted, a straight seek bar
 // riding below it.
-var TINY_SIDE_W = 22;
-var TINY_SIDE_H = 34;
+var TINY_SIDE_W = 26;
+var TINY_SIDE_H = 40;
 var TINY_SEEK_H = 16;
 var TINY_SEEK_BOTTOM = 8;      // seek's clearance from the card's bottom
 var TINY_ROW_GAP = 8;          // between the row and the seek
-var TINY_SIDE_TUCK = 8;        // how far a flanker reaches INTO the play rect
+var TINY_SIDE_TUCK = 6;        // how far a flanker reaches INTO the play rect
 
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150
