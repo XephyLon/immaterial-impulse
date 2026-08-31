@@ -294,16 +294,6 @@ Rectangle {
                             text: Translation.tr("View Markdown source")
                         }
                     }
-                    AiMessageControlButton {
-                        id: deleteButton
-                        buttonIcon: "close"
-                        onClicked: {
-                            Ai.removeMessage(root.messageIndex)
-                        }
-                        StyledToolTip {
-                            text: Translation.tr("Delete")
-                        }
-                    }
                 }
             }
         }
