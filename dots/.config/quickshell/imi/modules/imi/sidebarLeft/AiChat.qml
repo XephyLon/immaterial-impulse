@@ -39,6 +39,17 @@ Item {
         root.transcriptRevealToken = Math.max(0, root.transcriptRevealToken + 1);
         transcriptRevealWindow.restart();
     }
+    // A message added while the pane is on screen arrives - the delegates
+    // created inside this short window play the same fade-and-rise the
+    // reveal uses, so a fresh answer lands the way one does in a chat app
+    // instead of snapping into existence.
+    property bool messageArrivalWindow: false
+    Timer {
+        id: messageArrivalTimer
+        interval: 400
+        onTriggered: root.messageArrivalWindow = false
+    }
+
     Timer {
         id: transcriptRevealWindow
         // Covers the stagger while keeping delegates later created by
@@ -410,6 +421,14 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     // Auto-scroll when new messages are added
                     if (atYEnd)
                         Qt.callLater(positionViewAtEnd);
+                    // ...and open the arrival window for the delegates the
+                    // growth is about to create - only while the pane is
+                    // actually on screen, so a background population stays
+                    // still.
+                    if (GlobalStates.sidebarLeftOpen) {
+                        root.messageArrivalWindow = true;
+                        messageArrivalTimer.restart();
+                    }
                 }
 
                 add: null // Prevent function calls from being janky
@@ -425,6 +444,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     required property int index
                     transcriptRevealToken: root.transcriptRevealToken
                     transcriptRevealDelay: index * 40
+                    arrivalWindow: root.messageArrivalWindow
                     messageIndex: index
                     messageData: {
                         Ai.messageByID[modelData];

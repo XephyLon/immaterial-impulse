@@ -29,20 +29,30 @@ Rectangle {
     property int transcriptRevealToken: -1
     property int transcriptRevealDelay: 0
     property int handledRevealToken: -1
+    /** Open while the chat is receiving: a delegate CREATED inside the
+        window is a fresh message and arrives instead of snapping in. */
+    property bool arrivalWindow: false
 
     transform: Translate { id: arrivalRise }
-    onTranscriptRevealTokenChanged: {
-        if (root.transcriptRevealToken < 0) return;
-        if (root.transcriptRevealToken === root.handledRevealToken) return;
-        root.handledRevealToken = root.transcriptRevealToken;
+    function startArrival(delay) {
         arrivalAnimation.stop();
+        arrivalPause.duration = delay;
         root.opacity = 0;
         arrivalRise.y = Appearance.rounding.verysmall;
         arrivalAnimation.start();
     }
+    Component.onCompleted: {
+        if (root.arrivalWindow) root.startArrival(0);
+    }
+    onTranscriptRevealTokenChanged: {
+        if (root.transcriptRevealToken < 0) return;
+        if (root.transcriptRevealToken === root.handledRevealToken) return;
+        root.handledRevealToken = root.transcriptRevealToken;
+        root.startArrival(root.transcriptRevealDelay);
+    }
     SequentialAnimation {
         id: arrivalAnimation
-        PauseAnimation { duration: root.transcriptRevealDelay }
+        PauseAnimation { id: arrivalPause; duration: 0 }
         ParallelAnimation {
             NumberAnimation { target: root; property: "opacity"; to: 1; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutCubic }
             NumberAnimation { target: arrivalRise; property: "y"; to: 0; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutExpo }
