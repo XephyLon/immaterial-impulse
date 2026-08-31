@@ -96,6 +96,24 @@ def test_one_view_switcher_owns_the_overlays():
     assert "sessionsRequested" in bar, "the history chip requests, never renders"
 
 
+def test_the_history_arm_keeps_the_empty_draft_gate():
+    """Recall only from an empty draft: without the gate, Up in a
+    multi-line message jumps the transcript into the composer."""
+    chat = CHAT.read_text(encoding="utf-8")
+    assert "stepPromptHistory(-1)" in chat
+    up_arm = chat.split("stepPromptHistory(-1)")[0].rsplit("} else if", 1)[1]
+    assert "text.length === 0" in up_arm, "the Up arm lost its empty-draft gate"
+
+
+def test_edit_and_resend_forks_and_never_truncates_in_place():
+    ai = (ROOT / "services/Ai.qml").read_text(encoding="utf-8")
+    body = ai.split("function editAndResend")[1].split("\n    }")[0]
+    assert "AiSessions.saveNow()" in body, "the old branch must flush first"
+    assert "removeMessage" not in body, (
+        "editAndResend deletes nothing - the fork rule")
+    assert "editResendRequested" in (ROOT / "modules/imi/sidebarLeft/aiChat/AiMessage.qml").read_text(encoding="utf-8")
+
+
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from contract_runner import run

@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The composer remembers, and questions get second drafts.** Up/Down
+  steps through this chat's past prompts shell-style (your unsent draft
+  survives the round trip), and any question can be taken back - the
+  edit_note action on the message, or Ctrl+Up for the last one -
+  reworded, and resent as a fresh chat; the old branch stays in Chats.
+  Ctrl+R redoes the last answer.
 - **Chats save themselves.** Every conversation persists as a session
   the moment you send the first message - no /save needed. The tools
   bar's new history chip opens the list: pinned first, open on the row,

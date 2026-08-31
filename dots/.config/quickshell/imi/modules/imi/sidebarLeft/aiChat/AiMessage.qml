@@ -21,6 +21,9 @@ Rectangle {
     property bool renderMarkdown: true
     property bool editing: false
 
+    /** Asks the composer to take this question back for another go. */
+    signal editResendRequested(int messageIndex, string content)
+
     // The opening reveal (spec 2026-08-31): the sidebar bumps the token on
     // arrival and each delegate in view runs one short entrance, ordered by
     // its visible index. handledRevealToken is what keeps a recycled
@@ -215,6 +218,18 @@ Rectangle {
 
                 ButtonGroup {
                     spacing: Appearance.spacing.space100
+
+                    AiMessageControlButton {
+                        id: editResendButton
+                        visible: messageData?.role === 'user'
+                        enabled: messageData?.done ?? false
+                        buttonIcon: "edit_note"
+                        onClicked: root.editResendRequested(root.messageIndex,
+                            String(root.messageData?.rawContent ?? root.messageData?.content ?? ""))
+                        StyledToolTip {
+                            text: Translation.tr("Edit & resend")
+                        }
+                    }
 
                     AiMessageControlButton {
                         id: regenButton
