@@ -114,7 +114,18 @@ Item {
     })
 
     // Section glyphs, keyed on the group names keybinds.lua uses today,
-    // with a neutral fallback for any group added later.
+    // with a neutral fallback for any group added later. Each glyph sits in
+    // a Material shape chip, and the shape rotates per section - the design
+    // language's way of making a list of headers scannable.
+    property var sectionShapes: [
+        MaterialShape.Shape.Cookie9Sided,
+        MaterialShape.Shape.Clover4Leaf,
+        MaterialShape.Shape.Sunny,
+        MaterialShape.Shape.Gem,
+        MaterialShape.Shape.Slanted,
+        MaterialShape.Shape.Cookie6Sided,
+        MaterialShape.Shape.Ghostish
+    ]
     property var sectionIcons: ({
         "Utilities": "handyman",
         "Session": "power_settings_new",
@@ -192,6 +203,8 @@ Item {
                     delegate: Rectangle { // Section card
                         id: keybindSection
                         required property var modelData
+                        required property int index
+                        readonly property int sectionIndex: index
                         // Every section is its own surface rather than a
                         // heading floating on the sheet - the card is what
                         // separates one group of binds from the next. Width
@@ -219,11 +232,14 @@ Item {
                             Row {
                                 visible: sectionTitle.text.length > 0
                                 spacing: Appearance.spacing.space100
-                                MaterialSymbol {
+                                MaterialShapeWrappedMaterialSymbol {
                                     anchors.verticalCenter: sectionTitle.verticalCenter
+                                    wrappedShape: root.sectionShapes[keybindSection.sectionIndex % root.sectionShapes.length]
                                     text: root.sectionIcons[keybindSection.modelData.name] ?? "keyboard"
-                                    iconSize: Appearance.font.pixelSize.title
-                                    color: Appearance.colors.colPrimary
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    implicitSize: 32
+                                    color: Appearance.colors.colPrimaryContainer
+                                    colSymbol: Appearance.colors.colPrimary
                                 }
                                 StyledText {
                                     id: sectionTitle
