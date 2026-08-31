@@ -302,9 +302,14 @@ Singleton {
     // silently inert. The requester process's lifetime is the answer.
     readonly property bool isGenerating: requester.running || simTimer.running
 
+    /** A generation the tool path queued while the chat stream was still
+        running; launched by onExited once the requester is free. */
+    property var pendingImageGeneration: null
+
     /** Ends the current generation - network or simulated - marking the
         message done so every done-gated surface settles normally. */
     function stopGeneration() {
+        root.pendingImageGeneration = null;
         if (simTimer.running) {
             simTimer.stop();
             root.simRemaining = "";
@@ -1286,6 +1291,14 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 requester.message.content += note;
                 requester.message.rawContent += note;
             }
+
+            // The requester is free now: launch the generation the tool
+            // path queued mid-stream, if any.
+            if (root.pendingImageGeneration) {
+                const job = root.pendingImageGeneration;
+                root.pendingImageGeneration = null;
+                requester.makeImageRequest(job.model, job.prompt);
+            }
         }
     }
 
@@ -1512,7 +1525,11 @@ And a final paragraph after the math, so the stream does not end on a block boun
             const note = `\n\n*${Translation.tr("Generating image with %1…").arg(generator.name)}*\n`;
             message.content += note;
             message.rawContent += note;
-            requester.makeImageRequest(generator, prompt);
+            // NEVER launch here: the tool call lands mid-stream, and
+            // setting running=true on an already-running Process is a
+            // silent no-op - the generation (and its skeleton) vanished.
+            // The exit handler launches it once the chat request is done.
+            root.pendingImageGeneration = { "model": generator, "prompt": prompt };
         }
         else root.addMessage(Translation.tr("Unknown function call: %1").arg(name), "assistant");
     }
