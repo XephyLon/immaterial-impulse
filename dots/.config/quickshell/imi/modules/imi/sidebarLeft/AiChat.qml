@@ -49,6 +49,18 @@ Item {
         interval: 400
         onTriggered: root.messageArrivalWindow = false
     }
+    Connections {
+        // The SOURCE list, not the view's count: the view creates the new
+        // delegate before its own countChanged fires, so a window opened
+        // there is a window opened one message late. The service's property
+        // change precedes the model propagation.
+        target: Ai
+        function onMessageIDsChanged() {
+            if (!GlobalStates.sidebarLeftOpen) return;
+            root.messageArrivalWindow = true;
+            messageArrivalTimer.restart();
+        }
+    }
 
     Timer {
         id: transcriptRevealWindow
@@ -421,14 +433,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     // Auto-scroll when new messages are added
                     if (atYEnd)
                         Qt.callLater(positionViewAtEnd);
-                    // ...and open the arrival window for the delegates the
-                    // growth is about to create - only while the pane is
-                    // actually on screen, so a background population stays
-                    // still.
-                    if (GlobalStates.sidebarLeftOpen) {
-                        root.messageArrivalWindow = true;
-                        messageArrivalTimer.restart();
-                    }
                 }
 
                 add: null // Prevent function calls from being janky
