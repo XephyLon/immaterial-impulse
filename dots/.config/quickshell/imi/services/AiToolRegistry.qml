@@ -66,6 +66,48 @@ Singleton {
             }
         },
         {
+            "name": "control_media",
+            "description": "Control or query music playback on this desktop. Use action 'status' to learn what is playing.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["play_pause", "next", "previous", "status"], "description": "What to do" }
+                },
+                "required": ["action"]
+            }
+        },
+        {
+            "name": "focus_window",
+            "description": "Focus an open window on this desktop by part of its title or app name.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "Part of the window title or app class" }
+                },
+                "required": ["query"]
+            }
+        },
+        {
+            "name": "send_notification",
+            "description": "Show a desktop notification to the user.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "summary": { "type": "string", "description": "The notification title" },
+                    "body": { "type": "string", "description": "The notification body (optional)" }
+                },
+                "required": ["summary"]
+            }
+        },
+        {
+            "name": "get_system_status",
+            "description": "Read the current CPU, memory and battery state of this machine.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"]
+        },
+        {
             "name": "generate_image",
             "description": "Generate an image from a text prompt using the user's image-generation model. Use when the user asks to draw, render, paint or generate a picture.",
             // The pipeline behind this call is OpenAI-dialect (the

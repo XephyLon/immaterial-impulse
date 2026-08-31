@@ -6,6 +6,7 @@ import qs.modules.common
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQuick
 import qs.services.ai
 import "./ai/model_curation.js" as Curation
@@ -1462,6 +1463,59 @@ And a final paragraph after the math, so the stream does not end on a block boun
             // NEVER makeRequest here: the call lands mid-stream and a
             // running Process ignores running=true (the generate_image
             // lesson). The exit handler continues the conversation.
+            root.pendingContinuation = true;
+        }
+        else if (name === "control_media") {
+            const player = MprisController.activePlayer;
+            const action = String(args?.action ?? "status");
+            if (!player) {
+                addFunctionOutputMessage(name, Translation.tr("No media player is active."));
+            } else if (action === "play_pause") {
+                player.togglePlaying();
+                addFunctionOutputMessage(name, `Toggled. Now ${player.isPlaying ? "paused" : "playing"}: ${MprisController.trackTitle}`);
+            } else if (action === "next") {
+                player.next();
+                addFunctionOutputMessage(name, "Skipped to the next track.");
+            } else if (action === "previous") {
+                player.previous();
+                addFunctionOutputMessage(name, "Went to the previous track.");
+            } else {
+                addFunctionOutputMessage(name, `${player.isPlaying ? "Playing" : "Paused"}: ${MprisController.trackTitle} - ${MprisController.trackArtist}`);
+            }
+            root.pendingContinuation = true;
+        }
+        else if (name === "focus_window") {
+            const query = String(args?.query ?? "").toLowerCase().trim();
+            const wins = (HyprlandData.windowList || []).filter(w =>
+                String(w.title ?? "").toLowerCase().includes(query)
+                || String(w.class ?? "").toLowerCase().includes(query));
+            if (query.length === 0 || wins.length === 0) {
+                const open = (HyprlandData.windowList || []).slice(0, 15)
+                    .map(w => `${w.class}: ${String(w.title ?? "").slice(0, 60)}`).join("\n");
+                addFunctionOutputMessage(name, Translation.tr("No window matches. Open windows:\n%1").arg(open));
+            } else {
+                Hyprland.dispatch(`focuswindow address:${wins[0].address}`);
+                addFunctionOutputMessage(name, `Focused: ${wins[0].class} - ${wins[0].title}`);
+            }
+            root.pendingContinuation = true;
+        }
+        else if (name === "send_notification") {
+            const summary = String(args?.summary ?? "").trim();
+            if (summary.length === 0) {
+                addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `summary`."));
+            } else {
+                Quickshell.execDetached(["notify-send", "-a", "Shell", summary, String(args?.body ?? "")]);
+                addFunctionOutputMessage(name, "Notification sent.");
+            }
+            root.pendingContinuation = true;
+        }
+        else if (name === "get_system_status") {
+            const cpu = Math.round((ResourceUsage.cpuUsage ?? 0) * 100);
+            const mem = Math.round((ResourceUsage.memoryUsedPercentage ?? 0) * 100);
+            const battery = Battery.available
+                ? `${Math.round((Battery.percentage ?? 0) * 100)}%${Battery.isCharging ? " (charging)" : ""}`
+                : "no battery (desktop)";
+            addFunctionOutputMessage(name, `CPU: ${cpu}% | Memory: ${mem}% | Battery: ${battery}`);
             root.pendingContinuation = true;
         }
         else if (name === "generate_image") {
