@@ -224,15 +224,17 @@ ShellRoot {
                           === Math.round(Appearance.sizes.widgetGridSpanY(spanRows)));
     }
 
-    // The control. A widget offering one span has no grip, so the same gesture
-    // on the same corner is a plain drag-to-move - which is also what the
-    // resizable widget must never do.
-    function scoreMoved(label) {
+    // The control, per 88e747436: the grip arms on EVERY grid-sized
+    // widget now, and with a single span the whole drag is the clamped
+    // rubber-band bow - the widget must not move, and the release commits
+    // the span the widget already has (an idempotent store, no undo).
+    // That commit landing is also the proof events still flow.
+    function scoreElasticControl(label) {
         const after = harness.snapshot();
-        harness.check(`${label}: stores no span`, after.fixedSize === "");
-        harness.check(`${label}: the widget moved instead`,
-                      after.fixedX !== harness.before.fixedX
-                      || after.fixedY !== harness.before.fixedY);
+        harness.check(`${label}: commits only its own span`, after.fixedSize === "3x2");
+        harness.check(`${label}: the widget stays put`,
+                      after.fixedX === harness.before.fixedX
+                      && after.fixedY === harness.before.fixedY);
     }
 
     function scoreLocked(label) {
@@ -309,7 +311,7 @@ ShellRoot {
         () => harness.remember(),
         () => harness.hoverGrip(fixedWidget),
         () => harness.dragPending(-144, 0),
-        () => harness.scoreMoved("a single-span widget has no grip"),
+        () => harness.scoreElasticControl("a single-span corner is the elastic bow"),
 
         // Pinned per widget: the grip is disarmed, and so is the drag.
         () => { harness.remember(); PluginState.setOption("resize-probe", "positionLocked", true); },
