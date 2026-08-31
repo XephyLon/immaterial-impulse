@@ -94,11 +94,15 @@ Singleton {
 
     Timer {
         id: syncTimer
-        interval: 300
+        // The interpolated clock, not the raw position: MPRIS position only
+        // moves when the player answers the sidebar's 3s poke, and a line
+        // index read off it flips up to a whole poke late - the shell sat a
+        // line behind GlassyMusic's own karaoke at every transition.
+        interval: 150
         repeat: true
         running: root.status === "ok" && root.lyricsLines.length > 0
         onTriggered: {
-            const pos = root.activePlayer?.position ?? 0
+            const pos = root.estimatedPosition()
             let idx = -1
             for (let i = 0; i < root.lyricsLines.length; i++) {
                 if (root.lyricsLines[i].time <= pos) idx = i
