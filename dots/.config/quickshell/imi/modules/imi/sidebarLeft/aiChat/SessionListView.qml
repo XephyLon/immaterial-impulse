@@ -20,6 +20,9 @@ Rectangle {
 
     signal closed()
 
+    /** The list filter; empty shows the whole index. */
+    property string query: ""
+
     // Arrives from the right, the switcher's going-deeper direction.
     transform: Translate { id: slideIn }
     Component.onCompleted: {
@@ -83,6 +86,14 @@ Rectangle {
             }
         }
 
+        ConfigTextArea {
+            Layout.fillWidth: true
+            buttonIcon: "search"
+            placeholderText: Translation.tr("Search chats…")
+            value: root.query
+            onValueChanged: root.query = value
+        }
+
         StyledText {
             visible: AiSessions.index.length === 0 && root.legacyChats.length === 0
             Layout.fillWidth: true
@@ -106,7 +117,10 @@ Rectangle {
                 spacing: Appearance.spacing.space25
 
                 Repeater {
-                    model: AiSessions.index
+                    // Filtered by the search above; an empty query is the
+                    // whole index, so search costs nothing until used.
+                    model: AiSessions.index.filter(row =>
+                        (row.title ?? "").toLowerCase().includes(root.query.toLowerCase()))
                     delegate: SessionRow {}
                 }
 
