@@ -793,6 +793,26 @@ Item {
                                 font.weight: Font.DemiBold
                                 color: Appearance.colors.colOnLayer1
                             }
+                            Item { Layout.fillWidth: true }
+                            RippleButton {
+                                // The fetch, as a small FAB in the header
+                                // (was a text button lost at the bottom).
+                                implicitWidth: 40
+                                implicitHeight: 40
+                                buttonRadius: Appearance.rounding.normal
+                                colBackground: Appearance.colors.colPrimaryContainer
+                                colBackgroundHover: Appearance.colors.colPrimaryContainerHover
+                                colRipple: Appearance.colors.colPrimaryContainerActive
+                                onClicked: Ai.fetchCustomModels()
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: "sync"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.m3colors.m3onPrimaryContainer
+                                }
+                                StyledToolTip { text: Translation.tr("Fetch models") }
+                            }
                         }
 
                         StyledFlickable {

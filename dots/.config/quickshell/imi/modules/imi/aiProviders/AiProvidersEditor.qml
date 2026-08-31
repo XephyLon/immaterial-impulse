@@ -225,28 +225,60 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
-        Layout.alignment: Qt.AlignRight
-        Layout.topMargin: Appearance.spacing.space150
-        spacing: Appearance.spacing.space150
+    RippleButton {
+        // Add, as the M3 "empty slot" affordance: full width, dashed
+        // outline, where the next card will appear.
+        id: addProviderButton
+        Layout.fillWidth: true
+        Layout.topMargin: Appearance.spacing.space100
+        implicitHeight: 48
+        buttonRadius: Appearance.rounding.normal
+        colBackground: "transparent"
+        colBackgroundHover: Appearance.colors.colLayer2Hover
+        colRipple: Appearance.colors.colLayer2Active
+        onClicked: {
+            let providers = [...(Config.options.ai.customProviders || [])];
+            providers.push({ enabled: false, name: "New Provider", baseUrl: "", selectedModels: [] });
+            Config.options.ai.customProviders = providers;
+        }
 
-        IconButton {
-            textString: Translation.tr("Add Provider")
-            iconName: "add"
-            onClicked: {
-                let providers = [...(Config.options.ai.customProviders || [])];
-                providers.push({ enabled: false, name: "New Provider", baseUrl: "" });
-                Config.options.ai.customProviders = providers;
+        Canvas {
+            id: dashedBorder
+            anchors.fill: parent
+            property color stroke: Appearance.colors.colOutline
+            onStrokeChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.reset();
+                ctx.strokeStyle = String(stroke);
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 6]);
+                const r = Appearance.rounding.normal;
+                const inset = 1;
+                ctx.beginPath();
+                ctx.roundedRect(inset, inset, width - inset * 2, height - inset * 2, r, r);
+                ctx.stroke();
             }
         }
 
-        IconButton {
-            toggled: false
-            textColor: Appearance.colors.colPrimary
-            textString: Translation.tr("Fetch Models")
-            iconName: "sync"
-            onClicked: {
-                Ai.fetchCustomModels();
+        contentItem: Item {
+            implicitHeight: addRow.implicitHeight
+            RowLayout {
+                id: addRow
+                anchors.centerIn: parent
+                spacing: Appearance.spacing.space100
+                MaterialSymbol {
+                    text: "add"
+                    iconSize: Appearance.font.pixelSize.larger
+                    color: Appearance.colors.colOnLayer1
+                }
+                StyledText {
+                    text: Translation.tr("Add Provider")
+                    color: Appearance.colors.colOnLayer1
+                    font.pixelSize: Appearance.font.pixelSize.small
+                }
             }
         }
     }
