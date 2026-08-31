@@ -28,6 +28,19 @@ ColumnLayout {
 
     Layout.fillWidth: true
 
+    /** Generated images arrive as plain markdown pointing into the
+        attachment store, and TextEdit renders those at native size - a
+        1246px square swallowed the sidebar. Rewritten at render time into
+        an <img> bound to the block's own width, they fit wherever the
+        message does (height follows aspect). Raw text (editing, source
+        view) stays untouched. */
+    function fitLocalImages(s, width) {
+        if (width <= 0) return s;
+        return String(s).replace(
+            /!\[([^\]]*)\]\((\/[^)\s]*\/(?:inline-|gen-)[^)\s]+)\)/g,
+            (m, alt, path) => `<img src="${path}" width="${Math.max(64, Math.floor(width - 8))}"/>`);
+    }
+
     Timer {
         id: renderTimer
         interval: 1000
@@ -180,7 +193,10 @@ ColumnLayout {
                 : root.messageData?.role === 'user' ? Appearance.m3colors.m3onSecondaryContainer
                 : Appearance.colors.colOnLayer1
             textFormat: renderMarkdown ? TextEdit.MarkdownText : TextEdit.PlainText
-            text: liveTail ? committedText : modelData
+            text: {
+                const raw = liveTail ? committedText : modelData;
+                return (root.editing || !renderMarkdown) ? raw : root.fitLocalImages(raw, width);
+            }
 
             onTextChanged: {
                 if (!root.editing) return
@@ -219,7 +235,7 @@ ColumnLayout {
                     text: ""
                     function launch(snapshot) {
                         ghostAnim.stop();
-                        text = snapshot;
+                        text = root.fitLocalImages(snapshot, width);
                         opacity = 0;
                         ghostAnim.start();
                     }
