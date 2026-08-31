@@ -59,7 +59,9 @@ Singleton {
             property string hyprlandInstanceSignature: ""
 
             property JsonObject ai: JsonObject {
-                property string model: "gemini-2.5-flash"
+                // No built-in models ship any more; empty until the
+                // user's first pick from their own providers.
+                property string model: ""
                 property real temperature: 0.5
             }
 

@@ -269,30 +269,17 @@ def _catalog_models_by_legacy_id():
     return result
 
 
-def test_every_ai_qml_builtin_is_in_the_catalog_and_vice_versa():
-    ai_models = parse_ai_qml_builtins(AI_QML.read_text())
-    assert len(ai_models) >= 3, (
-        f"parsed only {sorted(ai_models)} from Ai.qml - the parser lost the "
-        f"models block")
-    catalog = _catalog_models_by_legacy_id()
-
-    missing = sorted(set(ai_models) - set(catalog))
-    assert not missing, (
-        f"Ai.qml declares built-in models the catalog does not: {missing}. "
-        f"Add them to services/ai_catalog.js.")
-    extra = sorted(set(catalog) - set(ai_models))
-    assert not extra, (
-        f"the catalog declares built-in models Ai.qml does not: {extra}. "
-        f"Until stage 2 wires Ai.qml to the catalog, a model ships in both.")
-
-    for legacy_id, ai_fields in sorted(ai_models.items()):
-        cat_fields = catalog[legacy_id]
-        for field in ("endpoint", "model", "api_format", "key_id",
-                      "key_get_link", "requires_key"):
-            assert ai_fields[field] == cat_fields[field], (
-                f"{legacy_id}.{field} disagrees: Ai.qml has "
-                f"{ai_fields[field]!r}, the catalog resolves "
-                f"{cat_fields[field]!r}")
+def test_ai_qml_declares_no_builtin_models():
+    """The inversion the module docstring promised: built-ins are gone
+    (maintainer's call, 2026-08-31) - the user brings providers, and the
+    catalog's builtin records remain only as data for the parsers and any
+    future first-run material. A model literal reappearing in Ai.qml is
+    the two-copies drift coming back."""
+    body = AI_QML.read_text(encoding="utf-8")
+    assert "property var models: ({})" in body, (
+        "Ai.qml's models map must start empty - providers fill it")
+    assert "key_get_link" not in body.split("addApiKeyAdvice")[0], (
+        "a built-in model literal (key_get_link field) is back in Ai.qml")
 
 
 def test_the_dialect_vocabulary_matches_the_strategies():

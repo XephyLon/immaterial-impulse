@@ -518,11 +518,22 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 sourceComponent: ColumnLayout {
                     spacing: Appearance.spacing.space25
                     EmptyStateKey {
+                        // No providers, no models: the one row that matters
+                        // leads, and it opens the door it names.
+                        visible: Ai.modelList.length === 0
+                        Layout.fillWidth: true
+                        keys: ["+"]
+                        label: Translation.tr("No providers yet - add one to start chatting")
+                        actionable: true
+                        onTriggered: root.activeView = "keys"
+                    }
+                    EmptyStateKey {
+                        visible: Ai.modelList.length > 0
                         Layout.fillWidth: true
                         keys: ["/key"]
                         label: Translation.tr("Set an API key to get started")
                         actionable: true
-                        onTriggered: controlBar.prefill(root.commandPrefix + "key ")
+                        onTriggered: root.activeView = "keys"
                     }
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "O"]; label: Translation.tr("Expand the sidebar") }
                     EmptyStateKey { Layout.fillWidth: true; keys: ["Ctrl", "P"]; label: Translation.tr("Pin it open") }
