@@ -73,6 +73,10 @@ ColumnLayout {
     }
     onEditingChanged: {
         if (!editing) {
+            // Leaving edit mode: fold the edits back into the display path
+            // the guards above kept frozen while typing.
+            renderedSegmentContent = segmentContent;
+            root.shownText = segmentContent;
             renderLatex()
         } else {
             // console.log("Editing mode enabled", segmentContent)
@@ -81,15 +85,20 @@ ColumnLayout {
     }
 
     onSegmentContentChanged: {
-        // console.log("Segment content changed: " + segmentContent);
+        // While EDITING, the TextArea is the source of truth and its own
+        // keystrokes land here - echoing them back into shownText replaced
+        // the Repeater's values and rebuilt the very delegate being typed
+        // in, killing the cursor after one keystroke. The echo resumes
+        // when editing ends (onEditingChanged reseeds shownText).
+        if (root.editing) return;
         renderedSegmentContent = segmentContent;
-        if (!root.editing && segmentContent) {
+        if (segmentContent) {
             root.renderLatex();
         }
     }
 
     onRenderedSegmentContentChanged: {
-        // console.log("Rendered segment content changed: " + renderedSegmentContent);
+        if (root.editing) return; // see onSegmentContentChanged
         if (renderedSegmentContent) {
             root.shownText = renderedSegmentContent;
         }
