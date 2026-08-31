@@ -182,6 +182,12 @@ ColumnLayout {
                     // contentHeight: codeTextArea.contentHeight
                     clip: true
                     ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+                    // The ScrollView's inner Flickable consumes EVERY wheel
+                    // event over the block - a wide code block became a hole
+                    // the transcript could not scroll past. Non-interactive
+                    // it lets the wheel through to the list; the horizontal
+                    // bar below still drags.
+                    Component.onCompleted: contentItem.interactive = false
                     
                     ScrollBar.horizontal: ScrollBar {
                         anchors.bottom: parent.bottom
