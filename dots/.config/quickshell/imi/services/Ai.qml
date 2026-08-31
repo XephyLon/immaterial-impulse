@@ -429,6 +429,16 @@ Singleton {
             }
         }
     }
+    // Custom providers auto-fetch (maintainer's ask): their models arrive
+    // at startup and whenever a provider is enabled, instead of waiting
+    // behind the editor's Fetch button. Gated on an ENABLED provider
+    // existing, so nobody gets a keyring prompt for a feature they never
+    // configured; the keyringArrival arm above finishes the job once the
+    // keyring answers.
+    readonly property bool wantsCustomModels: Config.ready
+        && (Config.options.ai.customProviders || []).some(p => p.enabled)
+    onWantsCustomModelsChanged: if (root.wantsCustomModels) root.fetchCustomModels()
+
     function fetchCustomModels() {
         if (!KeyringStorage.loaded) {
             customProviderFeedbackText = Translation.tr("Unlocking the keyring...");

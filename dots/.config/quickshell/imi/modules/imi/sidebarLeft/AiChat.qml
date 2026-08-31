@@ -1011,18 +1011,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 anchors.rightMargin: Appearance.spacing.space100
                 spacing: Appearance.spacing.space50
 
-                property var commandsShown: [
-                    {
-                        name: "",
-                        sendDirectly: false,
-                        dontAddSpace: true
-                    },
-                    {
-                        name: "clear",
-                        sendDirectly: true
-                    },
-                ]
-
                 StyledComboBox { // The model picker lives at the composer now.
                     id: modelPicker
                     Layout.fillWidth: false
@@ -1064,32 +1052,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
 
                 Item {
                     Layout.fillWidth: true
-                }
-
-                ButtonGroup {
-                    // Command buttons
-                    padding: 0
-
-                    Repeater {
-                        // Command buttons
-                        model: commandButtonsRow.commandsShown
-                        delegate: ApiCommandButton {
-                            property string commandRepresentation: `${root.commandPrefix}${modelData.name}`
-                            buttonText: commandRepresentation
-                            downAction: () => {
-                                if (modelData.sendDirectly) {
-                                    root.handleInput(commandRepresentation);
-                                } else {
-                                    messageInputField.text = commandRepresentation + (modelData.dontAddSpace ? "" : " ");
-                                    messageInputField.cursorPosition = messageInputField.text.length;
-                                    messageInputField.forceActiveFocus();
-                                }
-                                if (modelData.name === "clear") {
-                                    messageInputField.text = "";
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
