@@ -70,6 +70,18 @@ ShellRoot {
     property real startX: 0
     property real startY: 0
 
+    // A grab near an EDGE, so a held detent can put the cursor OUTSIDE the
+    // widget's rendered bounds - the field report's geometry ("edge snapping
+    // makes me lose control when my cursor leaves the widget").
+    function beginDragAt(widget, localX) {
+        harness.startX = widget.x;
+        harness.startY = widget.y;
+        harness.pressX = widget.x + localX;
+        harness.pressY = widget.y + widget.height / 2;
+        driver.mousePress(canvas, harness.pressX, harness.pressY, Qt.LeftButton);
+        driver.mouseMove(canvas, harness.pressX + 12, harness.pressY, 20, Qt.LeftButton);
+    }
+
     function beginDrag(widget) {
         harness.startX = widget.x;
         harness.startY = widget.y;
@@ -377,6 +389,61 @@ ShellRoot {
                           Math.round(crosserWidget.x) === 305
                               && Math.round(buddyWidget.x - crosserWidget.x) === 652
                               && Math.round(buddyWidget.y - crosserWidget.y) === 312);
+            stepEdgeGrab.running = true;
+        }
+    }
+
+    // ---- the cursor leaves the held widget, the drag must survive ---------
+    // mover rests at 477 from its held commit. Grabbed 6px from its LEFT
+    // edge and pulled left: the adjacency hold pins the widget at 477 while
+    // the shadow walks to 452 - putting the cursor ~19px OUTSIDE the
+    // widget's left edge. The gesture must keep steering: pushing past the
+    // release threshold retakes the lattice and the widget follows.
+    Timer {
+        id: stepEdgeGrab
+        interval: 400
+        onTriggered: {
+            harness.beginDragAt(moverWidget, 6);
+            harness.moveShadowTo(479, 48);
+            stepEdgeGrabHold.running = true;
+        }
+    }
+    Timer {
+        id: stepEdgeGrabHold
+        interval: 300
+        onTriggered: {
+            harness.check("edge-grab: the hold acquires as ever",
+                          Math.round(moverWidget.x) === 477);
+            harness.moveShadowTo(452, 48);
+            stepEdgeGrabOutside.running = true;
+        }
+    }
+    Timer {
+        id: stepEdgeGrabOutside
+        interval: 300
+        onTriggered: {
+            harness.check("the hold survives with the cursor outside the widget",
+                          Math.round(moverWidget.x) === 477);
+            harness.moveShadowTo(430, 48);
+            stepEdgeGrabFollow.running = true;
+        }
+    }
+    Timer {
+        id: stepEdgeGrabFollow
+        interval: 300
+        onTriggered: {
+            harness.check("and the drag still steers after the cursor left the widget",
+                          Math.round(moverWidget.x) === 432);
+            harness.releaseAtShadow(430, 48);
+            stepEdgeGrabCommit.running = true;
+        }
+    }
+    Timer {
+        id: stepEdgeGrabCommit
+        interval: 400
+        onTriggered: {
+            harness.check("the edge-grab gesture commits where it ended",
+                          harness.at(moverWidget, 432, 48));
             harness.finish();
         }
     }

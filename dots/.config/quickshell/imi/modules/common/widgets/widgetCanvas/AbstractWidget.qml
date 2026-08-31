@@ -32,6 +32,11 @@ MouseArea {
     // (moving) item into the static parent frame is exact on every event.
     readonly property bool dragging: dragActive
     property bool dragActive: false
+    // No ancestor MouseArea may steal this hand-computed drag through its
+    // event filter - the canvas itself is a MouseArea (marquee), and one
+    // future `drag.target` there would end every widget drag that crosses
+    // its threshold. Insurance, deliberately cheap.
+    preventStealing: true
     property real dragPressParentX: 0
     property real dragPressParentY: 0
     property real dragStartX: 0
@@ -177,6 +182,14 @@ MouseArea {
         Qt.callLater(root.clearEdgeSnap)
     }
     onCanceled: {
+        // A cancel with a drag in flight means SOMETHING took the grab or
+        // the compositor withdrew it - the "widget stopped following my
+        // cursor" report. Named in the log so the next field occurrence
+        // identifies its killer instead of being a shrug.
+        if (root.dragActive)
+            console.log("[WidgetDrag] gesture CANCELED mid-drag at",
+                Math.round(root.x), Math.round(root.y),
+                "- grab stolen or withdrawn");
         root.dragActive = false
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragEnded) canvas.widgetDragEnded(root)
