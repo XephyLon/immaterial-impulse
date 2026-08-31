@@ -43,10 +43,10 @@ MouseArea {
         onTriggered: root.updateElapsed()
     }
 
-    // Vivid error fill with its matching on-color - the BASE pair, not the
-    // low-contrast *container* variants (see TimerPill).
-    readonly property color pillColor: Appearance.colors.colError
-    readonly property color onColor: Appearance.colors.colOnError
+    // The error CONTAINER pair: in a dark scheme the base colError is the
+    // light rose, and this chip wants the deeper red under light glyphs.
+    readonly property color pillColor: Appearance.colors.colErrorContainer
+    readonly property color onColor: Appearance.colors.colOnErrorContainer
     readonly property string icon: paused ? "pause" : "screen_record"
     readonly property string label: {
         const s = root.elapsedSeconds;
