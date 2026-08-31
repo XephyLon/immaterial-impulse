@@ -60,6 +60,16 @@ var DIALECTS = {
         "endpointShape": "chat-completions",
         "auth": "bearer-header",
         "streaming": "sse"
+    },
+    // The Anthropic Messages API: /v1/messages, x-api-key auth, typed SSE
+    // events (see services/ai/AnthropicApiStrategy.qml). Keep quote marks
+    // and apostrophes out of comments inside this object - the catalog
+    // contract brace-parser reads them as opened strings.
+    "anthropic": {
+        "id": "anthropic",
+        "endpointShape": "messages",
+        "auth": "x-api-key-header",
+        "streaming": "sse"
     }
 };
 

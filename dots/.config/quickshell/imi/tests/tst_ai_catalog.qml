@@ -11,7 +11,7 @@ TestCase {
         // Exactly the strategies services/ai/ implements today. A fourth
         // dialect lands here together with its strategy file, or the
         // contract check reddens.
-        compare(ids.join(","), "gemini,mistral,openai")
+        compare(ids.join(","), "anthropic,gemini,mistral,openai")
         for (const id of ids) {
             compare(dialects[id].id, id)
             verify(dialects[id].endpointShape.length > 0)

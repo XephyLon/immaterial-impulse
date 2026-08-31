@@ -926,6 +926,36 @@ Item {
                                 width: keysScroll.width
                                 spacing: Appearance.spacing.space150
 
+                                ConfigTextArea {
+                                    // The current model's key, for models
+                                    // whose key is NOT a provider card's
+                                    // (an Anthropic entry, an import) -
+                                    // removed once as a duplicate, back
+                                    // gated to exactly the case the cards
+                                    // cannot cover.
+                                    readonly property var keyModel: Ai.models[Ai.currentModelId]
+                                    visible: (keyModel?.requires_key ?? false)
+                                        && !String(keyModel?.key_id ?? "").startsWith("custom_provider_")
+                                    Layout.fillWidth: true
+                                    buttonIcon: "key"
+                                    text: Translation.tr("%1 key").arg(keyModel?.name ?? "")
+                                    placeholderText: Translation.tr("Enter API key")
+                                    password: true
+                                    value: KeyringStorage.loaded
+                                        ? (KeyringStorage.keyringData.apiKeys?.[keyModel?.key_id] || "")
+                                        : ""
+                                    onValueChanged: {
+                                        if (!textArea.activeFocus || !visible) return;
+                                        const keyId = keyModel?.key_id;
+                                        if (!keyId) return;
+                                        const currentText = value;
+                                        Qt.callLater(() => {
+                                            if (KeyringStorage.loaded)
+                                                KeyringStorage.setNestedField(["apiKeys", keyId], currentText);
+                                        });
+                                    }
+                                }
+
                                 AiProvidersEditor {
                                     Layout.fillWidth: true
                                 }

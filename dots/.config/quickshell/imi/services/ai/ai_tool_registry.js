@@ -42,3 +42,12 @@ function namesFor(defs, dialect) {
 function allNames(defs) {
     return (defs || []).map(function (d) { return d.name; });
 }
+
+// Anthropic's tool shape: {name, description, input_schema} - a schema is
+// required, so a parameterless tool sends the empty object schema.
+function toAnthropicTools(defs) {
+    return _forDialect(defs, "anthropic").map(function (d) {
+        return { "name": d.name, "description": d.description,
+                 "input_schema": d.parameters || { "type": "object", "properties": {} } };
+    });
+}

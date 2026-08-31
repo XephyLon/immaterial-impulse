@@ -32,6 +32,19 @@ TestCase {
         verify(g[1].parameters === undefined, "a parameterless tool omits the key");
     }
 
+    function test_anthropic_shape_always_carries_a_schema() {
+        const defs2 = [
+            { name: "a", description: "A", dialects: ["anthropic"],
+              parameters: { type: "object", properties: { x: { type: "string" } } } },
+            { name: "b", description: "B", dialects: ["anthropic"] },
+        ];
+        const at = Reg.toAnthropicTools(defs2);
+        compare(at.length, 2);
+        compare(at[0].input_schema.properties.x.type, "string");
+        compare(at[1].input_schema.type, "object", "parameterless still schemas");
+        verify(at[0].type === undefined, "no openai wrapper");
+    }
+
     function test_names() {
         compare(Reg.namesFor(defs, "gemini").join(","), "a,b");
         compare(Reg.allNames(defs).join(","), "a,b,c");

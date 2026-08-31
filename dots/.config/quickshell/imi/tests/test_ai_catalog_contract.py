@@ -39,6 +39,7 @@ DIALECT_STRATEGY_FILES = {
     "gemini": "GeminiApiStrategy.qml",
     "openai": "OpenAiApiStrategy.qml",
     "mistral": "MistralApiStrategy.qml",
+    "anthropic": "AnthropicApiStrategy.qml",
 }
 
 

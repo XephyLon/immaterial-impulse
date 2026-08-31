@@ -26,12 +26,12 @@ Singleton {
         {
             "name": "get_shell_config",
             "description": "Get the desktop shell config file contents",
-            "dialects": ["gemini", "openai", "mistral"]
+            "dialects": ["gemini", "openai", "mistral", "anthropic"]
         },
         {
             "name": "set_shell_config",
             "description": "Set a field in the desktop graphical shell config file. Must only be used after `get_shell_config`.",
-            "dialects": ["gemini", "openai", "mistral"],
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -44,7 +44,7 @@ Singleton {
         {
             "name": "run_shell_command",
             "description": "Run a shell command in bash and get its output. Use this only for quick commands that don't require user interaction. For commands that require interaction, ask the user to run manually instead.",
-            "dialects": ["gemini", "openai", "mistral"],
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -56,7 +56,7 @@ Singleton {
         {
             "name": "remember_fact",
             "description": "Save one short durable fact about the user for future conversations (preferences, environment, standing context). Only for things worth knowing next week; every save is announced to the user.",
-            "dialects": ["gemini", "openai", "mistral"],
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -71,7 +71,7 @@ Singleton {
             // The pipeline behind this call is OpenAI-dialect (the
             // generator endpoints), but the CALLER can be any dialect -
             // gemini gets it now, which the hand-written block never did.
-            "dialects": ["gemini", "openai", "mistral"],
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -83,6 +83,7 @@ Singleton {
     ]
 
     readonly property var geminiDeclarations: Fold.toGeminiDeclarations(root.defs)
+    readonly property var anthropicTools: Fold.toAnthropicTools(root.defs)
     function openAiTools(dialect) { return Fold.toOpenAiTools(root.defs, dialect); }
     function knows(name) { return Fold.allNames(root.defs).indexOf(name) !== -1; }
 }

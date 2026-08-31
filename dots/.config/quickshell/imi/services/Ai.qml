@@ -27,6 +27,7 @@ Singleton {
     property Component geminiApiStrategy: GeminiApiStrategy {}
     property Component openaiApiStrategy: OpenAiApiStrategy {}
     property Component mistralApiStrategy: MistralApiStrategy {}
+    property Component anthropicApiStrategy: AnthropicApiStrategy {}
     readonly property string interfaceRole: "interface"
     readonly property string apiKeyEnvVarName: "API_KEY"
 
@@ -106,6 +107,11 @@ Singleton {
         },
         "mistral": {
             "functions": AiToolRegistry.openAiTools("mistral"),
+            "search": [],
+            "none": []
+        },
+        "anthropic": {
+            "functions": AiToolRegistry.anthropicTools,
             "search": [],
             "none": []
         }
@@ -196,6 +202,7 @@ Singleton {
         "openai": openaiApiStrategy.createObject(this),
         "gemini": geminiApiStrategy.createObject(this),
         "mistral": mistralApiStrategy.createObject(this),
+        "anthropic": anthropicApiStrategy.createObject(this),
     }
     property ApiStrategy currentApiStrategy: apiStrategies[models[currentModelId]?.api_format || "openai"]
 
