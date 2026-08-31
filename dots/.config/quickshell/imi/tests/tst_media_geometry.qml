@@ -134,9 +134,13 @@ TestCase {
         compare(t.prev.width, 22);
         compare(t.prev.height, 34);
         compare(t.play.width, 48);
-        compare(t.prev.x + t.prev.width, t.play.x, "prev is flush against play");
-        compare(t.play.x + t.play.width, t.next.x, "next is flush against play");
-        compare(t.prev.x, (132 - (22 + 48 + 22)) / 2, "the trio is centred");
+        // Tucked 8 INTO the play rect: the cookie's scalloped body is
+        // visually narrower than its rect, so rect-flush read as a gap.
+        // The badges draw above play (z 4 over 1), so the tuck shows as
+        // the flat edge meeting the cookie.
+        compare(t.prev.x + t.prev.width, t.play.x + 8, "prev tucks under play");
+        compare(t.play.x + t.play.width, t.next.x + 8, "next tucks under play");
+        compare(t.prev.x, (132 - (22 + 48 + 22 - 16)) / 2, "the visual trio is centred");
         compare(t.prev.y - t.play.y, (48 - 34) / 2, "sides centred on play");
     }
 

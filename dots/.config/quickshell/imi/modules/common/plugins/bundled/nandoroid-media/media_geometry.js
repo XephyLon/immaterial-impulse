@@ -57,6 +57,7 @@ var TINY_SIDE_H = 34;
 var TINY_SEEK_H = 16;
 var TINY_SEEK_BOTTOM = 8;      // seek's clearance from the card's bottom
 var TINY_ROW_GAP = 8;          // between the row and the seek
+var TINY_SIDE_TUCK = 8;        // how far a flanker reaches INTO the play rect
 
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150
@@ -118,13 +119,15 @@ function transportRects(span, width, height, scale) {
         var tinyPlay = TINY_PLAY * scale;
         var sideW = TINY_SIDE_W * scale;
         var sideH = TINY_SIDE_H * scale;
-        var tinyX = (width - (2 * sideW + tinyPlay)) / 2;
+        var tuck = TINY_SIDE_TUCK * scale;
+        var trioW = 2 * sideW + tinyPlay - 2 * tuck;
+        var tinyX = (width - trioW) / 2;
         var tinyPlayY = height - (TINY_SEEK_BOTTOM + TINY_SEEK_H + TINY_ROW_GAP) * scale - tinyPlay;
         var tinySideY = tinyPlayY + (tinyPlay - sideH) / 2;
         return {
             prev: _rect(tinyX, tinySideY, sideW, sideH),
-            play: _rect(tinyX + sideW, tinyPlayY, tinyPlay, tinyPlay),
-            next: _rect(tinyX + sideW + tinyPlay, tinySideY, sideW, sideH)
+            play: _rect(tinyX + sideW - tuck, tinyPlayY, tinyPlay, tinyPlay),
+            next: _rect(tinyX + sideW - tuck + tinyPlay - tuck, tinySideY, sideW, sideH)
         };
     }
     if (span === "2x1") {

@@ -155,6 +155,21 @@ Item {
                 // rounded corners (the image-skeleton lesson, again).
                 radius: bgCard.radius
                 color: "transparent"
+                // The transport zone's scrim: the squiggle seeker and the
+                // trio sit ON the artwork, and a primary-coloured line over
+                // matching-hue art simply vanished (the probe showed the
+                // seeker alive and placed - it was camouflage, not absence).
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: 44
+                    z: 1
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "transparent" }
+                        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.55) }
+                    }
+                }
                 Image {
                     anchors.fill: parent
                     source: root.artUrl
