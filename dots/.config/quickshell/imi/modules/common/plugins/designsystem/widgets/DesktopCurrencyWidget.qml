@@ -682,17 +682,22 @@ Item {
                     }
 
                     // 3x1 only: the movement column - percent over absolute.
+                    // Centered against the value's own line and tucked in
+                    // from the edge: pinned at y:0 in `smallest` it floated
+                    // above the number it describes, tiny and adrift.
                     ColumnLayout {
+                        id: movementColumn
                         visible: opacity > 0
                         opacity: quoteCell.movement !== null ? 1 : 0
                         Behavior on opacity { SpanFade {} }
                         anchors.right: parent.right
-                        y: 0
+                        anchors.rightMargin: 2 * Appearance.effectiveScale
+                        y: valueText.y + (valueText.height - movementColumn.implicitHeight) / 2
                         spacing: -2 * Appearance.effectiveScale
                         StyledText {
                             Layout.alignment: Qt.AlignRight
                             text: quoteCell.movement !== null ? root.signedPct(quoteCell.movement) : ""
-                            font.pixelSize: Appearance.font.pixelSize.smallest
+                            font.pixelSize: Appearance.font.pixelSize.smaller
                             font.weight: Font.DemiBold
                             color: quoteCell.inkColor
                         }
