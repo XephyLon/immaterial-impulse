@@ -30,6 +30,11 @@ own repo; the installer pins which revision it builds.
   media sidebar immediately no longer runs the new track's lines far ahead
   (interpolated from the previous song's stale position) until a play/pause
   forced a fresh poll.
+- **The AI chat's generated-image tooltip tracks the pointer.** "Click to
+  view fullscreen" sat on a bare container with no hover state, which the
+  tooltip reads as always-on, so it hung on screen - even outside the
+  sidebar - until a click. The image now carries a real hover flag, so the
+  tooltip shows on hover and clears on leave.
 
 ## [1.0.0-rc-1] — 2026-09-01
 
