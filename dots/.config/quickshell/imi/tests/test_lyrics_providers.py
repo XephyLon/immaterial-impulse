@@ -144,13 +144,23 @@ class GlassyDomTests(unittest.TestCase):
         return {"title": title, "byline": byline, "lines": [
             {"t": 12.0, "text": "Won't let go",
              "words": [[12.0, "Won't"], [12.3, "let"], [12.6, "go"]]},
-            {"t": 15.0, "text": "of me", "words": [[15.0, "of"], [15.2, "me"]]},
+            {"t": 15.0, "text": "provider here",
+             "words": [[15.0, "provider", 0.9, [[15.0, "pro"], [15.3, "vi"], [15.6, "der"]]],
+                       [16.0, "here"]]},
         ]}
 
     def test_words_come_through(self):
         lines = self.mod.lines_from_dom(self.payload(), "Lost Control", "Alan Walker & Sorana")
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0][2], [(12.0, "Won't"), (12.3, "let"), (12.6, "go")])
+
+    def test_durations_and_syllables_survive(self):
+        lines = self.mod.lines_from_dom(self.payload(), "Lost Control", "Alan Walker & Sorana")
+        word = lines[1][2][0]
+        self.assertEqual(word[0], 15.0)
+        self.assertEqual(word[1], "provider")
+        self.assertEqual(word[2], 0.9)
+        self.assertEqual(word[3], [[15.0, "pro"], [15.3, "vi"], [15.6, "der"]])
 
     def test_wrong_title_is_refused(self):
         self.assertIsNone(self.mod.lines_from_dom(

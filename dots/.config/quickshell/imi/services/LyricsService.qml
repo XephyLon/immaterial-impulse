@@ -66,7 +66,18 @@ Singleton {
         const line = root.lyricsLines[root.activeIndex]
         if (!root.looksLikeWords(line.words))
             return []
-        return line.words.map(word => ({ time: Number(word[0]), text: String(word[1]) }))
+        return line.words.map(word => ({
+            time: Number(word[0]),
+            text: String(word[1]),
+            // The sung window's end (start + duration) when the source
+            // carried it - the glow completes there and rests, instead of
+            // stretching across the silence to the next word.
+            end: word.length > 2 && isFinite(Number(word[2]))
+                ? Number(word[0]) + Number(word[2]) : undefined,
+            syllables: word.length > 3 && root.looksLikeWords(word[3])
+                ? word[3].map(syl => ({ time: Number(syl[0]), text: String(syl[1]) }))
+                : undefined,
+        }))
     }
 
     // The active line's span, pacing that sweep.

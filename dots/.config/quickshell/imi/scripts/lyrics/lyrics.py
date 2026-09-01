@@ -206,7 +206,7 @@ def main():
         if lines:
             print(json.dumps({"ok": True, "lines": [
                 {"t": stamp, "text": line_text,
-                 **({"words": [[wt, ww] for wt, ww in words]} if words else {})}
+                 **({"words": [list(word) for word in words]} if words else {})}
                 for stamp, line_text, words in lines]}))
             return 0
     print("not_found")

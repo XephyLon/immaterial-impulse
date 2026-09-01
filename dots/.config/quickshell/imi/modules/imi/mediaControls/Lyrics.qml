@@ -265,10 +265,40 @@ Item {
                                 text: modelData.text
                                 font.pixelSize: Appearance.font.pixelSize.large
                                 font.weight: sung ? Font.Bold : Font.Medium
-                                running: current
-                                phase: current && nextTime !== Infinity
-                                    ? (root.sweepPosition - modelData.time) / Math.max(0.05, nextTime - modelData.time)
-                                    : -1
+                                // The sung window: the word's own duration
+                                // when the source carried it, else up to the
+                                // next word, else a beat - so the glow passes
+                                // exactly ONCE and rests (a free-running loop
+                                // repeated on last words and long gaps).
+                                readonly property real windowEnd: {
+                                    if (modelData.end !== undefined) return modelData.end
+                                    if (nextTime !== Infinity) return nextTime
+                                    return modelData.time + 1.2
+                                }
+                                // Syllable-shaped travel: the band crosses
+                                // each syllable's share of the letters during
+                                // that syllable's share of the time.
+                                function syllablePhase(position) {
+                                    const syls = modelData.syllables
+                                    if (!syls || syls.length < 2) {
+                                        return (position - modelData.time)
+                                            / Math.max(0.05, windowEnd - modelData.time)
+                                    }
+                                    const total = syls.reduce((sum, s) => sum + s.text.length, 0)
+                                    let covered = 0
+                                    for (let i = 0; i < syls.length; i++) {
+                                        const sylEnd = i + 1 < syls.length ? syls[i + 1].time : windowEnd
+                                        if (position < sylEnd || i === syls.length - 1) {
+                                            const inside = Math.max(0, Math.min(1,
+                                                (position - syls[i].time) / Math.max(0.05, sylEnd - syls[i].time)))
+                                            return (covered + inside * syls[i].text.length) / Math.max(1, total)
+                                        }
+                                        covered += syls[i].text.length
+                                    }
+                                    return 1
+                                }
+                                running: current && root.sweepPosition < windowEnd
+                                phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
                                 baseColor: root.activeColor
                                 glowColor: Qt.lighter(root.activeColor, 1.6)
                                 restColor: sung ? root.activeColor : root.dimColor

@@ -27,9 +27,19 @@ EXTRACT_JS = """(() => {
         let words;
         if (groups.length > 0) {
             words = groups.map(group => {
-                const syllable = group.querySelector('.blyrics--word');
-                return [parseFloat(syllable?.dataset.time),
-                        (group.dataset.content || group.textContent || '').trim()];
+                const syls = [...group.querySelectorAll('.blyrics--word')]
+                    .map(s => [parseFloat(s.dataset.time),
+                               (s.dataset.content || s.textContent || '').trim(),
+                               parseFloat(s.dataset.duration)])
+                    .filter(([st, sw]) => Number.isFinite(st) && sw.length > 0);
+                if (syls.length === 0) return [NaN, ''];
+                const start = syls[0][0];
+                const last = syls[syls.length - 1];
+                const end = Number.isFinite(last[2]) ? last[0] + last[2] : last[0];
+                return [start,
+                        (group.dataset.content || group.textContent || '').trim(),
+                        Math.max(0, end - start),
+                        syls.map(([st, sw]) => [st, sw])];
             });
         } else {
             words = [...line.querySelectorAll('.blyrics--word')]
@@ -68,7 +78,15 @@ def lines_from_dom(payload, title, artist):
             t = float(entry["t"])
         except (KeyError, TypeError, ValueError):
             continue
-        words = [(float(wt), str(ww)) for wt, ww in (entry.get("words") or [])]
+        words = []
+        for word in entry.get("words") or []:
+            wt, ww = float(word[0]), str(word[1])
+            extra = []
+            if len(word) > 2 and isinstance(word[2], (int, float)):
+                extra.append(float(word[2]))
+                if len(word) > 3 and isinstance(word[3], list):
+                    extra.append([[float(st), str(sw)] for st, sw in word[3]])
+            words.append(tuple([wt, ww] + extra))
         text = str(entry.get("text") or "")
         if text:
             out.append((t, text, words or None))
