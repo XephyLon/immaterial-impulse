@@ -22,8 +22,8 @@ Item {
     property bool chromeless: false
 
     property bool showLyrics: Config.options.appearance.mediaWidget.showLyrics
-    property bool useRomaji: Config.options.appearance.lyrics.lyricsUseRomaji
     property bool viewLyrics: false
+    readonly property int crossfadeDuration: Appearance.animation.elementMove.duration
     property bool useBlurBackground: false
     // Handled state, for the card's elevation.
     property bool dragging: false
@@ -89,18 +89,23 @@ Item {
         }
     }
 
-    // StackLayout to toggle between Media Control (0) and Lyrics View (1)
-    StackLayout {
+    // Crossfade between Media Control (0) and Lyrics (1). A StackLayout
+    // swapped them instantly; both pages are stacked now and cross-fade on
+    // viewLyrics, so the switch is seamless. The hidden page drops to opacity
+    // 0 and visible:false, so it takes no input.
+    Item {
         id: mainStack
         anchors.fill: parent
         anchors.margins: 17 * Appearance.effectiveScale
         anchors.bottomMargin: 22 * Appearance.effectiveScale
-        currentIndex: viewLyrics ? 1 : 0
 
         // PAGE 0: Media Control & Info View
         ColumnLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            anchors.fill: parent
+            opacity: root.viewLyrics ? 0 : 1
+            visible: opacity > 0
+            enabled: !root.viewLyrics
+            Behavior on opacity { NumberAnimation { duration: root.crossfadeDuration; easing.type: Easing.InOutQuad } }
             spacing: 2 * Appearance.effectiveScale // Tighter spacing for title/artist
 
             // 1. TITLE (Centered, bounded from lyrics button)
@@ -375,6 +380,10 @@ Item {
         // in a Loader so it arms the service (its own refcount) only while
         // the lyrics page is actually shown.
         Item {
+            anchors.fill: parent
+            opacity: root.viewLyrics ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: root.crossfadeDuration; easing.type: Easing.InOutQuad } }
             Loader {
                 anchors.fill: parent
                 anchors.margins: Appearance.spacing.space100
@@ -390,53 +399,4 @@ Item {
         }
     }
 
-    // Romaji/Original switcher (outside layout, anchored - won't affect centering)
-    Item {
-        id: romajiToggleBtn
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.bottomMargin: 16 * Appearance.effectiveScale
-        anchors.leftMargin: 16 * Appearance.effectiveScale
-        implicitWidth: 32 * Appearance.effectiveScale
-        implicitHeight: 32 * Appearance.effectiveScale
-        visible: viewLyrics
-        z: 20
-
-        property bool hovered: false
-
-        MaterialShape {
-            anchors.fill: parent
-            shape: MaterialShape.Shape.Pill
-            color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
-
-            MaterialSymbol {
-                anchors.centerIn: parent
-                text: root.useRomaji ? "text_fields" : "translate"
-                iconSize: 18 * Appearance.effectiveScale
-                fill: 1
-                color: romajiToggleBtn.hovered
-                    ? (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colPrimary)
-                    : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer)
-                Behavior on color { ColorAnimation { duration: 150 } }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                hoverEnabled: true
-                onEntered: romajiToggleBtn.hovered = true
-                onExited: romajiToggleBtn.hovered = false
-                onClicked: {
-                    // Write the CONFIG, not the property bound to it: assigning
-                    // to `root.useRomaji` destroyed its binding on the first
-                    // click, after which the toggle showed local state that
-                    // never persisted and no preset could move.
-                    if (Config.ready) {
-                        Config.options.appearance.lyrics.lyricsUseRomaji =
-                            !Config.options.appearance.lyrics.lyricsUseRomaji;
-                    }
-                }
-            }
-        }
-    }
 }
