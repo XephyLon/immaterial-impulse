@@ -158,14 +158,18 @@ Item {
                     && LyricsService.activeLineSpan !== null
 
                 // The fork's polish, kept: the active line stands a step
-                // closer than its neighbours.
-                scale: isActive ? 1 : 0.94
+                // closer than its neighbours. Keyed on lineHot, not
+                // isActive/dist: the moment the next line activated, a
+                // still-singing tail line was dimmed to 0.6 and shrunk -
+                // whole-line demotion that read as the line being dropped,
+                // burying every word-level keep-alive underneath it.
+                scale: lineHot ? 1 : 0.94
                 transformOrigin: Item.Center
                 Behavior on scale {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
                 opacity: {
-                    if (dist === 0) return 1.0
+                    if (lineHot) return 1.0
                     if (dist === 1) return 0.6
                     if (dist === 2) return 0.35
                     if (dist === 3) return 0.15
@@ -214,13 +218,17 @@ Item {
                     horizontalAlignment: root.textAlignment
                     wrapMode: Text.WordWrap
                     text: lyricSlot.karaokeWords ? "" : (lyricSlot.modelData.text ?? "")
-                    font.pixelSize: lyricSlot.isActive
+                    font.pixelSize: lyricSlot.lineHot
                         ? Appearance.font.pixelSize.larger
                         : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.large : Appearance.font.pixelSize.normal)
                     Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
-                    font.weight: lyricSlot.isActive ? Font.Bold : Font.Normal
+                    // font.weight is numeric and the shell fonts are variable,
+                    // so the Bold<->Normal step can tween - without this the
+                    // ink-coverage jump reads as an instant colour change.
+                    font.weight: lyricSlot.lineHot ? Font.Bold : Font.Normal
+                    Behavior on font.weight { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                     color: lyricSlot.lineSweep ? root.dimColor
-                        : (lyricSlot.isActive ? root.activeColor : root.textColor)
+                        : (lyricSlot.lineHot ? root.activeColor : root.textColor)
                     // Ease the base colour when a line starts/ends its turn
                     // instead of snapping between active and rest.
                     Behavior on color {
@@ -400,6 +408,7 @@ Item {
                                         : ((lyricSlot?.dist ?? 9) === 1 ? Appearance.font.pixelSize.large : Appearance.font.pixelSize.normal)
                                     Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                                     font.weight: (lyricSlot?.lineHot ?? false) ? Font.DemiBold : Font.Medium
+                                    Behavior on font.weight { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                                     running: (lyricSlot?.lineHot ?? false) && current
                                     phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
                                     baseColor: root.activeColor
