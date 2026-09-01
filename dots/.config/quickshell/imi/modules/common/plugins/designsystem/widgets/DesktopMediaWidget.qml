@@ -6,6 +6,7 @@ import qs.modules.common
 import qs.modules.common.plugins
 import qs.modules.common.functions as Functions
 import qs.services
+import qs.modules.imi.mediaControls
 import "."
 
 Item {
@@ -37,9 +38,6 @@ Item {
         x: bgCard.x, y: bgCard.y, width: bgCard.width, height: bgCard.height, radius: bgCard.radius
     }]
 
-    onViewLyricsChanged: {
-        LyricsService.desktopWidgetLyricsActive = viewLyrics;
-    }
 
     // Main Card Background. Card bg = play/pause icon color (user request).
     WidgetCard {
@@ -371,130 +369,24 @@ Item {
             }
         }
 
-        // PAGE 1: Lyrics View (Clean 5 Lines Display)
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            spacing: 0
-
-            Item { Layout.fillHeight: true } // Spacer
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                spacing: 4 * Appearance.effectiveScale
-
-                // 5 Line Lyrics Display (dynamically centered around the active line index 'before')
-                Repeater {
-                    model: {
-                        if (LyricsService.slots.length === 0) return [];
-                        let mid = LyricsService.before;
-                        // Returns 5 indices centered around 'mid': [mid-2, mid-1, mid, mid+1, mid+2]
-                        return [mid - 2, mid - 1, mid, mid + 1, mid + 2];
-                    }
-                    delegate: StyledText {
-                        id: lyricLine
-                        readonly property int distanceFromActive: modelData - LyricsService.before
-                        property real flowOffset: 0
-                        property real flowOpacity: 1
-                        property real flowScale: 1
-
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.WordWrap
-                        text: {
-                            let slotIndex = modelData;
-                            if (slotIndex < 0 || slotIndex >= LyricsService.slots.length) return "";
-                            let slot = LyricsService.slots[slotIndex];
-                            if (typeof slot === "string") return slot;
-                            if (!slot) return "";
-                            return root.useRomaji
-                                ? (slot.romajiText || slot.originalText || "")
-                                : (slot.originalText || slot.romajiText || "");
-                        }
-                        font.pixelSize: modelData === LyricsService.before // Active line is bigger
-                            ? Appearance.font.pixelSize.large
-                            : Appearance.font.pixelSize.small
-                        font.weight: modelData === LyricsService.before ? Font.Bold : Font.Normal
-                        color: {
-                            if (modelData === LyricsService.before) return Appearance.colors.colPrimary;
-                            // Make outer lines even more faded
-                            let isOuter = (modelData === LyricsService.before - 2 || modelData === LyricsService.before + 2);
-                            let alpha = isOuter ? 0.25 : 0.45;
-                            return Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, alpha);
-                        }
-                        elide: modelData === LyricsService.before ? Text.ElideNone : Text.ElideRight
-                        maximumLineCount: modelData === LyricsService.before ? 2 : 1 // Active line can wrap up to 2 lines for karaoke
-                        opacity: flowOpacity
-                        scale: flowScale
-                        transformOrigin: Item.Center
-                        transform: Translate { y: lyricLine.flowOffset }
-
-                        Connections {
-                            target: LyricsService
-                            function onActiveIndexChanged() {
-                                if (LyricsService.status === "ok") lyricAdvance.restart();
-                            }
-                        }
-
-                        SequentialAnimation {
-                            id: lyricAdvance
-                            PauseAnimation {
-                                duration: Math.abs(lyricLine.distanceFromActive)
-                                    * Appearance.animation.elementMoveFast.duration / 8
-                            }
-                            ParallelAnimation {
-                                NumberAnimation {
-                                    target: lyricLine
-                                    property: "flowOffset"
-                                    from: Appearance.spacing.space100
-                                    to: 0
-                                    duration: Appearance.animation.elementMoveEnter.duration
-                                    easing.type: Easing.BezierSpline
-                                    easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-                                }
-                                NumberAnimation {
-                                    target: lyricLine
-                                    property: "flowOpacity"
-                                    from: 0.35
-                                    to: 1
-                                    duration: Appearance.animation.elementMoveEnter.duration
-                                    easing.type: Easing.BezierSpline
-                                    easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-                                }
-                                NumberAnimation {
-                                    target: lyricLine
-                                    property: "flowScale"
-                                    from: lyricLine.distanceFromActive === 0 ? 0.92 : 0.97
-                                    to: 1
-                                    duration: Appearance.animation.elementMoveEnter.duration
-                                    easing.type: Easing.BezierSpline
-                                    easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-                                }
-                            }
-                        }
-                        
-                        Behavior on font.pixelSize { NumberAnimation { duration: 200 } }
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                    }
-                }
-                
-                // Fallback if no lyrics/loading
-                StyledText {
-                    visible: LyricsService.slots.length === 0
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    text: LyricsService.status === "loading"
-                        ? "Loading lyrics..."
-                        : LyricsService.status === "no_info"
-                            ? "Track information unavailable"
-                            : "No synchronized lyrics available"
-                    color: Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.6)
-                    font.pixelSize: Appearance.font.pixelSize.normal
+        // PAGE 1: Lyrics - the shared word-synced component (the widget's
+        // own five-line renderer was line-level with no word sync; this is
+        // the same view the sidebar uses, so the two stay in step). Wrapped
+        // in a Loader so it arms the service (its own refcount) only while
+        // the lyrics page is actually shown.
+        Item {
+            Loader {
+                anchors.fill: parent
+                anchors.margins: Appearance.spacing.space100
+                active: root.viewLyrics
+                sourceComponent: Lyrics {
+                    player: MprisController.activePlayer
+                    textAlignment: Text.AlignHCenter
+                    textColor: Appearance.colors.colOnLayer0
+                    activeColor: Appearance.colors.colPrimary
+                    dimColor: Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.4)
                 }
             }
-
-            Item { Layout.fillHeight: true } // Spacer
         }
     }
 
