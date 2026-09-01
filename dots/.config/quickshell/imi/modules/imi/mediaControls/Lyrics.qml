@@ -100,6 +100,10 @@ Item {
                 width: lyricsList.width
                 implicitHeight: (lyricSlot.karaokeWords ? wordFlow.implicitHeight : slotText.implicitHeight)
                     + Appearance.spacing.space50
+                // The size changes are transformations too: an active line
+                // growing a tier, or swapping to the word flow, eases the
+                // rows around it instead of shoving them.
+                Behavior on implicitHeight { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
                 readonly property int dist: Math.abs(index - LyricsService.activeIndex)
                 readonly property bool isActive: index === LyricsService.activeIndex
@@ -228,12 +232,16 @@ Item {
                                 const timeline = LyricsService.activeWordTimeline
                                 return index + 1 < timeline.length ? timeline[index + 1].time : Infinity
                             }
-                            readonly property bool current: sung && root.sweepPosition < nextTime
                             readonly property real windowEnd: {
                                 if (modelData.end !== undefined) return modelData.end
                                 if (nextTime !== Infinity) return nextTime
                                 return modelData.time + 1.2
                             }
+                            // The word's OWN window, not "until the next word
+                            // starts": backing vocals land a word in the
+                            // middle of another, and both must carry their
+                            // shimmer for their own sung spans.
+                            readonly property bool current: sung && root.sweepPosition < windowEnd
                             function syllablePhase(position) {
                                 const syls = modelData.syllables
                                 if (!syls || syls.length < 2) {
@@ -257,12 +265,30 @@ Item {
                             text: modelData.text
                             font.pixelSize: Appearance.font.pixelSize.large
                             font.weight: sung ? Font.Bold : Font.Medium
-                            running: current && root.sweepPosition < windowEnd
+                            running: current
                             phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
                             baseColor: root.activeColor
                             glowColor: Qt.lighter(root.activeColor, 1.6)
                             restColor: sung ? root.activeColor : root.dimColor
-                            opacity: sung ? 1 : 0.55
+
+                            // The entrance: a new line's words rise in with a
+                            // small per-word stagger instead of popping as a
+                            // block. Explicit from-values; the entrance
+                            // opacity MULTIPLIES the sung state so the two
+                            // channels compose.
+                            property real appearOpacity: 0
+                            transform: Translate { id: wordRise; y: 8 }
+                            Component.onCompleted: wordAppear.start()
+                            SequentialAnimation {
+                                id: wordAppear
+                                PauseAnimation { duration: Math.min(240, wordText.index * 30) }
+                                ParallelAnimation {
+                                    NumberAnimation { target: wordText; property: "appearOpacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
+                                    NumberAnimation { target: wordRise; property: "y"; from: 8; to: 0; duration: 240; easing.type: Easing.OutCubic }
+                                }
+                            }
+
+                            opacity: (sung ? 1 : 0.55) * appearOpacity
                             scale: current ? 1.06 : 1.0
                             transformOrigin: Item.Center
                             Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
