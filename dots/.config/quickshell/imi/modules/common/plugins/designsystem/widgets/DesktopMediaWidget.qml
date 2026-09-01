@@ -63,20 +63,41 @@ Item {
 
         MaterialShape {
             anchors.fill: parent
-            shape: MaterialShape.Shape.Cookie4Sided
+            // Morphs with state, not a static frame: ShapeCanvas animates any
+            // `shape` change through its built-in prev->current polygon morph
+            // (elementMoveSmall clock), so the silhouette actually travels
+            // between the two faces - cookie at rest, clover while lyrics are
+            // up. The fill rides the same clock via the Behavior below, so
+            // shape and colour cross together instead of the colour snapping.
+            shape: viewLyrics ? MaterialShape.Shape.Clover4Leaf : MaterialShape.Shape.Cookie4Sided
             // Using colTertiaryContainer in dark mode and colSecondaryContainer in light mode for soft pastel visual
-            color: viewLyrics 
-                ? Appearance.colors.colPrimary 
+            color: viewLyrics
+                ? Appearance.colors.colPrimary
                 : (Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer)
+            Behavior on color {
+                ColorAnimation {
+                    duration: Appearance.animation.elementMoveSmall.duration
+                    easing.type: Appearance.animation.elementMoveSmall.type
+                    easing.bezierCurve: Appearance.animation.elementMoveSmall.bezierCurve
+                }
+            }
 
             MaterialSymbol {
                 anchors.centerIn: parent
                 text: viewLyrics ? "music_note" : "lyrics"
                 iconSize: 18 * Appearance.effectiveScale
                 fill: 0
-                color: viewLyrics 
-                    ? Appearance.colors.colOnPrimary 
+                color: viewLyrics
+                    ? Appearance.colors.colOnPrimary
                     : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer)
+                // The glyph's colour crosses on the shape's clock too.
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Appearance.animation.elementMoveSmall.duration
+                        easing.type: Appearance.animation.elementMoveSmall.type
+                        easing.bezierCurve: Appearance.animation.elementMoveSmall.bezierCurve
+                    }
+                }
             }
 
             MouseArea {
