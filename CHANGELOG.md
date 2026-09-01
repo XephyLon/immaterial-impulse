@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-2] — 2026-09-01
+
 ### Fixed
 - **Glassy lyrics stop losing the async-render race.** When Glassy is the
   app playing a track, its BetterLyrics DOM renders a beat after the track
