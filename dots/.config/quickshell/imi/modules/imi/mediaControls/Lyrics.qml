@@ -39,6 +39,10 @@ Item {
     // Lines breathe in from the panel edges; a long line wraps inside this
     // column instead of running to the side.
     property real sidePadding: Appearance.spacing.space300
+    // One duration for every size change - delegate height, word
+    // font, word scale, and the list's own resize - so a line growing
+    // as it becomes active reads as a single coordinated motion.
+    readonly property int growDuration: 320
 
     implicitWidth: 200
     implicitHeight: 200
@@ -92,9 +96,9 @@ Item {
             highlightRangeMode: ListView.StrictlyEnforceRange
             preferredHighlightBegin: Math.max(0, height / 2 - 40)
             preferredHighlightEnd: height / 2 + 40
-            highlightMoveDuration: 450
+            highlightMoveDuration: root.growDuration
             highlightMoveVelocity: -1
-            highlightResizeDuration: 0
+            highlightResizeDuration: root.growDuration
 
             delegate: Item {
                 id: lyricSlot
@@ -107,7 +111,7 @@ Item {
                 // The size changes are transformations too: an active line
                 // growing a tier, or swapping to the word flow, eases the
                 // rows around it instead of shoving them.
-                Behavior on implicitHeight { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                Behavior on implicitHeight { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
 
                 readonly property int dist: Math.abs(index - LyricsService.activeIndex)
                 readonly property bool isActive: index === LyricsService.activeIndex
@@ -193,7 +197,7 @@ Item {
                     font.pixelSize: lyricSlot.isActive
                         ? Appearance.font.pixelSize.large
                         : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
-                    Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                     font.weight: lyricSlot.isActive ? Font.Bold : Font.Normal
                     color: lyricSlot.lineSweep ? root.dimColor
                         : (lyricSlot.isActive ? root.activeColor : root.textColor)
@@ -245,109 +249,124 @@ Item {
                     }
                 }
 
-                // Word-mode: every word its own element; becoming sung is
-                // motion, and the current word carries the synced shimmer.
-                Flow {
-                    id: wordFlow
+// Word-mode: every word its own element, laid out in manually
+                // centred rows - a Flow left-packs its wrapped rows, which a
+                // centred view cannot have. FontMetrics measures the packing;
+                // each row is a Row centred in the column.
+                Column {
+                    id: wordColumn
                     visible: lyricSlot.karaokeWords
-                    spacing: Appearance.spacing.space50
-
-                    readonly property real naturalWidth: {
-                        let total = 0, count = 0;
-                        for (let i = 0; i < children.length; i++) {
-                            const w = children[i].implicitWidth ?? 0;
-                            if (w > 0) { total += w; count++; }
-                        }
-                        return total + Math.max(0, count - 1) * wordFlow.spacing;
-                    }
-                    width: Math.min(wordFlow.naturalWidth, lyricSlot.width - root.sidePadding * 2)
+                    width: lyricSlot.width - root.sidePadding * 2
                     anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter
                         ? parent.horizontalCenter : undefined
                     anchors.left: root.textAlignment === Text.AlignHCenter
                         ? undefined : parent.left
+                    anchors.leftMargin: root.textAlignment === Text.AlignHCenter
+                        ? 0 : root.sidePadding
+                    spacing: Appearance.spacing.space25
+
+                    FontMetrics {
+                        id: wordMetrics
+                        font.family: Appearance.font.family.reading
+                        font.pixelSize: Appearance.font.pixelSize.large
+                        font.weight: Font.Bold
+                    }
+                    // Greedy packing of the word timeline into rows that fit
+                    // the column - arrays of indices into wordModel.
+                    readonly property var rows: {
+                        const timeline = lyricSlot.wordModel
+                        const avail = wordColumn.width
+                        const gap = Appearance.spacing.space50
+                        const out = []
+                        let cur = [], used = 0
+                        for (let i = 0; i < timeline.length; i++) {
+                            const w = wordMetrics.advanceWidth(timeline[i].text)
+                            const add = (cur.length ? gap : 0) + w
+                            if (cur.length && used + add > avail) { out.push(cur); cur = []; used = 0 }
+                            cur.push(i); used += (cur.length > 1 ? gap : 0) + w
+                        }
+                        if (cur.length) out.push(cur)
+                        return out
+                    }
 
                     Repeater {
-                        model: lyricSlot.karaokeWords ? lyricSlot.wordModel : []
-                        delegate: ShimmerLabel {
-                            id: wordText
+                        model: wordColumn.rows
+                        delegate: Row {
+                            id: wordRow
                             required property var modelData
-                            required property int index
-                            readonly property bool sung: modelData.time <= root.sweepPosition
-                            readonly property real nextTime: {
-                                const timeline = lyricSlot.wordModel
-                                return index + 1 < timeline.length ? timeline[index + 1].time : Infinity
-                            }
-                            readonly property real windowEnd: {
-                                if (modelData.end !== undefined) return modelData.end
-                                if (nextTime !== Infinity) return nextTime
-                                return modelData.time + 1.2
-                            }
-                            // The word's OWN window, not "until the next word
-                            // starts": backing vocals land a word in the
-                            // middle of another, and both must carry their
-                            // shimmer for their own sung spans.
-                            readonly property bool current: sung && root.sweepPosition < windowEnd
-                            function syllablePhase(position) {
-                                const syls = modelData.syllables
-                                if (!syls || syls.length < 2) {
-                                    return (position - modelData.time)
-                                        / Math.max(0.05, windowEnd - modelData.time)
-                                }
-                                const total = syls.reduce((sum, s) => sum + s.text.length, 0)
-                                let covered = 0
-                                for (let i = 0; i < syls.length; i++) {
-                                    const sylEnd = i + 1 < syls.length ? syls[i + 1].time : windowEnd
-                                    if (position < sylEnd || i === syls.length - 1) {
-                                        const inside = Math.max(0, Math.min(1,
-                                            (position - syls[i].time) / Math.max(0.05, sylEnd - syls[i].time)))
-                                        return (covered + inside * syls[i].text.length) / Math.max(1, total)
+                            anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter
+                                ? parent.horizontalCenter : undefined
+                            anchors.left: root.textAlignment === Text.AlignHCenter
+                                ? undefined : parent.left
+                            spacing: Appearance.spacing.space50
+
+                            Repeater {
+                                model: wordRow.modelData
+                                delegate: ShimmerLabel {
+                                    id: wordText
+                                    required property var modelData
+                                    readonly property int wordIndex: modelData
+                                    readonly property var word: lyricSlot.wordModel[wordIndex]
+                                    readonly property bool sung: word.time <= root.sweepPosition
+                                    readonly property real nextTime: {
+                                        const tl = lyricSlot.wordModel
+                                        return wordIndex + 1 < tl.length ? tl[wordIndex + 1].time : Infinity
                                     }
-                                    covered += syls[i].text.length
+                                    readonly property real windowEnd: {
+                                        if (word.end !== undefined) return word.end
+                                        if (nextTime !== Infinity) return nextTime
+                                        return word.time + 1.2
+                                    }
+                                    readonly property bool current: sung && root.sweepPosition < windowEnd
+                                    function syllablePhase(position) {
+                                        const syls = word.syllables
+                                        if (!syls || syls.length < 2)
+                                            return (position - word.time) / Math.max(0.05, windowEnd - word.time)
+                                        const total = syls.reduce((s, x) => s + x.text.length, 0)
+                                        let covered = 0
+                                        for (let i = 0; i < syls.length; i++) {
+                                            const e = i + 1 < syls.length ? syls[i + 1].time : windowEnd
+                                            if (position < e || i === syls.length - 1) {
+                                                const inside = Math.max(0, Math.min(1,
+                                                    (position - syls[i].time) / Math.max(0.05, e - syls[i].time)))
+                                                return (covered + inside * syls[i].text.length) / Math.max(1, total)
+                                            }
+                                            covered += syls[i].text.length
+                                        }
+                                        return 1
+                                    }
+
+                                    text: word.text
+                                    font.pixelSize: lyricSlot.isActive
+                                        ? Appearance.font.pixelSize.large
+                                        : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
+                                    Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
+                                    font.weight: lyricSlot.lineHot && sung ? Font.Bold : Font.Medium
+                                    running: lyricSlot.lineHot && current
+                                    phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
+                                    baseColor: root.activeColor
+                                    glowColor: Qt.lighter(root.activeColor, 1.6)
+                                    restColor: lyricSlot.lineHot ? (sung ? root.activeColor : root.dimColor) : root.textColor
+
+                                    property real appearOpacity: 0
+                                    transform: Translate { id: wordRise; y: 8 }
+                                    Component.onCompleted: wordAppear.start()
+                                    SequentialAnimation {
+                                        id: wordAppear
+                                        PauseAnimation { duration: Math.min(240, wordText.wordIndex * 30) }
+                                        ParallelAnimation {
+                                            NumberAnimation { target: wordText; property: "appearOpacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
+                                            NumberAnimation { target: wordRise; property: "y"; from: 8; to: 0; duration: 240; easing.type: Easing.OutCubic }
+                                        }
+                                    }
+                                    opacity: (lyricSlot.lineHot ? (sung ? 1 : 0.55) : 1) * appearOpacity
+                                    scale: lyricSlot.lineHot && current ? 1.06 : 1.0
+                                    transformOrigin: Item.Center
+                                    Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                                    Behavior on scale {
+                                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                    }
                                 }
-                                return 1
-                            }
-
-                            text: modelData.text
-                            font.pixelSize: lyricSlot.isActive
-                                ? Appearance.font.pixelSize.large
-                                : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
-                            Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                            font.weight: lyricSlot.lineHot && sung ? Font.Bold : Font.Medium
-                            running: lyricSlot.lineHot && current
-                            phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
-                            baseColor: root.activeColor
-                            glowColor: Qt.lighter(root.activeColor, 1.6)
-                            // Hot lines (active, or a tail still singing)
-                            // colour by sung state; resting lines wear the
-                            // plain line inks, so the flow reads exactly like
-                            // the text it replaced.
-                            restColor: lyricSlot.lineHot
-                                ? (sung ? root.activeColor : root.dimColor)
-                                : root.textColor
-
-                            // The entrance: a new line's words rise in with a
-                            // small per-word stagger instead of popping as a
-                            // block. Explicit from-values; the entrance
-                            // opacity MULTIPLIES the sung state so the two
-                            // channels compose.
-                            property real appearOpacity: 0
-                            transform: Translate { id: wordRise; y: 8 }
-                            Component.onCompleted: wordAppear.start()
-                            SequentialAnimation {
-                                id: wordAppear
-                                PauseAnimation { duration: Math.min(240, wordText.index * 30) }
-                                ParallelAnimation {
-                                    NumberAnimation { target: wordText; property: "appearOpacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
-                                    NumberAnimation { target: wordRise; property: "y"; from: 8; to: 0; duration: 240; easing.type: Easing.OutCubic }
-                                }
-                            }
-
-                            opacity: (lyricSlot.lineHot ? (sung ? 1 : 0.55) : 1) * appearOpacity
-                            scale: lyricSlot.lineHot && current ? 1.06 : 1.0
-                            transformOrigin: Item.Center
-                            Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                            Behavior on scale {
-                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                             }
                         }
                     }
