@@ -63,10 +63,19 @@ Singleton {
     readonly property real fillerGapSeconds: 5
     function sungEnd(line) {
         if (root.looksLikeWords(line.words)) {
-            const last = line.words[line.words.length - 1]
-            if (last.length > 2 && isFinite(Number(last[2])))
-                return Number(last[0]) + Number(last[2])
-            return Number(last[0])
+            // The word array is DISPLAY order, not time order: BetterLyrics
+            // appends background vocals ("(Gave to me)") after the main line
+            // with EARLIER stamps, so the last element can end long before
+            // the main vocal's "yeah" does - and the tail keep-alive dropped
+            // a still-singing line seconds early. Scan for the latest end.
+            let end = -Infinity
+            for (let i = 0; i < line.words.length; i++) {
+                const w = line.words[i]
+                const t = Number(w[0])
+                const e = w.length > 2 && isFinite(Number(w[2])) ? t + Number(w[2]) : t
+                if (e > end) end = e
+            }
+            return end
         }
         return line.time + root.fillerGapSeconds
     }
