@@ -23,8 +23,13 @@ Item {
 
     property bool showLyrics: Config.options.appearance.mediaWidget.showLyrics
     property bool viewLyrics: false
-    readonly property int crossfadeDuration: Appearance.animation.elementMove.duration
     property bool useBlurBackground: false
+    // Shared-axis morph lift: the control face and the lyrics face are two
+    // peer surfaces on one axis. Going to lyrics, both travel up - the
+    // controls leaving off the top, the lyrics arriving from below - so the
+    // handover reads as one motion, not a crossfade. The wrapper's transport
+    // rides the same lift (see nandoroid-media/Widget.qml morphLift).
+    readonly property real morphLift: 28 * Appearance.effectiveScale
     // Handled state, for the card's elevation.
     property bool dragging: false
     // The host's box is animating; the cards drop their shadow for it.
@@ -110,10 +115,11 @@ Item {
         }
     }
 
-    // Crossfade between Media Control (0) and Lyrics (1). A StackLayout
-    // swapped them instantly; both pages are stacked now and cross-fade on
-    // viewLyrics, so the switch is seamless. The hidden page drops to opacity
-    // 0 and visible:false, so it takes no input.
+    // Shared-axis morph between Media Control (page 0) and Lyrics (page 1).
+    // A StackLayout swapped them in one frame; now both faces are stacked
+    // and travel together on the vertical axis - the outgoing face lifts up
+    // and fades, the incoming face rises into place and fades in. The hidden
+    // face drops to opacity 0 / visible:false, so it takes no input.
     Item {
         id: mainStack
         anchors.fill: parent
@@ -124,9 +130,12 @@ Item {
         ColumnLayout {
             anchors.fill: parent
             opacity: root.viewLyrics ? 0 : 1
-            visible: opacity > 0
+            visible: opacity > 0.01
             enabled: !root.viewLyrics
-            Behavior on opacity { NumberAnimation { duration: root.crossfadeDuration; easing.type: Easing.InOutQuad } }
+            // Leaves upward as the lyrics arrive; returns from above.
+            transform: Translate { y: root.viewLyrics ? -root.morphLift : 0
+                Behavior on y { SpanTravel {} } }
+            Behavior on opacity { SpanFade {} }
             spacing: 2 * Appearance.effectiveScale // Tighter spacing for title/artist
 
             // 1. TITLE (Centered, bounded from lyrics button)
@@ -401,19 +410,27 @@ Item {
         // in a Loader so it arms the service (its own refcount) only while
         // the lyrics page is actually shown.
         Item {
+            id: lyricsPage
             anchors.fill: parent
             opacity: root.viewLyrics ? 1 : 0
-            visible: opacity > 0
-            Behavior on opacity { NumberAnimation { duration: root.crossfadeDuration; easing.type: Easing.InOutQuad } }
+            visible: opacity > 0.01
+            // Rises from below into place as the controls lift away; leaves
+            // back downward. Same axis, same lift as page 0 - the morph.
+            transform: Translate { y: root.viewLyrics ? 0 : root.morphLift
+                Behavior on y { SpanTravel {} } }
+            Behavior on opacity { SpanFade {} }
             Loader {
                 anchors.fill: parent
                 anchors.margins: Appearance.spacing.space100
-                // Kept mounted (not active: viewLyrics) so the lyrics are
-                // already fetched and rendered when the crossfade begins -
-                // creating it on toggle left page 1 blank mid-fade while the
-                // fetch ran, the "pops in and out" gap. Gated on showLyrics
-                // so a widget with the feature off pays nothing.
-                active: true
+                // Armed while the lyrics page is on screen OR still animating
+                // out, tracking the page's own visibility rather than
+                // viewLyrics. active:viewLyrics destroyed the component the
+                // instant the toggle flipped, so the morph faded out a blank
+                // page; active:true held the fetch's refcount forever, fetching
+                // lyrics behind the controls face. Tied to lyricsPage.visible
+                // it stays mounted through the fade and releases the refcount
+                // only once the page is fully hidden.
+                active: lyricsPage.visible
                 sourceComponent: Lyrics {
                     player: MprisController.activePlayer
                     textAlignment: Text.AlignHCenter
@@ -424,5 +441,8 @@ Item {
             }
         }
     }
-
+    // The romaji/original switcher lived here as a widget-level anchored
+    // button reading the removed `useRomaji`; the shared Lyrics component now
+    // owns that toggle (and translation) in its own footer, so both faces
+    // stay in step with the sidebar. Nothing to duplicate here.
 }

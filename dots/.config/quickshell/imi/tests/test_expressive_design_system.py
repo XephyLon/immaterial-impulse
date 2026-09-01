@@ -18,7 +18,7 @@ PLUGIN_DIRS = (
     "nandoroid-currency",
 )
 EXPECTED_OPTIONS = {
-    "nandoroid-media": {"showLyrics", "useRomaji"},
+    "nandoroid-media": {"showLyrics"},
     "nandoroid-system-monitor": {"vertical", "showBattery"},
     "nandoroid-system-monitor-gpu": {"vertical"},
     # Both widgets declared a `sizeMode` choice option until the host's

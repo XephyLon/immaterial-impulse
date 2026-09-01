@@ -95,6 +95,12 @@ Item {
     readonly property bool lyricsUp: root.spanName === "3x2"
         && largeExtras.item !== null && largeExtras.item.viewLyrics === true
 
+    // Shared-axis morph: when the lyrics come up the transport, seeker and
+    // time do not just fade - they lift off the top of the card on the same
+    // axis the lyrics rise along (see DesktopMediaWidget.morphLift), so the
+    // control face and the lyrics face read as one handover, not a crossfade.
+    readonly property real morphLift: 28 * Appearance.effectiveScale
+
     // 1x1 hover choreography (the reference shot): at rest the transport
     // rides low on bare artwork; hovering the card slides it up to its
     // lifted slot, fades the seek bar in beneath, and raises the bottom
@@ -237,6 +243,10 @@ Item {
         opacity: root.lyricsUp ? 0 : 1
         visible: opacity > 0 && root.transport !== null
         Behavior on opacity { Expressive.SpanFade {} }
+        // Lifts on the lyrics axis (see root.morphLift) - a fade with travel,
+        // not a plain crossfade.
+        transform: Translate { y: root.lyricsUp ? -root.morphLift : 0
+            Behavior on y { Expressive.SpanTravel {} } }
         x: root.transport ? root.transport.prev.x : 0
         y: (root.transport ? root.transport.prev.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.prev.width : 0
@@ -267,6 +277,9 @@ Item {
         opacity: root.lyricsUp ? 0 : 1
         visible: opacity > 0 && root.transport !== null
         Behavior on opacity { Expressive.SpanFade {} }
+        // Lifts on the lyrics axis with the rest of the transport.
+        transform: Translate { y: root.lyricsUp ? -root.morphLift : 0
+            Behavior on y { Expressive.SpanTravel {} } }
         progress: root.playbackProgress
         artUrl: root.artUrl
         x: root.transport ? root.transport.play.x : 0
@@ -291,6 +304,9 @@ Item {
         opacity: root.lyricsUp ? 0 : 1
         visible: opacity > 0 && root.transport !== null
         Behavior on opacity { Expressive.SpanFade {} }
+        // Lifts on the lyrics axis with the rest of the transport.
+        transform: Translate { y: root.lyricsUp ? -root.morphLift : 0
+            Behavior on y { Expressive.SpanTravel {} } }
         x: root.transport ? root.transport.next.x : 0
         y: (root.transport ? root.transport.next.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.next.width : 0
@@ -322,6 +338,9 @@ Item {
         Behavior on opacity { Expressive.SpanFade {} }
         visible: opacity > 0
         z: 3
+        // Lifts on the lyrics axis with the transport it belongs to.
+        transform: Translate { y: root.lyricsUp ? -root.morphLift : 0
+            Behavior on y { Expressive.SpanTravel {} } }
         x: root.progressSlot ? root.progressSlot.x : 0
         y: root.progressSlot ? root.progressSlot.y : 0
         width: root.progressSlot ? root.progressSlot.width : 0
@@ -339,6 +358,9 @@ Item {
         opacity: (root.spanName === "3x2" && !root.lyricsUp) ? 1 : 0
         visible: opacity > 0 && root.timeSlot !== null
         Behavior on opacity { Expressive.SpanFade {} }
+        // Lifts on the lyrics axis with the transport it sits under.
+        transform: Translate { y: root.lyricsUp ? -root.morphLift : 0
+            Behavior on y { Expressive.SpanTravel {} } }
         x: root.timeSlot ? root.timeSlot.x : 0
         y: root.timeSlot ? root.timeSlot.y : 0
         width: root.timeSlot ? root.timeSlot.width : 0

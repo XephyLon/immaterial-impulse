@@ -27,15 +27,17 @@ class LyricsWidgetContractTests(unittest.TestCase):
         # The widget's own five-line renderer was line-level with no word
         # sync; it now embeds the same Lyrics component the sidebar uses, so
         # the two views stay in step. The legacy slots renderer is gone, and
-        # the component is loaded only while the lyrics page is shown (its
-        # own refcount arms the service - the widget no longer writes the
-        # activation flag itself).
+        # the component is mounted only while the lyrics page is on screen -
+        # tracking the page's own visibility so it survives the morph's
+        # fade-out and releases its refcount once the page is fully hidden,
+        # rather than being armed forever. Its own refcount arms the service;
+        # the widget no longer writes the activation flag itself.
         widget = (ROOT / "modules/common/plugins/designsystem/widgets/DesktopMediaWidget.qml").read_text(
             encoding="utf-8"
         )
         self.assertIn("import qs.modules.imi.mediaControls", widget)
         self.assertIn("sourceComponent: Lyrics {", widget)
-        self.assertIn("active: root.viewLyrics", widget)
+        self.assertIn("active: lyricsPage.visible", widget)
         # the legacy line-level renderer is retired
         self.assertNotIn('if (typeof slot === "string") return slot;', widget)
         self.assertNotIn('property: "flowOffset"', widget)
