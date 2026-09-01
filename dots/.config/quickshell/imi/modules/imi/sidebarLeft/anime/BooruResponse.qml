@@ -34,7 +34,11 @@ Rectangle {
     }
 
     Connections {
-        target: parent
+        // root.parent, named: an unqualified `parent` inside Connections
+        // resolves through the component root's scope - it happened to land
+        // on the same object here, which is luck, not a reference (the lint
+        // this fix answers watched two features die of the unlucky case).
+        target: root.parent
         function onWidthChanged() {
             updateWidthTimer.restart()
         }
@@ -44,7 +48,7 @@ Rectangle {
         id: updateWidthTimer
         interval: 100
         onTriggered: {
-            availableWidth = parent.width
+            root.availableWidth = root.parent.width
         }
     }
 
