@@ -68,6 +68,11 @@ Singleton {
         return line.time + root.fillerGapSeconds
     }
     function withFillers(lines) {
+        // Fillers only where the source has per-word timing: a line-level
+        // source has no trustworthy sung-end, so a gap it reports is a guess,
+        // and a guessed instrumental break is worse than none.
+        if (!lines.some(l => root.looksLikeWords(l.words)))
+            return lines
         const out = []
         if (lines.length > 0 && lines[0].time > root.fillerGapSeconds)
             out.push({ time: 0, text: "", words: null, filler: true })
@@ -129,6 +134,20 @@ Singleton {
     }
 
     readonly property real lineAnticipation: 0.5
+    // The active line's romanization/translation, and whether ANY line has
+    // them (so the view shows the toggles only when there is something to
+    // toggle). Line-level extras, not word-timed.
+    function lineRomanized(index) {
+        return (index >= 0 && index < root.lyricsLines.length)
+            ? (root.lyricsLines[index].romanized ?? "") : ""
+    }
+    function lineTranslated(index) {
+        return (index >= 0 && index < root.lyricsLines.length)
+            ? (root.lyricsLines[index].translated ?? "") : ""
+    }
+    readonly property bool hasRomanization: root.lyricsLines.some(l => (l.romanized ?? "").length > 0)
+    readonly property bool hasTranslation: root.lyricsLines.some(l => (l.translated ?? "").length > 0)
+
     readonly property int before: 3
     readonly property int after:  3
     readonly property int total:  7
@@ -203,7 +222,8 @@ Singleton {
                     const entry = rawLines[i]
                     const t = Number(entry?.t)
                     if (!isNaN(t))
-                        lines.push({ time: t, text: entry.text ?? "", words: entry.words ?? null })
+                        lines.push({ time: t, text: entry.text ?? "", words: entry.words ?? null,
+                            romanized: entry.romanized ?? "", translated: entry.translated ?? "" })
                 }
 
                 if (lines.length === 0) { root.status = "not_found"; return }

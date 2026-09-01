@@ -116,6 +116,10 @@ class WordTimingTests(unittest.TestCase):
         import io, contextlib, sys as _sys
         argv, _sys.argv = _sys.argv, ["lyrics.py", "T", "A", "100"]
         orig = lyrics.http_json
+        orig_glassy = lyrics.from_glassy
+        # Glassy answers over CDP, not http_json - stub it off so this stays
+        # hermetic whether or not a real GlassyMusic is running with a port.
+        lyrics.from_glassy = lambda *a, **k: None
         lyrics.http_json = lambda url: ({"lyrics": "[00:01.0]<00:01.0>hi <00:02.0>ho",
                                          "format": "lrc"} if "unison" in url else None)
         try:
@@ -124,6 +128,7 @@ class WordTimingTests(unittest.TestCase):
                 lyrics.main()
         finally:
             lyrics.http_json = orig
+            lyrics.from_glassy = orig_glassy
             _sys.argv = argv
         import json as _json
         payload = _json.loads(out.getvalue())

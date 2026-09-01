@@ -68,10 +68,17 @@ EXTRACT_JS = """(() => {
             flush();
         }
         words = words.filter(([t, w]) => Number.isFinite(t) && (w || '').length > 0);
+        // BetterLyrics renders the romanization and translation as sibling
+        // content lines inside the same .blyrics--line; carry them so the
+        // shell can offer the same two toggles Glassy has.
+        const romanized = line.querySelector('.blyrics--romanized')?.textContent?.trim() ?? '';
+        const translated = line.querySelector('.blyrics--translated')?.textContent?.trim() ?? '';
         return {
             t: parseFloat(line.dataset.time),
             text: words.map(([, w]) => w).join(' '),
             words: words,
+            romanized: romanized,
+            translated: translated,
         };
     }).filter(l => Number.isFinite(l.t) && l.text.length > 0);
     const title = document.querySelector('.title.ytmusic-player-bar')?.textContent?.trim() ?? '';
@@ -110,7 +117,9 @@ def lines_from_dom(payload, title, artist):
             words.append(tuple([wt, ww] + extra))
         text = str(entry.get("text") or "")
         if text:
-            out.append((t, text, words or None))
+            out.append((t, text, words or None,
+                        str(entry.get("romanized") or ""),
+                        str(entry.get("translated") or "")))
     out.sort(key=lambda e: e[0])
     return out or None
 

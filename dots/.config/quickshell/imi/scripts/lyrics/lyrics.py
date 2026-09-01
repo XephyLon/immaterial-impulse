@@ -406,10 +406,20 @@ def main():
     for provider in (from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib):
         lines = provider(title, artist, duration)
         if lines:
-            print(json.dumps({"ok": True, "lines": [
-                {"t": stamp, "text": line_text,
-                 **({"words": [list(word) for word in words]} if words else {})}
-                for stamp, line_text, words in lines]}))
+            emitted = []
+            for line in lines:
+                stamp, line_text, words = line[0], line[1], line[2]
+                romanized = line[3] if len(line) > 3 else ""
+                translated = line[4] if len(line) > 4 else ""
+                entry = {"t": stamp, "text": line_text}
+                if words:
+                    entry["words"] = [list(word) for word in words]
+                if romanized:
+                    entry["romanized"] = romanized
+                if translated:
+                    entry["translated"] = translated
+                emitted.append(entry)
+            print(json.dumps({"ok": True, "lines": emitted}))
             return 0
     print("not_found")
     return 0
