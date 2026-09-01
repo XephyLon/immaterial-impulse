@@ -29,8 +29,8 @@ TestCase {
     // TestCase goes unavailable and all five cases are lost with it. CI runs
     // Ubuntu's Qt and that is exactly what happened the first time this landed:
     // one FAIL reading `Type GroupedList unavailable`, with the real cause
-    // ("Cannot assign to non-existent property bottomRightRadius") one line
-    // further down.
+    // ("Cannot assign to non-existent property bottomRightRadius", or the
+    // "variableAxes" the shared StyledText now sets) one line further down.
     //
     // Through `createComponent` the version dependency is a STATUS, so the
     // skip is specific: an error naming a per-corner radius is a Qt too old for
@@ -41,15 +41,16 @@ TestCase {
         groupComponent = Qt.createComponent("fixtures/GroupedListRows.qml");
         if (groupComponent.status === Component.Error) {
             const reason = groupComponent.errorString();
-            verify(/(top|bottom)(Left|Right)Radius/.test(reason),
+            verify(/(top|bottom)(Left|Right)Radius|variableAxes/.test(reason),
                 "GroupedList failed to build for a reason that is not Qt's version: " + reason);
         }
     }
 
     function ensureComponent() {
         if (groupComponent.status === Component.Error)
-            skip("Qt is older than 6.7, so the per-corner radii GroupedList "
-                + "draws its group with do not exist here");
+            skip("Qt is older than 6.7, so the per-corner radii and variable "
+                + "font axes GroupedList (through the shared widgets) needs do "
+                + "not exist here");
         compare(groupComponent.status, Component.Ready, groupComponent.errorString());
     }
 

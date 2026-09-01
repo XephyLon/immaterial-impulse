@@ -15,9 +15,9 @@ TestCase {
     function test_title_from_first_prompt() {
         compare(Sessions.titleFrom("  How do I    tune the bar's margins?  "),
             "How do I tune the bar's margins?");
-        const long = Sessions.titleFrom("x".repeat(80));
-        verify(long.length <= 41, "capped");
-        verify(long.endsWith("…"), "capped titles say so");
+        const capped = Sessions.titleFrom("x".repeat(80));
+        verify(capped.length <= 41, "capped");
+        verify(capped.endsWith("…"), "capped titles say so");
         compare(Sessions.titleFrom(""), "");
         compare(Sessions.titleFrom("/model gemini"), "/model gemini",
             "a command prompt is still a title; the caller decides what mints");
@@ -76,8 +76,8 @@ TestCase {
         compare(Sessions.titleFromModelReply("Title: Fixing the follow scroll.", "fb"), "Fixing the follow scroll");
         compare(Sessions.titleFromModelReply("**Currency Widget Ideas**\nplus rambling", "fb"), "Currency Widget Ideas");
         compare(Sessions.titleFromModelReply("   \n\n", "the fallback"), "the fallback", "empty keeps the fallback");
-        const long = Sessions.titleFromModelReply("x".repeat(200), "fb");
-        verify(long.length <= 61, "capped like every other title");
+        const capped = Sessions.titleFromModelReply("x".repeat(200), "fb");
+        verify(capped.length <= 61, "capped like every other title");
     }
 
     function test_rebuild_folds_meta_lines() {
