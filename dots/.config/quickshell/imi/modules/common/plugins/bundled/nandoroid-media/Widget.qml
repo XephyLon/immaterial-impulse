@@ -136,7 +136,6 @@ Item {
         sourceComponent: Expressive.DesktopMediaWidget {
             chromeless: true
             showLyrics: PluginState.option("nandoroid_media", "showLyrics", false)
-            useRomaji: PluginState.option("nandoroid_media", "useRomaji", false)
         }
     }
 
