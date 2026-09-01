@@ -20,6 +20,16 @@ own repo; the installer pins which revision it builds.
   reads Glassy's own player bar: if it shows the current track it waits out
   the render (so the word-synced lines win), and if it shows a different one
   it bails immediately so playback Glassy does not own is not stalled.
+- **No instrumental fillers for lyrics without per-word timing.** The
+  breathing-note fillers between lines are emitted only after a word-timed
+  line, whose sung-end is a real stamp; a line-level source (or a line-level
+  line inside a mixed one) no longer guesses an instrumental break where
+  there is none.
+- **Lyrics sync survives opening the sidebar mid-song.** The word-sweep
+  clock re-anchors on every track change, so starting a song and opening the
+  media sidebar immediately no longer runs the new track's lines far ahead
+  (interpolated from the previous song's stale position) until a play/pause
+  forced a fresh poll.
 
 ## [1.0.0-rc-1] — 2026-09-01
 

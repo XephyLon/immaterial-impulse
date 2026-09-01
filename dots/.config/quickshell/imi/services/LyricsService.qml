@@ -77,11 +77,20 @@ Singleton {
         if (!lines.some(l => root.looksLikeWords(l.words)))
             return lines
         const out = []
-        if (lines.length > 0 && lines[0].time > root.fillerGapSeconds)
+        // Intro filler only when the first sung line is itself word-timed: its
+        // start is then a real stamp to measure the instrumental intro against.
+        if (lines.length > 0 && root.looksLikeWords(lines[0].words)
+                && lines[0].time > root.fillerGapSeconds)
             out.push({ time: 0, text: "", words: null, filler: true })
         for (let i = 0; i < lines.length; i++) {
             out.push(lines[i])
             if (i + 1 < lines.length) {
+                // A filler after line i needs a TRUSTWORTHY sung-end, which only
+                // a word-timed line has. A line-level line's end is a guess
+                // (time + a fixed allowance), so a gap it "reports" is a guessed
+                // instrumental break - exactly what the no-per-word rule forbids.
+                if (!root.looksLikeWords(lines[i].words))
+                    continue
                 const end = root.sungEnd(lines[i])
                 if (lines[i + 1].time - end > root.fillerGapSeconds)
                     out.push({ time: end, text: "", words: null, filler: true })
@@ -246,6 +255,16 @@ Singleton {
         root.lyricsLines = []
         root.activeIndex = -1
         root.slots = []
+
+        // Drop the previous track's sweep anchor. The (lastKnownPosition,
+        // lastPositionWall) pair only refreshes on a position poll, so a track
+        // change carried the OLD song's clock: opening the sidebar right after
+        // a song started interpolated the new lyrics from a stale anchor and
+        // ran them far ahead, until a play/pause forced a fresh poll. Zeroing
+        // the wall makes estimatedPosition read the live position until the
+        // next poll re-anchors it for smooth interpolation.
+        root.lastPositionWall = 0
+        root.lastKnownPosition = root.activePlayer?.position ?? 0
 
         if (!root.lyricsWanted) {
             root.status = "idle"

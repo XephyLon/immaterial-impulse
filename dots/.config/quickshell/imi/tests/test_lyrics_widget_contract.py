@@ -23,6 +23,19 @@ class LyricsWidgetContractTests(unittest.TestCase):
         self.assertIn('property var slots: []', service)
         self.assertIn('root.status = "idle"', service)
 
+    def test_fillers_need_per_word_timing_and_the_clock_re_anchors(self):
+        service = (ROOT / "services/LyricsService.qml").read_text(encoding="utf-8")
+        # A filler after a line is emitted only when THAT line is word-timed:
+        # a line-level line's sung-end is a guess (time + a fixed allowance),
+        # so it must not sprout a breathing note. Guards the rule that lyrics
+        # with no per-word/syllable timestamps render no instrumental fillers.
+        self.assertIn("if (!root.looksLikeWords(lines[i].words))", service)
+        # The word-sweep clock re-anchors on every restart, so a track change
+        # does not interpolate the new song from the previous song's stale
+        # (position, wall) pair - the "open the sidebar right after a song
+        # starts and the sync is thrown off until play/pause" bug.
+        self.assertIn("root.lastPositionWall = 0", service)
+
     def test_desktop_widget_uses_the_shared_lyrics_component(self):
         # The widget's own five-line renderer was line-level with no word
         # sync; it now embeds the same Lyrics component the sidebar uses, so
