@@ -79,6 +79,7 @@ Singleton {
         return { start: start, end: Math.max(next, start + 0.5) }
     }
 
+    readonly property real lineAnticipation: 0.5
     readonly property int before: 3
     readonly property int after:  3
     readonly property int total:  7
@@ -105,7 +106,11 @@ Singleton {
         repeat: true
         running: root.status === "ok" && root.lyricsLines.length > 0
         onTriggered: {
-            const pos = root.estimatedPosition()
+            // The line flips half a second EARLY, on the maintainer's call:
+            // the reader wants the next line settled before it is sung. Only
+            // the index anticipates - the word clock stays true, so an
+            // early-arrived line simply waits unsung until its words come.
+            const pos = root.estimatedPosition() + root.lineAnticipation
             let idx = -1
             for (let i = 0; i < root.lyricsLines.length; i++) {
                 if (root.lyricsLines[i].time <= pos) idx = i

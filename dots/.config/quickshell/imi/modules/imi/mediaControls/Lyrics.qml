@@ -160,9 +160,9 @@ Item {
                         wrapMode: Text.WordWrap
                         text: lyricSlot.karaokeWords ? "" : (LyricsService.slots[lyricSlot.index] ?? "")
                         font.pixelSize: {
-                            if (lyricSlot.dist === 0) return Appearance.font.pixelSize.normal
-                            if (lyricSlot.dist === 1) return Appearance.font.pixelSize.small
-                            return Appearance.font.pixelSize.smaller
+                            if (lyricSlot.dist === 0) return Appearance.font.pixelSize.large
+                            if (lyricSlot.dist === 1) return Appearance.font.pixelSize.normal
+                            return Appearance.font.pixelSize.small
                         }
                         Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                         font.weight: lyricSlot.dist === 0 ? Font.Bold : Font.Normal
@@ -263,7 +263,7 @@ Item {
                                 readonly property bool current: sung && root.sweepPosition < nextTime
 
                                 text: modelData.text
-                                font.pixelSize: Appearance.font.pixelSize.normal
+                                font.pixelSize: Appearance.font.pixelSize.large
                                 font.weight: sung ? Font.Bold : Font.Medium
                                 running: current
                                 phase: current && nextTime !== Infinity
