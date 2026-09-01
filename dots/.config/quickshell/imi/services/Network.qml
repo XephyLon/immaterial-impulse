@@ -182,20 +182,27 @@ Singleton {
     // all reparented to init and sleeping until the next network event).
     signal monitorEvent()
 
+    // Orphan reaper: `nmcli monitor` writes only on network events, so an
+    // instance orphaned by a hard shell kill (SIGKILL, crash) sleeps forever
+    // instead of hitting SIGPIPE - and every such death left one behind (322
+    // found once, ~500 MiB). The old fix wrapped nmcli in a bash watchdog,
+    // but that made nmcli a GRANDCHILD, and a SIGKILL skips bash's EXIT trap
+    // and orphans it anyway. Two moves instead: run nmcli as a DIRECT child
+    // (quickshell tears its own children down on a clean exit), and on every
+    // start reap any `nmcli monitor` already reparented to init (ppid 1) -
+    // which is exactly a previous instance's leak, never this one's (ours is
+    // a child of the qs process). pkill exits 1 when it finds none; harmless.
+    Process {
+        running: true
+        command: ["pkill", "-P", "1", "-x", "nmcli"]
+    }
+
     Process {
         id: subscriber
         running: true
-        // `nmcli monitor` under a watchdog rather than bare. `nmcli monitor`
-        // only writes on network events, so when the shell dies without
-        // tearing its children down (SIGKILL, a crash) the orphan never hits
-        // SIGPIPE and sleeps forever. The loop costs one wakeup every 5s and
-        // ends when either side dies: quickshell gone -> the trap kills
-        // nmcli; nmcli gone -> the loop falls through and the Process exits.
-        // nmcli's stdout is inherited, not piped through bash, so the
-        // SplitParser reads it exactly as before.
-        command: ["bash", "-c",
-            "nmcli monitor & M=$!; trap 'kill $M 2>/dev/null' EXIT; " +
-            "while kill -0 $PPID 2>/dev/null && kill -0 $M 2>/dev/null; do sleep 5; done"]
+        // Direct child, no bash wrapper - the grandchild the wrapper created
+        // was the leak. quickshell sends this SIGTERM on teardown.
+        command: ["nmcli", "monitor"]
         stdout: SplitParser {
             onRead: {
                 root.update();
