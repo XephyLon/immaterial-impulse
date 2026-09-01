@@ -356,7 +356,7 @@ Item {
                                     Component.onCompleted: wordAppear.start()
                                     SequentialAnimation {
                                         id: wordAppear
-                                        PauseAnimation { duration: Math.min(240, wordText.wordIndex * 30) }
+                                        PauseAnimation { duration: Appearance.animation.staggerDelay(wordText.wordIndex, 30, 0) }
                                         ParallelAnimation {
                                             NumberAnimation { target: wordText; property: "appearOpacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
                                             NumberAnimation { target: wordRise; property: "y"; from: 8; to: 0; duration: 240; easing.type: Easing.OutCubic }
