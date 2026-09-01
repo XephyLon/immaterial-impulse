@@ -1,7 +1,7 @@
 groups=(immaterial-impulse)
 pkgname=immaterial-impulse-fonts-themes
 pkgver=1.0
-pkgrel=6
+pkgrel=7
 pkgdesc='Illogical Impulse Fonts and Theming Dependencies'
 arch=(any)
 license=(None)
@@ -15,11 +15,17 @@ depends=(
   fontconfig
   kitty
   matugen
-  otf-space-grotesk
   starship
   ttf-jetbrains-mono-nerd
   ttf-material-symbols-variable-git
   ttf-readex-pro
   ttf-rubik-vf
   ttf-twemoji
+)
+# Space Grotesk is only the Expressive display font, and its package is
+# unreachable/awkward to build in some regions - a hard depend there failed the
+# whole install. Optional now: the shell falls back to another family when it is
+# missing, and the Expressive font is settable in Settings > Appearance.
+optdepends=(
+  'otf-space-grotesk: the Expressive display font (set another in Settings if unavailable)'
 )
