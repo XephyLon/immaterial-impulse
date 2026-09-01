@@ -223,10 +223,27 @@ Item {
                     // a rich-text rebuild's hard flip.
                     Flow {
                         id: wordFlow
-                        anchors.left: parent.left
-                        anchors.right: parent.right
                         visible: lyricSlot.karaokeWords
                         spacing: Appearance.spacing.space50
+
+                        // Centred like every other line when the view centres.
+                        // The width comes from the words' own implicitWidths,
+                        // never from the Flow's - a positioner feeds its
+                        // implicitWidth from its children's WIDTH, and that
+                        // circle is the cheatsheet's collapsed-sheet bug.
+                        readonly property real naturalWidth: {
+                            let total = 0, count = 0;
+                            for (let i = 0; i < children.length; i++) {
+                                const w = children[i].implicitWidth ?? 0;
+                                if (w > 0) { total += w; count++; }
+                            }
+                            return total + Math.max(0, count - 1) * wordFlow.spacing;
+                        }
+                        width: Math.min(wordFlow.naturalWidth, lyricSlot.width)
+                        anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter
+                            ? parent.horizontalCenter : undefined
+                        anchors.left: root.textAlignment === Text.AlignHCenter
+                            ? undefined : parent.left
 
                         Repeater {
                             model: lyricSlot.karaokeWords ? LyricsService.activeWordTimeline : []
