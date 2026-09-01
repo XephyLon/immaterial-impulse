@@ -6,6 +6,12 @@ Provider chain, in order:
  0. GlassyMusic's own BetterLyrics DOM over CDP (glassy_dom.py) - the full
     richsync the app is already showing, word stamps included, when the app
     runs with a debug port. Track-guarded; fails soft to the chain below.
+ 0.5 BetterLyrics' richsync API (lyrics.api.dacubeking.com) - the
+    Musixmatch word-by-word source the plugin itself uses - when the user
+    has placed a bearer token in
+    ~/.config/immaterial-impulse/betterlyrics-token (their own browser
+    session's; the endpoint is Turnstile-gated). Word stamps without the
+    app running. 401/403 or a missing file fall through silently.
  1. BetterLyrics' community API (unison.boidu.dev) - prioritized on the
     maintainer's call after comparing sync quality. Rows carry their body in
     `lyrics` with a `format` of lrc/ttml/plain; plain is unsynced and the
@@ -184,6 +190,54 @@ def from_lrclib(title, artist, duration):
     return None
 
 
+CUBEY_URL = "https://lyrics.api.dacubeking.com/v2/lyrics"
+
+
+def cubey_token():
+    import os
+    path = os.path.join(os.environ.get("XDG_CONFIG_HOME",
+        os.path.expanduser("~/.config")), "immaterial-impulse/betterlyrics-token")
+    try:
+        with open(path) as f:
+            token = f.read().strip()
+        return token or None
+    except OSError:
+        return None
+
+
+def parse_cubey(payload):
+    """The response's best body, as rich lines. Word-by-word first - that
+    is the whole reason to carry a token - then the line-synced fallbacks."""
+    if not isinstance(payload, dict):
+        return None
+    for field in ("musixmatchWordByWordLyrics", "musixmatchSyncedLyrics",
+                  "lrclibSyncedLyrics"):
+        body = payload.get(field)
+        if body:
+            parsed = parse_lrc_rich(body)
+            if parsed:
+                return parsed
+    return None
+
+
+def from_cubey(title, artist, duration):
+    token = cubey_token()
+    if not token:
+        return None
+    data = urllib.parse.urlencode({
+        "song": title, "artist": artist,
+        **({"duration": str(int(duration))} if duration else {})}).encode()
+    request = urllib.request.Request(CUBEY_URL, data=data, headers={
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/x-www-form-urlencoded"})
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            payload = json.loads(response.read().decode("utf-8", "replace"))
+    except Exception:
+        return None
+    return parse_cubey(payload)
+
+
 def from_glassy(title, artist, duration):
     try:
         import glassy_dom
@@ -201,7 +255,7 @@ def main():
         duration = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     except ValueError:
         duration = 0.0
-    for provider in (from_glassy, from_unison, from_lrclib):
+    for provider in (from_glassy, from_cubey, from_unison, from_lrclib):
         lines = provider(title, artist, duration)
         if lines:
             print(json.dumps({"ok": True, "lines": [

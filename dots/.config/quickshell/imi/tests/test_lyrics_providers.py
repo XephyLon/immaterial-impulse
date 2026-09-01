@@ -172,7 +172,38 @@ class GlassyDomTests(unittest.TestCase):
 
     def test_glassy_answers_before_every_network_provider(self):
         source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
-        self.assertIn("(from_glassy, from_unison, from_lrclib)", source)
+        self.assertIn("(from_glassy, from_cubey, from_unison, from_lrclib)", source)
+
+
+
+class CubeyTests(unittest.TestCase):
+    """The richsync API provider: token-gated, word-by-word preferred."""
+
+    def test_no_token_is_a_silent_pass(self):
+        orig = lyrics.cubey_token
+        lyrics.cubey_token = lambda: None
+        try:
+            self.assertIsNone(lyrics.from_cubey("t", "a", 100))
+        finally:
+            lyrics.cubey_token = orig
+
+    def test_word_by_word_beats_line_synced(self):
+        payload = {
+            "musixmatchWordByWordLyrics": "[00:10.0]<00:10.0>hello <00:11.5>there",
+            "musixmatchSyncedLyrics": "[00:10.0]hello there",
+        }
+        lines = lyrics.parse_cubey(payload)
+        self.assertEqual(lines[0][2], [(10.0, "hello"), (11.5, "there")])
+
+    def test_line_synced_is_the_fallback(self):
+        payload = {"musixmatchSyncedLyrics": "[00:10.0]hello there"}
+        lines = lyrics.parse_cubey(payload)
+        self.assertEqual(lines[0][:2], (10.0, "hello there"))
+        self.assertIsNone(lines[0][2])
+
+    def test_cubey_slots_after_glassy(self):
+        source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
+        self.assertIn("(from_glassy, from_cubey, from_unison, from_lrclib)", source)
 
 
 if __name__ == "__main__":
