@@ -231,7 +231,12 @@ Item {
         z: root.spanName === "1x1" ? 1 : 4
         role: "prev"
         span: root.spanName
-        visible: !root.lyricsUp && root.transport !== null
+        // Fade with the lyrics page instead of snapping - the transport is
+        // a shared element the lyrics view replaces, and M3E wants that
+        // handover animated, not instant.
+        opacity: root.lyricsUp ? 0 : 1
+        visible: opacity > 0 && root.transport !== null
+        Behavior on opacity { Expressive.SpanFade {} }
         x: root.transport ? root.transport.prev.x : 0
         y: (root.transport ? root.transport.prev.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.prev.width : 0
@@ -256,7 +261,12 @@ Item {
         z: root.spanName === "1x1" ? 4 : 1
         role: "play"
         span: root.spanName
-        visible: !root.lyricsUp && root.transport !== null
+        // Fade with the lyrics page instead of snapping - the transport is
+        // a shared element the lyrics view replaces, and M3E wants that
+        // handover animated, not instant.
+        opacity: root.lyricsUp ? 0 : 1
+        visible: opacity > 0 && root.transport !== null
+        Behavior on opacity { Expressive.SpanFade {} }
         progress: root.playbackProgress
         artUrl: root.artUrl
         x: root.transport ? root.transport.play.x : 0
@@ -275,7 +285,12 @@ Item {
         z: root.spanName === "1x1" ? 1 : 4
         role: "next"
         span: root.spanName
-        visible: !root.lyricsUp && root.transport !== null
+        // Fade with the lyrics page instead of snapping - the transport is
+        // a shared element the lyrics view replaces, and M3E wants that
+        // handover animated, not instant.
+        opacity: root.lyricsUp ? 0 : 1
+        visible: opacity > 0 && root.transport !== null
+        Behavior on opacity { Expressive.SpanFade {} }
         x: root.transport ? root.transport.next.x : 0
         y: (root.transport ? root.transport.next.y : 0) + root.tinyDrop
         width: root.transport ? root.transport.next.width : 0
@@ -320,7 +335,10 @@ Item {
     // The time label, in the fixed slot the geometry gives it (the one
     // deliberate deviation from the flowed original - see media_geometry.js).
     Expressive.StyledText {
-        visible: root.spanName === "3x2" && !root.lyricsUp && root.timeSlot !== null
+        // Fades with the transport, not a hard toggle.
+        opacity: (root.spanName === "3x2" && !root.lyricsUp) ? 1 : 0
+        visible: opacity > 0 && root.timeSlot !== null
+        Behavior on opacity { Expressive.SpanFade {} }
         x: root.timeSlot ? root.timeSlot.x : 0
         y: root.timeSlot ? root.timeSlot.y : 0
         width: root.timeSlot ? root.timeSlot.width : 0

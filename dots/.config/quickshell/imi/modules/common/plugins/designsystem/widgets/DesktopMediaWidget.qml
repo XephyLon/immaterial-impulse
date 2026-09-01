@@ -392,7 +392,7 @@ Item {
                 // creating it on toggle left page 1 blank mid-fade while the
                 // fetch ran, the "pops in and out" gap. Gated on showLyrics
                 // so a widget with the feature off pays nothing.
-                active: root.showLyrics || root.viewLyrics
+                active: true
                 sourceComponent: Lyrics {
                     player: MprisController.activePlayer
                     textAlignment: Text.AlignHCenter
