@@ -294,10 +294,13 @@ Item {
                         delegate: Row {
                             id: wordRow
                             required property var modelData
+                            // Anchor to the stable column id, never `parent`
+                            // (null for a frame at create/destroy - the source
+                            // of the horizontalCenter-of-null warnings).
                             anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter
-                                ? parent.horizontalCenter : undefined
+                                ? wordColumn.horizontalCenter : undefined
                             anchors.left: root.textAlignment === Text.AlignHCenter
-                                ? undefined : parent.left
+                                ? undefined : wordColumn.left
                             spacing: Appearance.spacing.space50
 
                             Repeater {
@@ -306,7 +309,7 @@ Item {
                                     id: wordText
                                     required property var modelData
                                     readonly property int wordIndex: modelData
-                                    readonly property var word: lyricSlot.wordModel[wordIndex]
+                                    readonly property var word: lyricSlot?.wordModel[wordIndex] ?? ({ time: 0, text: "" })
                                     readonly property bool sung: word.time <= root.sweepPosition
                                     readonly property real nextTime: {
                                         const tl = lyricSlot.wordModel
@@ -337,16 +340,16 @@ Item {
                                     }
 
                                     text: word.text
-                                    font.pixelSize: lyricSlot.isActive
+                                    font.pixelSize: (lyricSlot?.isActive ?? false)
                                         ? Appearance.font.pixelSize.large
-                                        : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
+                                        : ((lyricSlot?.dist ?? 9) === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
                                     Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                                     font.weight: lyricSlot.lineHot && sung ? Font.Bold : Font.Medium
-                                    running: lyricSlot.lineHot && current
+                                    running: (lyricSlot?.lineHot ?? false) && current
                                     phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
                                     baseColor: root.activeColor
                                     glowColor: Qt.lighter(root.activeColor, 1.6)
-                                    restColor: lyricSlot.lineHot ? (sung ? root.activeColor : root.dimColor) : root.textColor
+                                    restColor: (lyricSlot?.lineHot ?? false) ? (sung ? root.activeColor : root.dimColor) : root.textColor
 
                                     property real appearOpacity: 0
                                     transform: Translate { id: wordRise; y: 8 }
@@ -359,8 +362,8 @@ Item {
                                             NumberAnimation { target: wordRise; property: "y"; from: 8; to: 0; duration: 240; easing.type: Easing.OutCubic }
                                         }
                                     }
-                                    opacity: (lyricSlot.lineHot ? (sung ? 1 : 0.55) : 1) * appearOpacity
-                                    scale: lyricSlot.lineHot && current ? 1.06 : 1.0
+                                    opacity: ((lyricSlot?.lineHot ?? false) ? (sung ? 1 : 0.55) : 1) * appearOpacity
+                                    scale: (lyricSlot?.lineHot ?? false) && current ? 1.06 : 1.0
                                     transformOrigin: Item.Center
                                     Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                                     Behavior on scale {

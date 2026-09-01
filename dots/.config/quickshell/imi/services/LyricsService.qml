@@ -233,7 +233,12 @@ Singleton {
         const artist   = root.activePlayer?.trackArtist ?? ""
         const duration = root.activePlayer?.length       ?? 0
 
-        if (!title || !artist) { root.status = "no_info"; return }
+        // Title only: a browser/YouTube player often reports an empty
+        // artist with everything packed in the title ("Sleep Token -
+        // Provider - YouTube"), and scripts/lyrics/lyrics.py's normalizer
+        // unpacks that - which it cannot do if this guard drops the track
+        // first. An unresolvable title still comes back not_found.
+        if (!title) { root.status = "no_info"; return }
 
         lyricsProc.command = [
             "python3",
