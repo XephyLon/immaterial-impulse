@@ -52,7 +52,14 @@ Item {
 
     onArtFilePathChanged: {
         if (!root.artUrl || root.artUrl.length == 0) {
-            root.artDominantColor = Appearance.m3colors.m3secondaryContainer
+            // Never assign artDominantColor imperatively: it has a declarative
+            // binding (to the quantizer, gated by the artColors option), and a
+            // write here destroyed it, freezing the tint at a grey after the
+            // first art-less moment - which is why the sidebar showed no cover
+            // colour until a full restart caught art already present. Clearing
+            // `downloaded` empties the quantizer source, and the binding falls
+            // back to the theme colour on its own.
+            root.downloaded = false
             return
         }
         coverArtDownloader.targetFile = root.artUrl
@@ -89,7 +96,9 @@ Item {
         anchors.rightMargin: Appearance.spacing.space50
         anchors.topMargin: -Appearance.spacing.space25
         anchors.bottomMargin: Appearance.spacing.space50
-        color: ColorUtils.transparentize(artDominantColor, 0.9)
+        // A touch stronger than the old 0.9 so the cover tint actually reads
+        // on the dark sidebar rather than washing out to grey.
+        color: ColorUtils.transparentize(artDominantColor, 0.8)
         radius: Appearance.rounding.normal
 
         ColumnLayout {
