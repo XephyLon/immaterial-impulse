@@ -18,10 +18,25 @@ import urllib.request
 
 EXTRACT_JS = """(() => {
     const lines = [...document.querySelectorAll('.blyrics--line')].map(line => {
-        const words = [...line.querySelectorAll('.blyrics--word')]
-            .map(w => [parseFloat(w.dataset.time),
-                       (w.dataset.content || w.textContent || '').trim()])
-            .filter(([t, w]) => Number.isFinite(t) && w.length > 0);
+        // .blyrics--word spans are SYLLABLES; the word is the
+        // .blyrics-word-group around them (whole word in data-content,
+        // start time on the first syllable). Read groups first - flattening
+        // syllables spaced "pro vi der" across the panel - and keep the
+        // flat spans only as a fallback for lines without groups.
+        const groups = [...line.querySelectorAll('.blyrics-word-group')];
+        let words;
+        if (groups.length > 0) {
+            words = groups.map(group => {
+                const syllable = group.querySelector('.blyrics--word');
+                return [parseFloat(syllable?.dataset.time),
+                        (group.dataset.content || group.textContent || '').trim()];
+            });
+        } else {
+            words = [...line.querySelectorAll('.blyrics--word')]
+                .map(w => [parseFloat(w.dataset.time),
+                           (w.dataset.content || w.textContent || '').trim()]);
+        }
+        words = words.filter(([t, w]) => Number.isFinite(t) && w.length > 0);
         return {
             t: parseFloat(line.dataset.time),
             text: words.map(([, w]) => w).join(' '),
