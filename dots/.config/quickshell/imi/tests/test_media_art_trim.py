@@ -18,8 +18,18 @@ SCRIPT = ROOT / "scripts/media/art_trim.py"
 sys.path.insert(0, str(SCRIPT.parent))
 import art_trim  # noqa: E402
 
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
+# numpy and Pillow live in the shell's uv venv, not on the bare CI runner;
+# every case here needs both, so import them lazily and skip the suite when
+# they are absent (matching test_subject_mask_refine.py's gate) rather than
+# erroring at import time.
+try:
+    import numpy as np  # noqa: E402
+    from PIL import Image  # noqa: E402
+    HAVE_NUMPY = True
+except ImportError:  # pragma: no cover - exercised only on a bare runner
+    np = None
+    Image = None
+    HAVE_NUMPY = False
 
 
 def noisy_cover(width, height, seed=7):
@@ -33,6 +43,7 @@ def save(tmp, array, name="art.png"):
     return path
 
 
+@unittest.skipUnless(HAVE_NUMPY, "needs numpy and pillow (the shell's uv venv)")
 class ArtTrimTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

@@ -23,8 +23,18 @@ SCRIPT = ROOT / "scripts/background/subject_mask.py"
 sys.path.insert(0, str(SCRIPT.parent))
 import subject_mask as sm  # noqa: E402
 
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
+# numpy and Pillow live in the shell's uv venv, not on the bare CI runner.
+# Import them lazily so the label-grammar tests below (which need neither)
+# still run there; the rasterised-arithmetic and select() classes skip when
+# the pair is absent, matching test_subject_mask_refine.py's needs_numpy gate.
+try:
+    import numpy as np  # noqa: E402
+    from PIL import Image  # noqa: E402
+    HAVE_NUMPY = True
+except ImportError:  # pragma: no cover - exercised only on a bare runner
+    np = None
+    Image = None
+    HAVE_NUMPY = False
 
 
 SQUARE = "1:0.25,0.25;0.75,0.25;0.75,0.75;0.25,0.75"
@@ -57,6 +67,7 @@ class ParseLassoTests(unittest.TestCase):
             sm.parse_lasso("1:0,0;1.5,0;1,1")
 
 
+@unittest.skipUnless(HAVE_NUMPY, "needs numpy and pillow (the shell's uv venv)")
 class ApplyLassosTests(unittest.TestCase):
     def setUp(self):
         self.size = 64
@@ -96,6 +107,7 @@ class ApplyLassosTests(unittest.TestCase):
         self.assertIs(sm.apply_lassos(mask, []), mask)
 
 
+@unittest.skipUnless(HAVE_NUMPY, "needs numpy and pillow (the shell's uv venv)")
 class LassoOnlySelectTests(unittest.TestCase):
     """select() with loops and no clicks touches no model at all."""
 
