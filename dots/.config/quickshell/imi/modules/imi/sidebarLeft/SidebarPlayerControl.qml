@@ -100,6 +100,12 @@ Item {
             // ── Player selector ──
             StyledComboBox {
                 id: playerSelector
+                // Transparent at rest so it sits on the media card's cover-art
+                // tint instead of a filled pill; hover/active keep a faint
+                // overlay for affordance.
+                colBackground: "transparent"
+                colBackgroundHover: ColorUtils.applyAlpha(Appearance.colors.colOnLayer0, 0.06)
+                colBackgroundActive: ColorUtils.applyAlpha(Appearance.colors.colOnLayer0, 0.10)
                 // A manual pick wins until that player disappears; otherwise the
                 // selector follows whichever player became active.
                 property bool userSelected: false

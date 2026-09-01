@@ -20,6 +20,12 @@ own repo; the installer pins which revision it builds.
   highlight stuck there while the song played on (a play/pause forced a clean
   re-render). The reader now waits for real, increasing stamps before it
   accepts the DOM.
+- **The media sidebar re-tints from each song's cover, live.** The card's
+  cover-derived tint had its colour binding destroyed by an imperative write
+  on the no-art path, so it only picked up colours at startup and never
+  followed a track change. The binding is restored (it falls back to the
+  theme when there is no art), and the player-selector dropdown is now
+  transparent so it sits on the tint rather than a filled pill.
 
 ## [1.0.0-rc-2] — 2026-09-01
 

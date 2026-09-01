@@ -51,7 +51,13 @@ Item {
 
     onArtFilePathChanged: {
         if (!root.artUrl || root.artUrl.length === 0) {
-            root.artDominantColor = Appearance.m3colors.m3secondaryContainer
+            // Do NOT assign artDominantColor here: it has a declarative binding
+            // (to the quantizer, above), and an imperative write destroys that
+            // binding for good - after which the tint never tracked a later
+            // track and only a full restart rebuilt it. The binding already
+            // falls back to the theme colour when there is no art, so clearing
+            // `downloaded` (which empties displayedArtFilePath -> the quantizer)
+            // is enough; the colour follows on its own.
             root.downloaded = false
             return
         }
