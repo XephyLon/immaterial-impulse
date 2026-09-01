@@ -7,6 +7,7 @@ import qs.services
 import "../../designsystem/widgets" as Expressive
 import "media_layouts.js" as MediaLayouts
 import "media_geometry.js" as Geometry
+import "../../../functions/media_art.js" as MediaArt
 
 // The media widget as ONE tree.
 //
@@ -68,7 +69,7 @@ Item {
 
     readonly property real playbackProgress:
         (MprisController.length > 0 ? (MprisController.position / MprisController.length) : 0) || 0
-    readonly property string artUrl: MprisController.activePlayer?.trackArtUrl ?? ""
+    readonly property string artUrl: MediaArt.resolve(MprisController.activePlayer?.trackArtUrl ?? "", MprisController.activePlayer?.metadata)
 
     // The geometry, evaluated at the span's SETTLED box, not the animating
     // one. Measured before this was fixed: rects derived from the live width

@@ -11,6 +11,7 @@ import Quickshell.Io
 import Quickshell.Services.Mpris
 import qs.modules.common
 import "MprisSelection.js" as MprisSelection
+import "../modules/common/functions/media_art.js" as MediaArt
 
 /**
  * A service that provides easy access to the active Mpris player.
@@ -138,7 +139,7 @@ Singleton {
 		//console.log(`update: ${this.activePlayer?.trackTitle ?? ""} : ${this.activePlayer?.trackArtists}`)
 		this.activeTrack = {
 			uniqueId: this.activePlayer?.uniqueId ?? 0,
-			artUrl: this.activePlayer?.trackArtUrl ?? "",
+			artUrl: MediaArt.resolve(this.activePlayer?.trackArtUrl ?? "", this.activePlayer?.metadata),
 			title: this.activePlayer?.trackTitle || Translation.tr("Unknown Title"),
 			artist: this.activePlayer?.trackArtist || Translation.tr("Unknown Artist"),
 			album: this.activePlayer?.trackAlbum || Translation.tr("Unknown Album"),

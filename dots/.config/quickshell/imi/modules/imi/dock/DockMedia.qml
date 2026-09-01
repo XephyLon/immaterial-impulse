@@ -11,6 +11,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "../../common/functions/media_art.js" as MediaArt
 
 Item {
     id: root
@@ -21,7 +22,7 @@ Item {
 
     property var player: MprisController.activePlayer
 
-    property var    artUrl:      player?.trackArtUrl ?? ""
+    property var    artUrl:      MediaArt.resolve(player?.trackArtUrl ?? "", player?.metadata)
     property string trackTitle:  player?.trackTitle  ?? ""
     property string trackArtist: player?.trackArtist ?? ""
     property bool   isPlaying:   player?.isPlaying   ?? false

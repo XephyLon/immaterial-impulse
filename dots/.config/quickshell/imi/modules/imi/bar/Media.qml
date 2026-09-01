@@ -12,6 +12,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "../../common/functions/media_art.js" as MediaArt
 
 Item {
     id: root
@@ -23,7 +24,7 @@ Item {
 
     readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || Translation.tr("No media")
 
-    property var    artUrl:      activePlayer?.trackArtUrl ?? ""
+    property var    artUrl:      MediaArt.resolve(activePlayer?.trackArtUrl ?? "", activePlayer?.metadata)
     property string trackTitle:  activePlayer?.trackTitle  ?? ""
     property string trackArtist: activePlayer?.trackArtist ?? ""
     property bool   isPlaying:   activePlayer?.isPlaying   ?? false

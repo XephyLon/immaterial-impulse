@@ -12,11 +12,12 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "../../common/functions/media_art.js" as MediaArt
 
 Item {
     id: root
     required property MprisPlayer player
-    property var artUrl: player?.trackArtUrl ?? ""
+    property var artUrl: MediaArt.resolve(player?.trackArtUrl ?? "", player?.metadata)
     property string artDownloadLocation: Directories.coverArt
     property string artFileName: Qt.md5(artUrl)
     property string artFilePath: `${artDownloadLocation}/${artFileName}`

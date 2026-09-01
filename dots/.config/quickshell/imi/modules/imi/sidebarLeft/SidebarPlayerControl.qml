@@ -5,6 +5,7 @@ import qs.modules.common.widgets
 import qs.modules.imi.mediaControls
 import qs.services
 import qs.modules.common.functions
+import "../../common/functions/media_art.js" as MediaArt
 import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Controls
@@ -21,7 +22,9 @@ Item {
     // active, so the sidebar and the bar cannot disagree about what is playing.
     readonly property var availablePlayers: MprisController.players
     property var player: availablePlayers[playerSelector.currentIndex] ?? MprisController.activePlayer
-    property var artUrl: player?.trackArtUrl ?? ""
+    // Falls back to a YouTube thumbnail when a browser player gives no
+    // art (empty mpris:artUrl) but xesam:url is a watch link.
+    property var artUrl: MediaArt.resolve(player?.trackArtUrl ?? "", player?.metadata)
     property string artDownloadLocation: Directories.coverArt
     property string artFileName: Qt.md5(artUrl)
     property string artFilePath: `${artDownloadLocation}/${artFileName}`
