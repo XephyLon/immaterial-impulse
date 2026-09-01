@@ -29,35 +29,6 @@ Item {
         onTriggered: root.sweepPosition = LyricsService.estimatedPosition()
     }
 
-    function escapeMarkup(text) {
-        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    }
-    // Qt's rich-text HTML subset takes #rrggbb only; a QML color stringifies
-    // with its alpha in front (#aarrggbb) and the 8-digit form is ignored -
-    // which painted every word the same and hid the sweep entirely.
-    function cssColor(value) {
-        const s = String(value)
-        return s.length === 9 ? "#" + s.slice(3) : s
-    }
-    // The active line as rich text: sung words in the active colour, the
-    // rest dimmed - the word flips as the clock crosses its stamp.
-    function karaokeMarkup(timeline, position) {
-        let parts = []
-        for (let i = 0; i < timeline.length; i++) {
-            const word = timeline[i]
-            const sung = word.time <= position
-            const tone = sung
-                ? root.cssColor(root.activeColor)
-                : root.cssColor(Qt.darker(root.textColor, 2.2))
-            const glyphs = root.escapeMarkup(word.text)
-            // Bold as well as bright: at composer sizes the colour flip
-            // alone was easy to miss.
-            parts.push(sung
-                ? `<b><font color="${tone}">${glyphs}</font></b>`
-                : `<font color="${tone}">${glyphs}</font>`)
-        }
-        return parts.join(" ")
-    }
 
     property color textColor: "white"
     property color activeColor: "white"
@@ -137,16 +108,16 @@ Item {
 
             Repeater {
                 model: 7
-                delegate: StyledText {
+                delegate: Item {
                     id: lyricSlot
                     required property int index
                     Layout.fillWidth: true
-                    horizontalAlignment: root.textAlignment
-                    wrapMode: Text.WordWrap
+                    implicitHeight: lyricSlot.karaokeWords ? wordFlow.implicitHeight : slotText.implicitHeight
+
                     readonly property int dist: Math.abs(index - LyricsService.before)
-                    // Word stamps from the source drive per-word flips; a
-                    // line-level source gets the glyph-masked sweep below
-                    // instead of a synthesized word fake.
+                    // Word stamps from the source drive the animated word
+                    // flow; a line-level source gets the glyph-masked comet
+                    // sweep on the plain text instead.
                     readonly property bool karaokeWords: dist === 0 && LyricsService.activeWordTimeline.length > 0
                     readonly property bool lineSweep: dist === 0 && !karaokeWords && LyricsService.activeLineSpan !== null
 
@@ -157,12 +128,19 @@ Item {
                     Behavior on scale {
                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                     }
+                    opacity: {
+                        if (dist === 0) return 1.0
+                        if (dist === 1) return 0.6
+                        if (dist === 2) return 0.35
+                        return 0.15
+                    }
+                    Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
                     // A line is a place in the song: click seeks there.
                     MouseArea {
                         anchors.fill: parent
                         enabled: (LyricsService.activePlayer?.canSeek ?? false)
-                            && lyricSlot.text.length > 0
+                            && (lyricSlot.karaokeWords || slotText.text.length > 0)
                         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: {
                             const lineIndex = LyricsService.activeIndex - LyricsService.before + lyricSlot.index
@@ -172,83 +150,112 @@ Item {
                         }
                     }
 
-                    // The line-level sweep: the active colour crossing the
-                    // line's own glyphs (an invisible twin is the mask), paced
-                    // by the interpolated clock over the line's span - honest
-                    // motion without invented word stamps, and seek-proof
-                    // where the fork's fire-and-forget animation drifts.
-                    Item {
-                        id: sweepState
-                        anchors.fill: parent
-                        visible: lyricSlot.lineSweep
-                        readonly property real sweepProgress: {
-                            const span = LyricsService.activeLineSpan
-                            if (!span) return 0
-                            return Math.max(0, Math.min(1,
-                                (root.sweepPosition - span.start) / (span.end - span.start)))
+                    // Plain and line-sweep rendering.
+                    StyledText {
+                        id: slotText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        visible: !lyricSlot.karaokeWords
+                        horizontalAlignment: root.textAlignment
+                        wrapMode: Text.WordWrap
+                        text: lyricSlot.karaokeWords ? "" : (LyricsService.slots[lyricSlot.index] ?? "")
+                        font.pixelSize: {
+                            if (lyricSlot.dist === 0) return Appearance.font.pixelSize.normal
+                            if (lyricSlot.dist === 1) return Appearance.font.pixelSize.small
+                            return Appearance.font.pixelSize.smaller
                         }
-                        property real shownProgress: sweepProgress
-                        Behavior on shownProgress { NumberAnimation { duration: 140 } }
+                        Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                        font.weight: lyricSlot.dist === 0 ? Font.Bold : Font.Normal
+                        color: lyricSlot.lineSweep ? root.dimColor
+                            : (lyricSlot.dist === 0 ? root.activeColor : root.textColor)
 
-                        LinearGradient {
-                            id: sweepSource
+                        // The line-level sweep: the active colour crossing the
+                        // line's own glyphs (an invisible twin is the mask),
+                        // paced by the interpolated clock over the line's span.
+                        Item {
+                            id: sweepState
                             anchors.fill: parent
-                            visible: false
-                            start: Qt.point(0, 0)
-                            end: Qt.point(width, 0)
-                            gradient: Gradient {
-                                GradientStop { position: 0 ; color: root.activeColor }
-                                // Named, not `parent`: a GradientStop is a
-                                // QObject with no parent in scope, so the
-                                // unqualified chain assigned undefined and the
-                                // sweep rendered as a full solid - the third
-                                // member of this bug class today.
-                                GradientStop { position: sweepState.shownProgress; color: root.activeColor }
-                                // The comet head: a brighter tip at the clock's
-                                // exact position (the fork's highlight trick),
-                                // so the eye tracks WHERE the sweep is, not
-                                // just that a region is lit.
-                                GradientStop { position: Math.min(1, sweepState.shownProgress + 0.05); color: Qt.lighter(root.activeColor, 1.55) }
-                                GradientStop { position: Math.min(1, sweepState.shownProgress + 0.16); color: "transparent" }
+                            visible: lyricSlot.lineSweep
+                            readonly property real sweepProgress: {
+                                const span = LyricsService.activeLineSpan
+                                if (!span) return 0
+                                return Math.max(0, Math.min(1,
+                                    (root.sweepPosition - span.start) / (span.end - span.start)))
+                            }
+                            property real shownProgress: sweepProgress
+                            Behavior on shownProgress { NumberAnimation { duration: 140 } }
+
+                            LinearGradient {
+                                id: sweepSource
+                                anchors.fill: parent
+                                visible: false
+                                start: Qt.point(0, 0)
+                                end: Qt.point(width, 0)
+                                gradient: Gradient {
+                                    GradientStop { position: 0 ; color: root.activeColor }
+                                    GradientStop { position: sweepState.shownProgress; color: root.activeColor }
+                                    // The comet head: a brighter tip at the
+                                    // clock's exact position.
+                                    GradientStop { position: Math.min(1, sweepState.shownProgress + 0.05); color: Qt.lighter(root.activeColor, 1.55) }
+                                    GradientStop { position: Math.min(1, sweepState.shownProgress + 0.16); color: "transparent" }
+                                }
+                            }
+                            StyledText {
+                                id: sweepMask
+                                anchors.fill: parent
+                                visible: false
+                                text: lyricSlot.lineSweep ? slotText.text : ""
+                                font: slotText.font
+                                horizontalAlignment: slotText.horizontalAlignment
+                                wrapMode: slotText.wrapMode
+                            }
+                            OpacityMask {
+                                anchors.fill: parent
+                                source: sweepSource
+                                maskSource: sweepMask
                             }
                         }
-                        StyledText {
-                            id: sweepMask
-                            anchors.fill: parent
-                            visible: false
-                            text: lyricSlot.lineSweep ? lyricSlot.text : ""
-                            font: lyricSlot.font
-                            horizontalAlignment: lyricSlot.horizontalAlignment
-                            wrapMode: lyricSlot.wrapMode
-                        }
-                        OpacityMask {
-                            anchors.fill: parent
-                            source: sweepSource
-                            maskSource: sweepMask
-                        }
                     }
 
-                    textFormat: karaokeWords ? Text.RichText : Text.PlainText
-                    text: {
-                        if (lyricSlot.karaokeWords)
-                            return root.karaokeMarkup(LyricsService.activeWordTimeline, root.sweepPosition)
-                        return LyricsService.slots[index] ?? ""
+                    // Word-mode: every word is its own element, so becoming
+                    // sung is MOTION - colour and opacity ease in, and the
+                    // word under the clock pops a step forward - instead of
+                    // a rich-text rebuild's hard flip.
+                    Flow {
+                        id: wordFlow
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        visible: lyricSlot.karaokeWords
+                        spacing: Appearance.spacing.space50
+
+                        Repeater {
+                            model: lyricSlot.karaokeWords ? LyricsService.activeWordTimeline : []
+                            delegate: StyledText {
+                                id: wordText
+                                required property var modelData
+                                required property int index
+                                readonly property bool sung: modelData.time <= root.sweepPosition
+                                readonly property real nextTime: {
+                                    const timeline = LyricsService.activeWordTimeline
+                                    return index + 1 < timeline.length ? timeline[index + 1].time : Infinity
+                                }
+                                readonly property bool current: sung && root.sweepPosition < nextTime
+
+                                text: modelData.text
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                font.weight: sung ? Font.Bold : Font.Medium
+                                color: sung ? root.activeColor : root.dimColor
+                                opacity: sung ? 1 : 0.55
+                                scale: current ? 1.12 : 1.0
+                                transformOrigin: Item.Center
+                                Behavior on color { ColorAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                                Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                                Behavior on scale {
+                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                }
+                            }
+                        }
                     }
-                    font.pixelSize: {
-                        if (dist === 0) return Appearance.font.pixelSize.normal
-                        if (dist === 1) return Appearance.font.pixelSize.small
-                        return Appearance.font.pixelSize.smaller
-                    }
-                    opacity: {
-                        if (dist === 0) return 1.0
-                        if (dist === 1) return 0.6
-                        if (dist === 2) return 0.35
-                        return 0.15
-                    }
-                    color: lyricSlot.lineSweep ? root.dimColor
-                        : (dist === 0 ? root.activeColor : root.textColor)
-                    Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                    Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                 }
             }
         }

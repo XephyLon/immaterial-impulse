@@ -66,10 +66,6 @@ REVIEWED_RICH_TEXT_SITES = {
     "modules/imi/overview/SearchItem.qml": 1,
     "modules/imi/screenTranslator/ScreenTextOverlay.qml": 1,
     "modules/imi/settings/pages/About.qml": 1,
-    # The karaoke active line: every word passes root.escapeMarkup (&, <, >)
-    # before the shell-authored <font color> wrapping - no provider string
-    # reaches the site unescaped.
-    "modules/imi/mediaControls/Lyrics.qml": 1,
     # base TextArea + the append-fade ghost twin, which renders the SAME
     # already-reviewed model string (textFormat mirrored) - no new source.
     "modules/imi/sidebarLeft/aiChat/MessageTextBlock.qml": 2,
