@@ -106,7 +106,7 @@ Item {
                 required property int index
                 width: lyricsList.width
                 implicitHeight: (lyricSlot.filler ? fillerNote.implicitHeight
-                    : lyricSlot.karaokeWords ? wordFlow.implicitHeight : slotText.implicitHeight)
+                    : lyricSlot.karaokeWords ? wordColumn.implicitHeight : slotText.implicitHeight)
                     + Appearance.spacing.space50
                 // The size changes are transformations too: an active line
                 // growing a tier, or swapping to the word flow, eases the
