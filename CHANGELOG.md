@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-3] — 2026-09-01
+
 ### Fixed
 - **Glassy lyrics no longer pin at the top when the sidebar opens as a song
   starts.** BetterLyrics renders its line elements a beat before it fills
