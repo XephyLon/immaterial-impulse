@@ -12,6 +12,9 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **1x1 media widget icons are filled**, not outlined, so they read over the bare cover artwork.
+
 ## [1.0.0-rc-4] — 2026-09-01
 
 ### Fixed

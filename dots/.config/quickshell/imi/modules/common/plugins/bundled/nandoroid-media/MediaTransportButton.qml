@@ -163,7 +163,9 @@ Item {
                     : root.span === "2x2" ? parent.height * 0.46
                     : root.span === "1x1" ? 20 * Appearance.effectiveScale
                     : 26 * Appearance.effectiveScale
-                fill: 0
+                // Filled at 1x1: the bare glyph sits on busy artwork with no
+                // body behind it, so a solid icon reads where an outline is lost.
+                fill: root.span === "1x1" ? 1 : 0
                 // Bare over the artwork at 1x1, the glyph borrows the
                 // cookie body's own light tone so the trio stays one family.
                 color: root.hoveredNow
@@ -476,7 +478,8 @@ Item {
                 text: MprisController.isPlaying ? "pause" : "play_arrow"
                 iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34
                     : root.span === "1x1" ? 22 : 30) * Appearance.effectiveScale
-                fill: 0
+                // Filled at 1x1 to read over bare artwork (see prev/next above).
+                fill: root.span === "1x1" ? 1 : 0
                 color: hitArea.pressed
                     ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, 0.7)
                     : (artClip.visible && artClip.artLoaded ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimary)
