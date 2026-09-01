@@ -172,7 +172,7 @@ class GlassyDomTests(unittest.TestCase):
 
     def test_glassy_answers_before_every_network_provider(self):
         source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
-        self.assertIn("(from_glassy, from_cubey, from_unison, from_lrclib)", source)
+        self.assertIn("(from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib)", source)
 
 
 
@@ -203,7 +203,39 @@ class CubeyTests(unittest.TestCase):
 
     def test_cubey_slots_after_glassy(self):
         source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
-        self.assertIn("(from_glassy, from_cubey, from_unison, from_lrclib)", source)
+        self.assertIn("(from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib)", source)
+
+
+
+class LyricsPlusTests(unittest.TestCase):
+    """KPoe v2: app-independent word sync, syllabus -> words."""
+
+    def payload(self):
+        return {"type": "Word", "lyrics": [
+            {"time": 11044, "duration": 2958, "text": "You were the light",
+             "syllabus": [
+                {"time": 11044, "duration": 362, "text": "You "},
+                {"time": 11406, "duration": 429, "text": "were "},
+                {"time": 11835, "duration": 143, "text": "the "},
+                {"time": 11978, "duration": 868, "text": "light"}]},
+            {"time": 20000, "text": "line-level only", "syllabus": []},
+        ]}
+
+    def test_words_have_ms_to_seconds_time_and_duration(self):
+        lines = lyrics.parse_lyricsplus(self.payload())
+        self.assertEqual(len(lines), 1)  # the syllabus-less line is dropped
+        t, text, words = lines[0]
+        self.assertAlmostEqual(t, 11.044, places=3)
+        self.assertEqual(text, "You were the light")
+        self.assertEqual(words[0], (11.044, "You", 0.362))
+        self.assertEqual(words[3][1], "light")
+
+    def test_non_word_type_is_refused(self):
+        self.assertIsNone(lyrics.parse_lyricsplus({"type": "Line", "lyrics": []}))
+
+    def test_lyricsplus_answers_before_the_gated_and_line_providers(self):
+        source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
+        self.assertIn("(from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib)", source)
 
 
 if __name__ == "__main__":

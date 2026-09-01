@@ -6,6 +6,10 @@ Provider chain, in order:
  0. GlassyMusic's own BetterLyrics DOM over CDP (glassy_dom.py) - the full
     richsync the app is already showing, word stamps included, when the app
     runs with a debug port. Track-guarded; fails soft to the chain below.
+ 0.4 LyricsPlus / KPoe (lyricsplus.prjktla.my.id) - the app-INDEPENDENT
+    word-sync source: a public, keyless proxy over Apple/Musixmatch/Spotify
+    richsync, returning per-word time+duration. Answers first among the
+    network providers, so word sync works with Glassy closed. Fails soft.
  0.5 BetterLyrics' richsync API (lyrics.api.dacubeking.com) - the
     Musixmatch word-by-word source the plugin itself uses - when the user
     has placed a bearer token in
@@ -36,9 +40,17 @@ import urllib.parse
 import urllib.request
 
 
+# A browser-ish UA: several of these hosts (LyricsPlus behind Cloudflare)
+# answer curl fine but 403 the default "Python-urllib/3.x" agent - which
+# read as a dead server until the agent was the thing being refused.
+UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/128.0 Safari/537.36")
+
+
 def http_json(url):
     try:
-        with urllib.request.urlopen(url, timeout=12) as response:
+        request = urllib.request.Request(url, headers={"User-Agent": UA})
+        with urllib.request.urlopen(request, timeout=12) as response:
             return json.loads(response.read().decode("utf-8", "replace"))
     except Exception:
         return None
@@ -238,6 +250,52 @@ def from_cubey(title, artist, duration):
     return parse_cubey(payload)
 
 
+LYRICSPLUS_URL = "https://lyricsplus.prjktla.my.id/v2/lyrics/get"
+
+
+def parse_lyricsplus(payload):
+    """KPoe v2 -> [(t, text, dur, [(t, word)])]. Word timing lives in each
+    line's `syllabus` (time/duration in ms); a line without it is line-level
+    and not what this provider is for, so it is dropped rather than faked."""
+    if not isinstance(payload, dict) or payload.get("type") != "Word":
+        return None
+    out = []
+    for line in payload.get("lyrics") or []:
+        syllabus = line.get("syllabus") or []
+        words = []
+        for syl in syllabus:
+            try:
+                wt = float(syl["time"]) / 1000.0
+            except (KeyError, TypeError, ValueError):
+                continue
+            text = str(syl.get("text", "")).strip()
+            if not text:
+                continue
+            entry = [wt, text]
+            dur = syl.get("duration")
+            if isinstance(dur, (int, float)):
+                entry.append(float(dur) / 1000.0)
+            words.append(tuple(entry))
+        if not words:
+            continue
+        try:
+            line_t = float(line["time"]) / 1000.0
+        except (KeyError, TypeError, ValueError):
+            line_t = words[0][0]
+        text = str(line.get("text", "")).strip() or " ".join(w[1] for w in words)
+        out.append((line_t, text, words))
+    out.sort(key=lambda e: e[0])
+    return out or None
+
+
+def from_lyricsplus(title, artist, duration):
+    params = {"title": title, "artist": artist}
+    if duration:
+        params["duration"] = str(int(duration))
+    data = http_json(LYRICSPLUS_URL + "?" + urllib.parse.urlencode(params))
+    return parse_lyricsplus(data)
+
+
 def from_glassy(title, artist, duration):
     try:
         import glassy_dom
@@ -255,7 +313,7 @@ def main():
         duration = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     except ValueError:
         duration = 0.0
-    for provider in (from_glassy, from_cubey, from_unison, from_lrclib):
+    for provider in (from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib):
         lines = provider(title, artist, duration)
         if lines:
             print(json.dumps({"ok": True, "lines": [
