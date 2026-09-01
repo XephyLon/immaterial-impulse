@@ -94,8 +94,15 @@ Singleton {
     readonly property var activeWordTimeline: {
         if (root.activeIndex < 0 || root.activeIndex >= root.lyricsLines.length)
             return []
-        const line = root.lyricsLines[root.activeIndex]
-        if (!root.looksLikeWords(line.words))
+        return root.wordTimeline(root.lyricsLines[root.activeIndex])
+    }
+
+    // Any line's words as a timeline - the view builds one per delegate,
+    // because a line's tail can still be singing after the NEXT line went
+    // active (cross-line overlap: Provider's "Want" under the following
+    // line's "And"), and a single active-line timeline cannot say so.
+    function wordTimeline(line) {
+        if (!line || !root.looksLikeWords(line.words))
             return []
         return line.words.map(word => ({
             time: Number(word[0]),

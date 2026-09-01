@@ -111,8 +111,19 @@ Item {
                 readonly property bool filler: lyricSlot.modelData.filler === true
                 // Word stamps from the source drive the animated word flow;
                 // a line-level source gets the glyph-masked comet sweep.
-                readonly property bool karaokeWords: !filler && isActive && LyricsService.activeWordTimeline.length > 0
-                readonly property bool lineSweep: !filler && isActive && !karaokeWords && LyricsService.activeLineSpan !== null
+                readonly property var wordModel: LyricsService.wordTimeline(lyricSlot.modelData)
+                // The line just passed keeps its word flow while its tail is
+                // still singing - the active-line switch (and the half-second
+                // anticipation) must not kill a word mid-glow when lines
+                // overlap.
+                readonly property bool tailSinging: index === LyricsService.activeIndex - 1
+                    && wordModel.length > 0
+                    && LyricsService.sungEnd(lyricSlot.modelData) > root.sweepPosition
+                readonly property bool karaokeWords: !filler && wordModel.length > 0
+                    && (isActive || tailSinging)
+                readonly property bool lineSweep: !filler && isActive
+                    && LyricsService.activeWordTimeline.length === 0
+                    && LyricsService.activeLineSpan !== null
 
                 // The fork's polish, kept: the active line stands a step
                 // closer than its neighbours.
@@ -246,14 +257,14 @@ Item {
                         ? undefined : parent.left
 
                     Repeater {
-                        model: lyricSlot.karaokeWords ? LyricsService.activeWordTimeline : []
+                        model: lyricSlot.karaokeWords ? lyricSlot.wordModel : []
                         delegate: ShimmerLabel {
                             id: wordText
                             required property var modelData
                             required property int index
                             readonly property bool sung: modelData.time <= root.sweepPosition
                             readonly property real nextTime: {
-                                const timeline = LyricsService.activeWordTimeline
+                                const timeline = lyricSlot.wordModel
                                 return index + 1 < timeline.length ? timeline[index + 1].time : Infinity
                             }
                             readonly property real windowEnd: {
