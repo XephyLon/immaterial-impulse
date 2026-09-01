@@ -5,6 +5,7 @@ import qs.modules.common.widgets
 import qs.services
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -137,13 +138,83 @@ Item {
                     horizontalAlignment: root.textAlignment
                     wrapMode: Text.WordWrap
                     readonly property int dist: Math.abs(index - LyricsService.before)
-                    textFormat: dist === 0 ? Text.RichText : Text.PlainText
-                    text: {
-                        if (dist === 0) {
-                            const timeline = LyricsService.activeWordTimeline
-                            if (timeline.length > 0)
-                                return root.karaokeMarkup(timeline, root.sweepPosition)
+                    // Word stamps from the source drive per-word flips; a
+                    // line-level source gets the glyph-masked sweep below
+                    // instead of a synthesized word fake.
+                    readonly property bool karaokeWords: dist === 0 && LyricsService.activeWordTimeline.length > 0
+                    readonly property bool lineSweep: dist === 0 && !karaokeWords && LyricsService.activeLineSpan !== null
+
+                    // The fork's polish, kept: the active line stands a step
+                    // closer than its neighbours.
+                    scale: dist === 0 ? 1 : 0.94
+                    transformOrigin: Item.Center
+                    Behavior on scale {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
+
+                    // A line is a place in the song: click seeks there.
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: (LyricsService.activePlayer?.canSeek ?? false)
+                            && lyricSlot.text.length > 0
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: {
+                            const lineIndex = LyricsService.activeIndex - LyricsService.before + lyricSlot.index
+                            if (lineIndex < 0 || lineIndex >= LyricsService.lyricsLines.length)
+                                return
+                            LyricsService.activePlayer.position = LyricsService.lyricsLines[lineIndex].time
                         }
+                    }
+
+                    // The line-level sweep: the active colour crossing the
+                    // line's own glyphs (an invisible twin is the mask), paced
+                    // by the interpolated clock over the line's span - honest
+                    // motion without invented word stamps, and seek-proof
+                    // where the fork's fire-and-forget animation drifts.
+                    Item {
+                        anchors.fill: parent
+                        visible: lyricSlot.lineSweep
+                        readonly property real sweepProgress: {
+                            const span = LyricsService.activeLineSpan
+                            if (!span) return 0
+                            return Math.max(0, Math.min(1,
+                                (root.sweepPosition - span.start) / (span.end - span.start)))
+                        }
+                        property real shownProgress: sweepProgress
+                        Behavior on shownProgress { NumberAnimation { duration: 140 } }
+
+                        LinearGradient {
+                            id: sweepSource
+                            anchors.fill: parent
+                            visible: false
+                            start: Qt.point(0, 0)
+                            end: Qt.point(width, 0)
+                            gradient: Gradient {
+                                GradientStop { position: 0 ; color: root.activeColor }
+                                GradientStop { position: parent.parent.shownProgress; color: root.activeColor }
+                                GradientStop { position: Math.min(1, parent.parent.shownProgress + 0.12); color: "transparent" }
+                            }
+                        }
+                        StyledText {
+                            id: sweepMask
+                            anchors.fill: parent
+                            visible: false
+                            text: lyricSlot.lineSweep ? lyricSlot.text : ""
+                            font: lyricSlot.font
+                            horizontalAlignment: lyricSlot.horizontalAlignment
+                            wrapMode: lyricSlot.wrapMode
+                        }
+                        OpacityMask {
+                            anchors.fill: parent
+                            source: sweepSource
+                            maskSource: sweepMask
+                        }
+                    }
+
+                    textFormat: karaokeWords ? Text.RichText : Text.PlainText
+                    text: {
+                        if (lyricSlot.karaokeWords)
+                            return root.karaokeMarkup(LyricsService.activeWordTimeline, root.sweepPosition)
                         return LyricsService.slots[index] ?? ""
                     }
                     font.pixelSize: {
@@ -157,7 +228,8 @@ Item {
                         if (dist === 2) return 0.35
                         return 0.15
                     }
-                    color: dist === 0 ? root.activeColor : root.textColor
+                    color: lyricSlot.lineSweep ? root.dimColor
+                        : (dist === 0 ? root.activeColor : root.textColor)
                     Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                     Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                 }

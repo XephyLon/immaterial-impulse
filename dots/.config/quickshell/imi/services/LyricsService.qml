@@ -56,24 +56,27 @@ Singleton {
             && typeof value.length === "number" && value.length > 0
     }
 
-    // The active line's words with absolute times: the provider's own when
-    // the source carried word-level timing, an even sweep across the line's
-    // span otherwise - so every line animates per word, just with honest
-    // timing where it exists and synthesized timing where it does not.
+    // The active line's words with absolute times - the provider's OWN
+    // stamps only. A source without word timing gets no synthesized fake:
+    // line-level data is styled fittingly (the view's glyph-masked sweep
+    // across the line's span) instead of pretending to know each word.
     readonly property var activeWordTimeline: {
         if (root.activeIndex < 0 || root.activeIndex >= root.lyricsLines.length)
             return []
         const line = root.lyricsLines[root.activeIndex]
-        if (root.looksLikeWords(line.words))
-            return line.words.map(word => ({ time: Number(word[0]), text: String(word[1]) }))
-        const start = line.time
+        if (!root.looksLikeWords(line.words))
+            return []
+        return line.words.map(word => ({ time: Number(word[0]), text: String(word[1]) }))
+    }
+
+    // The active line's span, pacing that sweep.
+    readonly property var activeLineSpan: {
+        if (root.activeIndex < 0 || root.activeIndex >= root.lyricsLines.length)
+            return null
+        const start = root.lyricsLines[root.activeIndex].time
         const next = root.activeIndex + 1 < root.lyricsLines.length
             ? root.lyricsLines[root.activeIndex + 1].time : start + 8
-        const tokens = String(line.text).split(/\s+/).filter(word => word.length > 0)
-        if (tokens.length === 0)
-            return []
-        const step = Math.max(0.001, (next - start) / tokens.length)
-        return tokens.map((word, index) => ({ time: start + index * step, text: word }))
+        return { start: start, end: Math.max(next, start + 0.5) }
     }
 
     readonly property int before: 3
