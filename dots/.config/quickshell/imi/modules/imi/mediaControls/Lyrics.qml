@@ -119,8 +119,13 @@ Item {
                 readonly property bool tailSinging: index === LyricsService.activeIndex - 1
                     && wordModel.length > 0
                     && LyricsService.sungEnd(lyricSlot.modelData) > root.sweepPosition
+                // A line with word data is a word flow ALWAYS - swapping
+                // to plain text while inactive made activation a twin swap,
+                // and the fresh words' entrance left a visible gap ("words
+                // disappear for a moment"). One element per purpose:
+                // activation restyles the same words through Behaviors.
                 readonly property bool karaokeWords: !filler && wordModel.length > 0
-                    && (isActive || tailSinging)
+                readonly property bool lineHot: isActive || tailSinging
                 readonly property bool lineSweep: !filler && isActive
                     && LyricsService.activeWordTimeline.length === 0
                     && LyricsService.activeLineSpan !== null
@@ -298,13 +303,22 @@ Item {
                             }
 
                             text: modelData.text
-                            font.pixelSize: Appearance.font.pixelSize.large
-                            font.weight: sung ? Font.Bold : Font.Medium
-                            running: current
+                            font.pixelSize: lyricSlot.isActive
+                                ? Appearance.font.pixelSize.large
+                                : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
+                            Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                            font.weight: lyricSlot.lineHot && sung ? Font.Bold : Font.Medium
+                            running: lyricSlot.lineHot && current
                             phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
                             baseColor: root.activeColor
                             glowColor: Qt.lighter(root.activeColor, 1.6)
-                            restColor: sung ? root.activeColor : root.dimColor
+                            // Hot lines (active, or a tail still singing)
+                            // colour by sung state; resting lines wear the
+                            // plain line inks, so the flow reads exactly like
+                            // the text it replaced.
+                            restColor: lyricSlot.lineHot
+                                ? (sung ? root.activeColor : root.dimColor)
+                                : root.textColor
 
                             // The entrance: a new line's words rise in with a
                             // small per-word stagger instead of popping as a
@@ -323,8 +337,8 @@ Item {
                                 }
                             }
 
-                            opacity: (sung ? 1 : 0.55) * appearOpacity
-                            scale: current ? 1.06 : 1.0
+                            opacity: (lyricSlot.lineHot ? (sung ? 1 : 0.55) : 1) * appearOpacity
+                            scale: lyricSlot.lineHot && current ? 1.06 : 1.0
                             transformOrigin: Item.Center
                             Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                             Behavior on scale {
