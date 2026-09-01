@@ -31,13 +31,22 @@ Item {
     implicitWidth: baseText.implicitWidth
     implicitHeight: baseText.implicitHeight
 
+    // How long the base ink eases between states. Defaults to the fast tier
+    // (the AI "thinking" label's feel); the lyrics view sets it longer so a
+    // line's colour change reads as a transition, not a snap.
+    property int colorDuration: Appearance.animation.elementMoveFast.duration
+
     StyledText {
         id: baseText
         anchors.fill: parent
         text: root.text
         color: root.running ? root.baseColor : root.restColor
         Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+            ColorAnimation {
+                duration: root.colorDuration
+                easing.type: Appearance.animation.elementMoveFast.type
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+            }
         }
     }
 

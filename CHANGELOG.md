@@ -15,6 +15,15 @@ own repo; the installer pins which revision it builds.
 ### Changed
 - **1x1 media widget icons are filled**, not outlined, so they read over the bare cover artwork.
 
+### Fixed
+- **Lyrics line transitions ease instead of snapping.** A line's colour now
+  animates over the same clock as its size/scroll (a new `colorDuration` on
+  ShimmerLabel), the line-sweep overlay fades rather than vanishing in a
+  frame, and the active emphasis dropped its discrete per-word bold snap in
+  favour of the animating size+colour. A still-singing previous line keeps its
+  size (keyed on lineHot) and stays lit through the activeIndex anticipation,
+  fixing the tail-line being dropped early.
+
 ## [1.0.0-rc-4] — 2026-09-01
 
 ### Fixed

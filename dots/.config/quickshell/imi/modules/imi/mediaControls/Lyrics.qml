@@ -134,9 +134,18 @@ Item {
                 // still singing - the active-line switch (and the half-second
                 // anticipation) must not kill a word mid-glow when lines
                 // overlap.
+                // The previous line stays lit while its tail is still singing.
+                // Word-timed: until the last word's sung end (cross-line
+                // overlap). Line-level (no word data - Glassy's line-synced
+                // lyrics): until the ACTIVE line actually starts, bridging the
+                // half-second activeIndex anticipation so a still-singing line
+                // is not dropped early. The old `wordModel.length > 0` gate left
+                // line-level lines with no keep-alive at all.
                 readonly property bool tailSinging: index === LyricsService.activeIndex - 1
-                    && wordModel.length > 0
-                    && LyricsService.sungEnd(lyricSlot.modelData) > root.sweepPosition
+                    && ((wordModel.length > 0
+                            && LyricsService.sungEnd(lyricSlot.modelData) > root.sweepPosition)
+                        || (LyricsService.activeLineSpan !== null
+                            && root.sweepPosition < LyricsService.activeLineSpan.start))
                 // A line with word data is a word flow ALWAYS - swapping
                 // to plain text while inactive made activation a twin swap,
                 // and the fresh words' entrance left a visible gap ("words
@@ -212,13 +221,27 @@ Item {
                     font.weight: lyricSlot.isActive ? Font.Bold : Font.Normal
                     color: lyricSlot.lineSweep ? root.dimColor
                         : (lyricSlot.isActive ? root.activeColor : root.textColor)
+                    // Ease the base colour when a line starts/ends its turn
+                    // instead of snapping between active and rest.
+                    Behavior on color {
+                        ColorAnimation { duration: root.growDuration; easing.type: Easing.OutCubic }
+                    }
 
                     // The line-level sweep: the active colour crossing the
                     // line's own glyphs, paced by the interpolated clock.
                     Item {
                         id: sweepState
                         anchors.fill: parent
-                        visible: lyricSlot.lineSweep
+                        // Fade the bright overlay in/out rather than toggling
+                        // it: a hard flip made the active colour vanish in one
+                        // frame when a line ended, which the base-colour
+                        // Behavior above could not smooth (the overlay sits on
+                        // top of it).
+                        opacity: lyricSlot.lineSweep ? 1 : 0
+                        visible: opacity > 0.01
+                        Behavior on opacity {
+                            NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic }
+                        }
                         readonly property real sweepProgress: {
                             const span = LyricsService.activeLineSpan
                             if (!span) return 0
@@ -259,7 +282,9 @@ Item {
                             id: sweepMask
                             anchors.fill: parent
                             visible: false
-                            text: lyricSlot.lineSweep ? slotText.text : ""
+                            // Track the overlay's visibility (not lineSweep) so
+                            // the glyph mask survives the fade-out.
+                            text: sweepState.visible ? slotText.text : ""
                             font: slotText.font
                             horizontalAlignment: slotText.horizontalAlignment
                             wrapMode: slotText.wrapMode
@@ -366,16 +391,24 @@ Item {
                                     }
 
                                     text: word.text
-                                    font.pixelSize: (lyricSlot?.isActive ?? false)
+                                    // Keyed on lineHot, not isActive: a line whose tail is
+                                    // still singing (activeIndex moved on, but it isn't done)
+                                    // keeps its full size instead of shrinking away - the
+                                    // "previous line still being sung gets ignored" bug.
+                                    font.pixelSize: (lyricSlot?.lineHot ?? false)
                                         ? Appearance.font.pixelSize.larger
                                         : ((lyricSlot?.dist ?? 9) === 1 ? Appearance.font.pixelSize.large : Appearance.font.pixelSize.normal)
                                     Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
-                                    font.weight: lyricSlot.lineHot && sung ? Font.Bold : Font.Medium
+                                    font.weight: (lyricSlot?.lineHot ?? false) ? Font.DemiBold : Font.Medium
                                     running: (lyricSlot?.lineHot ?? false) && current
                                     phase: current ? Math.max(0, Math.min(1, syllablePhase(root.sweepPosition))) : 0
                                     baseColor: root.activeColor
                                     glowColor: Qt.lighter(root.activeColor, 1.6)
                                     restColor: (lyricSlot?.lineHot ?? false) ? (sung ? root.activeColor : root.dimColor) : root.textColor
+                                    // Ease the word colour over the same clock as the size/scale
+                                    // so a line's activation and hand-off read as one motion, not
+                                    // a fast colour flick.
+                                    colorDuration: root.growDuration
 
                                     property real appearOpacity: 0
                                     transform: Translate { id: wordRise; y: 8 }
