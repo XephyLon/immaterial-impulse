@@ -204,18 +204,23 @@ Scope {
     IpcHandler {
         target: "mediaControls"
 
+        // Through GlobalStates, never the loader: assigning loader.active
+        // directly destroys its binding to mediaControlsOpen, after which
+        // the shortcuts (which set the state) do nothing and CavaRef (which
+        // reads it) never arms - one IPC call left the visualizer dead and
+        // the keybind inert for the session.
         function toggle(): void {
-            mediaControlsLoader.active = !mediaControlsLoader.active;
-            if (mediaControlsLoader.active)
+            GlobalStates.mediaControlsOpen = !GlobalStates.mediaControlsOpen;
+            if (GlobalStates.mediaControlsOpen)
                 Notifications.timeoutAll();
         }
 
         function close(): void {
-            mediaControlsLoader.active = false;
+            GlobalStates.mediaControlsOpen = false;
         }
 
         function open(): void {
-            mediaControlsLoader.active = true;
+            GlobalStates.mediaControlsOpen = true;
             Notifications.timeoutAll();
         }
     }
