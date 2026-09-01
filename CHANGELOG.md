@@ -12,7 +12,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-1] — 2026-09-01
+
 ### Added
+- **Lyrics track the word, in both views.** The desktop media widget now
+  shares the sidebar's word-synced lyrics view instead of its own line-
+  level one, so the two stay in step. App-independent word sync through
+  LyricsPlus/KPoe with a GlassyMusic DOM path that wins the async-render
+  race, a small source indicator, romanization and translation toggles,
+  right-to-left word order, and a fixed-speed sweep for lines that carry
+  no per-word timing.
+- **The media widget's two faces morph.** Switching the 3x2 between its
+  controls and its lyrics travels one vertical axis - the transport,
+  seeker and time lift and fade as the lyrics rise into place, no snap -
+  and the lyrics toggle's glyph morphs its shape (cookie to clover) and
+  its colour on the same clock rather than jumping.
 - **Browse is every provider now.** The browse view leads with your own
   providers' models - each named "Provider: Model" and carrying a
   show/hide toggle that curates what the picker surfaces - followed by
