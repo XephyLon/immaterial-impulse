@@ -30,6 +30,8 @@ import subprocess
 import tempfile
 import time
 import unittest
+
+import nested_display
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,12 +89,16 @@ class EditModeRuntimeTest(unittest.TestCase):
         env["XDG_CONFIG_HOME"] = str(self.home / "config")
         env["XDG_STATE_HOME"] = str(self.home / "state")
 
-        proc = subprocess.run(
-            # dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS: a
-            # shell reading MPRIS, UPower or a portal off the developer's bus
-            # measures their session rather than this tree.
-            ["dbus-run-session", "--", "qs", "-p", str(HARNESS)], cwd=str(ROOT), env=env,
-                              capture_output=True, text=True, timeout=240)
+        # dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS: a
+        # shell reading MPRIS, UPower or a portal off the developer's bus
+        # measures their session rather than this tree. Through the retry
+        # wrapper: the nested bus collapses under a green harness on occasion
+        # (all 108 checks ok, summary line lost) - the environment's failure,
+        # retried once, not the code's.
+        proc = nested_display.run_harness_with_bus_retry(
+            ["dbus-run-session", "--", "qs", "-p", str(HARNESS)],
+            env=env, cwd=str(ROOT), timeout=240,
+            marker=f"[EditMode] checks: {EXPECTED_CHECKS} failures: 0")
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
