@@ -1858,6 +1858,12 @@ if ! python3 "$SCRIPT_DIR/test_lyrics_providers.py"; then
     exit 1
 fi
 
+echo "Running unqualified-parent scope lint..."
+if ! python3 "$SCRIPT_DIR/lint_unqualified_parent_scope.py"; then
+    echo "Unqualified-parent scope lint failed."
+    exit 1
+fi
+
 echo "Running clock depth model list tests..."
 if ! python3 "$SCRIPT_DIR/test_clock_depth_models.py"; then
     echo "Clock depth model list tests failed."
