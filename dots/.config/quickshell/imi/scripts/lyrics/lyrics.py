@@ -318,11 +318,20 @@ def parse_lyricsplus(payload):
 
 
 def from_lyricsplus(title, artist, duration):
-    params = {"title": title, "artist": artist}
+    # Duration disambiguates covers, but LyricsPlus rejects a match whose
+    # length differs from its own - and a browser's reported length often
+    # does, so a song it HAS comes back empty. Try with duration for
+    # precision, then without it rather than lose the track (Provider from a
+    # YouTube tab: None at 222s, 53 lines with no duration).
+    attempts = []
     if duration:
-        params["duration"] = str(int(duration))
-    data = http_json(LYRICSPLUS_URL + "?" + urllib.parse.urlencode(params))
-    return parse_lyricsplus(data)
+        attempts.append({"title": title, "artist": artist, "duration": str(int(duration))})
+    attempts.append({"title": title, "artist": artist})
+    for params in attempts:
+        lines = parse_lyricsplus(http_json(LYRICSPLUS_URL + "?" + urllib.parse.urlencode(params)))
+        if lines:
+            return lines
+    return None
 
 
 def from_glassy(title, artist, duration):

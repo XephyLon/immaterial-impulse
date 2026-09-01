@@ -276,5 +276,33 @@ class NormalizeTrackTests(unittest.TestCase):
                          ("Song - Part II", "Some Band"))
 
 
+
+class LyricsPlusDurationRetryTests(unittest.TestCase):
+    def setUp(self):
+        self.calls = []
+        self._orig = lyrics.http_json
+        def fake(url):
+            self.calls.append(url)
+            # answer only the request WITHOUT a duration param
+            if "duration" in url:
+                return None
+            return {"type": "Word", "lyrics": [
+                {"time": 1000, "text": "hi there",
+                 "syllabus": [{"time": 1000, "duration": 300, "text": "hi "},
+                              {"time": 1300, "duration": 300, "text": "there"}]}]}
+        lyrics.http_json = fake
+
+    def tearDown(self):
+        lyrics.http_json = self._orig
+
+    def test_retries_without_duration_when_the_dated_query_is_empty(self):
+        r = lyrics.from_lyricsplus("Provider", "Sleep Token", 222)
+        self.assertIsNotNone(r)
+        self.assertEqual([w[1] for w in r[0][2]], ["hi", "there"])
+        self.assertEqual(len(self.calls), 2)  # tried with duration, then without
+        self.assertIn("duration", self.calls[0])
+        self.assertNotIn("duration", self.calls[1])
+
+
 if __name__ == "__main__":
     unittest.main()
