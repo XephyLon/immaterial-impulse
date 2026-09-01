@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Glassy lyrics stop losing the async-render race.** When Glassy is the
+  app playing a track, its BetterLyrics DOM renders a beat after the track
+  changes; the shell's fetch used to give up after a fixed 3s and hand the
+  song to a fallback provider that never got replaced. The Glassy reader now
+  reads Glassy's own player bar: if it shows the current track it waits out
+  the render (so the word-synced lines win), and if it shows a different one
+  it bails immediately so playback Glassy does not own is not stalled.
+
 ## [1.0.0-rc-1] — 2026-09-01
 
 ### Added

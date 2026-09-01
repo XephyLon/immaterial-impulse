@@ -6,6 +6,8 @@ Darkside-for-Faded mismatch, and the provider order (unison answers first,
 lrclib only after) - all against stubbed http_json, no network.
 """
 import sys
+import time
+import json
 import unittest
 from pathlib import Path
 
@@ -179,6 +181,77 @@ class GlassyDomTests(unittest.TestCase):
         source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
         self.assertIn("(from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib)", source)
 
+
+
+class GlassyDomPollTests(unittest.TestCase):
+    """The smart poll: wait out Glassy's own async render, bail fast on a track
+    Glassy is not playing. Guards the async-render race that twice handed a
+    Glassy track to a fallback provider."""
+
+    LINE = [{"t": 16.4, "text": "line", "words": [[16.4, "I", 0.2]]}]
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "scripts/lyrics"))
+        import glassy_dom
+        self.mod = glassy_dom
+        self._saved = (glassy_dom.GLASSY_RENDER_WAIT, glassy_dom.GLASSY_MATCH_GRACE,
+                       glassy_dom.GLASSY_POLL_INTERVAL)
+        # Shrink the budgets so the timing paths resolve in a fraction of a second.
+        glassy_dom.GLASSY_RENDER_WAIT = 0.6
+        glassy_dom.GLASSY_MATCH_GRACE = 0.2
+        glassy_dom.GLASSY_POLL_INTERVAL = 0.02
+        glassy_dom._page_ws_url = lambda: "ws://fake"
+
+    def tearDown(self):
+        (self.mod.GLASSY_RENDER_WAIT, self.mod.GLASSY_MATCH_GRACE,
+         self.mod.GLASSY_POLL_INTERVAL) = self._saved
+        sys.modules.pop("websockets", None)
+
+    def _install(self, script):
+        import types
+        outer = self
+
+        class FakeWS:
+            def __init__(self):
+                self.mid = 0
+
+            async def send(self, msg):
+                self.mid = json.loads(msg)["id"]
+
+            async def recv(self):
+                payload = script(self.mid)
+                value = json.dumps(payload) if payload is not None else None
+                return json.dumps({"id": self.mid, "result": {"result": {"value": value}}})
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+        fake = types.ModuleType("websockets")
+        fake.connect = lambda url, **kw: FakeWS()
+        sys.modules["websockets"] = fake
+
+    def _match(self, lines):
+        return {"title": "Running in the Night", "byline": "FM-84", "lines": lines}
+
+    def test_waits_out_the_render_race(self):
+        # Player bar shows the track; the lines only appear after a few polls.
+        self._install(lambda mid: self._match([] if mid <= 3 else self.LINE))
+        self.assertTrue(self.mod.fetch("Running in the Night", "FM-84"),
+                        "must wait for Glassy's own render, not bail to a fallback")
+
+    def test_bails_fast_when_glassy_plays_another_track(self):
+        self._install(lambda mid: {"title": "Some Other Song", "byline": "X", "lines": []})
+        start = time.monotonic()
+        self.assertIsNone(self.mod.fetch("Running in the Night", "FM-84"))
+        self.assertLess(time.monotonic() - start, 0.5,
+                        "a track Glassy is not playing must not stall the chain")
+
+    def test_gives_up_when_the_track_never_renders(self):
+        self._install(lambda mid: self._match([]))
+        self.assertIsNone(self.mod.fetch("Running in the Night", "FM-84"))
 
 
 class CubeyTests(unittest.TestCase):

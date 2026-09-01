@@ -16,7 +16,16 @@ lyrics for the wrong song are worse than none.
 import json
 import urllib.request
 
-EXTRACT_JS = """(() => {
+# Poll budgets for the async-render race (see fetch). When Glassy's player bar
+# shows the requested track, BetterLyrics is merely still fetching its DOM, so
+# wait up to GLASSY_RENDER_WAIT for the lines. When it shows a different track,
+# Glassy is not the source; bail after GLASSY_MATCH_GRACE (enough for its own
+# title to catch up to a change) so the fallback chain is not stalled.
+GLASSY_RENDER_WAIT = 9.0
+GLASSY_MATCH_GRACE = 2.0
+GLASSY_POLL_INTERVAL = 0.4
+
+EXTRACT_JS = r"""(() => {
     const lines = [...document.querySelectorAll('.blyrics--line')].map(line => {
         // .blyrics--word spans are SYLLABLES; the word is the
         // .blyrics-word-group around them (whole word in data-content,
@@ -148,13 +157,29 @@ def fetch(title, artist):
     # Glassy's BetterLyrics renders its DOM asynchronously after a track
     # change (it fetches over the network), so the shell's fetch on that
     # same change often arrives before the lines exist - which handed the
-    # track to LyricsPlus and never came back. Poll the DOM for a few
-    # seconds: re-evaluate until the matching lines appear or the window
-    # closes. One websocket for the whole poll.
+    # track to LyricsPlus and never came back, even though Glassy is the very
+    # app playing it. A fixed 3s poll lost that race whenever the render ran
+    # long. Poll SMART instead, off the one signal that tells the two cases
+    # apart: Glassy's own player bar (EXTRACT_JS returns its title).
+    #
+    #   - Bar shows THIS track, lines not there yet -> Glassy is the source,
+    #     BetterLyrics is still fetching; wait it out (RENDER_WAIT) so the
+    #     word-synced lines win rather than a fallback grabbing the track.
+    #   - Bar shows a DIFFERENT track (Glassy is running but not what is
+    #     playing) -> not our source; bail after a short grace (MATCH_GRACE,
+    #     enough for Glassy's own title to catch up to the change) so the
+    #     fallback chain is not stalled for playback Glassy does not own.
+    #
+    # One websocket for the whole poll. The budgets are module constants so
+    # a test can shrink them (GLASSY_RENDER_WAIT / GLASSY_MATCH_GRACE).
+    want = (title or "").casefold()
+
     async def run():
+        loop = asyncio.get_event_loop()
         async with websockets.connect(ws_url, max_size=20_000_000, open_timeout=4) as ws:
             mid = 0
-            deadline = asyncio.get_event_loop().time() + 3.0
+            started = loop.time()
+            matched_at = None
             while True:
                 mid += 1
                 await ws.send(json.dumps({"id": mid, "method": "Runtime.evaluate",
@@ -169,9 +194,18 @@ def fetch(title, artist):
                 lines = lines_from_dom(payload, title, artist)
                 if lines:
                     return lines
-                if asyncio.get_event_loop().time() >= deadline:
+                now = loop.time()
+                page_title = ((payload or {}).get("title") or "").casefold()
+                on_track = bool(want and page_title
+                                and (want in page_title or page_title in want))
+                if on_track:
+                    if matched_at is None:
+                        matched_at = now
+                    if now - matched_at >= GLASSY_RENDER_WAIT:
+                        return None
+                elif now - started >= GLASSY_MATCH_GRACE:
                     return None
-                await asyncio.sleep(0.4)
+                await asyncio.sleep(GLASSY_POLL_INTERVAL)
 
     try:
         return asyncio.run(run())
