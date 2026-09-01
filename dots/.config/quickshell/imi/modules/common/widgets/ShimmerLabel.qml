@@ -19,6 +19,14 @@ Item {
     property color baseColor: Appearance.colors.colSubtext
     property color glowColor: Appearance.colors.colOnLayer1
     property bool running: false
+    // What a finished label rests in. Defaults to the glow (the original
+    // "thinking done" reading); the karaoke words rest in their own state
+    // colours instead.
+    property color restColor: root.glowColor
+    // Externally driven sweep: 0..1 places the band across the text and
+    // silences the loop - the karaoke current-word sync. Negative keeps the
+    // original free-running loop.
+    property real phase: -1
 
     implicitWidth: baseText.implicitWidth
     implicitHeight: baseText.implicitHeight
@@ -27,7 +35,7 @@ Item {
         id: baseText
         anchors.fill: parent
         text: root.text
-        color: root.running ? root.baseColor : root.glowColor
+        color: root.running ? root.baseColor : root.restColor
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
@@ -60,11 +68,23 @@ Item {
                         GradientStop { position: 0.5; color: "white" }
                         GradientStop { position: 1.0; color: "transparent" }
                     }
+                    // Two exclusive drivers for one x: the free-running loop
+                    // writes loopX, an external phase maps straight across,
+                    // and the Behavior smooths only the phase-driven mode
+                    // (the loop is already continuous).
+                    property real loopX: -band.width
+                    x: root.phase >= 0
+                        ? -band.width + Math.min(1, root.phase) * (root.width + band.width)
+                        : band.loopX
+                    Behavior on x {
+                        enabled: root.phase >= 0
+                        NumberAnimation { duration: 90 }
+                    }
                     // The sweep: off the left edge to off the right, looped.
                     // Linear on purpose - a glow that eases reads as a pulse,
                     // not a passing light.
-                    NumberAnimation on x {
-                        running: root.running && root.visible
+                    NumberAnimation on loopX {
+                        running: root.running && root.visible && root.phase < 0
                         loops: Animation.Infinite
                         from: -band.width
                         to: root.width

@@ -230,7 +230,11 @@ Item {
 
                         Repeater {
                             model: lyricSlot.karaokeWords ? LyricsService.activeWordTimeline : []
-                            delegate: StyledText {
+                            // The AI "Thinking" shimmer, synced to the word:
+                            // the current word carries the traveling glow with
+                            // its band at exactly the word's progress, then
+                            // rests in the sung colour.
+                            delegate: ShimmerLabel {
                                 id: wordText
                                 required property var modelData
                                 required property int index
@@ -244,11 +248,16 @@ Item {
                                 text: modelData.text
                                 font.pixelSize: Appearance.font.pixelSize.normal
                                 font.weight: sung ? Font.Bold : Font.Medium
-                                color: sung ? root.activeColor : root.dimColor
+                                running: current
+                                phase: current && nextTime !== Infinity
+                                    ? (root.sweepPosition - modelData.time) / Math.max(0.05, nextTime - modelData.time)
+                                    : -1
+                                baseColor: root.activeColor
+                                glowColor: Qt.lighter(root.activeColor, 1.6)
+                                restColor: sung ? root.activeColor : root.dimColor
                                 opacity: sung ? 1 : 0.55
-                                scale: current ? 1.12 : 1.0
+                                scale: current ? 1.06 : 1.0
                                 transformOrigin: Item.Center
-                                Behavior on color { ColorAnimation { duration: 160; easing.type: Easing.OutCubic } }
                                 Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                                 Behavior on scale {
                                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
