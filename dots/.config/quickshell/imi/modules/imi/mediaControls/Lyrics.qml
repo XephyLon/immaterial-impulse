@@ -172,6 +172,7 @@ Item {
                     // motion without invented word stamps, and seek-proof
                     // where the fork's fire-and-forget animation drifts.
                     Item {
+                        id: sweepState
                         anchors.fill: parent
                         visible: lyricSlot.lineSweep
                         readonly property real sweepProgress: {
@@ -191,8 +192,13 @@ Item {
                             end: Qt.point(width, 0)
                             gradient: Gradient {
                                 GradientStop { position: 0 ; color: root.activeColor }
-                                GradientStop { position: parent.parent.shownProgress; color: root.activeColor }
-                                GradientStop { position: Math.min(1, parent.parent.shownProgress + 0.12); color: "transparent" }
+                                // Named, not `parent`: a GradientStop is a
+                                // QObject with no parent in scope, so the
+                                // unqualified chain assigned undefined and the
+                                // sweep rendered as a full solid - the third
+                                // member of this bug class today.
+                                GradientStop { position: sweepState.shownProgress; color: root.activeColor }
+                                GradientStop { position: Math.min(1, sweepState.shownProgress + 0.12); color: "transparent" }
                             }
                         }
                         StyledText {
