@@ -133,6 +133,23 @@ def lines_from_dom(payload, title, artist):
     return out or None
 
 
+def times_are_ready(lines):
+    """BetterLyrics renders the line ELEMENTS before it fills their data-time:
+    every line starts at data-time="0" and the real stamps arrive a beat later
+    (the same async render the poll already waits on, one step deeper). Taking
+    that half-rendered snapshot stamped a whole block of lines at t=0, and the
+    sweep then stuck on the last of them while the song played on - the "open
+    the sidebar right as a song starts and the lyrics are pinned" bug.
+
+    A ready set has real, increasing stamps: at most one line may sit at ~0 (a
+    genuine opening line), and the stamps must not decrease. A cluster of zeros
+    means the render is not done, so the poll keeps waiting."""
+    times = [float(line[0]) for line in lines]
+    if sum(1 for t in times if t <= 0.05) > 1:
+        return False
+    return all(a <= b for a, b in zip(times, times[1:]))
+
+
 def _page_ws_url():
     with urllib.request.urlopen("http://127.0.0.1:9222/json", timeout=3) as r:
         for target in json.loads(r.read().decode()):
@@ -192,7 +209,7 @@ def fetch(title, artist):
                         payload = json.loads(value) if value else None
                         break
                 lines = lines_from_dom(payload, title, artist)
-                if lines:
+                if lines and times_are_ready(lines):
                     return lines
                 now = loop.time()
                 page_title = ((payload or {}).get("title") or "").casefold()

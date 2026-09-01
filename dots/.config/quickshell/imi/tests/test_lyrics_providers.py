@@ -181,6 +181,19 @@ class GlassyDomTests(unittest.TestCase):
         source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
         self.assertIn("(from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib)", source)
 
+    def line(self, *times):
+        return [(t, "x", None, "", "") for t in times]
+
+    def test_times_ready_rejects_a_zero_block(self):
+        # A half-rendered snapshot: elements present, data-time still 0.
+        self.assertFalse(self.mod.times_are_ready(self.line(0.0, 0.0, 5.0, 10.0)))
+
+    def test_times_ready_accepts_real_increasing_stamps(self):
+        self.assertTrue(self.mod.times_are_ready(self.line(11.0, 16.0, 20.0, 28.0)))
+
+    def test_times_ready_allows_a_single_opening_zero(self):
+        self.assertTrue(self.mod.times_are_ready(self.line(0.0, 5.0, 10.0)))
+
 
 
 class GlassyDomPollTests(unittest.TestCase):
@@ -189,6 +202,14 @@ class GlassyDomPollTests(unittest.TestCase):
     Glassy track to a fallback provider."""
 
     LINE = [{"t": 16.4, "text": "line", "words": [[16.4, "I", 0.2]]}]
+    # BetterLyrics renders the line elements with data-time=0, then fills the
+    # real stamps a beat later. The zero block is the half-rendered snapshot.
+    ZEROS = [{"t": 0, "text": "a", "words": [[0, "a"]]},
+             {"t": 0, "text": "b", "words": [[0, "b"]]},
+             {"t": 0, "text": "c", "words": [[0, "c"]]}]
+    REAL = [{"t": 11, "text": "a", "words": [[11, "a"]]},
+            {"t": 16, "text": "b", "words": [[16, "b"]]},
+            {"t": 20, "text": "c", "words": [[20, "c"]]}]
 
     def setUp(self):
         sys.path.insert(0, str(ROOT / "scripts/lyrics"))
@@ -241,6 +262,16 @@ class GlassyDomPollTests(unittest.TestCase):
         self._install(lambda mid: self._match([] if mid <= 3 else self.LINE))
         self.assertTrue(self.mod.fetch("Running in the Night", "FM-84"),
                         "must wait for Glassy's own render, not bail to a fallback")
+
+    def test_waits_for_populated_timestamps(self):
+        # Lines exist but their stamps are still 0 for the first polls; the poll
+        # must reject the zero block and return the real-timed lines - the
+        # "sidebar opened as the song starts, lyrics pinned at t=0" bug.
+        self._install(lambda mid: self._match(self.ZEROS if mid <= 3 else self.REAL))
+        lines = self.mod.fetch("Running in the Night", "FM-84")
+        self.assertTrue(lines)
+        self.assertGreater(lines[0][0], 0.05,
+                           "must return real-timed lines, not the t=0 render")
 
     def test_bails_fast_when_glassy_plays_another_track(self):
         self._install(lambda mid: {"title": "Some Other Song", "byline": "X", "lines": []})

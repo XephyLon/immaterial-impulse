@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Glassy lyrics no longer pin at the top when the sidebar opens as a song
+  starts.** BetterLyrics renders its line elements a beat before it fills
+  their timestamps (each starts at data-time 0), and the reader accepted that
+  half-rendered snapshot - stamping a whole block of lines at 0:00, so the
+  highlight stuck there while the song played on (a play/pause forced a clean
+  re-render). The reader now waits for real, increasing stamps before it
+  accepts the DOM.
+
 ## [1.0.0-rc-2] — 2026-09-01
 
 ### Fixed
