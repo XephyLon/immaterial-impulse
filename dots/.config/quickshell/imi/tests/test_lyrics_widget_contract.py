@@ -16,6 +16,10 @@ class LyricsWidgetContractTests(unittest.TestCase):
         # a refcount, and the union gate is what arms and disarms the fetch.
         self.assertIn("property int sidebarLyricsRefs: 0", service)
         self.assertIn("onLyricsWantedChanged:", service)
+        # Instrumental gaps become filler lines at parse time, threshold in
+        # one place; the view draws them as the breathing note.
+        self.assertIn("function withFillers", service)
+        self.assertIn("root.withFillers(lines)", service)
         self.assertIn('property var slots: []', service)
         self.assertIn('root.status = "idle"', service)
 

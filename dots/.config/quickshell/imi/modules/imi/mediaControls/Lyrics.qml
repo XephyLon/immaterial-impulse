@@ -98,7 +98,8 @@ Item {
                 required property var modelData
                 required property int index
                 width: lyricsList.width
-                implicitHeight: (lyricSlot.karaokeWords ? wordFlow.implicitHeight : slotText.implicitHeight)
+                implicitHeight: (lyricSlot.filler ? fillerNote.implicitHeight
+                    : lyricSlot.karaokeWords ? wordFlow.implicitHeight : slotText.implicitHeight)
                     + Appearance.spacing.space50
                 // The size changes are transformations too: an active line
                 // growing a tier, or swapping to the word flow, eases the
@@ -107,10 +108,11 @@ Item {
 
                 readonly property int dist: Math.abs(index - LyricsService.activeIndex)
                 readonly property bool isActive: index === LyricsService.activeIndex
+                readonly property bool filler: lyricSlot.modelData.filler === true
                 // Word stamps from the source drive the animated word flow;
                 // a line-level source gets the glyph-masked comet sweep.
-                readonly property bool karaokeWords: isActive && LyricsService.activeWordTimeline.length > 0
-                readonly property bool lineSweep: isActive && !karaokeWords && LyricsService.activeLineSpan !== null
+                readonly property bool karaokeWords: !filler && isActive && LyricsService.activeWordTimeline.length > 0
+                readonly property bool lineSweep: !filler && isActive && !karaokeWords && LyricsService.activeLineSpan !== null
 
                 // The fork's polish, kept: the active line stands a step
                 // closer than its neighbours.
@@ -137,11 +139,33 @@ Item {
                 }
 
                 // Plain and line-sweep rendering.
+                // The instrumental filler: a note that breathes while its
+                // gap is the active line, and sits quiet otherwise. The loop
+                // runs only while ON - the hidden-panels lesson.
+                MaterialSymbol {
+                    id: fillerNote
+                    visible: lyricSlot.filler
+                    anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter
+                        ? parent.horizontalCenter : undefined
+                    anchors.left: root.textAlignment === Text.AlignHCenter
+                        ? undefined : parent.left
+                    text: "music_note"
+                    iconSize: Appearance.font.pixelSize.large
+                    color: lyricSlot.isActive ? root.activeColor : root.dimColor
+                    transformOrigin: Item.Center
+                    SequentialAnimation on scale {
+                        running: lyricSlot.filler && lyricSlot.isActive && lyricSlot.visible
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 1.18; duration: 600; easing.type: Easing.InOutQuad }
+                        NumberAnimation { from: 1.18; to: 1.0; duration: 600; easing.type: Easing.InOutQuad }
+                    }
+                }
+
                 StyledText {
                     id: slotText
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    visible: !lyricSlot.karaokeWords
+                    visible: !lyricSlot.karaokeWords && !lyricSlot.filler
                     horizontalAlignment: root.textAlignment
                     wrapMode: Text.WordWrap
                     text: lyricSlot.karaokeWords ? "" : (lyricSlot.modelData.text ?? "")

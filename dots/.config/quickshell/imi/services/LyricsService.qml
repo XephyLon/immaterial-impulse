@@ -51,6 +51,37 @@ Singleton {
         return root.lastKnownPosition + (Date.now() - root.lastPositionWall) / 1000
     }
 
+    // Instrumental gaps become their own lines: where the space between one
+    // line's sung end and the next line's start exceeds the threshold, a
+    // filler entry (the view draws it as a breathing note) fills it - the
+    // intro before the first line included. The sung end is the last word's
+    // own end when the source carried word timing; a line-level source gets
+    // a fixed allowance, so a merely slow line does not sprout notes.
+    readonly property real fillerGapSeconds: 5
+    function sungEnd(line) {
+        if (root.looksLikeWords(line.words)) {
+            const last = line.words[line.words.length - 1]
+            if (last.length > 2 && isFinite(Number(last[2])))
+                return Number(last[0]) + Number(last[2])
+            return Number(last[0])
+        }
+        return line.time + root.fillerGapSeconds
+    }
+    function withFillers(lines) {
+        const out = []
+        if (lines.length > 0 && lines[0].time > root.fillerGapSeconds)
+            out.push({ time: 0, text: "", words: null, filler: true })
+        for (let i = 0; i < lines.length; i++) {
+            out.push(lines[i])
+            if (i + 1 < lines.length) {
+                const end = root.sungEnd(lines[i])
+                if (lines[i + 1].time - end > root.fillerGapSeconds)
+                    out.push({ time: end, text: "", words: null, filler: true })
+            }
+        }
+        return out
+    }
+
     function looksLikeWords(value) {
         return value !== null && value !== undefined
             && typeof value.length === "number" && value.length > 0
@@ -170,7 +201,7 @@ Singleton {
 
                 if (lines.length === 0) { root.status = "not_found"; return }
 
-                root.lyricsLines = lines
+                root.lyricsLines = root.withFillers(lines)
                 root.activeIndex = -1
                 root.slots = root.buildSlots(-1)
                 root.status = "ok"
