@@ -136,7 +136,10 @@ def run_streamer(port, lines, wait, extra=()):
         proc.stdin.flush()
         time.sleep(pause)
     time.sleep(wait)
-    proc.stdin.close()
+    # Let communicate() flush and close stdin itself. Closing it here first
+    # made communicate() flush an already-closed pipe, which is a hard
+    # ValueError on Python 3.12 (the CI runner) though a no-op on older
+    # builds; the EOF the streamer waits on is identical either way.
     out, err = proc.communicate(timeout=10)
     return out, err
 
