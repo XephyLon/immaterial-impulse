@@ -12,6 +12,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Glassy line-level lyrics shimmer again.** BetterLyrics renders line-synced
+  lyrics as word spans with fake ~0.05s-apart times and no per-word duration;
+  the shell took them for real karaoke and raced the sweep to the last word (or
+  never ran it). A line with no real per-word duration is now treated as
+  line-level, so the sweep walks the whole line - the read LyricsPlus gives.
+
+### Changed
+- **Lyrics text is a notch larger** in the media view.
+
 ## [1.0.0-rc-3] — 2026-09-01
 
 ### Fixed

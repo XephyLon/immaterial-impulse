@@ -150,7 +150,7 @@ class GlassyDomTests(unittest.TestCase):
     def payload(self, title="Lost Control", byline="Alan Walker, Sorana - 2 views"):
         return {"title": title, "byline": byline, "lines": [
             {"t": 12.0, "text": "Won't let go",
-             "words": [[12.0, "Won't"], [12.3, "let"], [12.6, "go"]]},
+             "words": [[12.0, "Won't", 0.2], [12.3, "let", 0.2], [12.6, "go", 0.3]]},
             {"t": 15.0, "text": "provider here",
              "words": [[15.0, "provider", 0.9, [[15.0, "pro"], [15.3, "vi"], [15.6, "der"]]],
                        [16.0, "here"]]},
@@ -159,7 +159,8 @@ class GlassyDomTests(unittest.TestCase):
     def test_words_come_through(self):
         lines = self.mod.lines_from_dom(self.payload(), "Lost Control", "Alan Walker & Sorana")
         self.assertEqual(len(lines), 2)
-        self.assertEqual(lines[0][2], [(12.0, "Won't"), (12.3, "let"), (12.6, "go")])
+        self.assertEqual([(w[0], w[1]) for w in lines[0][2]],
+                         [(12.0, "Won't"), (12.3, "let"), (12.6, "go")])
 
     def test_durations_and_syllables_survive(self):
         lines = self.mod.lines_from_dom(self.payload(), "Lost Control", "Alan Walker & Sorana")
@@ -193,6 +194,33 @@ class GlassyDomTests(unittest.TestCase):
 
     def test_times_ready_allows_a_single_opening_zero(self):
         self.assertTrue(self.mod.times_are_ready(self.line(0.0, 5.0, 10.0)))
+
+    def test_words_with_real_durations_are_kept_as_karaoke(self):
+        # Genuine per-word karaoke carries per-word durations - keep the words.
+        p = {"title": "Lost Control", "byline": "Alan Walker", "lines": [
+            {"t": 10.0, "text": "won't let go",
+             "words": [[10.0, "won't", 0.3], [10.4, "let", 0.3], [10.8, "go", 0.4]]}]}
+        lines = self.mod.lines_from_dom(p, "Lost Control", "Alan Walker")
+        self.assertTrue(lines[0][2])
+
+    def test_durationless_words_become_line_level(self):
+        # BetterLyrics' line-synced render: word spans with fake ~0.05s-apart
+        # times and NO durations. Not real karaoke - drop the words so the line
+        # sweep walks the whole line rather than racing to the last word.
+        p = {"title": "Lost Control", "byline": "Alan Walker", "lines": [
+            {"t": 0.59, "text": "welcome to the club",
+             "words": [[0.59, "welcome", 0.0], [0.64, "to", 0.0],
+                       [0.69, "the", 0.0], [0.74, "club", 0.0]]}]}
+        lines = self.mod.lines_from_dom(p, "Lost Control", "Alan Walker")
+        self.assertIsNone(lines[0][2],
+                          "no real per-word duration -> line-level, not karaoke")
+
+    def test_same_time_words_are_line_level(self):
+        p = {"title": "Lost Control", "byline": "Alan Walker", "lines": [
+            {"t": 10.0, "text": "won't let go",
+             "words": [[10.0, "won't"], [10.0, "let"], [10.0, "go"]]}]}
+        lines = self.mod.lines_from_dom(p, "Lost Control", "Alan Walker")
+        self.assertIsNone(lines[0][2])
 
 
 

@@ -206,8 +206,8 @@ Item {
                     wrapMode: Text.WordWrap
                     text: lyricSlot.karaokeWords ? "" : (lyricSlot.modelData.text ?? "")
                     font.pixelSize: lyricSlot.isActive
-                        ? Appearance.font.pixelSize.large
-                        : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
+                        ? Appearance.font.pixelSize.larger
+                        : (lyricSlot.dist === 1 ? Appearance.font.pixelSize.large : Appearance.font.pixelSize.normal)
                     Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                     font.weight: lyricSlot.isActive ? Font.Bold : Font.Normal
                     color: lyricSlot.lineSweep ? root.dimColor
@@ -367,8 +367,8 @@ Item {
 
                                     text: word.text
                                     font.pixelSize: (lyricSlot?.isActive ?? false)
-                                        ? Appearance.font.pixelSize.large
-                                        : ((lyricSlot?.dist ?? 9) === 1 ? Appearance.font.pixelSize.normal : Appearance.font.pixelSize.small)
+                                        ? Appearance.font.pixelSize.larger
+                                        : ((lyricSlot?.dist ?? 9) === 1 ? Appearance.font.pixelSize.large : Appearance.font.pixelSize.normal)
                                     Behavior on font.pixelSize { NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic } }
                                     font.weight: lyricSlot.lineHot && sung ? Font.Bold : Font.Medium
                                     running: (lyricSlot?.lineHot ?? false) && current

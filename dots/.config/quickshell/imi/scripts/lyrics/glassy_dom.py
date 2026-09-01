@@ -116,14 +116,25 @@ def lines_from_dom(payload, title, artist):
         except (KeyError, TypeError, ValueError):
             continue
         words = []
+        any_real_duration = False
         for word in entry.get("words") or []:
             wt, ww = float(word[0]), str(word[1])
             extra = []
-            if len(word) > 2 and isinstance(word[2], (int, float)):
+            if len(word) > 2 and isinstance(word[2], (int, float)) and word[2] > 0:
+                any_real_duration = True
                 extra.append(float(word[2]))
                 if len(word) > 3 and isinstance(word[3], list):
                     extra.append([[float(st), str(sw)] for st, sw in word[3]])
             words.append(tuple([wt, ww] + extra))
+        # Real per-word karaoke carries per-word DURATIONS. BetterLyrics renders
+        # LINE-synced lyrics as word spans too, but with no data-duration and
+        # fake ~0.05s-apart data-time - so kept, the view raced the "current
+        # word" through the whole line in a fraction of a second and parked on
+        # the last word (the shimmer "jumped to the end"). When no word carries a
+        # real duration, this is line-level: drop the words so the line sweep
+        # walks the whole line (the same read LyricsPlus gives as one word).
+        if not any_real_duration:
+            words = []
         text = str(entry.get("text") or "")
         if text:
             out.append((t, text, words or None,
