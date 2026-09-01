@@ -45,10 +45,16 @@ Item {
         let parts = []
         for (let i = 0; i < timeline.length; i++) {
             const word = timeline[i]
-            const tone = word.time <= position
+            const sung = word.time <= position
+            const tone = sung
                 ? root.cssColor(root.activeColor)
                 : root.cssColor(Qt.darker(root.textColor, 2.2))
-            parts.push(`<font color="${tone}">${root.escapeMarkup(word.text)}</font>`)
+            const glyphs = root.escapeMarkup(word.text)
+            // Bold as well as bright: at composer sizes the colour flip
+            // alone was easy to miss.
+            parts.push(sung
+                ? `<b><font color="${tone}">${glyphs}</font></b>`
+                : `<font color="${tone}">${glyphs}</font>`)
         }
         return parts.join(" ")
     }
@@ -198,7 +204,12 @@ Item {
                                 // sweep rendered as a full solid - the third
                                 // member of this bug class today.
                                 GradientStop { position: sweepState.shownProgress; color: root.activeColor }
-                                GradientStop { position: Math.min(1, sweepState.shownProgress + 0.12); color: "transparent" }
+                                // The comet head: a brighter tip at the clock's
+                                // exact position (the fork's highlight trick),
+                                // so the eye tracks WHERE the sweep is, not
+                                // just that a region is lit.
+                                GradientStop { position: Math.min(1, sweepState.shownProgress + 0.05); color: Qt.lighter(root.activeColor, 1.55) }
+                                GradientStop { position: Math.min(1, sweepState.shownProgress + 0.16); color: "transparent" }
                             }
                         }
                         StyledText {
