@@ -12,7 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-4] — 2026-09-01
+
 ### Fixed
+- **Space Grotesk is optional now.** It was a hard font dependency of the
+  install, so where that package is unreachable (some regions) the whole
+  install failed. It is only the Expressive display font - the shell falls
+  back without it, and it stays settable in Settings > Appearance.
 - **Glassy line-level lyrics shimmer again.** BetterLyrics renders line-synced
   lyrics as word spans with fake ~0.05s-apart times and no per-word duration;
   the shell took them for real karaoke and raced the sweep to the last word (or
