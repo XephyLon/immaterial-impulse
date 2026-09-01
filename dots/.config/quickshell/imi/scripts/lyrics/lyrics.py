@@ -403,9 +403,14 @@ def main():
         duration = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     except ValueError:
         duration = 0.0
+    PROVIDER_NAMES = {
+        "from_glassy": "Glassy", "from_lyricsplus": "LyricsPlus",
+        "from_cubey": "BetterLyrics", "from_unison": "Unison", "from_lrclib": "LRCLIB",
+    }
     for provider in (from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib):
         lines = provider(title, artist, duration)
         if lines:
+            source = PROVIDER_NAMES.get(provider.__name__, provider.__name__)
             emitted = []
             for line in lines:
                 stamp, line_text, words = line[0], line[1], line[2]
@@ -419,7 +424,7 @@ def main():
                 if translated:
                     entry["translated"] = translated
                 emitted.append(entry)
-            print(json.dumps({"ok": True, "lines": emitted}))
+            print(json.dumps({"ok": True, "source": source, "lines": emitted}))
             return 0
     print("not_found")
     return 0

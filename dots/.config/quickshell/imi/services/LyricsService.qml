@@ -22,6 +22,9 @@ Singleton {
     property var lyricsLines: []
     property int activeIndex: -1
     property string status: "idle"
+    // Which provider answered (Glassy / LyricsPlus / LRCLIB / ...), for the
+    // view's small source indicator. Cleared when a fetch restarts.
+    property string source: ""
     property var slots: []
     property bool desktopWidgetLyricsActive: false
     // The media sidebar's lyrics view, as a refcount: the desktop widget's
@@ -216,6 +219,7 @@ Singleton {
                     parsed = null
                 }
                 if (!parsed || parsed.ok !== true) return
+                root.source = parsed.source ?? ""
                 const rawLines = parsed.lines ?? []
                 let lines = []
                 for (let i = 0; i < rawLines.length; i++) {
@@ -237,6 +241,7 @@ Singleton {
     }
 
     function restartLyrics() {
+        root.source = ""
         lyricsProc.running = false
         root.lyricsLines = []
         root.activeIndex = -1

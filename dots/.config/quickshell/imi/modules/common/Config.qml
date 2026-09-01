@@ -754,7 +754,7 @@ Singleton {
                 property JsonObject systemMonitor: JsonObject { property bool locked: false; property bool vertical: false; property int updateInterval: 3000 }
                 property JsonObject weatherWidget: JsonObject { property bool locked: false; property string sizeMode: "3x1" }
                 property JsonObject currencyWidget: JsonObject { property bool locked: false; property string sizeMode: "2x1"; property string baseCurrency: "USD"; property string quote1: "EUR"; property string quote2: "GBP"; property string quote3: "JPY"; property string quote4: "CAD" }
-                property JsonObject lyrics: JsonObject { property bool showFloatingLyrics: false; property bool lyricsUseRomaji: false }
+                property JsonObject lyrics: JsonObject { property bool showFloatingLyrics: false; property bool lyricsUseRomaji: false; property bool showRomanization: false; property bool showTranslation: false }
             }
 
             property JsonObject audio: JsonObject {

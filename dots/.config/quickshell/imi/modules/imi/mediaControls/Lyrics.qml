@@ -46,6 +46,10 @@ Item {
     // font, word scale, and the list's own resize - so a line growing
     // as it becomes active reads as a single coordinated motion.
     readonly property int growDuration: 320
+    // Romanization/translation toggles, persisted. Shown as footer buttons
+    // only when the fetched source actually carries them.
+    property bool showRomanization: Config.options.appearance.lyrics.showRomanization
+    property bool showTranslation: Config.options.appearance.lyrics.showTranslation
 
     implicitWidth: 200
     implicitHeight: 200
@@ -110,6 +114,7 @@ Item {
                 width: lyricsList.width
                 implicitHeight: (lyricSlot.filler ? fillerNote.implicitHeight
                     : lyricSlot.karaokeWords ? wordColumn.implicitHeight : slotText.implicitHeight)
+                    + (lyricSlot.hasExtras ? extrasColumn.implicitHeight + Appearance.spacing.space50 : 0)
                     + Appearance.spacing.space50
                 // The size changes are transformations too: an active line
                 // growing a tier, or swapping to the word flow, eases the
@@ -118,6 +123,9 @@ Item {
 
                 readonly property int dist: Math.abs(index - LyricsService.activeIndex)
                 readonly property bool isActive: index === LyricsService.activeIndex
+                readonly property string rowRomanized: root.showRomanization ? LyricsService.lineRomanized(index) : ""
+                readonly property string rowTranslated: root.showTranslation ? LyricsService.lineTranslated(index) : ""
+                readonly property bool hasExtras: isActive && (rowRomanized.length > 0 || rowTranslated.length > 0)
                 readonly property bool filler: lyricSlot.modelData.filler === true
                 // Word stamps from the source drive the animated word flow;
                 // a line-level source gets the glyph-masked comet sweep.
@@ -391,6 +399,95 @@ Item {
                             }
                         }
                     }
+                }
+
+                // Romanization / translation under the active line, when the
+                // matching toggle is on and the source carried them.
+                Column {
+                    id: extrasColumn
+                    visible: lyricSlot.hasExtras
+                    width: lyricSlot.width - root.sidePadding * 2
+                    y: (lyricSlot.karaokeWords ? wordColumn.implicitHeight : slotText.implicitHeight)
+                        + Appearance.spacing.space50
+                    anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter ? parent.horizontalCenter : undefined
+                    anchors.left: root.textAlignment === Text.AlignHCenter ? undefined : parent.left
+                    anchors.leftMargin: root.textAlignment === Text.AlignHCenter ? 0 : root.sidePadding
+                    spacing: 0
+                    StyledText {
+                        visible: lyricSlot.rowRomanized.length > 0
+                        width: parent.width
+                        horizontalAlignment: root.textAlignment
+                        wrapMode: Text.WordWrap
+                        text: lyricSlot.rowRomanized
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: root.dimColor
+                    }
+                    StyledText {
+                        visible: lyricSlot.rowTranslated.length > 0
+                        width: parent.width
+                        horizontalAlignment: root.textAlignment
+                        wrapMode: Text.WordWrap
+                        text: lyricSlot.rowTranslated
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        font.italic: true
+                        color: root.dimColor
+                    }
+                }
+            }
+        }
+
+        // Footer: which source answered, and the romanize/translate toggles -
+        // shown only where the source carried each.
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: root.sidePadding
+            Layout.rightMargin: root.sidePadding
+            Layout.bottomMargin: Appearance.spacing.space50
+            spacing: Appearance.spacing.space100
+            visible: LyricsService.status === "ok"
+
+            StyledText {
+                visible: LyricsService.source.length > 0
+                text: Translation.tr("via %1").arg(LyricsService.source)
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                color: root.dimColor
+                opacity: 0.7
+            }
+            Item { Layout.fillWidth: true }
+            RippleButton {
+                visible: LyricsService.hasRomanization
+                implicitWidth: 28; implicitHeight: 28
+                buttonRadius: Appearance.rounding.full
+                toggled: root.showRomanization
+                onClicked: {
+                    root.showRomanization = !root.showRomanization
+                    Config.options.appearance.lyrics.showRomanization = root.showRomanization
+                }
+                contentItem: MaterialSymbol {
+                    anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: "translate"
+                    iconSize: Appearance.font.pixelSize.normal
+                    color: root.showRomanization ? root.activeColor : root.dimColor
+                }
+            }
+            RippleButton {
+                visible: LyricsService.hasTranslation
+                implicitWidth: 28; implicitHeight: 28
+                buttonRadius: Appearance.rounding.full
+                toggled: root.showTranslation
+                onClicked: {
+                    root.showTranslation = !root.showTranslation
+                    Config.options.appearance.lyrics.showTranslation = root.showTranslation
+                }
+                contentItem: MaterialSymbol {
+                    anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: "language"
+                    iconSize: Appearance.font.pixelSize.normal
+                    color: root.showTranslation ? root.activeColor : root.dimColor
                 }
             }
         }
