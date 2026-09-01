@@ -22,7 +22,11 @@ own repo; the installer pins which revision it builds.
   frame, and the active emphasis dropped its discrete per-word bold snap in
   favour of the animating size+colour. A still-singing previous line keeps its
   size (keyed on lineHot) and stays lit through the activeIndex anticipation,
-  fixing the tail-line being dropped early.
+  fixing the tail-line being dropped early. Whole-line emphasis
+  (opacity/scale) now follows the same keep-alive, font.weight tweens on the
+  variable fonts instead of snapping, and `sungEnd` scans all words for the
+  latest end - BetterLyrics appends background vocals out of time order, and
+  taking the last element dropped still-singing chorus lines seconds early.
 
 ## [1.0.0-rc-4] — 2026-09-01
 
