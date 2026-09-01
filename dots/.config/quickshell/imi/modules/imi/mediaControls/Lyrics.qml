@@ -36,6 +36,9 @@ Item {
     property color indicatorColor: Appearance.colors.colPrimaryContainer
     property color indicatorShapeColor: Appearance.colors.colOnPrimaryContainer
     property int textAlignment: Text.AlignLeft
+    // Lines breathe in from the panel edges; a long line wraps inside this
+    // column instead of running to the side.
+    property real sidePadding: Appearance.spacing.space300
 
     implicitWidth: 200
     implicitHeight: 200
@@ -181,6 +184,8 @@ Item {
                     id: slotText
                     anchors.left: parent.left
                     anchors.right: parent.right
+                    anchors.leftMargin: root.sidePadding
+                    anchors.rightMargin: root.sidePadding
                     visible: !lyricSlot.karaokeWords && !lyricSlot.filler
                     horizontalAlignment: root.textAlignment
                     wrapMode: Text.WordWrap
@@ -255,7 +260,7 @@ Item {
                         }
                         return total + Math.max(0, count - 1) * wordFlow.spacing;
                     }
-                    width: Math.min(wordFlow.naturalWidth, lyricSlot.width)
+                    width: Math.min(wordFlow.naturalWidth, lyricSlot.width - root.sidePadding * 2)
                     anchors.horizontalCenter: root.textAlignment === Text.AlignHCenter
                         ? parent.horizontalCenter : undefined
                     anchors.left: root.textAlignment === Text.AlignHCenter

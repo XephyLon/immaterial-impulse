@@ -83,10 +83,11 @@ Item {
             }
 
             Lyrics {
-            player: root.player
+                player: root.player
                 id: lyricsComp
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                textAlignment: Text.AlignHCenter
                 textColor: root.blendedColors.colOnLayer0
                 activeColor: root.blendedColors.colPrimary
                 dimColor: root.blendedColors.colSubtext
