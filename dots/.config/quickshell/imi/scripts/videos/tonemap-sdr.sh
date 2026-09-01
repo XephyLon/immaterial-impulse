@@ -150,7 +150,18 @@ if [[ "$filters" == *libplacebo* ]] \
     VF="libplacebo=tonemapping=auto:src_max=$PEAK_NITS:colorspace=bt709:color_primaries=bt709:color_trc=bt709:format=yuv420p"
     HW=(-init_hw_device vulkan)
 else
-    VF="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0:peak=$PEAK,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+    # The 0.88 saturation trim is measured, not tasted: scored against the
+# compositor's own SDR rendering of the same HDR region (grim of the
+# rect vs this chain on a real KMS HDR capture, zero-drift control
+# confirmed on static content), the chain alone runs +0.029 mean
+# saturation hot - the "more saturated than normal" report - because
+# zscale clips bt2020 primaries into bt709 and desat=0 keeps every
+# clipped color at full chroma. eq=0.88 zeroes the excess (-0.001)
+# and lowers total error too (12.89 vs 13.05/255). The desat knob is
+# not the tool: at this low peak desat=0.5 scored 50.8/255. Applied
+# to the CPU chains only - libplacebo does real gamut mapping and
+# must not be double-corrected (still uninitialisable here anyway).
+VF="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0:peak=$PEAK,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,eq=saturation=0.88"
     HW=()
 fi
 
@@ -170,7 +181,7 @@ width="$(ffprobe -v error -select_streams v:0 -show_entries stream=width \
 
 # The vaapi rung uses the CPU tonemap chain: mixing the Vulkan libplacebo
 # filter with a VAAPI hwupload made ffmpeg's format negotiation fall over.
-VF_CPU="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0:peak=$PEAK,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+VF_CPU="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0:peak=$PEAK,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,eq=saturation=0.88"
 
 try_encode() {
     local enc="$1" vfarg="$VF" hw=("${HW[@]}") pre=() args=()
