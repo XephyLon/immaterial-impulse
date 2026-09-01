@@ -131,5 +131,39 @@ class WordTimingTests(unittest.TestCase):
         self.assertEqual(payload["lines"][0]["words"], [[1.0, "hi"], [2.0, "ho"]])
 
 
+
+class GlassyDomTests(unittest.TestCase):
+    """The pure half of the CDP provider: DOM payload -> lines, track-guarded."""
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "scripts/lyrics"))
+        import glassy_dom
+        self.mod = glassy_dom
+
+    def payload(self, title="Lost Control", byline="Alan Walker, Sorana - 2 views"):
+        return {"title": title, "byline": byline, "lines": [
+            {"t": 12.0, "text": "Won't let go",
+             "words": [[12.0, "Won't"], [12.3, "let"], [12.6, "go"]]},
+            {"t": 15.0, "text": "of me", "words": [[15.0, "of"], [15.2, "me"]]},
+        ]}
+
+    def test_words_come_through(self):
+        lines = self.mod.lines_from_dom(self.payload(), "Lost Control", "Alan Walker & Sorana")
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0][2], [(12.0, "Won't"), (12.3, "let"), (12.6, "go")])
+
+    def test_wrong_title_is_refused(self):
+        self.assertIsNone(self.mod.lines_from_dom(
+            self.payload(title="Some Other Song"), "Lost Control", "Alan Walker"))
+
+    def test_wrong_artist_is_refused(self):
+        self.assertIsNone(self.mod.lines_from_dom(
+            self.payload(byline="Somebody Else - views"), "Lost Control", "Alan Walker & Sorana"))
+
+    def test_glassy_answers_before_every_network_provider(self):
+        source = (ROOT / "scripts/lyrics/lyrics.py").read_text(encoding="utf-8")
+        self.assertIn("(from_glassy, from_unison, from_lrclib)", source)
+
+
 if __name__ == "__main__":
     unittest.main()

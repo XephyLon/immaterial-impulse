@@ -3,6 +3,9 @@
 
 Provider chain, in order:
 
+ 0. GlassyMusic's own BetterLyrics DOM over CDP (glassy_dom.py) - the full
+    richsync the app is already showing, word stamps included, when the app
+    runs with a debug port. Track-guarded; fails soft to the chain below.
  1. BetterLyrics' community API (unison.boidu.dev) - prioritized on the
     maintainer's call after comparing sync quality. Rows carry their body in
     `lyrics` with a `format` of lrc/ttml/plain; plain is unsynced and the
@@ -181,6 +184,14 @@ def from_lrclib(title, artist, duration):
     return None
 
 
+def from_glassy(title, artist, duration):
+    try:
+        import glassy_dom
+    except ImportError:
+        return None
+    return glassy_dom.fetch(title, artist)
+
+
 def main():
     if len(sys.argv) < 3:
         print("no_info")
@@ -190,7 +201,7 @@ def main():
         duration = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     except ValueError:
         duration = 0.0
-    for provider in (from_unison, from_lrclib):
+    for provider in (from_glassy, from_unison, from_lrclib):
         lines = provider(title, artist, duration)
         if lines:
             print(json.dumps({"ok": True, "lines": [
