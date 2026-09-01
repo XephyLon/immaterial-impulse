@@ -145,18 +145,35 @@ def fetch(title, artist):
     if not ws_url:
         return None
 
+    # Glassy's BetterLyrics renders its DOM asynchronously after a track
+    # change (it fetches over the network), so the shell's fetch on that
+    # same change often arrives before the lines exist - which handed the
+    # track to LyricsPlus and never came back. Poll the DOM for a few
+    # seconds: re-evaluate until the matching lines appear or the window
+    # closes. One websocket for the whole poll.
     async def run():
         async with websockets.connect(ws_url, max_size=20_000_000, open_timeout=4) as ws:
-            await ws.send(json.dumps({"id": 1, "method": "Runtime.evaluate",
-                "params": {"expression": EXTRACT_JS, "returnByValue": True}}))
+            mid = 0
+            deadline = asyncio.get_event_loop().time() + 3.0
             while True:
-                reply = json.loads(await asyncio.wait_for(ws.recv(), timeout=6))
-                if reply.get("id") == 1:
-                    value = reply.get("result", {}).get("result", {}).get("value")
-                    return json.loads(value) if value else None
+                mid += 1
+                await ws.send(json.dumps({"id": mid, "method": "Runtime.evaluate",
+                    "params": {"expression": EXTRACT_JS, "returnByValue": True}}))
+                payload = None
+                while True:
+                    reply = json.loads(await asyncio.wait_for(ws.recv(), timeout=6))
+                    if reply.get("id") == mid:
+                        value = reply.get("result", {}).get("result", {}).get("value")
+                        payload = json.loads(value) if value else None
+                        break
+                lines = lines_from_dom(payload, title, artist)
+                if lines:
+                    return lines
+                if asyncio.get_event_loop().time() >= deadline:
+                    return None
+                await asyncio.sleep(0.4)
 
     try:
-        payload = asyncio.run(run())
+        return asyncio.run(run())
     except Exception:
         return None
-    return lines_from_dom(payload, title, artist)
