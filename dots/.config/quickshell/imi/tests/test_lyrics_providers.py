@@ -212,23 +212,28 @@ class LyricsPlusTests(unittest.TestCase):
 
     def payload(self):
         return {"type": "Word", "lyrics": [
-            {"time": 11044, "duration": 2958, "text": "You were the light",
+            {"time": 390, "text": "I wanna be a provider",
              "syllabus": [
-                {"time": 11044, "duration": 362, "text": "You "},
-                {"time": 11406, "duration": 429, "text": "were "},
-                {"time": 11835, "duration": 143, "text": "the "},
-                {"time": 11978, "duration": 868, "text": "light"}]},
+                {"time": 390, "duration": 410, "text": "I "},
+                {"time": 800, "duration": 850, "text": "wanna "},
+                {"time": 1650, "duration": 440, "text": "be "},
+                {"time": 2090, "duration": 410, "text": "a "},
+                {"time": 2500, "duration": 380, "text": "pro"},
+                {"time": 2880, "duration": 690, "text": "vi"},
+                {"time": 3570, "duration": 500, "text": "der"}]},
             {"time": 20000, "text": "line-level only", "syllabus": []},
         ]}
 
-    def test_words_have_ms_to_seconds_time_and_duration(self):
+    def test_syllables_rejoin_into_words(self):
         lines = lyrics.parse_lyricsplus(self.payload())
         self.assertEqual(len(lines), 1)  # the syllabus-less line is dropped
         t, text, words = lines[0]
-        self.assertAlmostEqual(t, 11.044, places=3)
-        self.assertEqual(text, "You were the light")
-        self.assertEqual(words[0], (11.044, "You", 0.362))
-        self.assertEqual(words[3][1], "light")
+        self.assertAlmostEqual(t, 0.39, places=3)
+        self.assertEqual([w[1] for w in words], ["I", "wanna", "be", "a", "provider"])
+        # "provider" carries its three syllables; "I" carries none.
+        provider = words[-1]
+        self.assertEqual([s[1] for s in provider[3]], ["pro", "vi", "der"])
+        self.assertEqual(len(words[0]), 3)  # single-syllable word: no sub-array
 
     def test_non_word_type_is_refused(self):
         self.assertIsNone(lyrics.parse_lyricsplus({"type": "Line", "lyrics": []}))

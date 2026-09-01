@@ -250,6 +250,37 @@ def from_cubey(title, artist, duration):
     return parse_cubey(payload)
 
 
+def reassemble_words(syllables):
+    """Flat [(time, text, dur?), ...] -> word entries, split on the trailing
+    space Apple/Musixmatch mark word boundaries with. A word that spanned
+    several syllables ("pro"+"vi"+"der") becomes one entry carrying its
+    syllables as sub-units; a single-syllable word carries none. Word time is
+    its first syllable's, its duration runs to the last syllable's end.
+    """
+    words, current = [], []
+    def flush():
+        if not current:
+            return
+        start = current[0][0]
+        last = current[-1]
+        end = last[0] + last[2] if len(last) > 2 and last[2] is not None else last[0]
+        text = "".join(s[1] for s in current).strip()
+        if not text:
+            current.clear()
+            return
+        entry = [start, text, max(0.0, end - start)]
+        if len(current) > 1:
+            entry.append([[s[0], s[1].strip()] for s in current if s[1].strip()])
+        words.append(tuple(entry))
+        current.clear()
+    for syl in syllables:
+        current.append(syl)
+        if syl[1].endswith((" ", "\u00a0", "\n")):
+            flush()
+    flush()
+    return words
+
+
 LYRICSPLUS_URL = "https://lyricsplus.prjktla.my.id/v2/lyrics/get"
 
 
@@ -262,20 +293,18 @@ def parse_lyricsplus(payload):
     out = []
     for line in payload.get("lyrics") or []:
         syllabus = line.get("syllabus") or []
-        words = []
+        raw = []
         for syl in syllabus:
             try:
                 wt = float(syl["time"]) / 1000.0
             except (KeyError, TypeError, ValueError):
                 continue
-            text = str(syl.get("text", "")).strip()
-            if not text:
+            text = str(syl.get("text", ""))  # keep trailing space - the boundary
+            if not text.strip():
                 continue
-            entry = [wt, text]
             dur = syl.get("duration")
-            if isinstance(dur, (int, float)):
-                entry.append(float(dur) / 1000.0)
-            words.append(tuple(entry))
+            raw.append((wt, text, float(dur) / 1000.0 if isinstance(dur, (int, float)) else None))
+        words = reassemble_words(raw)
         if not words:
             continue
         try:

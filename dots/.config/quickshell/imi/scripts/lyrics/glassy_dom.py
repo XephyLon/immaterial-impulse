@@ -25,6 +25,11 @@ EXTRACT_JS = """(() => {
         // flat spans only as a fallback for lines without groups.
         const groups = [...line.querySelectorAll('.blyrics-word-group')];
         let words;
+        // Prefer word-groups (whole word in data-content). Where a track
+        // is not wrapped in them, reassemble the flat syllable spans by the
+        // trailing space that marks a word boundary - a syllable keeps its
+        // OWN textContent (with the space), never .trim(), so the boundary
+        // survives; "pro"+"vi"+"der" rejoins into one word.
         if (groups.length > 0) {
             words = groups.map(group => {
                 const syls = [...group.querySelectorAll('.blyrics--word')]
@@ -39,14 +44,30 @@ EXTRACT_JS = """(() => {
                 return [start,
                         (group.dataset.content || group.textContent || '').trim(),
                         Math.max(0, end - start),
-                        syls.map(([st, sw]) => [st, sw])];
+                        syls.length > 1 ? syls.map(([st, sw]) => [st, sw]) : null];
             });
         } else {
-            words = [...line.querySelectorAll('.blyrics--word')]
-                .map(w => [parseFloat(w.dataset.time),
-                           (w.dataset.content || w.textContent || '').trim()]);
+            const flat = [...line.querySelectorAll('.blyrics--word')]
+                .map(s => ({ t: parseFloat(s.dataset.time),
+                             text: (s.textContent || ''),
+                             dur: parseFloat(s.dataset.duration) }))
+                .filter(s => Number.isFinite(s.t) && s.text.trim().length > 0);
+            words = [];
+            let cur = [];
+            const flush = () => {
+                if (cur.length === 0) return;
+                const start = cur[0].t;
+                const last = cur[cur.length - 1];
+                const end = Number.isFinite(last.dur) ? last.t + last.dur : last.t;
+                const text = cur.map(s => s.text).join('').trim();
+                if (text) words.push([start, text, Math.max(0, end - start),
+                    cur.length > 1 ? cur.map(s => [s.t, s.text.trim()]) : null]);
+                cur = [];
+            };
+            for (const s of flat) { cur.push(s); if (/\s$/.test(s.text)) flush(); }
+            flush();
         }
-        words = words.filter(([t, w]) => Number.isFinite(t) && w.length > 0);
+        words = words.filter(([t, w]) => Number.isFinite(t) && (w || '').length > 0);
         return {
             t: parseFloat(line.dataset.time),
             text: words.map(([, w]) => w).join(' '),
