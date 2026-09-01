@@ -238,5 +238,38 @@ class LyricsPlusTests(unittest.TestCase):
         self.assertIn("(from_glassy, from_lyricsplus, from_cubey, from_unison, from_lrclib)", source)
 
 
+
+class NormalizeTrackTests(unittest.TestCase):
+    def n(self, title, artist):
+        return lyrics.normalize_track(title, artist)
+
+    def test_youtube_suffix_and_packed_artist(self):
+        # Firefox: everything in the title, no artist.
+        self.assertEqual(self.n("Sleep Token - Provider - YouTube", ""),
+                         ("Provider", "Sleep Token"))
+
+    def test_vevo_channel_artist(self):
+        # plasma-browser-integration: channel as artist.
+        self.assertEqual(self.n("Sleep Token - Provider", "SleepTokenVEVO"),
+                         ("Provider", "Sleep Token"))
+
+    def test_topic_channel(self):
+        self.assertEqual(self.n("Blinding Lights", "The Weeknd - Topic"),
+                         ("Blinding Lights", "The Weeknd"))
+
+    def test_official_noise_stripped(self):
+        title, artist = self.n("Faded (Official Music Video)", "")
+        self.assertEqual(title, "Faded")
+
+    def test_clean_player_untouched(self):
+        # Spotify: already correct, must not be mangled.
+        self.assertEqual(self.n("Diamonds", "Rihanna"), ("Diamonds", "Rihanna"))
+
+    def test_hyphen_title_kept_when_artist_is_real(self):
+        # A real artist means the title's hyphen is not an "artist - song".
+        self.assertEqual(self.n("Song - Part II", "Some Band"),
+                         ("Song - Part II", "Some Band"))
+
+
 if __name__ == "__main__":
     unittest.main()

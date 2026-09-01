@@ -304,11 +304,63 @@ def from_glassy(title, artist, duration):
     return glassy_dom.fetch(title, artist)
 
 
+# Browser MPRIS metadata is dirty: YouTube tabs report a title like
+# "Sleep Token - Provider - YouTube" with no artist, or a "SleepTokenVEVO"
+# channel as the artist - none of which a lyrics search matches. This
+# normalizes them into a real title/artist, and is a no-op for a well-formed
+# player (Spotify's "Diamonds" / "Rihanna" survives untouched).
+TITLE_SUFFIXES = (" - youtube music", " - youtube", " - topic")
+NOISE = re.compile(
+    r"\s*[\(\[]\s*(official\s*(music\s*)?(video|audio|lyric(s)?(\s*video)?)"
+    r"|lyric(s)?(\s*video)?|audio|visuali[sz]er|music\s*video|m/?v|hd|4k"
+    r"|remaster(ed)?(\s*\d{4})?)\s*[\)\]]",
+    re.IGNORECASE)
+
+
+def channel_artist(artist):
+    a = (artist or "").strip()
+    low = a.casefold()
+    return (not a) or low.endswith("vevo") or low.endswith("- topic") \
+        or low.endswith("official")
+
+
+def strip_channel(artist):
+    a = (artist or "").strip()
+    if a.casefold().endswith("vevo"):
+        a = a[:-4].strip()
+    if a.casefold().endswith("- topic"):
+        a = a[:-7].strip()
+    return a
+
+
+def normalize_track(title, artist):
+    title = (title or "").strip()
+    artist = (artist or "").strip()
+    low = title.casefold()
+    for suffix in TITLE_SUFFIXES:
+        if low.endswith(suffix):
+            title = title[: len(title) - len(suffix)].strip()
+            low = title.casefold()
+    title = NOISE.sub("", title).strip()
+    # "Artist - Song" packed into the title, with no usable artist of its own.
+    if channel_artist(artist) and " - " in title:
+        left, _, right = title.partition(" - ")
+        left, right = left.strip(), right.strip()
+        if left and right:
+            title, artist = right, left
+    else:
+        artist = strip_channel(artist)
+    return title, artist
+
+
 def main():
     if len(sys.argv) < 3:
         print("no_info")
         return 0
-    title, artist = sys.argv[1], sys.argv[2]
+    title, artist = normalize_track(sys.argv[1], sys.argv[2])
+    if not title:
+        print("no_info")
+        return 0
     try:
         duration = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     except ValueError:
