@@ -39,6 +39,9 @@ Item {
     // Lines breathe in from the panel edges; a long line wraps inside this
     // column instead of running to the side.
     property real sidePadding: Appearance.spacing.space300
+    // A line is right-to-left if it carries Hebrew/Arabic-block
+    // glyphs; its words must then lay out right to left.
+    function isRtl(s) { return /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(s || "") }
     // One duration for every size change - delegate height, word
     // font, word scale, and the list's own resize - so a line growing
     // as it becomes active reads as a single coordinated motion.
@@ -214,8 +217,20 @@ Item {
                             return Math.max(0, Math.min(1,
                                 (root.sweepPosition - span.start) / (span.end - span.start)))
                         }
-                        property real shownProgress: sweepProgress
-                        Behavior on shownProgress { NumberAnimation { duration: 140 } }
+                        // A line with no per-word timing gets a single sweep
+                        // at a FIXED speed, not one paced to the line's
+                        // duration - restarted each time this becomes the
+                        // active swept line. (sweepProgress stays defined for
+                        // reference but no longer drives the paint.)
+                        property real shownProgress: 0
+                        onVisibleChanged: if (visible) fixedSweep.restart()
+                        NumberAnimation on shownProgress {
+                            id: fixedSweep
+                            running: false
+                            from: 0; to: 1
+                            duration: 2200
+                            easing.type: Easing.Linear
+                        }
 
                         LinearGradient {
                             id: sweepSource
@@ -294,6 +309,9 @@ Item {
                         delegate: Row {
                             id: wordRow
                             required property var modelData
+                            // RTL lines pack their words right-to-left.
+                            layoutDirection: root.isRtl(lyricSlot.modelData.text)
+                                ? Qt.RightToLeft : Qt.LeftToRight
                             // Anchor to the stable column id, never `parent`
                             // (null for a frame at create/destroy - the source
                             // of the horizontalCenter-of-null warnings).
