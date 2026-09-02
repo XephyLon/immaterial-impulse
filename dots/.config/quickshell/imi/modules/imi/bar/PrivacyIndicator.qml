@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../common/functions/barEdges.js" as BarEdges
 
 // Privacy indicator pill (macOS/Android style). Only visible while an app is
 // actively using the microphone, camera, and/or screencast; hidden when idle.
@@ -126,6 +127,14 @@ MouseArea {
     // the overlay hosts it - so the widget that was clicked is what owns the
     // decision to keep it open.
     property bool controlsPinned: false
+    // The bar's one open state while the click-pinned controls are up: the
+    // anchor indicator on the popup-facing edge, as long as the pill.
+    PopupAnchorIndicator {
+        wraps: pill
+        edgeItem: root
+        edge: BarEdges.popupEdge(Config.options.bar.vertical, Config.options.bar.bottom)
+        shown: root.controlsPinned
+    }
     cursorShape: Qt.PointingHandCursor
     onClicked: root.controlsPinned = !root.controlsPinned
     // A click anywhere outside the card unpins, which is what the overlay's

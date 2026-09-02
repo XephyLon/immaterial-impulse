@@ -28,6 +28,7 @@ POPUP_OWNERS = {
     "DockerPlugin.qml": ("root.popupOpen", "contentLoader"),
     "DiscordVoicePlugin.qml": ("root.popupOpen", "content"),
     "SysTray.qml": ("root.trayOverflowOpen", "trayOverflowButton.background"),
+    "PrivacyIndicator.qml": ("root.controlsPinned", "pill"),
 }
 
 
@@ -106,7 +107,7 @@ class PopupOwnerTests(unittest.TestCase):
         # or it ships without the open state.
         for path in sorted(BAR.glob("*.qml")):
             text = strip_comments(path.read_text(encoding="utf-8"))
-            if re.search(r"property bool popupOpen\b", text) or "trayOverflowOpen" in text:
+            if re.search(r"property bool (popupOpen|controlsPinned)\b", text) or "trayOverflowOpen" in text:
                 self.assertIn(path.name, POPUP_OWNERS, f"{path.name} holds a popup open on a click; register it")
 
 
