@@ -105,14 +105,17 @@ ColumnLayout {
             // and the same four chips latched one per line there once the
             // page was built across frames ("This broke again").
             Layout.preferredWidth: buttonsFlow.naturalWidth
-            // Not paired with a `Layout.minimumWidth: 0`: an ALIGNED child is
-            // handed its preferred size and positioned, never resized, so the
-            // minimum is never consulted. A row too narrow for its chips
-            // therefore overflows rather than wrapping - measured, a 228px row
-            // leaves this Flow at its full 333px. That predates this fix and is
-            // its own change: making the chips yield means giving up
-            // `Layout.alignment`, and then the right edge has to be earned some
-            // other way.
+            // An ALIGNED child is handed its preferred size and positioned,
+            // never resized, so a row too narrow for its chips overflowed
+            // rather than wrapping - the Quick page's Bar style card, once a
+            // fifth style joined, drew its last chip past the card's edge
+            // (measured: a 461px Flow in a 442px card). On the unlabelled path
+            // the Flow FILLS its cell up to the natural width as a maximum: a
+            // wider cell leaves it at the natural width, right-aligned, and a
+            // narrower one gives it less, which is when the chips wrap for the
+            // real reason. The labelled path keeps its aligned natural width -
+            // the label beside it is what would yield, and it has no minimum.
+            Layout.maximumWidth: root.text ? Number.POSITIVE_INFINITY : buttonsFlow.naturalWidth
 
             Repeater {
                 model: root.options

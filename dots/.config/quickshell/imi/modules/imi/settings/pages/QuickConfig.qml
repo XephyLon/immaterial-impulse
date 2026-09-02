@@ -600,8 +600,10 @@ ContentPage {
 
                         ConfigSelectionArray {
                             id: barStyleArray
-                            Layout.fillWidth: false
-                            Layout.alignment: Qt.AlignRight
+                            // Fills its card: the array's own Flow keeps its natural
+                            // width as a maximum and right-aligns, so what this gives
+                            // up is only the overflow.
+                            Layout.fillWidth: true
                             currentValue: Config.options.bar.cornerStyle
                             onSelected: newValue => { Config.options.bar.cornerStyle = newValue; }
                             options: [
@@ -643,8 +645,10 @@ ContentPage {
 
                         ConfigSelectionArray {
                             id: groupStyleArray
-                            Layout.fillWidth: false
-                            Layout.alignment: Qt.AlignRight
+                            // Fills its card: the array's own Flow keeps its natural
+                            // width as a maximum and right-aligns, so what this gives
+                            // up is only the overflow.
+                            Layout.fillWidth: true
                             currentValue: Config.options.bar.borderless
                             onSelected: newValue => { Config.options.bar.borderless = newValue; }
                             options: [
