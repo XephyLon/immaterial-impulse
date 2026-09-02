@@ -7,6 +7,7 @@ import Quickshell.Wayland
 import qs
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 import "bar_popup_unroll.js" as BarPopupUnroll
 
 // One always-mapped layer surface per screen, hosting the single card every bar
@@ -650,7 +651,14 @@ Scope {
                 opacity: Math.max(0, Math.min(1, card.openProgress))
                 visible: width > 0 && height > 0
 
-                color: Appearance.colors.colLayer1Base
+                // Thinned by the same background transparency the bar, the
+                // sidebars and the dock draw at, so Settings > Quick's "Shell
+                // opacity" reaches the popups too; opaque with transparency
+                // off, as colLayer1Base always was. The compositor blurs this
+                // surface above PopupBlurThreshold's line, which already sits
+                // below the bar's body - fainter than this card, since the bar
+                // thins colLayer0 by its own opacity as well.
+                color: ColorUtils.transparentize(Appearance.colors.colLayer1Base, Appearance.backgroundTransparency)
                 radius: Appearance.rounding.normal + 4
                 border.width: Appearance.borderWidth.standard
                 border.color: Appearance.colors.colLayer0Border
