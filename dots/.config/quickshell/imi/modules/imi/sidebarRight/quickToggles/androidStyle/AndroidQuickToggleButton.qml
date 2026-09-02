@@ -370,7 +370,12 @@ GroupButton {
         onClicked: root.addRequested(root.buttonData.type)
     }
 
-    // del
+    // Edit-mode badges sit INSIDE the tile, both on its right edge: remove at
+    // the top, resize at the bottom. They used to hang 8px outside opposite
+    // corners, and in an 8px gutter one tile's remove badge landed beside
+    // its neighbour's resize handle - a user could not tell which tile either
+    // belonged to - while the bottom row's handles fell outside the grid and
+    // were clipped. Inside, on one edge, a badge can only be its own tile's.
     Rectangle {
         id: deleteBtn
         visible: root.editMode && !root.isUnused
@@ -380,9 +385,9 @@ GroupButton {
         radius: Appearance.rounding.full
         color: deleteHover.containsMouse ? Appearance.colors.colError : ColorUtils.transparentize(Appearance.colors.colError, 0.15)
         anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.topMargin: -Appearance.spacing.space100
-        anchors.leftMargin: -Appearance.spacing.space100
+        anchors.right: parent.right
+        anchors.topMargin: Appearance.spacing.space50
+        anchors.rightMargin: Appearance.spacing.space50
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
@@ -419,8 +424,8 @@ GroupButton {
         color: resizeHover.containsMouse ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colPrimary, 0.15)
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.bottomMargin: -Appearance.spacing.space100
-        anchors.rightMargin: -Appearance.spacing.space100
+        anchors.bottomMargin: Appearance.spacing.space50
+        anchors.rightMargin: Appearance.spacing.space50
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
