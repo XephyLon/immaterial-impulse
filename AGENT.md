@@ -6661,6 +6661,19 @@ the score at 0.01 - a lifetime past the flag, which is the whole of the rule. Th
 refuses a bare `visible:` on state in the surface and the toolbar.
 ("fix(typing): nothing in the test snaps in or out on state").
 
+**An icon in a circle on the bar is an OUTLINED ring under every bar style but M3.** The
+maintainer's rule (2026-09-02), with the resource monitor's four rings as the reference: a bar
+widget that puts a glyph in a circle draws the ring, not a disc, unless the style is M3, where the
+tonal pill is the container and the circle is filled. Where the circle means progress - and on the
+bar it usually does: the resource monitor's usage, the media widget's position, the Docker widget's
+running-over-total - it is `ClippedOutlineCircularProgress`, with `ClippedFilledCircularProgress`
+only for M3 (and the resource monitor's own Filled option). The style decision stays in the bar
+widget: a shared ring widget that read `Config.options.bar.cornerStyle` was written first and
+refused by `lint_dumb_widgets`, which is right - the widget picks the component and passes the
+choice down. `tests/test_bar_icon_ring_contract.py` holds Media and Docker to it and lists every
+file that may use the filled ring.
+("fix(bar): the media and Docker circles are outline progress rings, as the resource monitor's").
+
 **A marquee is the answer for an IDENTITY, and where it may run is as much of the design as how it
 moves.** `MarqueeText` exists because every long label in this shell elides, which is honest about
 the truncation and useless about the content: a router that names its two bands and its guest

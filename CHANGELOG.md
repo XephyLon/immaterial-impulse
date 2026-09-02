@@ -21,6 +21,11 @@ own repo; the installer pins which revision it builds.
   the same blur, shadow and background switches as Float.
 
 ### Fixed
+- **Bar icons in circles are outlined rings under every style but M3.** The
+  media widget's progress circle and the Docker widget's container gauge
+  were filled discs whatever the bar style; both are outline progress rings
+  now, the resource monitor's vocabulary, with the filled ring kept for M3
+  (and for the resource monitor's own Filled option).
 - **The typing test's key sounds play.** They were silent: Qt 6.11's
   `SoundEffect` reports itself playing while its PipeWire stream stays corked
   and muted. The pool is `MediaPlayer`s naming the default output now.
