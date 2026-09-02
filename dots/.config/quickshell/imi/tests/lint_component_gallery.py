@@ -75,6 +75,11 @@ EXCLUDED = {
         "consumer, and the maintainer's bar had it in the first slot",
     "modules/imi/bar/PowerButton.qml":
         "the same: `powerButton` in a layout, opens the session menu on press",
+    "modules/imi/bar/DockerPlugin.qml":
+        "the same shape again: `plugin:docker_plugin` in a layout, reads the "
+        "Docker service for its gauge and count and opens its container popup "
+        "on press. It joined this set the day it became a RippleButton so a "
+        "click has a press - the lint working, as with the quick toggles",
     "modules/imi/dock/DockAppButton.qml":
         "a dock entry is a running window's button - it takes a toplevel and "
         "an app id, and a bare one is an empty square that teaches nothing",
