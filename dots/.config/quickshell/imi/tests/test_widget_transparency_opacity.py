@@ -74,7 +74,14 @@ class TheDerivationIsCentral(unittest.TestCase):
         body = body[:body.index("function presetPersisted")]
         self.assertIn("Config.options.appearance.transparency.enable", body)
         self.assertIn('"keepTranslucent"', body)
-        self.assertIn("Config.options.plugins.blurOpacity", body)
+        # The configured opacity moved out of the body into a property, so it
+        # can be the shell's opacity when plugins.followShellOpacity is on;
+        # the widgets' slider is still what it reads otherwise.
+        self.assertIn("root.configuredBackgroundOpacity", body)
+        prop = self.src[self.src.index("readonly property real configuredBackgroundOpacity"):]
+        prop = prop[:prop.index("function effectiveBackgroundOpacity(")]
+        self.assertIn("Config.options.plugins.followShellOpacity", prop)
+        self.assertIn("Config.options.plugins.blurOpacity", prop)
 
     def test_opaque_means_one_not_zero(self):
         """`transparentize(color, 1 - opacity)` is how every consumer applies
@@ -189,7 +196,9 @@ class TheInertControlsSaySo(unittest.TestCase):
         """Gating only the slider leaves its neighbour - the frost selector,
         dead for the same reason - looking live right next to it.
         """
-        self.assertEqual(self.src.count("enabled: root.widgetTranslucencyApplies"), 2)
+        # Three rows since "Follow shell opacity" joined the frost selector
+        # and the slider; the slider's gate also yields to the follow switch.
+        self.assertEqual(self.src.count("enabled: root.widgetTranslucencyApplies"), 3)
 
 
 class TheToggleReachesTheOtherPaintedSurfaces(unittest.TestCase):
