@@ -52,7 +52,7 @@ class SelectionArrayFlowTests(unittest.TestCase):
     # unlabelled path the Flow fills its cell up to the natural width as a
     # maximum; measured through QuickPageProbe.qml: 316px, two lines, 0 over.
     def test_an_unlabelled_flow_fills_up_to_its_natural_width_so_it_can_wrap(self):
-        text = strip_comments(SOURCE.read_text(encoding="utf-8"))
+        text = strip_comments(ROW.read_text(encoding="utf-8"))
         match = re.search(r"Layout\.maximumWidth:\s*(.+)", text)
         self.assertIsNotNone(match, "the Flow hands the layout no maximum, so it can never be given less")
         self.assertEqual(match.group(1).strip(),
@@ -67,6 +67,17 @@ class SelectionArrayFlowTests(unittest.TestCase):
         for body in card_rows:
             self.assertNotIn("Layout.fillWidth: false", body,
                              "a row that refuses width cannot wrap, and overflows its card instead")
+
+    def test_the_bar_and_screen_cards_stack_in_one_column(self):
+        # The page is 720 wide. Two columns hand each card 316px of content and
+        # only one of the four chip rows fits that; the rest overflowed, or,
+        # once they could wrap, left an orphan chip on a second line beside a
+        # neighbour of a different height. One card per row holds every chip
+        # row on one line: measured 461px, the widest, in a 720px row.
+        quick = strip_comments((ROOT / "modules/imi/settings/pages/QuickConfig.qml").read_text(encoding="utf-8"))
+        section = quick[quick.index('Translation.tr("Bar & Screen")'):quick.index('Translation.tr("Screen round corner")')]
+        self.assertRegex(section, r"GridLayout \{[^}]*?columns:\s*1\b",
+                         "the Bar & Screen cards must stack, or the chip rows cannot fit")
 
 
 if __name__ == "__main__":
