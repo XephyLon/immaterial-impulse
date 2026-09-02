@@ -584,6 +584,20 @@ ShellRoot {
                               === Math.round(harness.before.x));
             harness.check("...all three cells at once, not one press at a time",
                           GlobalStates.editUndoStack.length === 0);
+            // The undone burst is one redo entry - swap's return, folded by
+            // composite - and redoing it replays the whole gesture forwards.
+            harness.check("the undone burst is one redo entry",
+                          GlobalStates.editRedoStack.length === 1);
+            GlobalStates.editRedo();
+        },
+        () => {
+            harness.check("redoing the burst puts the widget back three cells on",
+                          Math.round(harness.storedPosition("edit-move-probe").x)
+                              === Math.round(harness.before.x + canvas.gridSize * 3));
+            harness.check("...and hands the entry back to the undo stack",
+                          GlobalStates.editUndoStack.length === 1
+                              && GlobalStates.editRedoStack.length === 0);
+            GlobalStates.editUndo();
             canvas.clearSelection();
         },
 

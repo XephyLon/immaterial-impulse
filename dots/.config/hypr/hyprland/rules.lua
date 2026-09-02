@@ -159,7 +159,7 @@ hl.layer_rule({ match = { namespace = "quickshell:clockDepthSelect" }, blur = fa
 -- dock then slid downward, into the screen, to leave.
 hl.layer_rule({ match = { namespace = "quickshell:dock" }, animation = "slide"})
 -- Edit Mode's chrome: another full-screen surface that is transparent
--- everywhere except two opaque toolbars, because the desktop it frames is the
+-- everywhere except an opaque toolbar (and its drawer), because the desktop it frames is the
 -- real one underneath it. Same hazard as the subject selector above - under the
 -- catch-all 0.05 its transparent pixels clear the threshold and the compositor
 -- is asked to blur the whole screen - answered the other way round, because the
