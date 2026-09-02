@@ -19,7 +19,7 @@ import subprocess
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[5]  # the repo root: tui.sh is under sdata/, not the shell
 TUI = ROOT / "sdata/subcmd-install/tui.sh"
 
 
@@ -34,7 +34,7 @@ class SpinnerStaticTests(unittest.TestCase):
         self.loop = function_source("progress_loop", TUI.read_text(encoding="utf-8"))
 
     def test_the_loop_forks_nothing_for_time_or_sleep(self):
-        code = "\n".join(l for l in self.loop.splitlines() if not l.lstrip().startswith("#"))
+        code = "\n".join(re.sub(r"\s+#.*$", "", l) for l in self.loop.splitlines() if not l.lstrip().startswith("#"))
         self.assertNotRegex(code, r"\bsleep\b", "sleep is a process; use read -t on the held fd")
         self.assertNotIn("date +%s", code, "date is a process; use EPOCHSECONDS")
         self.assertIn("EPOCHSECONDS", code)
@@ -58,8 +58,10 @@ SPIN=(a b c d e f g h i j)
 log=$(mktemp); printf '1. Install dependencies\\nupgrading glibc...\\n' > "$log"
 # the child: alive for ~0.5s, via builtins only
 bash -c 'read -t 0.5 -u 9 9<> <(:) || true' & pid=$!
+saved_path=$PATH
 PATH=/nonexistent
 progress_loop "$pid" "$log"
+PATH=$saved_path
 rm -f "$log"
 """
         result = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=20)
