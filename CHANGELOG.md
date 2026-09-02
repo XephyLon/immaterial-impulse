@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The cheatsheet fits a 1080p laptop screen.** Its window is fixed-size and
+  as tall as its tallest page, and the Elements page was ~800px of fixed tiles
+  on any screen - so at a fractional scale (864 or 720 logical px) the window
+  sat under the bar and the dock, or ran off both screen edges. Pages now get
+  a budget derived from the monitor's own reserved area (what `hyprctl
+  monitors` reports for the bar and the dock) instead of a hard-coded 220px
+  allowance, and the Elements page scales itself into it.
+
 ## [1.0.0-rc-5] — 2026-09-02
 
 ### Changed

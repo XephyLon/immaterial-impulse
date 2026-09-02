@@ -9,6 +9,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import Quickshell
 import Quickshell.Hyprland
+import "../../common/functions/cheatsheetFit.js" as CheatsheetFit
 
 Scope { // Scope
     id: root
@@ -46,6 +47,32 @@ Scope { // Scope
             // The binding currently open in the keybind editor overlay, null
             // when the overlay is closed.
             property var editingBinding: null
+
+            // The part of the screen a floating window may take, from the
+            // monitor's own reserved area (the bar and the dock, as hyprctl
+            // reports them), and what that leaves a page once the window's
+            // chrome has taken its share. The window below is fixed-size and
+            // as tall as its tallest page, so the pages have to fit the screen
+            // by reading these: the Elements page was ~800px of fixed tiles on
+            // any screen, which on a 1080p laptop at 1.25x sat under the bar
+            // and the dock, and at 1.5x ran off both screen edges. Before
+            // HyprlandData has answered the reserve reads as nothing and the
+            // budget is the whole screen less the gaps, which is the same
+            // window as before on any screen that never clipped.
+            readonly property var monitorData: HyprlandData.monitors.find(m => m.name === cheatsheetRoot.screen?.name) ?? null
+            readonly property real usableWidth: CheatsheetFit.usableWidth(
+                cheatsheetRoot.screen?.width ?? 1920, cheatsheetRoot.monitorData?.reserved,
+                Appearance.sizes.hyprlandGapsOut)
+            readonly property real usableHeight: CheatsheetFit.usableHeight(
+                cheatsheetRoot.screen?.height ?? 1080, cheatsheetRoot.monitorData?.reserved,
+                Appearance.sizes.hyprlandGapsOut)
+            readonly property real pageWidthBudget: CheatsheetFit.pageBudget(
+                cheatsheetRoot.usableWidth,
+                cheatsheetBackground.padding * 2 + Appearance.spacing.space250 * 2)
+            readonly property real pageHeightBudget: CheatsheetFit.pageBudget(
+                cheatsheetRoot.usableHeight,
+                cheatsheetBackground.padding * 2 + cheatsheetToolbar.implicitHeight
+                    + Appearance.spacing.space50 + Appearance.spacing.space125)
 
             function hide() {
                 cheatsheetLoader.active = false;
@@ -151,6 +178,7 @@ Scope { // Scope
                     spacing: Appearance.spacing.space125
 
                     Toolbar {
+                        id: cheatsheetToolbar
                         Layout.alignment: Qt.AlignHCenter
                         enableShadow: false
                         ToolbarTabBar {
@@ -194,22 +222,22 @@ Scope { // Scope
 
                         CheatsheetKeybinds {
                             // The room the card may use before it starts
-                            // growing past the screen, minus the toolbar and
-                            // padding - what decides the column count.
-                            maxContentHeight: (cheatsheetRoot.screen?.height ?? 1080) - 220
-                            // And the room across. Columns trade height for
-                            // width, so a screen with height to spare but not
-                            // width was asked for more columns than fit and the
-                            // outer ones ran off both edges.
-                            maxContentWidth: (cheatsheetRoot.screen?.width ?? 1920)
-                                - Appearance.sizes.elevationMargin * 2
-                                - cheatsheetBackground.padding * 2
-                                - Appearance.spacing.space250 * 2
+                            // growing past the screen - what decides the
+                            // column count. Columns trade height for width,
+                            // so a screen with height to spare but not width
+                            // was asked for more columns than fit and the
+                            // outer ones ran off both edges; both budgets come
+                            // from the window, which reads the screen.
+                            maxContentHeight: cheatsheetRoot.pageHeightBudget
+                            maxContentWidth: cheatsheetRoot.pageWidthBudget
                             onEditRequested: bindingData => {
                                 cheatsheetRoot.editingBinding = bindingData;
                             }
                         }
-                        CheatsheetPeriodicTable {}
+                        CheatsheetPeriodicTable {
+                            maxContentHeight: cheatsheetRoot.pageHeightBudget
+                            maxContentWidth: cheatsheetRoot.pageWidthBudget
+                        }
 
                         // A Loader rather than the page itself: the gallery
                         // builds every shared widget in the library, and doing
