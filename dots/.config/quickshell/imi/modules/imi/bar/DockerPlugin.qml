@@ -9,7 +9,13 @@ import "../../common/plugins/bundled/docker" as DockerPackage
 // Native bar adapter for the bundled Docker manager. Its geometry follows the
 // same content-driven contract as WeatherBar so BarGroup remains the sole
 // owner of the surrounding layout size.
-MouseArea {
+//
+// A RippleButton, not a MouseArea: a click here opens the container popup,
+// and a bare area answered it with nothing - no ripple, no press, no state
+// while the popup was up. The button brings the interaction model (the
+// press squish and the ripple from the press point) and a tonal toggled
+// container while its popup is open, the tray's overflow button's grammar.
+RippleButton {
     id: root
 
     property bool vertical: Config.options.bar.vertical
@@ -78,19 +84,28 @@ MouseArea {
     implicitHeight: root.vertical
         ? (contentLoader.item?.implicitHeight ?? 0)
         : Appearance.sizes.barHeight
-    acceptedButtons: Qt.LeftButton
-    hoverEnabled: false
-    cursorShape: Qt.PointingHandCursor
+    toggled: root.popupOpen
+    buttonRadius: Appearance.rounding.full
+    colBackground: "transparent"
+    colBackgroundHover: Appearance.colors.colLayer1Hover
+    colRipple: Appearance.colors.colLayer1Active
+    colBackgroundToggled: Appearance.colors.colSecondaryContainer
+    colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
+    colRippleToggled: Appearance.colors.colSecondaryContainerActive
 
-    onClicked: {
+    downAction: () => {
         root.popupOpen = !root.popupOpen;
         if (root.popupOpen) DockerPackage.DockerService.refresh();
     }
 
-    Loader {
-        id: contentLoader
-        anchors.centerIn: parent
-        sourceComponent: root.vertical ? verticalContent : horizontalContent
+    contentItem: Item {
+        implicitWidth: contentLoader.implicitWidth
+        implicitHeight: contentLoader.implicitHeight
+        Loader {
+            id: contentLoader
+            anchors.centerIn: parent
+            sourceComponent: root.vertical ? verticalContent : horizontalContent
+        }
     }
 
     Component {
@@ -140,8 +155,8 @@ MouseArea {
         active: root.popupOpen
         sourceComponent: DockerPackage.DockerPopup {
             pinnedOpen: true
-            // StyledPopup uses its target for screen-relative positioning.
-            // Hover remains disabled on the MouseArea, so this is click-only.
+            // StyledPopup uses its target for screen-relative positioning;
+            // a RippleButton exposes no containsMouse, so this is click-only.
             hoverTarget: root
             // The overlay owns the surface, so it owns the outside-click grab.
             onDismissRequested: root.popupOpen = false
