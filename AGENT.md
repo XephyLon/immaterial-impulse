@@ -6578,7 +6578,10 @@ blurred surface - the bar, the sidebars, the dock, the settings window, the chea
 `colLayer0`, which `Appearance` thins by `backgroundTransparency`; Settings > Quick's "Shell
 opacity" slider is that amount inverted (`1 - appearance.transparency.backgroundTransparency`),
 inert while Automatic derives it from the wallpaper or while transparency is off. There is no
-per-surface slider: the surfaces share one colour. Desktop widgets keep their own slider
+per-surface slider: the surfaces share one colour. The bar popup card painted an opaque
+`colLayer1Base` by choice; it is thinned by the same amount now, and the compositor's threshold
+(`PopupBlurThreshold`) needs nothing new, since it already sits below the bar's body, which is
+fainter than the card ("feat(bar): the popup card follows the shell opacity"). Desktop widgets keep their own slider
 (`plugins.blurOpacity`) unless `plugins.followShellOpacity` is on, in which case
 `PluginState.configuredBackgroundOpacity` hands every panel `1 - Appearance.backgroundTransparency`
 - PluginState is the one place every widget's panel alpha already passes, so no widget reads

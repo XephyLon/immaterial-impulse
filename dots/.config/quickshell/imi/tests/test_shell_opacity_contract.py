@@ -47,6 +47,15 @@ class ShellOpacitySliderTests(unittest.TestCase):
         self.assertRegex(slider, r"enabled:\s*Config\.options\.appearance\.transparency\.enable && !Config\.options\.appearance\.transparency\.automatic")
 
 
+class PopupCardTests(unittest.TestCase):
+    def test_the_bar_popup_card_thins_with_the_shell(self):
+        # Opaque colLayer1Base by choice once; the slider reaches the popups
+        # by thinning it with the same amount, which stays 0 with transparency
+        # off. The blur threshold already sits below the bar's fainter body.
+        overlay = strip_comments((ROOT / "modules/imi/bar/BarPopupOverlay.qml").read_text(encoding="utf-8"))
+        self.assertIn("color: ColorUtils.transparentize(Appearance.colors.colLayer1Base, Appearance.backgroundTransparency)", overlay)
+
+
 class WidgetsFollowTests(unittest.TestCase):
     def setUp(self):
         self.widgets = strip_comments(WIDGETS.read_text(encoding="utf-8"))

@@ -15,8 +15,8 @@ own repo; the installer pins which revision it builds.
 ### Added
 - **A shell opacity slider.** Settings > Quick, beside the transparency
   switches: one opacity for every blurred shell surface - the bar, the
-  sidebars, the dock, the settings window, the cheatsheet. Inert while
-  Automatic picks the amount from the wallpaper.
+  sidebars, the dock, the settings window, the cheatsheet, and the bar's
+  popups. Inert while Automatic picks the amount from the wallpaper.
 - **Widgets can follow the shell opacity.** Settings > Widgets gains "Follow
   shell opacity": widget panels take the shell's value, and the widgets' own
   slider shows it and yields.
