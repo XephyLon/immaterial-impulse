@@ -608,7 +608,8 @@ ContentPage {
                                 { displayName: Translation.tr("Hug"), icon: "line_curve", value: 0 },
                                 { displayName: Translation.tr("Float"), icon: "view_day",   value: 1 },
                                 { displayName: Translation.tr("Islands"), icon: "crop_3_2",   value: 2 },
-                                { displayName: Translation.tr("M3"), icon: "interests",  value: 3 }
+                                { displayName: Translation.tr("M3"), icon: "interests",  value: 3 },
+                                { displayName: Translation.tr("Float Islands"), icon: "view_week", value: 4 }
                             ]
                         }
                     }

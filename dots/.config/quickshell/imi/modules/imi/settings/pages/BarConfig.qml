@@ -338,7 +338,8 @@ ContentPage {
                         { displayName: Translation.tr("Hug"),     icon: "line_curve", value: 0 },
                         { displayName: Translation.tr("Float"),   icon: "view_day",   value: 1 },
                         { displayName: Translation.tr("Islands"), icon: "crop_3_2",   value: 2 },
-                        { displayName: Translation.tr("M3"), icon: "interests",   value: 3 }
+                        { displayName: Translation.tr("M3"), icon: "interests",   value: 3 },
+                        { displayName: Translation.tr("Float Islands"), icon: "view_week", value: 4 }
                     ]
                 }
                 ConfigSelectionArray {
@@ -357,7 +358,7 @@ ContentPage {
                     ConfigSwitch {
                         buttonIcon: "variable_insert"
                         text: Translation.tr("Show Background")
-                        enabled: Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1
+                        enabled: Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4
                         checked: Config.options.bar.showBackground
                         onToggleRequested: Config.options.bar.showBackground = !Config.options.bar.showBackground
                     }
@@ -376,7 +377,7 @@ ContentPage {
                     buttonIcon: "ev_shadow"
                     text: Translation.tr("Bar shadow")
                     enabled: Config.options.bar.showBackground
-                        && (Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1)
+                        && (Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4)
                     checked: Config.options.bar.shadow
                     onToggleRequested: Config.options.bar.shadow = !Config.options.bar.shadow
                 }
