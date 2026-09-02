@@ -42,8 +42,13 @@ Item {
                 color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
             }
         }
+        // Every icon that comes and goes does so through a Revealer: the row
+        // slides closed over it instead of jumping when it leaves. Recorded
+        // with a bare `visible:` on the bell: gone between two frames a sixth
+        // of a second apart, the icons beside it snapping left.
         Revealer {
             reveal: Audio.source?.audio?.muted ?? false
+            vertical: root.vertical
             MaterialSymbol {
                 text: "mic_off"
                 iconSize: Appearance.font.pixelSize.larger
@@ -59,23 +64,35 @@ Item {
             iconSize: Appearance.font.pixelSize.larger
             color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
         }
-        MaterialSymbol {
-            visible: BluetoothStatus.available
-            text: BluetoothStatus.connected ? "bluetooth_connected" : BluetoothStatus.enabled ? "bluetooth" : "bluetooth_disabled"
-            iconSize: Appearance.font.pixelSize.larger
-            color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+        Revealer {
+            reveal: BluetoothStatus.available
+            vertical: root.vertical
+            MaterialSymbol {
+                text: BluetoothStatus.connected ? "bluetooth_connected" : BluetoothStatus.enabled ? "bluetooth" : "bluetooth_disabled"
+                iconSize: Appearance.font.pixelSize.larger
+                color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+            }
         }
-        MaterialSymbol {
-            visible: Vpn.anyActive
-            text: Vpn.materialSymbol
-            iconSize: Appearance.font.pixelSize.larger
-            color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+        Revealer {
+            reveal: Vpn.anyActive
+            vertical: root.vertical
+            MaterialSymbol {
+                text: Vpn.materialSymbol
+                iconSize: Appearance.font.pixelSize.larger
+                color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+            }
         }
-        Loader {
-            id: notifLoader
-            active: Notifications.silent || Notifications.unread > 0
-            visible: active
-            source: "NotificationUnreadCount.qml"
+        Revealer {
+            id: notifRevealer
+            reveal: Notifications.silent || Notifications.unread > 0
+            vertical: root.vertical
+            Loader {
+                id: notifLoader
+                // Stays loaded while the revealer is still closing over it,
+                // so what slides away is the bell, not an empty gap.
+                active: notifRevealer.reveal || notifRevealer.visible
+                source: "NotificationUnreadCount.qml"
+            }
         }
     }
 }
