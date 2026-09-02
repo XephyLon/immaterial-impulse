@@ -96,8 +96,7 @@ class TypingTestContractTests(unittest.TestCase):
         for the bare effect, a `quickshell` stream on the default sink once
         audioDevice is MediaDevices.defaultAudioOutput."""
         player = source("modules/imi/cheatsheet/typing/TypingSounds.qml")
-        effects = re.findall(r"SoundEffect \{(.*?)
-\s*\}", player, re.S)
+        effects = re.findall(r"SoundEffect \{(.*?)\n\s*\}", player, re.S)
         self.assertGreaterEqual(len(effects), 2)
         for body in effects:
             self.assertIn("audioDevice: outputs.defaultAudioOutput", body, body)
