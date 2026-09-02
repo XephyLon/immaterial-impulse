@@ -6541,8 +6541,24 @@ and back, at a distance-proportional speed with a floor — see the entry below 
 `Presence` (an element that fades in and out on a state and stays drawn until the fade out has
 finished, optionally giving up its room along an axis - the spelling for anything that would
 otherwise be a bare `visible:` on a state; `FadeLoader` is the same for a Loader, `Revealer` the
-size-only sibling).
+size-only sibling),
+`PopupAnchorOutline` (the one open state a bar widget has while a click holds its popup open: a
+dashed primary outline in the widget's rounding that fades in with its dashes marching and fades
+back out - see the entry below before painting a toggled container on a bar widget).
 All in `modules/common/widgets/`.
+
+**A bar widget's open state is the dashed anchor outline, never a tonal container.** The bar had no
+open state for a widget whose popup is up; the first one tried - `RippleButton`'s toggled tonal
+container, the tray overflow button's grammar - broke every bar style but M3: a filled pill behind
+the Docker gauge's bare ring. `PopupAnchorOutline` fills the widget and binds `shown` to the
+popup's open state; it is `ShapePath` geometry (a Canvas would be a GUI-thread raster on every
+frame the dashes move), its dashes tile the perimeter in whole counts so there is no half dash at
+the seam, and it rides two tokenised tiers - the effects tier for the fade, one spatial tier for the
+march both ways. Taken from the p3drovfx fork's expressive dashboard pill, minus its Canvas, its
+literal 800ms and its snap on close. `tests/test_bar_popup_anchor_contract.py` keeps a register of
+the click-held popups and fails on a new one that ships without it, or with a tonal container.
+("feat(bar): a widget's open popup marks its anchor with a dashed outline",
+"fix(bar): the Docker widget and the tray overflow wear the anchor outline instead of a tonal pill").
 
 **A catalogue's rows are one component, and it is deliberately not a control.** Edit Mode's drawer,
 every settings row and the widget store's cards all draw the same thing — a leading icon, a name, a
