@@ -245,9 +245,17 @@ Singleton {
         return (transparencyEnabled || keepTranslucent) ? baseOpacity : 1;
     }
 
+    // The opacity a widget panel is given when its caller passes none: the
+    // shell's own (Settings > Quick's "Shell opacity", the background
+    // transparency inverted - what the bar, the sidebars and the dock draw
+    // at) when `plugins.followShellOpacity` is on, else the widgets' slider.
+    readonly property real configuredBackgroundOpacity: Config.options.plugins.followShellOpacity
+        ? 1 - Appearance.backgroundTransparency
+        : Config.options.plugins.blurOpacity
+
     function effectiveBackgroundOpacity(pluginId, baseOpacity, keepTranslucentDefault) {
         return root.resolveBackgroundOpacity(
-            baseOpacity === undefined ? Config.options.plugins.blurOpacity : baseOpacity,
+            baseOpacity === undefined ? root.configuredBackgroundOpacity : baseOpacity,
             Config.options.appearance.transparency.enable,
             root.option(pluginId, "keepTranslucent", keepTranslucentDefault === true));
     }

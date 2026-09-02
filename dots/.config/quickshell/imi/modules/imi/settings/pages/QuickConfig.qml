@@ -304,6 +304,28 @@ ContentPage {
                 }
             }
 
+            // One opacity for every blurred shell surface - the bar, the
+            // sidebars, the dock, this window, the cheatsheet - since they all
+            // draw on colLayer0, which the background transparency thins. The
+            // slider is that amount inverted; it is inert while Automatic picks
+            // the amount from the wallpaper, and while transparency is off.
+            // Desktop widgets follow it through Settings > Widgets.
+            ConfigSlider {
+                Layout.fillWidth: true
+                enabled: Config.options.appearance.transparency.enable && !Config.options.appearance.transparency.automatic
+                text: Translation.tr("Shell opacity")
+                buttonIcon: "opacity"
+                from: 0
+                to: 1
+                usePercentTooltip: true
+                value: 1 - Config.options.appearance.transparency.backgroundTransparency
+                onValueModified: {
+                    const rounded = Math.round((1 - newValue) * 20) / 20;
+                    if (rounded !== Config.options.appearance.transparency.backgroundTransparency)
+                        Config.options.appearance.transparency.backgroundTransparency = rounded;
+                }
+            }
+
             ConfigSelectionArray {
                 icon: "brightness_auto"
                 text: Translation.tr("Auto dark/light")

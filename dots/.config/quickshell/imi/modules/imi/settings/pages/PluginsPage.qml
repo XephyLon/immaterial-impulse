@@ -149,15 +149,30 @@ Item {
                         ]
                     }
 
+                    // Widgets can take the shell's opacity - Settings > Quick's
+                    // "Shell opacity", what the bar, the sidebars and the dock
+                    // draw at - instead of their own slider, which then shows
+                    // the followed value and yields.
+                    ConfigSwitch {
+                        enabled: root.widgetTranslucencyApplies
+                        buttonIcon: "link"
+                        text: Translation.tr("Follow shell opacity")
+                        description: Translation.tr("Widget panels use the shell opacity from Settings > Quick")
+                        checked: Config.options.plugins.followShellOpacity
+                        onToggleRequested: Config.options.plugins.followShellOpacity = !Config.options.plugins.followShellOpacity
+                    }
+
                     ConfigSlider {
                         Layout.fillWidth: true
-                        enabled: root.widgetTranslucencyApplies
+                        enabled: root.widgetTranslucencyApplies && !Config.options.plugins.followShellOpacity
                         text: Translation.tr("Blurred widget opacity")
                         buttonIcon: "opacity"
                         from: 0
                         to: 1
                         usePercentTooltip: true
-                        value: Config.options.plugins.blurOpacity
+                        value: Config.options.plugins.followShellOpacity
+                            ? 1 - Appearance.backgroundTransparency
+                            : Config.options.plugins.blurOpacity
                         onValueModified: {
                             const rounded = Math.round(newValue * 20) / 20;
                             if (rounded !== Config.options.plugins.blurOpacity)

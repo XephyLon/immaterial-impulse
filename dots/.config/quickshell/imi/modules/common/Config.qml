@@ -564,6 +564,10 @@ Singleton {
                 // config-file-only, no settings toggle on purpose.
                 property bool storeEnabled: false
                 property real blurOpacity: 0.1
+                // Desktop widgets take the shell's own opacity (Settings > Quick's
+                // "Shell opacity", appearance.transparency.backgroundTransparency
+                // inverted) instead of blurOpacity above.
+                property bool followShellOpacity: false
                 // How desktop widgets frost their background over the wallpaper:
                 //   "tint" - a translucent palette-tinted panel (cheap, no blur)
                 //   "blur" - a true in-shell blur of the wallpaper region behind
