@@ -63,8 +63,10 @@ QtObject {
         if (!GlobalStates.editMode || pluginId === "") return;
         if (!Config.options.plugins.enabled.includes(pluginId)) return;
         const before = EditMode.listCopy(Config.options.plugins.enabled);
-        GlobalStates.editUndoPush(() =>
-            Config.setNestedValue("plugins.enabled", before));
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => EditMode.listCopy(Config.options.plugins.enabled),
+            (value) => Config.setNestedValue("plugins.enabled", value),
+            before));
         Config.setNestedValue("plugins.enabled",
             EditMode.enabledWithout(Config.options.plugins.enabled, pluginId));
     }

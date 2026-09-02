@@ -7,8 +7,8 @@ import qs.modules.common.widgets
 import "../../common/functions/edit_mode.js" as EditMode
 
 /**
- * Edit Mode's chrome: the toolbar above the shrunk desktop and the tab bar
- * below it.
+ * Edit Mode's chrome: the one toolbar above the shrunk desktop, with the
+ * mode's tabs leading it.
  *
  * Split out of the surface that hosts it for the reason `EditModeCard` is split
  * out of `Background.qml` - weston implements no wlr-layer-shell, so the only
@@ -24,22 +24,26 @@ import "../../common/functions/edit_mode.js" as EditMode
  *
  * That also gives the motion for free, and gives it the RIGHT shape: `card` is
  * a function of `GlobalStates.editProgress`, so the toolbar rises out of the
- * top edge and the tab bar out of the bottom one exactly as fast as the desktop
- * shrinks away from them. At progress 0 both bands have zero height and both
- * pieces are parked half off screen, which is why nothing here needs a
- * `Behavior` of its own - and must not have one: a Behavior whose target moves
- * every frame restarts every frame and never ticks (b710ef731 ("fix(plugins):
- * stop the position Behavior swallowing the parallax cancellation")).
+ * top edge exactly as fast as the desktop shrinks away from it. At progress 0
+ * the band has zero height and the toolbar is parked half off screen, which is
+ * why nothing here needs a `Behavior` of its own - and must not have one: a
+ * Behavior whose target moves every frame restarts every frame and never ticks
+ * (b710ef731 ("fix(plugins): stop the position Behavior swallowing the
+ * parallax cancellation")).
+ *
+ * The tab bar used to be a second toolbar in a mirror band under the desktop.
+ * It moved up here on the maintainer's ask - the tabs lead the toolbar, undo
+ * and redo sit before Done - and the desktop took the band it left.
  *
  * ---- what it is made of ---------------------------------------------------
  *
- * `Toolbar` and `ToolbarTabBar`, which is the shell's M3 expressive toolbar and
- * its toolbar tab bar - the same pieces the cheatsheet, the region selector,
- * the recording controls and the lock islands are built from. A bespoke card
- * matching the desktop's own outline and 30px corner was the other option and
- * would have been a second toolbar look minted for one mode, which is the drift
- * this repo keeps paying for. What ties it to the card is the shadow both carry
- * and the symmetry of the two bands, not a copied radius.
+ * `Toolbar` with a `ToolbarTabBar` inside it, which is the shell's M3
+ * expressive toolbar and its toolbar tab bar - the same pieces the cheatsheet,
+ * the region selector, the recording controls and the lock islands are built
+ * from. A bespoke card matching the desktop's own outline and 30px corner was
+ * the other option and would have been a second toolbar look minted for one
+ * mode, which is the drift this repo keeps paying for. What ties it to the
+ * card is the shadow both carry, not a copied radius.
  */
 Item {
     id: root
@@ -67,6 +71,8 @@ Item {
     signal doneRequested()
     signal drawerToggleRequested()
     signal snapToggleRequested()
+    signal undoRequested()
+    signal redoRequested()
     signal widgetDropRequested(var manifest, real dropX, real dropY)
     signal widgetToggleRequested(var manifest)
     signal barWidgetAddRequested(string widgetId, string bucket)
@@ -94,7 +100,6 @@ Item {
     // its REVEAL, so closed it is a zero-width rect and the mask built from it
     // is empty - the edge it lives on keeps its clicks.
     readonly property alias toolbarItem: toolbar
-    readonly property alias tabBarItem: tabBar
     readonly property alias drawerItem: drawerPanel
 
     Toolbar {
@@ -113,29 +118,37 @@ Item {
         y: root.area.y + (root.card.y - root.area.y - height) * root.bandFraction
         spacing: Appearance.spacing.space150
 
-        // The toolbar's title, and every part of this is about it NOT reading
-        // as a control.
-        //
-        // It used to be a `MaterialSymbol { text: "edit" }` followed by a
-        // `StyledText`, which is not merely similar to a button - it is the
-        // exact construction of `IconAndTextToolbarButton`, an icon and a label
-        // in a row. Sat flat between two real buttons it was an unfilled
-        // icon-and-text button with nothing behind it, so the one question the
-        // toolbar has to answer, "which of these can I press", had a wrong
-        // answer sitting first in the row. `doneButton` below records the
-        // mirror of this failure: Done rendered flat read as a second label.
-        //
-        // So the icon goes (an icon beside a word is the button shape here),
-        // the type drops to the label tier in the variant role, and a rule
-        // stands between the title and the controls - which is the structural
-        // half, and the half a restyle cannot undo by accident.
-        StyledText {
+        // The mode's two tabs LEAD the toolbar (spec §1.4, moved up from the
+        // band under the desktop): the tab is a FILTER on what the viewport
+        // draws, so the bar's index and `GlobalStates.editTab` must agree from
+        // both directions. An index change writes the state - including the
+        // wheel shortcut, which writes the inner index without passing through
+        // any button - and an external state write (Escape's return to Desktop,
+        // the exit's reset) moves the index back. Both directions are
+        // imperative on purpose: the wheel handler assigns the inner index
+        // directly, so a binding placed on `currentIndex` would be destroyed by
+        // the first scroll and the indicator would frame a viewport showing
+        // the other tab. The re-entrant hop each write takes through the other
+        // terminates because both sides no-op on equality. Sitting first, the
+        // tabs also name the mode, which is why the "Edit layout" title went.
+        ToolbarTabBar {
+            id: tabs
             Layout.alignment: Qt.AlignVCenter
-            Layout.leftMargin: Appearance.spacing.space100
-            text: Translation.tr("Edit layout")
-            font.pixelSize: Appearance.font.pixelSize.small
-            font.weight: Font.Medium
-            color: Appearance.colors.colOnSurfaceVariant
+            tabButtonList: [
+                { name: Translation.tr("Desktop"), icon: "wallpaper" },
+                { name: Translation.tr("Lockscreen"), icon: "lock" }
+            ]
+            onCurrentIndexChanged: GlobalStates.editTab = EditMode.tabAt(tabs.currentIndex)
+            // The sync is change-driven both ways, so a chrome built while a
+            // non-default tab is showing - a monitor hotplugged mid-mode -
+            // needs the one initial alignment no change ever delivers.
+            Component.onCompleted: tabs.setCurrentIndex(EditMode.tabIndex(GlobalStates.editTab))
+            Connections {
+                target: GlobalStates
+                function onEditTabChanged() {
+                    tabs.setCurrentIndex(EditMode.tabIndex(GlobalStates.editTab));
+                }
+            }
         }
 
         Rectangle {
@@ -173,7 +186,9 @@ Item {
         IconToolbarButton {
             id: snapButton
             Layout.alignment: Qt.AlignVCenter
-            text: "align_horizontal_left"
+            // The grid, on or off - the alignment glyph it carried read as a
+            // text-alignment control.
+            text: Config.options.background.showSnapLines ? "grid_on" : "grid_off"
             toggled: Config.options.background.showSnapLines
             onClicked: root.snapToggleRequested()
             StyledToolTip {
@@ -181,6 +196,28 @@ Item {
                     ? Translation.tr("Edge snapping on")
                     : Translation.tr("Edge snapping off")
             }
+        }
+
+        // Undo and redo (spec §7.3), as buttons beside the keyboard's Ctrl+Z
+        // and Ctrl+Shift+Z: a mode whose only undo is a chord nobody is told
+        // about has no undo for most people. Disabled when their stack is
+        // empty, which is the button model's dim; the surface performs them,
+        // since it is where every store write the mode makes lives.
+        IconToolbarButton {
+            id: undoButton
+            Layout.alignment: Qt.AlignVCenter
+            text: "undo"
+            enabled: GlobalStates.editUndoStack.length > 0
+            onClicked: root.undoRequested()
+            StyledToolTip { text: Translation.tr("Undo") }
+        }
+        IconToolbarButton {
+            id: redoButton
+            Layout.alignment: Qt.AlignVCenter
+            text: "redo"
+            enabled: GlobalStates.editRedoStack.length > 0
+            onClicked: root.redoRequested()
+            StyledToolTip { text: Translation.tr("Redo") }
         }
 
         // The mode's real way out. Two things about it are deliberate. It
@@ -201,52 +238,6 @@ Item {
             colRipple: Appearance.colors.colPrimaryActive
             colText: Appearance.colors.colOnPrimary
             onClicked: root.doneRequested()
-        }
-    }
-
-    Toolbar {
-        id: tabBar
-        x: root.card.x + (root.card.width - width) / 2
-        // ...and the mirror band, between the card's bottom edge and the usable
-        // area's. The card is centred in that area, so the two bands are the
-        // same height and the two pieces travel by the same amount - which is
-        // true with a bar on one edge and a dock on the other, and was true
-        // before only because neither was accounted for. Mirrored means
-        // `1 - bandFraction` as well as the other edge: measured from the
-        // card, the bottom band spends the generous margin first and the tight
-        // edge gap last.
-        y: root.card.y + root.card.height
-            + (root.area.y + root.area.height - root.card.y - root.card.height - height)
-                * (1 - root.bandFraction)
-
-        // The mode's two tabs (spec §1.4): the tab is a FILTER on what the
-        // viewport draws, so the bar's index and `GlobalStates.editTab` must
-        // agree from both directions. An index change writes the state -
-        // including the wheel shortcut, which writes the inner index without
-        // passing through any button - and an external state write (Escape's
-        // return to Desktop, the exit's reset) moves the index back. Both
-        // directions are imperative on purpose: the wheel handler assigns the
-        // inner index directly, so a binding placed on `currentIndex` would be
-        // destroyed by the first scroll and the indicator would frame a
-        // viewport showing the other tab. The re-entrant hop each write takes
-        // through the other terminates because both sides no-op on equality.
-        ToolbarTabBar {
-            id: tabs
-            tabButtonList: [
-                { name: Translation.tr("Desktop"), icon: "wallpaper" },
-                { name: Translation.tr("Lockscreen"), icon: "lock" }
-            ]
-            onCurrentIndexChanged: GlobalStates.editTab = EditMode.tabAt(tabs.currentIndex)
-            // The sync is change-driven both ways, so a chrome built while a
-            // non-default tab is showing - a monitor hotplugged mid-mode -
-            // needs the one initial alignment no change ever delivers.
-            Component.onCompleted: tabs.setCurrentIndex(EditMode.tabIndex(GlobalStates.editTab))
-            Connections {
-                target: GlobalStates
-                function onEditTabChanged() {
-                    tabs.setCurrentIndex(EditMode.tabIndex(GlobalStates.editTab));
-                }
-            }
         }
     }
 

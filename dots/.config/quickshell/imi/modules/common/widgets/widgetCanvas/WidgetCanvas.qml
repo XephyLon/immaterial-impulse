@@ -126,11 +126,14 @@ MouseArea {
             return
         }
         if (!root.editMode) return
-        // Exactly Control, not "Control among others": Ctrl+Shift+Z is
-        // convention's redo, and a redo stack is deliberately not built -
-        // answering it with an undo would be worse than ignoring it.
+        // Exactly Control for undo; Ctrl+Shift+Z and Ctrl+Y are convention's
+        // redo, and the redo stack exists now (the toolbar carries both).
         if (event.key === Qt.Key_Z && event.modifiers === Qt.ControlModifier) {
             GlobalStates.editUndo()
+            event.accepted = true
+        } else if ((event.key === Qt.Key_Z && event.modifiers === (Qt.ControlModifier | Qt.ShiftModifier))
+                   || (event.key === Qt.Key_Y && event.modifiers === Qt.ControlModifier)) {
+            GlobalStates.editRedo()
             event.accepted = true
         }
     }

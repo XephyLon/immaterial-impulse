@@ -84,9 +84,10 @@ Item {
         for (let i = 0; !changed && i < newOrder.length; i++)
             changed = before[i] !== newOrder[i]
         if (changed)
-            GlobalStates.editUndoPush(() => {
-                Config.options.dock.pinnedApps = before
-            })
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.dock.pinnedApps),
+                (value) => { Config.options.dock.pinnedApps = value },
+                before))
         Config.options.dock.pinnedApps = newOrder
         orderChanged(newOrder)
     }
@@ -368,9 +369,10 @@ Item {
                             if (!GlobalStates.editMode || root._dragging) return;
                             // A remove is a committed mutation (spec §7.3).
                             const beforePins = EditMode.listCopy(Config.options.dock.pinnedApps);
-                            GlobalStates.editUndoPush(() => {
-                                Config.options.dock.pinnedApps = beforePins;
-                            });
+                            GlobalStates.editUndoPush(EditMode.swap(
+                                () => EditMode.listCopy(Config.options.dock.pinnedApps),
+                                (value) => { Config.options.dock.pinnedApps = value; },
+                                beforePins));
                             Config.options.dock.pinnedApps =
                                 LayoutOps.remove(root.pinnedApps, slotItem.index);
                         }

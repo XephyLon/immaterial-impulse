@@ -322,6 +322,7 @@ Singleton {
         const entries = root.editUndoBatch;
         root.editUndoBatch = null;
         if (entries === null || entries.length === 0) return;
+        root.editRedoStack = [];
         if (entries.length === 1) {
             root.editUndoStack = EditMode.undoPush(root.editUndoStack, entries[0]);
             return;
@@ -332,23 +333,40 @@ Singleton {
         // and replaying those in order leaves it at 60 - the last entry wins
         // and the undo appears to move the widget forward. The group drag that
         // introduced batches never showed it, because its entries are one per
-        // widget and independent, so any order looks right.
-        root.editUndoStack = EditMode.undoPush(root.editUndoStack, () => {
-            for (let index = entries.length - 1; index >= 0; index--) entries[index]();
-        });
+        // widget and independent, so any order looks right. `composite` is
+        // that walk, and it returns the redo of the whole gesture.
+        root.editUndoStack = EditMode.undoPush(root.editUndoStack, EditMode.composite(entries));
     }
+    // The redo stack: what each undone entry returned (edit_mode.js's `swap`
+    // makes every entry return the entry that reverses it). A NEW mutation
+    // empties it - the redone future was on the history the user just left.
+    property var editRedoStack: []
     function editUndoPush(entry) {
         if (!root.editMode) return;
         if (root.editUndoBatch !== null) {
             root.editUndoBatch.push(entry);
             return;
         }
+        root.editRedoStack = [];
         root.editUndoStack = EditMode.undoPush(root.editUndoStack, entry);
     }
     function editUndo() {
         const popped = EditMode.undoPop(root.editUndoStack);
         root.editUndoStack = popped.stack;
-        if (popped.entry !== null) popped.entry();
+        if (popped.entry === null) return;
+        const redo = popped.entry();
+        if (typeof redo === "function")
+            root.editRedoStack = EditMode.undoPush(root.editRedoStack, redo);
+    }
+    function editRedo() {
+        const popped = EditMode.undoPop(root.editRedoStack);
+        root.editRedoStack = popped.stack;
+        if (popped.entry === null) return;
+        const undo = popped.entry();
+        // Straight onto the stack: not through editUndoPush, which would empty
+        // the redo stack this entry just came from and fold into an open batch.
+        if (typeof undo === "function")
+            root.editUndoStack = EditMode.undoPush(root.editUndoStack, undo);
     }
 
     property bool dropShelfOpen: false

@@ -329,7 +329,10 @@ AbstractBackgroundWidget {
         const next = GridSizes.formatSize(size);
         const before = PluginState.gridSize(id, screen, surface) ?? null;
         if (before !== next)
-            GlobalStates.editUndoPush(() => PluginState.setGridSize(id, screen, before, surface));
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => PluginState.gridSize(id, screen, surface) ?? null,
+                (value) => PluginState.setGridSize(id, screen, value, surface),
+                before));
         PluginState.setGridSize(id, screen, next, surface);
     }
 
@@ -784,7 +787,10 @@ AbstractBackgroundWidget {
                 y: beforeY,
                 placementStrategy: rootWidget.placementStrategy
             };
-            GlobalStates.editUndoPush(() => PluginState.setPosition(id, screen, before, surface));
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => PluginState.position(id, screen, surface),
+                (value) => PluginState.setPosition(id, screen, value, surface),
+                before));
         }
         PluginState.setPosition(id, screenName, {
             x: rootWidget.targetX,

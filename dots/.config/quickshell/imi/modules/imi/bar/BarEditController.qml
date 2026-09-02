@@ -219,13 +219,21 @@ Item {
         const snap = [];
         for (const bucket of buckets)
             snap.push({ bucket: bucket, list: EditMode.listCopy(root.storedLayout(bucket)) });
-        GlobalStates.editUndoPush(() => {
-            for (const entry of snap) {
-                if (entry.bucket === 0) Config.options.bar.layouts.leftLayout = entry.list;
-                else if (entry.bucket === 1) Config.options.bar.layouts.middleLayout = entry.list;
-                else Config.options.bar.layouts.rightLayout = entry.list;
-            }
-        });
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => {
+                const now = [];
+                for (const bucket of buckets)
+                    now.push({ bucket: bucket, list: EditMode.listCopy(root.storedLayout(bucket)) });
+                return now;
+            },
+            (lists) => {
+                for (const entry of lists) {
+                    if (entry.bucket === 0) Config.options.bar.layouts.leftLayout = entry.list;
+                    else if (entry.bucket === 1) Config.options.bar.layouts.middleLayout = entry.list;
+                    else Config.options.bar.layouts.rightLayout = entry.list;
+                }
+            },
+            snap));
     }
 
     // The commits. Guarded on the mode because a drag can outlive it - Done

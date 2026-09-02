@@ -113,7 +113,10 @@ Item {
         const screen = root.screenName;
         const surface = PluginState.currentSurface;
         const before = PluginState.gridSize(id, screen, surface) ?? null;
-        GlobalStates.editUndoPush(() => PluginState.setGridSize(id, screen, before, surface));
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => PluginState.gridSize(id, screen, surface) ?? null,
+            (value) => PluginState.setGridSize(id, screen, value, surface),
+            before));
         PluginState.setGridSize(id, screen, GridSizes.formatSize(next), surface);
     }
 
@@ -283,8 +286,10 @@ Item {
                 // re-enables the widget at the position the store still
                 // holds for it.
                 const before = EditMode.listCopy(Config.options.plugins.enabled);
-                GlobalStates.editUndoPush(() =>
-                    Config.setNestedValue("plugins.enabled", before));
+                GlobalStates.editUndoPush(EditMode.swap(
+                    () => EditMode.listCopy(Config.options.plugins.enabled),
+                    (value) => Config.setNestedValue("plugins.enabled", value),
+                    before));
                 Config.setNestedValue("plugins.enabled",
                     EditMode.enabledWithout(Config.options.plugins.enabled, root.manifest.id));
                 root.dismissRequested();

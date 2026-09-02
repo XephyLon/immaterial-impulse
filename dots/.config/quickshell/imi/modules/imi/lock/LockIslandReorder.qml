@@ -181,19 +181,22 @@ Item {
         // tears these overlays down and the stack outlives them.
         if (root.island === "main") {
             const beforeMain = EditMode.listCopy(Config.options.lock.islands.main);
-            GlobalStates.editUndoPush(() => {
-                Config.options.lock.islands.main = beforeMain;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.lock.islands.main),
+                (value) => { Config.options.lock.islands.main = value; },
+                beforeMain));
         } else if (root.island === "left") {
             const beforeLeft = EditMode.listCopy(Config.options.lock.islands.left);
-            GlobalStates.editUndoPush(() => {
-                Config.options.lock.islands.left = beforeLeft;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.lock.islands.left),
+                (value) => { Config.options.lock.islands.left = value; },
+                beforeLeft));
         } else {
             const beforeRight = EditMode.listCopy(Config.options.lock.islands.right);
-            GlobalStates.editUndoPush(() => {
-                Config.options.lock.islands.right = beforeRight;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.lock.islands.right),
+                (value) => { Config.options.lock.islands.right = value; },
+                beforeRight));
         }
         const moved = LayoutOps.move(root.orderedIds, from, destination);
         root.writeList(LockIslands.storedOrder(moved, root.storedList(), root.defaults()));

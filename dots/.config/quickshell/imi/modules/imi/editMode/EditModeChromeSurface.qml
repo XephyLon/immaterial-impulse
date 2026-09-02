@@ -121,9 +121,6 @@ PanelWindow {
 
     mask: Region {
         item: chrome.toolbarItem
-        Region {
-            item: chrome.tabBarItem
-        }
         // The drawer's REVEAL: a closed drawer is a zero-width item, so this
         // region is empty and the edge it lives on keeps its clicks - the
         // collapse rule every permanently-mapped surface here follows.
@@ -176,8 +173,10 @@ PanelWindow {
         // holding the whole enabled list from before the write. The closure
         // reaches only the Config singleton and captured data.
         const before = EditMode.listCopy(Config.options.plugins.enabled);
-        GlobalStates.editUndoPush(() =>
-            Config.setNestedValue("plugins.enabled", before));
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => EditMode.listCopy(Config.options.plugins.enabled),
+            (value) => Config.setNestedValue("plugins.enabled", value),
+            before));
         if (Config.options.plugins.enabled.includes(manifest.id))
             Config.setNestedValue("plugins.enabled", root.enabledWithout(manifest.id));
         else
@@ -210,19 +209,22 @@ PanelWindow {
         // it touched, at the same literal path the write below uses.
         if (bucket === "left") {
             const beforeLeft = EditMode.listCopy(Config.options.bar.layouts.leftLayout);
-            GlobalStates.editUndoPush(() => {
-                Config.options.bar.layouts.leftLayout = beforeLeft;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.bar.layouts.leftLayout),
+                (value) => { Config.options.bar.layouts.leftLayout = value; },
+                beforeLeft));
         } else if (bucket === "middle") {
             const beforeMiddle = EditMode.listCopy(Config.options.bar.layouts.middleLayout);
-            GlobalStates.editUndoPush(() => {
-                Config.options.bar.layouts.middleLayout = beforeMiddle;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.bar.layouts.middleLayout),
+                (value) => { Config.options.bar.layouts.middleLayout = value; },
+                beforeMiddle));
         } else {
             const beforeRight = EditMode.listCopy(Config.options.bar.layouts.rightLayout);
-            GlobalStates.editUndoPush(() => {
-                Config.options.bar.layouts.rightLayout = beforeRight;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => EditMode.listCopy(Config.options.bar.layouts.rightLayout),
+                (value) => { Config.options.bar.layouts.rightLayout = value; },
+                beforeRight));
         }
         if (bucket === "left")
             Config.options.bar.layouts.leftLayout = LayoutOps.insert(
@@ -249,21 +251,24 @@ PanelWindow {
         // each writing its own literal path back.
         if (key === "showToolbars") {
             const beforeToolbars = Config.options.lock.showToolbars;
-            GlobalStates.editUndoPush(() => {
-                Config.options.lock.showToolbars = beforeToolbars;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => Config.options.lock.showToolbars,
+                (value) => { Config.options.lock.showToolbars = value; },
+                beforeToolbars));
             Config.options.lock.showToolbars = !Config.options.lock.showToolbars;
         } else if (key === "showMedia") {
             const beforeMedia = Config.options.lock.showMedia;
-            GlobalStates.editUndoPush(() => {
-                Config.options.lock.showMedia = beforeMedia;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => Config.options.lock.showMedia,
+                (value) => { Config.options.lock.showMedia = value; },
+                beforeMedia));
             Config.options.lock.showMedia = !Config.options.lock.showMedia;
         } else if (key === "showWidgets") {
             const beforeWidgets = Config.options.lock.showWidgets;
-            GlobalStates.editUndoPush(() => {
-                Config.options.lock.showWidgets = beforeWidgets;
-            });
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => Config.options.lock.showWidgets,
+                (value) => { Config.options.lock.showWidgets = value; },
+                beforeWidgets));
             Config.options.lock.showWidgets = !Config.options.lock.showWidgets;
         }
     }
@@ -278,7 +283,10 @@ PanelWindow {
     // where the lock's positions and spans already do.
     function toggleLockWidget(pluginId) {
         const before = PluginState.lockPresenceRecords();
-        GlobalStates.editUndoPush(() => PluginState.restoreLockPresence(before));
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => PluginState.lockPresenceRecords(),
+            (value) => PluginState.restoreLockPresence(value),
+            before));
         PluginState.setLockWidgetEnabled(pluginId,
             !PluginState.lockWidgetEnabled(pluginId));
     }
@@ -290,7 +298,10 @@ PanelWindow {
     function resetLockPresence() {
         if (!PluginState.lockPresenceForked()) return;
         const forked = PluginState.lockPresenceRecords();
-        GlobalStates.editUndoPush(() => PluginState.restoreLockPresence(forked));
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => PluginState.lockPresenceRecords(),
+            (value) => PluginState.restoreLockPresence(value),
+            forked));
         PluginState.resetLockPresence();
     }
 
@@ -304,7 +315,10 @@ PanelWindow {
         // The whole records - position AND span - so the undo puts back
         // exactly the fork that was there, not a re-fork from the desktop.
         const forked = PluginState.lockRecords(screen);
-        GlobalStates.editUndoPush(() => PluginState.restoreLockRecords(screen, forked));
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => PluginState.lockRecords(screen),
+            (value) => PluginState.restoreLockRecords(screen, value),
+            forked));
         PluginState.resetLockLayout(screen);
     }
 
@@ -350,11 +364,18 @@ PanelWindow {
         // position that was never there.
         const beforeRaw = PluginState.rawPosition(id, screen, surface);
         const beforePosition = beforeRaw !== undefined ? PluginState.position(id, screen, surface) : null;
-        GlobalStates.editUndoPush(() => {
-            Config.setNestedValue("plugins.enabled", beforeEnabled);
-            if (beforePosition)
-                PluginState.setPosition(id, screen, beforePosition, surface);
-        });
+        GlobalStates.editUndoPush(EditMode.swap(
+            () => ({
+                enabled: EditMode.listCopy(Config.options.plugins.enabled),
+                position: PluginState.rawPosition(id, screen, surface) !== undefined
+                    ? PluginState.position(id, screen, surface) : null
+            }),
+            (value) => {
+                Config.setNestedValue("plugins.enabled", value.enabled);
+                if (value.position)
+                    PluginState.setPosition(id, screen, value.position, surface);
+            },
+            { enabled: beforeEnabled, position: beforePosition }));
         PluginState.setPosition(manifest.id, root.screen?.name ?? "",
             { x: placed.x, y: placed.y, placementStrategy: "free" }, surface);
         root.enablePlugin(manifest.id);
@@ -407,7 +428,9 @@ PanelWindow {
             // inverts their choice instead of reverting this one - accepted,
             // because the alternative is a second derivation of the store.
             const toggled = appId;
-            GlobalStates.editUndoPush(() => TaskbarApps.togglePin(toggled));
+            // Self-inverse: the same toggle is the undo and the redo.
+            GlobalStates.editUndoPush(EditMode.swap(
+                () => null, () => TaskbarApps.togglePin(toggled), null));
             TaskbarApps.togglePin(appId);
         }
         onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
@@ -420,5 +443,8 @@ PanelWindow {
         // widget lock. The write is here, not in the chrome, because this
         // surface makes every store write the mode makes.
         onSnapToggleRequested: Config.options.background.showSnapLines = !Config.options.background.showSnapLines
+        // The toolbar's undo and redo, performed here beside the keyboard's.
+        onUndoRequested: GlobalStates.editUndo()
+        onRedoRequested: GlobalStates.editRedo()
     }
 }

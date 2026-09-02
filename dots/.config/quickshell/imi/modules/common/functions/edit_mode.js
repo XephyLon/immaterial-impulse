@@ -221,15 +221,20 @@ function viewportGeometry(input) {
     // height and 85px of width to put air above a toolbar that already floats
     // over the wallpaper. With no chrome the band collapses back to one margin,
     // which is what the geometry was before the chrome existed.
-    const band = chromeThickness > 0
+    // ONE band, at the top: the toolbar's. The tab bar that mirrored it below
+    // the desktop moved into the toolbar (the tabs lead it now), so the bottom
+    // gives up a plain margin and the desktop takes the rest - the height the
+    // mirror band cost was the maintainer's ask the day the bar merged.
+    const bandTop = chromeThickness > 0
         ? edgeMargin + chromeThickness + margin : margin;
+    const bandBottom = margin;
     // Horizontally, left to right: a margin, the desktop, a margin, the
     // drawer, and the drawer's own edge gap. The last term is what stops the
     // open drawer sitting flush on the screen's edge - it was missing, so the
     // panel had a rounded right corner against nothing.
     const roomX = area.width - drawerWidth - margin * 2
         - (drawerWidth > 0 ? edgeMargin : 0);
-    const roomY = area.height - band * 2;
+    const roomY = area.height - bandTop - bandBottom;
     const scale = Math.max(MIN_SCALE,
         Math.min(MAX_SCALE, roomX / screenWidth, roomY / screenHeight));
     const width = screenWidth * scale;
@@ -247,7 +252,11 @@ function viewportGeometry(input) {
         // travels straight, and the four margins are equal in pairs against the
         // USABLE AREA at rest.
         x: area.x + (area.width - width) / 2,
-        y: area.y + (area.height - height) / 2,
+        // Vertically the card sits in the room the two unequal bands leave -
+        // flush under the toolbar's band when the height binds, centred in
+        // that room when the width does - not in the whole area, which would
+        // put half the toolbar's band back under the desktop.
+        y: area.y + bandTop + (roomY - height) / 2,
         width: width,
         height: height,
         area: area,
@@ -527,6 +536,45 @@ function dropPosition(input) {
 // diff needs a serialiser per store and there are three stores.
 
 var UNDO_LIMIT = 50;
+
+// An entry that inverts itself, which is what gives the stack a redo without
+// a second protocol: running it restores `value` through `write` and returns
+// the entry that restores what was there the moment before, read through
+// `read`. Undo runs the top entry and keeps what it returns on the redo
+// stack; redo runs THAT and keeps its return on the undo stack. Every push
+// site says how to read and how to write its one store path (the write keeps
+// the literal path lint_edit_mode_scope asks for) and hands over the value it
+// captured before its own mutation. A self-inverse write - toggling a pin -
+// passes a `read` of nothing: whatever it returns is ignored by a write that
+// takes no value.
+function swap(read, write, value) {
+    return function () {
+        var current = read();
+        write(value);
+        return swap(read, write, current);
+    };
+}
+
+// One gesture's several entries as one. Undone from the end, since the
+// gesture was a sequence (three arrow steps replayed forward would leave the
+// widget where the last one put it), collecting what each returns; the
+// composite's own inverse is those inverses, which this same function then
+// runs from ITS end - which is the original order - on redo. An entry that
+// returns nothing (a legacy closure) leaves the composite with no inverse.
+function composite(entries) {
+    return function () {
+        var inverses = [];
+        var complete = true;
+        for (var index = entries.length - 1; index >= 0; index--) {
+            var inverse = entries[index]();
+            if (typeof inverse === "function")
+                inverses.push(inverse);
+            else
+                complete = false;
+        }
+        return complete ? composite(inverses) : undefined;
+    };
+}
 
 // A fresh stack on every operation, never a mutation: the stack sits in a
 // `property var`, whose change signal fires on reassignment only, so an
