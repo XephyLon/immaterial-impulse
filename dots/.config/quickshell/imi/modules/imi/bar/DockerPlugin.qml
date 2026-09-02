@@ -15,6 +15,62 @@ MouseArea {
     property bool vertical: Config.options.bar.vertical
     property bool popupOpen: false
     readonly property real horizontalPadding: Appearance.spacing.space100
+    readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
+    // The circle is a progress ring - running over total - in the resource
+    // monitor's vocabulary: the outline ring under every bar style but M3,
+    // where the tonal pill is the container and the ring is filled.
+    readonly property real containerProgress: DockerPackage.DockerService.totalCount > 0
+        ? DockerPackage.DockerService.runningCount / DockerPackage.DockerService.totalCount : 0
+    readonly property color tone: DockerPackage.DockerService.dockerAvailable
+        ? Appearance.colors.colPrimary : Appearance.colors.colError
+
+    Component {
+        id: outlineRing
+        ClippedOutlineCircularProgress {
+            implicitSize: 25
+            lineWidth: Appearance.rounding.unsharpen
+            value: root.containerProgress
+            colPrimary: root.tone
+            enableAnimation: false
+            Item {
+                anchors.centerIn: parent
+                width: 25
+                height: 25
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    fill: 0
+                    text: "deployed_code"
+                    iconSize: Appearance.font.pixelSize.normal
+                    color: root.tone
+                }
+            }
+        }
+    }
+
+    Component {
+        id: filledRing
+        ClippedFilledCircularProgress {
+            implicitSize: 25
+            lineWidth: Appearance.rounding.unsharpen
+            value: root.containerProgress
+            colPrimary: root.tone
+            accountForLightBleeding: DockerPackage.DockerService.dockerAvailable
+            enableAnimation: false
+            Item {
+                anchors.centerIn: parent
+                width: 25
+                height: 25
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    fill: 0
+                    text: "deployed_code"
+                    iconSize: Appearance.font.pixelSize.normal
+                    color: DockerPackage.DockerService.dockerAvailable
+                        ? Appearance.colors.colOnPrimary : Appearance.colors.colOnError
+                }
+            }
+        }
+    }
 
     implicitWidth: root.vertical
         ? (contentLoader.item?.implicitWidth ?? 32)
@@ -51,21 +107,9 @@ MouseArea {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            Rectangle {
-                implicitWidth: 25
-                implicitHeight: 25
-                radius: Appearance.rounding.full
-                color: DockerPackage.DockerService.dockerAvailable
-                    ? Appearance.colors.colPrimary : Appearance.colors.colError
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    fill: 0
-                    text: "deployed_code"
-                    iconSize: Appearance.font.pixelSize.normal
-                    color: DockerPackage.DockerService.dockerAvailable
-                        ? Appearance.colors.colOnPrimary : Appearance.colors.colOnError
-                }
+            Loader {
+                Layout.alignment: Qt.AlignVCenter
+                sourceComponent: root.isMaterial ? filledRing : outlineRing
             }
         }
     }
@@ -75,22 +119,9 @@ MouseArea {
         ColumnLayout {
             spacing: Appearance.spacing.space25
 
-            Rectangle {
-                implicitWidth: 25
-                implicitHeight: 25
-                radius: Appearance.rounding.full
-                color: DockerPackage.DockerService.dockerAvailable
-                    ? Appearance.colors.colPrimary : Appearance.colors.colError
+            Loader {
                 Layout.alignment: Qt.AlignHCenter
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    fill: 0
-                    text: "deployed_code"
-                    iconSize: Appearance.font.pixelSize.normal
-                    color: DockerPackage.DockerService.dockerAvailable
-                        ? Appearance.colors.colOnPrimary : Appearance.colors.colOnError
-                }
+                sourceComponent: root.isMaterial ? filledRing : outlineRing
             }
 
             StyledText {

@@ -97,13 +97,15 @@ Item {
         }
     }
 
-    // Vertical default
+    // Vertical default. The progress circle is the outline ring - an icon in
+    // a circle is outlined under every bar style but M3 (BarIconRing says
+    // why); the filled ring stays the resource monitor's own option.
     Loader {
         id: mediaCircProg
         active: root.vertical && !root.isMaterial
         visible: active
         anchors.centerIn: parent
-        sourceComponent: ClippedFilledCircularProgress {
+        sourceComponent: ClippedOutlineCircularProgress {
             implicitSize: 20
             lineWidth: Appearance.rounding.unsharpen
             value: root.activePlayer?.position / root.activePlayer?.length
@@ -118,7 +120,7 @@ Item {
                     fill: 1
                     text: root.activePlayer?.isPlaying ? "pause" : "music_note"
                     iconSize: Appearance.font.pixelSize.normal
-                    color: Appearance.m3colors.m3onSecondaryContainer
+                    color: Appearance.colors.colOnSecondaryContainer
                 }
             }
         }
@@ -150,7 +152,7 @@ Item {
         anchors.fill: parent
         sourceComponent: RowLayout {
             spacing: Appearance.spacing.space50
-            ClippedFilledCircularProgress {
+            ClippedOutlineCircularProgress {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: Appearance.spacing.space50
                 implicitSize: 20
@@ -167,7 +169,7 @@ Item {
                         fill: 1
                         text: root.activePlayer?.isPlaying ? "pause" : "music_note"
                         iconSize: Appearance.font.pixelSize.normal
-                        color: Appearance.m3colors.m3onSecondaryContainer
+                        color: Appearance.colors.colOnSecondaryContainer
                     }
                 }
             }
