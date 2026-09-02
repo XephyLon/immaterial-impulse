@@ -272,6 +272,14 @@ Singleton {
         property color colErrorContainerHover: ColorUtils.mix(m3colors.m3errorContainer, m3colors.m3onErrorContainer, 0.90)
         property color colErrorContainerActive: ColorUtils.mix(m3colors.m3errorContainer, m3colors.m3onErrorContainer, 0.70)
         property color colOnErrorContainer: m3colors.m3onErrorContainer
+        // The alarm pair: danger-red in EITHER theme. M3's error role flips
+        // saturation with the theme - dark's m3error is a pastel pink and its
+        // errorContainer the deep red, light the other way round - so a pill
+        // that must always read as an alarm (the privacy indicator) takes the
+        // saturated member and its on-colour, whichever that is.
+        property color colAlarm: m3colors.darkmode ? m3colors.m3errorContainer : m3colors.m3error
+        property color colAlarmHover: m3colors.darkmode ? colErrorContainerHover : colErrorHover
+        property color colOnAlarm: m3colors.darkmode ? m3colors.m3onErrorContainer : m3colors.m3onError
     }
 
     rounding: QtObject {

@@ -23,18 +23,13 @@ MouseArea {
     readonly property bool replayOn: ScreenRecord.replaying
     readonly property bool shown: micOn || cameraOn || screencastOn || recordingOn || replayOn
 
-    // Drawn from the bar's own palette, not the error pair: a vivid colError
-    // pill was the one thing on the bar not in its palette and read as a
-    // fault, not a status. Under M3 it is a tonal primary-container pill like
-    // the other M3 group pills; under every other style there is no pill -
-    // the glyphs sit on the bar in the accent, the way a live state reads
-    // elsewhere on it - and the hover pill is the layer's, as on any bar
-    // button.
-    readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
-    readonly property color pillColor: root.isMaterial
-        ? (root.containsMouse ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colPrimaryContainer)
-        : (root.containsMouse ? Appearance.colors.colLayer1Hover : "transparent")
-    readonly property color onColor: root.isMaterial ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
+    // An alarm, under every bar style and in both themes: the saturated
+    // member of the error pair (colAlarm - dark's errorContainer, light's
+    // error) with its on-colour. colError alone was a pastel pink pill with
+    // a dark glyph in the dark theme, which is the pair the other way round
+    // and read as decoration rather than danger. Hover is a colour, not a dim.
+    readonly property color pillColor: root.containsMouse ? Appearance.colors.colAlarmHover : Appearance.colors.colAlarm
+    readonly property color onColor: Appearance.colors.colOnAlarm
 
     // Stay visible while collapsing so the pill can fade/scale out instead of
     // vanishing; the width still animates for a smooth bar reflow.
