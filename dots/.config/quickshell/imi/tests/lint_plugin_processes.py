@@ -125,9 +125,12 @@ docker_adapter_code = re.sub(r"//.*", "", docker_adapter)
 if "DockerPackage.DockerWidget" in docker_adapter_code:
     failures.append(
         "modules/imi/bar/DockerPlugin.qml: native adapter must not wrap package-root bar geometry")
+# `hoverEnabled: false` was in this list while the adapter was a bare
+# MouseArea; it is a RippleButton now (a click has a press, and the popup
+# opens from `downAction`), and a button's hover feedback is the shared model's.
 for required in (
         "DockerPackage.DockerService", "DockerPackage.DockerPopup",
-        "hoverEnabled: false", "active: root.popupOpen",
+        "downAction:", "active: root.popupOpen",
         "id: contentLoader", "contentLoader.item?.implicitWidth"):
     if required not in docker_adapter_code:
         failures.append(
