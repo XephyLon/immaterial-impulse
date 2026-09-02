@@ -34,9 +34,12 @@ class DockerMemorySafetyTests(unittest.TestCase):
         adapter = self.text("modules/imi/bar/DockerPlugin.qml")
         self.assertIn("contentLoader.item?.implicitWidth", adapter)
         self.assertNotRegex(adapter, r"(?m)^\s*(width|height)\s*:\s*implicit(?:Width|Height)")
-        self.assertIn("hoverEnabled: false", adapter)
-        self.assertIn("cursorShape: Qt.PointingHandCursor", adapter)
-        self.assertIn("horizontalPadding: Appearance.spacing.space100", adapter)
+        # A RippleButton since a click got a press: the popup opens from the
+        # press action (click-lazy), the pointer cursor is the shared button's,
+        # and the side padding is not named after the Control's FINAL property.
+        self.assertIn("downAction:", adapter)
+        self.assertIn("sidePadding: Appearance.spacing.space100", adapter)
+        self.assertNotIn("property real horizontalPadding", adapter)
         self.assertRegex(adapter, r"Loader\s*\{[\s\S]*?active\s*:\s*root\.popupOpen")
         self.assertIn("hoverTarget: root", adapter)
         self.assertIn("onDismissRequested: root.popupOpen = false", adapter)
