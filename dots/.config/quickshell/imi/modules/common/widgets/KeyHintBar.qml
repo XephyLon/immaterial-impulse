@@ -26,7 +26,7 @@ RowLayout {
             StyledText {
                 text: modelData.label ?? ""
                 color: root.onSurface
-                font.pixelSize: Appearance.font.pixelSize.smallest
+                font.pixelSize: Appearance.font.pixelSize.smaller
             }
 
             KeyHint {

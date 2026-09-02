@@ -12,7 +12,7 @@ Row {
     property var keys: ["Ctrl", "K"]
     property color surface: Appearance.colors.colSurfaceContainerHigh
     property color onSurface: Appearance.colors.colOnSurface
-    property real pixelSize: 9
+    property real pixelSize: Appearance.font.pixelSize.smallest
 
     spacing: Appearance.spacing.space25
 
@@ -25,8 +25,8 @@ Row {
         delegate: Rectangle {
             required property string modelData
 
-            implicitWidth: Math.max(14, label.implicitWidth + 10)
-            implicitHeight: 16
+            implicitWidth: Math.max(label.implicitHeight + Appearance.spacing.space75, label.implicitWidth + Appearance.spacing.space125)
+            implicitHeight: label.implicitHeight + Appearance.spacing.space75
             radius: Appearance.rounding.verysmall
             color: root.keyFace
 
