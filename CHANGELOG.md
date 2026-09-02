@@ -24,6 +24,12 @@ own repo; the installer pins which revision it builds.
   is on by default and can be switched off in Settings > General > Cheatsheet.
 
 ### Fixed
+- **The right sidebar's notification list stops drawing blank under a live
+  count.** A card built while the panel was closed (a notification arriving,
+  or the list restored at startup) started its entrance fade and the fade
+  never advanced, so it stayed invisible - at 0, or part way - until it took
+  a new notification. The list runs no entrance while it is off screen and
+  settles any half-faded card when it comes on.
 - **Clipboard image previews stop going blank.** The launcher's decoded
   previews lived in one `/tmp` directory that the shell wiped on every reload
   that rebuilt its `Directories` singleton (a deploy, an update) and that a

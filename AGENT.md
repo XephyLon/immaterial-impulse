@@ -1871,6 +1871,26 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
   a `rm` in an `onCompleted`, ask what a reload does to it.
   ("fix(cliphist): a decoded preview lives while anything shows it").
 
+- **A ListView `add` transition started while the view is off screen freezes
+  where it started, and `from: 0` on opacity leaves the card invisible for
+  good.** `StyledListView`'s add transition fades and scales a new delegate
+  from 0. The right sidebar is a persistent surface whose content hides while
+  closed, so a delegate built then - a notification arriving with the panel
+  closed, the whole list restored from file at startup - starts that
+  transition and it never advances: measured with a per-delegate probe in a
+  nested Hyprland, sixteen arrivals with the panel closed left cards at
+  0.65 / 0.87 / 0.96 / 0.98 / 0.99, a restart left five of seven at exactly 0,
+  and opening the panel moved none of them; only a card that took a new
+  notification while open was drawn again. On screen that is a blank list
+  under a footer counting sixteen, with nothing in the log - the delegates
+  exist, at full height, `visible: true`. `NotificationListView` gates
+  `animateAppearance` on its own effective `visible` and settles any card
+  below 1 when it comes on screen; a transition is for something the user can
+  see, and a view that is hidden adds at rest. Before giving a view an add
+  transition with a `from`, ask whether its window can be hidden while the
+  model grows. `tests/test_notification_list_entrance.py` pins both halves.
+  ("fix(notifications): a card built while the sidebar is closed arrives at rest").
+
 - **A `Flow` with no width of its own and an incubated parent wraps once and
   stays wrapped.** `Flow` takes its `implicitWidth` when a layout does not
   give it a width, and computes that implicit width from the width it
