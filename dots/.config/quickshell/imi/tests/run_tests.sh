@@ -1211,8 +1211,8 @@ if ! python3 "$SCRIPT_DIR/test_system_icons_graceful.py"; then
     exit 1
 fi
 
-# A bar widget whose popup a click holds open marks its anchor with the dashed
-# PopupAnchorOutline, on tokenised tiers, and paints no tonal container for it.
+# A bar widget whose popup a click holds open marks it with the edge
+# PopupAnchorIndicator, on tokenised tiers, and paints no tonal container.
 if ! python3 "$SCRIPT_DIR/test_bar_popup_anchor_contract.py"; then
     echo "Bar popup anchor contract failed."
     exit 1
