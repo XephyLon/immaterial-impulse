@@ -57,8 +57,18 @@ Item {
             }
         }
         Loader {
+            id: xkbLoader
             source: "HyprlandXkbIndicator.qml"
-            onLoaded: item.color = root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+            // A BINDING, not an assignment in onLoaded: assigned once, the
+            // layout's colour froze at load while the icons beside it followed
+            // the palette and the pill's hover - light text on the light
+            // hovered M3 pill.
+            Binding {
+                target: xkbLoader.item
+                property: "color"
+                value: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+                when: xkbLoader.item !== null
+            }
         }
         MaterialSymbol {
             text: Network.materialSymbol
