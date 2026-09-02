@@ -306,6 +306,7 @@ Item {
 
         // ── The test ──────────────────────────────────────────────
         Presence {
+            anchors.fill: parent
             shown: root.page === "test"
 
             ColumnLayout {
@@ -608,6 +609,7 @@ Item {
 
         // ── Settings and history pages ────────────────────────────
         Presence {
+            anchors.fill: parent
             shown: root.page !== "test"
 
             ColumnLayout {
