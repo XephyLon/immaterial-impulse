@@ -362,7 +362,8 @@ Scope {
                             // the row-height band of empty `colLayer0` this
                             // menu grew between Widgets and DropShelf while the
                             // mode was on. See GroupedList.qml.
-                            property bool rowVisible: !GlobalStates.editMode
+                            // Present in both states: the row is the way in and, flipped, a way out.
+                            property bool rowVisible: true
                             implicitHeight: 40
                             colBackground: "transparent"
                             colRipple: Appearance.colors.colLayer2Active
