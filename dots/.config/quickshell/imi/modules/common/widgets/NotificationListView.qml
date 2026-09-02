@@ -14,6 +14,35 @@ StyledListView { // Scrollable window
 
     spacing: Appearance.spacing.space50
 
+    // Entrance transitions only while the view is on screen. A delegate built
+    // while the sidebar's content was hidden (a notification arriving with
+    // the panel closed, the list restored from file at startup) started its
+    // add transition - opacity and scale from 0 - and the transition never
+    // advanced: measured in a nested Hyprland, cards sat at 0.65/0.87/0.96
+    // after sixteen arrivals with the panel closed, and at exactly 0 after a
+    // restart, and stayed there when the panel opened. Only a card that took
+    // a new notification while open was drawn again - the list read as blank
+    // under a footer counting sixteen. So a view that is not visible adds
+    // its cards at rest, and coming on screen settles anything a transition
+    // left half way.
+    animateAppearance: root.visible
+    onVisibleChanged: {
+        if (root.visible)
+            Qt.callLater(root.settleDelegates);
+    }
+    function settleDelegates(): void {
+        const children = root.contentItem?.children ?? [];
+        for (let i = 0; i < children.length; i++) {
+            const card = children[i];
+            if (!card?.blurItem)
+                continue;
+            if (card.opacity < 1)
+                card.opacity = 1;
+            if (card.scale !== 1)
+                card.scale = 1;
+        }
+    }
+
     // The painted card of every realized delegate, for a caller that needs the
     // list's painted area rather than its bounding box - the popup window's
     // blur region (see NotificationPopup.qml). The bounding box would swallow
