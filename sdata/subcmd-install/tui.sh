@@ -289,23 +289,42 @@ draw_progress(){
 }
 
 # Animate the bar while $1(pid) runs, reading phase from $2(log).
+#
+# Builtins only for the clock and the tick. The install this animates runs
+# `pacman -Syu`, and while pacman replaces glibc there is a moment in which
+# NOTHING can exec: every tick's `sleep` and `date` failed with "cannot
+# execute: required file not found", once a tick, on the user's screen, and an
+# empty `date` made the elapsed clock negative (a user's screenshot:
+# "-29806108m-8s"). `EPOCHSECONDS` and `read -t` on a held fd need no
+# process. The log reads still fork; they are tolerated instead - a failed
+# read keeps the previous phase and last line, and a milestone only ever
+# moves forward, so a `grep` that could not run cannot drop the phase back to
+# "Starting" mid-install.
 progress_loop(){
   local pid="$1" log="$2"
-  local start cur=0 frame=0
-  start=$(date +%s)
+  local start cur=0 frame=0 target=0 phase="Starting" last=""
+  start=$EPOCHSECONDS
+  local sleep_fd
+  exec {sleep_fd}<> <(:)      # a fifo nobody writes: `read -t` on it is a fork-free sleep
   printf '\033[?25l'          # hide cursor
   printf '\n\n\n'             # reserve the 3-line area
   while kill -0 "$pid" 2>/dev/null; do
-    local ms target phase
-    ms="$(log_milestone "$log")"; target=${ms%%|*}; phase=${ms#*|}
+    local ms next
+    if ms="$(log_milestone "$log" 2>/dev/null)" && [[ "$ms" == *"|"* ]]; then
+      next=${ms%%|*}
+      if [[ "$next" =~ ^[0-9]+$ ]] && (( next >= target )); then target=$next; phase=${ms#*|}; fi
+    fi
     (( cur < target )) && cur=$(( cur + (target - cur + 3) / 4 ))
     (( cur > 99 )) && cur=99
-    local last
-    last="$(grep -av '^[[:space:]]*$' "$log" 2>/dev/null | tail -n1 | sed 's/\x1b\[[0-9;]*m//g')"
-    draw_progress "$cur" "$phase" "$(( $(date +%s) - start ))" "${SPIN[frame % 10]}" "$last"
+    local line
+    if line="$(grep -av '^[[:space:]]*$' "$log" 2>/dev/null | tail -n1 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' 2>/dev/null)" && [[ -n "$line" ]]; then
+      last=$line
+    fi
+    draw_progress "$cur" "$phase" "$(( EPOCHSECONDS - start ))" "${SPIN[frame % 10]}" "$last"
     frame=$(( frame + 1 ))
-    sleep 0.12
+    read -rt 0.12 -u "$sleep_fd" || true
   done
+  exec {sleep_fd}>&-
   printf '\033[?25h'          # show cursor
 }
 
