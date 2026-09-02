@@ -172,6 +172,7 @@ Item {
                 // as the cost of the mistakes without needing a legend.
                 Graph {
                     anchors.fill: parent
+                    animateReveal: true
                     visible: root.samples.length >= 2
                     values: root.normalized("raw")
                     color: Appearance.colors.colSecondary
@@ -180,6 +181,7 @@ Item {
 
                 Graph {
                     anchors.fill: parent
+                    animateReveal: true
                     visible: root.samples.length >= 2
                     values: root.normalized("wpm")
                     color: Appearance.colors.colPrimary

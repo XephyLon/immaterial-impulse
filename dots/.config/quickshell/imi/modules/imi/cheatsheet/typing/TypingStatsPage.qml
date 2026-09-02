@@ -488,6 +488,7 @@ Item {
                         }
 
                         Graph {
+                            animateReveal: true
                             anchors.fill: parent
                             visible: speedChart.series.length >= 2
                             values: speedChart.series.map(value => speedChart.normalize(value))
