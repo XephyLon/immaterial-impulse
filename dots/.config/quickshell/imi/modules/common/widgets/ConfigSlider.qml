@@ -7,6 +7,11 @@ import qs.services
 RowLayout {
     id: root
     spacing: Appearance.spacing.space150
+    // The disabled dim, once, at the root - a RowLayout does not dim itself
+    // the way a RippleButton root does, so a gated slider looked live: the
+    // Shell opacity slider under Automatic, the widget opacity slider with
+    // transparency off. Nothing inside dims again (lint_disabled_opacity).
+    opacity: root.enabled ? 1 : 0.4
     Layout.leftMargin: Appearance.spacing.space100
     Layout.rightMargin: Appearance.spacing.space100
 
