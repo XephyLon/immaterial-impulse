@@ -19,6 +19,10 @@ Item {
 
     readonly property real barPadding: 0
     readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
+    // Float Islands: see BarContent.qml - three plates in Float's look, one
+    // per populated section, in place of the full-length plate.
+    readonly property bool isFloatIslands: Config.options.bar.cornerStyle === 4
+    readonly property bool floatPlate: Config.options.bar.cornerStyle === 1 || root.isFloatIslands
     readonly property bool trayHasItems: SystemTray.items.values.length > 0
 
     function filterLayout(layout) {
@@ -102,7 +106,7 @@ Item {
     // shape would frost the bare wallpaper behind it.
     readonly property Item backgroundItem: barBackground
     readonly property bool backgroundPainted: Config.options.bar.showBackground
-        && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.centerOnly
+        && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.isFloatIslands && !root.centerOnly
     readonly property Item centerPillItem: centerPill
     readonly property bool centerPillPainted: centerPill.visible
 
@@ -117,12 +121,18 @@ Item {
     readonly property Item centerMaterialPillItem: centerMaterialPill
     readonly property Item bottomMaterialPillItem: bottomMaterialPill
     readonly property bool materialPillsPainted: root.isMaterial
+    readonly property Item topIslandItem: topIsland
+    readonly property Item centerIslandItem: centerIsland
+    readonly property Item bottomIslandItem: bottomIsland
+    readonly property bool topIslandPainted: topIsland.visible
+    readonly property bool centerIslandPainted: centerIsland.visible
+    readonly property bool bottomIslandPainted: bottomIsland.visible
 
     // Optional soft drop shadow under the bar background (Config.options.bar.shadow).
     // Only rendered when the background itself is painted (mirrors barBackground's color condition).
     Loader {
         active: Config.options.bar.shadow && !root.centerOnly && Config.options.bar.showBackground
-            && Config.options.bar.cornerStyle !== 2 && !root.isMaterial
+            && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.isFloatIslands
         anchors.fill: barBackground
         sourceComponent: StyledRectangularShadow {
             anchors.fill: undefined // The loader's anchors act on this, and this should not have any anchor
@@ -133,9 +143,9 @@ Item {
         id: barBackground
         anchors {
             fill: parent
-            margins: Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0
+            margins: root.floatPlate ? Appearance.sizes.hyprlandGapsOut : 0
         }
-        color: (Config.options.bar.showBackground && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.centerOnly)
+        color: (Config.options.bar.showBackground && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.isFloatIslands && !root.centerOnly)
             ? Appearance.colors.colBarBackground : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: (!root.centerOnly && Config.options.bar.cornerStyle === 1) ? 1 : 0
@@ -158,10 +168,10 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         height: middleCol.implicitHeight + 7
-        width: parent.width - (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut * 2 : 0)
+        width: parent.width - (root.floatPlate ? Appearance.sizes.hyprlandGapsOut * 2 : 0)
         color: Appearance.colors.colBarBackground
-        radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
-        border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0
+        radius: root.floatPlate ? Appearance.rounding.windowRounding : 0
+        border.width: root.floatPlate ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
 
         bottomRightRadius: Config.options.bar.cornerStyle === 0 && !Config.options.bar.bottom ? Appearance.rounding.screenRounding : radius
@@ -174,6 +184,56 @@ Item {
         id: contentContainer
         anchors.fill: barBackground
         anchors.margins: root.barPadding
+
+        // Float Islands, the vertical reading: one plate behind each populated
+        // section, declared first so they paint under the sections.
+        readonly property real islandPad: Appearance.spacing.space125
+        component Island: Rectangle {
+            required property bool populated
+            visible: root.isFloatIslands && Config.options.bar.showBackground && !root.centerOnly && populated
+            anchors.left: parent.left
+            anchors.right: parent.right
+            color: Appearance.colors.colBarBackground
+            radius: Appearance.rounding.windowRounding
+            border.width: 1
+            border.color: Appearance.colors.colLayer0Border
+        }
+        component IslandShadow: Loader {
+            required property Item island
+            active: Config.options.bar.shadow && island.visible
+            anchors.fill: island
+            sourceComponent: StyledRectangularShadow {
+                anchors.fill: undefined
+                target: island
+            }
+        }
+        IslandShadow { island: topIsland }
+        IslandShadow { island: centerIsland }
+        IslandShadow { island: bottomIsland }
+        Island {
+            id: topIsland
+            populated: root.effectiveLeftLayout.length > 0
+            anchors.top: topSection.top
+            anchors.bottom: topSection.bottom
+            anchors.topMargin: -contentContainer.islandPad
+            anchors.bottomMargin: -contentContainer.islandPad
+        }
+        Island {
+            id: centerIsland
+            populated: root.effectiveMiddleLayout.length > 0
+            anchors.top: absoluteCenter.top
+            anchors.bottom: absoluteCenter.bottom
+            anchors.topMargin: -contentContainer.islandPad
+            anchors.bottomMargin: -contentContainer.islandPad
+        }
+        Island {
+            id: bottomIsland
+            populated: root.effectiveRightLayout.length > 0
+            anchors.top: bottomSection.top
+            anchors.bottom: bottomSection.bottom
+            anchors.topMargin: -contentContainer.islandPad
+            anchors.bottomMargin: -contentContainer.islandPad
+        }
 
         // Top
         Item {

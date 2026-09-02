@@ -73,7 +73,7 @@ Scope {
                     // No edgeMargin: this surface declares no margins, so the
                     // compositor adds nothing to the zone.
                     zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
-                        Appearance.sizes.baseVerticalBarWidth + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                        Appearance.sizes.baseVerticalBarWidth + ((Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4) ? Appearance.sizes.hyprlandGapsOut : 0)
                         + (Config.options.bar.cornerStyle === 3 ? (Config.options.hyprland.general.gapsOut || 5) : 0)
                 }
                 WlrLayershell.namespace: "quickshell:verticalBar"
@@ -123,6 +123,19 @@ Scope {
                         Region {
                             item: barContent.materialPillsPainted ? barContent.bottomMaterialPillItem : null
                             radius: Math.round(Math.min(barContent.bottomMaterialPillItem.width, barContent.bottomMaterialPillItem.height) / 2)
+                        }
+                        // Float Islands' three plates.
+                        Region {
+                            item: barContent.topIslandPainted ? barContent.topIslandItem : null
+                            radius: barContent.topIslandItem.radius
+                        }
+                        Region {
+                            item: barContent.centerIslandPainted ? barContent.centerIslandItem : null
+                            radius: barContent.centerIslandItem.radius
+                        }
+                        Region {
+                            item: barContent.bottomIslandPainted ? barContent.bottomIslandItem : null
+                            radius: barContent.bottomIslandItem.radius
                         }
                     }
                 }

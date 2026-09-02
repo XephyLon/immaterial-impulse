@@ -739,7 +739,9 @@ Singleton {
 
     sizes: QtObject {
         property real baseBarHeight: 40
-        property real barHeight: Config.options.bar.cornerStyle === 1 ?
+        // Float (1) and Float Islands (4) both hold their plates a gap off the
+        // edge and the windows, inside the surface.
+        property real barHeight: (Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4) ?
             (baseBarHeight + root.sizes.hyprlandGapsOut * 2) : baseBarHeight
         // M3E bar widget-pill geometry: the pill is inset from the bar by
         // barPillMargin top and bottom, giving barPillHeight. Shared by BarGroup
@@ -749,8 +751,8 @@ Singleton {
         // them so the gaps stay consistent:
         //
         //   Hug (0) is flush against the monitor edge, so it has no margin on
-        //   the edge side. Float (1), Islands (2) and M3 (3) are detached from
-        //   the edge and share one. All four share the opposite-side margin -
+        //   the edge side. Float (1), Islands (2), M3 (3) and Float Islands (4)
+        //   are detached from the edge and share one. All four share the opposite-side margin -
         //   the gap between the bar and the windows next to it.
         //
         // The names say top/bottom because that is the default case, a
@@ -897,7 +899,7 @@ Singleton {
         // band that is not its size.
         property real toolbarHeight: 56
         property real baseVerticalBarWidth: 46
-        property real verticalBarWidth: Config.options.bar.cornerStyle === 1 ? 
+        property real verticalBarWidth: (Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4) ?
             (baseVerticalBarWidth + root.sizes.hyprlandGapsOut * 2) : baseVerticalBarWidth
         property real wallpaperSelectorWidth: 1200
         property real wallpaperSelectorHeight: 690

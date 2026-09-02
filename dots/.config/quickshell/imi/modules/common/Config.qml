@@ -1137,7 +1137,7 @@ Singleton {
                     }
                 }
                 property bool bottom: false // Instead of top
-                property int cornerStyle: 0 // 0: Hug | 1: Float | 2: Plain rectangle | 3: M3
+                property int cornerStyle: 0 // 0: Hug | 1: Float | 2: Islands | 3: M3 | 4: Float Islands (M3's three sections, each drawn as Float's plate)
                 property bool shadow: false // Soft drop shadow under the bar background
                 property string borderless: "pills"
                 property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/imi/assets/icons

@@ -89,7 +89,7 @@ Scope {
                     edgeMargin: Config.options.bar.bottom
                         ? Appearance.sizes.barBottomMargin : Appearance.sizes.barDetachMargin
                     zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows))
-                        ? 0 : Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                        ? 0 : Appearance.sizes.baseBarHeight + ((Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4) ? Appearance.sizes.hyprlandGapsOut : 0)
                 }
                 WlrLayershell.namespace: "quickshell:bar"
                 // Overlay layer only while special workspace sits on top of a fullscreen window on this monitor,
@@ -181,6 +181,20 @@ Scope {
                         Region {
                             item: barContent.materialPillsPainted ? barContent.rightMaterialPillItem : null
                             radius: Math.round(Math.min(barContent.rightMaterialPillItem.width, barContent.rightMaterialPillItem.height) / 2)
+                        }
+                        // Float Islands' three plates - the only painted shapes
+                        // in that style, each at the window rounding.
+                        Region {
+                            item: barContent.leftIslandPainted ? barContent.leftIslandItem : null
+                            radius: barContent.leftIslandItem.radius
+                        }
+                        Region {
+                            item: barContent.centerIslandPainted ? barContent.centerIslandItem : null
+                            radius: barContent.centerIslandItem.radius
+                        }
+                        Region {
+                            item: barContent.rightIslandPainted ? barContent.rightIslandItem : null
+                            radius: barContent.rightIslandItem.radius
                         }
                     }
                 }
