@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-6] — 2026-09-02
+
 ### Added
 - **A typing test in the cheatsheet.** A Monkeytype-style test as a new
   cheatsheet tab (ported from the p3drovfx fork): time / words / zen modes,
