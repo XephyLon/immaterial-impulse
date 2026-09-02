@@ -20,7 +20,9 @@ RippleButton {
 
     property bool vertical: Config.options.bar.vertical
     property bool popupOpen: false
-    readonly property real horizontalPadding: Appearance.spacing.space100
+    // Not `horizontalPadding`: that is a FINAL property of the Control this
+    // button is, and redeclaring it stops the whole widget from being created.
+    readonly property real sidePadding: Appearance.spacing.space100
     readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
     // The circle is a progress ring - running over total - in the resource
     // monitor's vocabulary: the outline ring under every bar style but M3,
@@ -80,7 +82,7 @@ RippleButton {
 
     implicitWidth: root.vertical
         ? (contentLoader.item?.implicitWidth ?? 32)
-        : (contentLoader.item?.implicitWidth ?? 0) + root.horizontalPadding * 2
+        : (contentLoader.item?.implicitWidth ?? 0) + root.sidePadding * 2
     implicitHeight: root.vertical
         ? (contentLoader.item?.implicitHeight ?? 0)
         : Appearance.sizes.barHeight
