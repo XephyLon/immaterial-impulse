@@ -642,6 +642,9 @@ ContentPage {
                         onToggleRequested: Config.options.bar.resources.alwaysShowGpu = !Config.options.bar.resources.alwaysShowGpu
                     }
                 }
+                // Two switches per row, like the rows above: three uniform cells
+                // leave "GPU Temperature" a third of the row, and its switch was
+                // drawn over the next cell's label.
                 ConfigRow {
                     uniform: true
                     ConfigSwitch {
@@ -650,15 +653,15 @@ ContentPage {
                         checked: Config.options.bar.resources.alwaysShowDisk
                         onToggleRequested: Config.options.bar.resources.alwaysShowDisk = !Config.options.bar.resources.alwaysShowDisk
                     }
-                }
-                ConfigRow {
-                    uniform: true
                     ConfigSwitch {
                         buttonIcon: "swap_horiz"
                         text: Translation.tr("Swap")
                         checked: Config.options.bar.resources.alwaysShowSwap
                         onToggleRequested: Config.options.bar.resources.alwaysShowSwap = !Config.options.bar.resources.alwaysShowSwap
                     }
+                }
+                ConfigRow {
+                    uniform: true
                     ConfigSwitch {
                         buttonIcon: "thermostat"
                         text: Translation.tr("GPU Temperature")
