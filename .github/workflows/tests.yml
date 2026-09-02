@@ -31,17 +31,25 @@ jobs:
         # turns that into a red run in minutes instead of a held runner, and
         # the retry covers the transient case a rerun would otherwise be
         # needed for.
-        timeout-minutes: 10
+        timeout-minutes: 25
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           set -euo pipefail
           # Bounded per attempt as well as per step: a single apt call that
           # hangs would otherwise consume the whole step budget and leave no
-          # room for the retry to be worth having.
+          # room for the retry to be worth having. The bound is per CALL: the
+          # install fetches ~130 packages, and on 2026-09-02 (rc-7) a slow
+          # Azure mirror - a second per small package, 17s for a 3MB one -
+          # ran every one of three 150s attempts out mid-download, so a
+          # healthy run went red on nothing but mirror speed. Fetched packages
+          # stay in apt's cache between attempts, so a retry resumes rather
+          # than restarts, and apt's own per-file retries cover a dropped
+          # connection without spending an attempt on it.
           apt_get() {
+            local budget="$1"; shift
             for attempt in 1 2 3; do
-              if timeout 150 sudo -E apt-get "$@"; then
+              if timeout "$budget" sudo -E apt-get -o Acquire::Retries=3 "$@"; then
                 return 0
               fi
               echo "apt-get $1 failed (attempt $attempt of 3), retrying"
@@ -49,13 +57,13 @@ jobs:
             done
             return 1
           }
-          apt_get update
+          apt_get 150 update
           # ffmpeg: test_tonemap_sdr.py builds a real HDR10 fixture (libx265)
           # and drives the actual tonemap script; without ffmpeg those tests
           # skip and the SDR delivery path ships unexercised.
           # qt5compat supplies FastBlur, which WallpaperBlurSurface imports; without
           # it that type is simply "unavailable" and its test fails to compile.
-          apt_get install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qt5compat-graphicaleffects ffmpeg
+          apt_get 420 install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qt5compat-graphicaleffects ffmpeg
 
       # zstd builds the fixture release tarballs in
       # test_wallpaperengine_prebuilt.py and extracts them in the installer under
