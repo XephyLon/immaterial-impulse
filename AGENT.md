@@ -6461,7 +6461,11 @@ above before adding a third call site),
 answered),
 `MarqueeText` (a single-line label that scrolls only while it overflows its box, over the overflow
 and back, at a distance-proportional speed with a floor — see the entry below before adopting one),
-`CatalogueRow` (one entry of a catalogue, drawn — see the entry below before building a list row).
+`CatalogueRow` (one entry of a catalogue, drawn — see the entry below before building a list row),
+`Presence` (an element that fades in and out on a state and stays drawn until the fade out has
+finished, optionally giving up its room along an axis - the spelling for anything that would
+otherwise be a bare `visible:` on a state; `FadeLoader` is the same for a Loader, `Revealer` the
+size-only sibling).
 All in `modules/common/widgets/`.
 
 **A catalogue's rows are one component, and it is deliberately not a control.** Edit Mode's drawer,
@@ -6587,6 +6591,19 @@ label is a rationale, and a rationale is the (i)'s). Three things about it are n
 "feat(capture): record_bitrate.js, what a quality tier costs on this screen",
 "feat(settings): the Capture page adopts the row grammar",
 "test(settings): pin the row grammar's widgets and its reference page").
+
+**Gracefully entering and exiting: an element that comes and goes with a state never snaps.** A
+bare `visible: engine.isFinished` is a one-frame swap, and the typing test's results screen shipped
+as exactly that, with its stage, its keyboard preview, its restart button, its live counters, its
+three sub-pages and the toolbar's modifier group all gated the same way. Each is a `Presence` now
+(the pages are `FadeLoader`s), and where two states share one place - the stage and the score, the
+reading line and its loading mark - they sit in ONE slot and cross-fade, with the slot's height
+eased on the same tier, because two sequential layout children fading past each other stack
+mid-fade and jump the layout. Measured in a nested Hyprland with a 15s test: the results' presence
+0 → 1 as the stage's 1 → 0 with the slot 186 → 226px, and a restart sampled 80ms in still drawing
+the score at 0.01 - a lifetime past the flag, which is the whole of the rule. The typing contract
+refuses a bare `visible:` on state in the surface and the toolbar.
+("fix(typing): nothing in the test snaps in or out on state").
 
 **A marquee is the answer for an IDENTITY, and where it may run is as much of the design as how it
 moves.** `MarqueeText` exists because every long label in this shell elides, which is honest about
