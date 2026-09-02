@@ -50,8 +50,8 @@ class TypingTestContractTests(unittest.TestCase):
         settings = source("modules/imi/settings/pages/GeneralConfig.qml")
         self.assertIn('"component": typingTestPage', cheatsheet)
         self.assertIn("id: typingTestPage", cheatsheet)
-        self.assertIn("readonly property var tabButtonList: root.pages.map(", cheatsheet)
-        self.assertIn("model: root.pages", cheatsheet)
+        self.assertIn("readonly property var tabButtonList: cheatsheetRoot.pages.map(", cheatsheet)
+        self.assertIn("model: cheatsheetRoot.pages", cheatsheet)
         # The frame is all the host page may own: no engine, no input sink, no
         # shortcut table of its own.
         self.assertIn("TypingTestSurface {", page)

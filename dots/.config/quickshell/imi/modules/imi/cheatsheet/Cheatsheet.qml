@@ -23,19 +23,6 @@ Scope { // Scope
     // persisted while a tab existed.
     readonly property bool showComponents: Config.options?.developer?.enable ?? false
     readonly property bool showTypingTest: Config.options?.cheatsheet?.enableTypingTest ?? true
-    readonly property var pages: {
-        const list = [
-            { "icon": "keyboard", "name": Translation.tr("Keybinds"), "component": keybindsPage },
-            { "icon": "experiment", "name": Translation.tr("Elements"), "component": elementsPage },
-        ];
-        if (root.showTypingTest)
-            list.push({ "icon": "speed", "name": Translation.tr("Typing test"), "component": typingTestPage });
-        if (root.showComponents)
-            list.push({ "icon": "widgets", "name": Translation.tr("Components"), "component": componentsPage });
-        return list;
-    }
-    readonly property var tabButtonList: root.pages.map(page => ({ "icon": page.icon, "name": page.name }))
-
     Loader {
         id: cheatsheetLoader
         active: false
@@ -54,6 +41,24 @@ Scope { // Scope
             // The binding currently open in the keybind editor overlay, null
             // when the overlay is closed.
             property var editingBinding: null
+
+            // The page list lives on the window, not the Scope: the page
+            // Components are declared inside this FloatingWindow's component
+            // scope, and an id in one component scope is not visible from a
+            // binding in another - read from the Scope, `keybindsPage` is a
+            // ReferenceError and the cheatsheet opens as an empty 56x110 box.
+            readonly property var pages: {
+                const list = [
+                    { "icon": "keyboard", "name": Translation.tr("Keybinds"), "component": keybindsPage },
+                    { "icon": "experiment", "name": Translation.tr("Elements"), "component": elementsPage },
+                ];
+                if (root.showTypingTest)
+                    list.push({ "icon": "speed", "name": Translation.tr("Typing test"), "component": typingTestPage });
+                if (root.showComponents)
+                    list.push({ "icon": "widgets", "name": Translation.tr("Components"), "component": componentsPage });
+                return list;
+            }
+            readonly property var tabButtonList: cheatsheetRoot.pages.map(page => ({ "icon": page.icon, "name": page.name }))
 
             // The part of the screen a floating window may take, from the
             // monitor's own reserved area (the bar and the dock, as hyprctl
@@ -145,10 +150,10 @@ Scope { // Scope
                             tabBar.decrementCurrentIndex();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Tab) {
-                            tabBar.setCurrentIndex((tabBar.currentIndex + 1) % root.tabButtonList.length);
+                            tabBar.setCurrentIndex((tabBar.currentIndex + 1) % cheatsheetRoot.tabButtonList.length);
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Backtab) {
-                            tabBar.setCurrentIndex((tabBar.currentIndex - 1 + root.tabButtonList.length) % root.tabButtonList.length);
+                            tabBar.setCurrentIndex((tabBar.currentIndex - 1 + cheatsheetRoot.tabButtonList.length) % cheatsheetRoot.tabButtonList.length);
                             event.accepted = true;
                         }
                     }
@@ -233,7 +238,7 @@ Scope { // Scope
                         enableShadow: false
                         ToolbarTabBar {
                             id: tabBar
-                            tabButtonList: root.tabButtonList
+                            tabButtonList: cheatsheetRoot.tabButtonList
 
                             Synchronizer on currentIndex {
                                 property alias source: swipeView.currentIndex
@@ -252,7 +257,7 @@ Scope { // Scope
                         // which leaves a SwipeView pointing past its own end -
                         // an empty page and a tab bar highlighting nothing.
                         currentIndex: Math.min(Persistent.states.cheatsheet.tabIndex,
-                                               root.pages.length - 1)
+                                               cheatsheetRoot.pages.length - 1)
                         onCurrentIndexChanged: {
                             Persistent.states.cheatsheet.tabIndex = currentIndex;
                         }
@@ -271,7 +276,7 @@ Scope { // Scope
                         }
 
                         Repeater {
-                            model: root.pages
+                            model: cheatsheetRoot.pages
                             delegate: Loader {
                                 id: pageLoader
                                 required property var modelData
