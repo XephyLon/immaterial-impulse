@@ -1218,6 +1218,13 @@ if ! python3 "$SCRIPT_DIR/test_bar_popup_anchor_contract.py"; then
     exit 1
 fi
 
+# One opacity for the blurred shell surfaces (Settings > Quick), and widgets
+# that follow it through PluginState (Settings > Widgets).
+if ! python3 "$SCRIPT_DIR/test_shell_opacity_contract.py"; then
+    echo "Shell opacity contract failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."

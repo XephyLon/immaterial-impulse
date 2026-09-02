@@ -133,6 +133,20 @@ TestCase {
         compare(PluginState.effectiveBackgroundOpacity("notes"), 1);
     }
 
+    // Settings > Widgets' "Follow shell opacity": a widget panel takes the
+    // shell's opacity - the background transparency inverted, what the bar and
+    // the sidebars draw at - instead of the widgets' own slider.
+    function test_effectiveBackgroundOpacityFollowsTheShellWhenAsked() {
+        Config.options.appearance.transparency.enable = true;
+        Config.options.appearance.transparency.automatic = false;
+        Config.options.appearance.transparency.backgroundTransparency = 0.3;
+        Config.options.plugins.blurOpacity = 0.1;
+        Config.options.plugins.followShellOpacity = true;
+        fuzzyCompare(PluginState.effectiveBackgroundOpacity("notes"), 0.7, 0.0001);
+        Config.options.plugins.followShellOpacity = false;
+        compare(PluginState.effectiveBackgroundOpacity("notes"), 0.1);
+    }
+
     // The opt-out is a stored PluginState option, so it survives a restart and
     // stays reversible from Settings > Widgets - and it must not leak to the
     // widgets that did not ask for it.
