@@ -1175,6 +1175,12 @@ if ! python3 "$SCRIPT_DIR/test_cheatsheet_width_budget.py"; then
     exit 1
 fi
 
+echo "Running typing test contract tests..."
+if ! python3 "$SCRIPT_DIR/test_typing_test_contract.py"; then
+    echo "Typing test contract tests failed."
+    exit 1
+fi
+
 echo "Running calendar card tests..."
 if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
     echo "Calendar card tests failed."
