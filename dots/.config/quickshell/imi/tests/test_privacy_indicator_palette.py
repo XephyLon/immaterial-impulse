@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""The privacy indicator is drawn from the bar's palette, not the error pair.
+"""The privacy indicator is danger-red in both themes.
 
-A vivid colError pill with colOnError glyphs was the one thing on the bar
-not in its palette, and read as a fault rather than a status. Under M3 it
-is a tonal primary-container pill like the other M3 group pills; under every
-other style there is no pill, the glyphs sit on the bar in the accent the
-way a live state reads elsewhere on it, and hover is the layer's pill.
+It is an alarm: an app is on the microphone, the camera or the screen. M3's
+error role flips saturation with the theme - the dark theme's colError is a
+pastel pink and its errorContainer the deep red, the light theme the other
+way round - so colError alone was a pink pill with a dark glyph in the dark
+theme and read as decoration. Appearance's alarm pair picks the saturated
+member and its on-colour in either theme; the indicator wears that pair under
+every bar style, and hover is a colour rather than a dim.
 """
 
 from pathlib import Path
@@ -15,27 +17,33 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "modules/imi/bar/PrivacyIndicator.qml"
+APPEARANCE = ROOT / "modules/common/Appearance.qml"
 
 
 def strip_comments(text):
     return re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", text, flags=re.S))
 
 
-class PrivacyIndicatorPaletteTests(unittest.TestCase):
+class AlarmPairTests(unittest.TestCase):
+    def test_the_alarm_pair_is_the_saturated_member_in_either_theme(self):
+        appearance = strip_comments(APPEARANCE.read_text(encoding="utf-8"))
+        self.assertRegex(appearance, r"property color colAlarm: m3colors\.darkmode \? m3colors\.m3errorContainer : m3colors\.m3error")
+        self.assertRegex(appearance, r"property color colOnAlarm: m3colors\.darkmode \? m3colors\.m3onErrorContainer : m3colors\.m3onError")
+        self.assertRegex(appearance, r"property color colAlarmHover: m3colors\.darkmode \? colErrorContainerHover : colErrorHover")
+
+
+class PrivacyIndicatorTests(unittest.TestCase):
     def setUp(self):
         self.src = strip_comments(SOURCE.read_text(encoding="utf-8"))
 
-    def test_no_error_colours(self):
-        for token in ("colError", "colOnError", "colErrorContainer"):
-            self.assertNotRegex(self.src, r"\b" + token + r"\b", f"{token} is for faults; the indicator is a status")
+    def test_it_wears_the_alarm_pair_under_every_style(self):
+        self.assertRegex(self.src, r"pillColor: root\.containsMouse \? Appearance\.colors\.colAlarmHover : Appearance\.colors\.colAlarm")
+        self.assertRegex(self.src, r"onColor: Appearance\.colors\.colOnAlarm")
+        self.assertNotIn("isMaterial", self.src, "the alarm does not change with the bar style")
 
-    def test_m3_is_a_tonal_primary_container_pill(self):
-        self.assertRegex(self.src, r"readonly property bool isMaterial: Config\.options\.bar\.cornerStyle === 3")
-        self.assertRegex(self.src, r"pillColor: root\.isMaterial\s*\?\s*\(root\.containsMouse \? Appearance\.colors\.colPrimaryContainerHover : Appearance\.colors\.colPrimaryContainer\)")
-        self.assertRegex(self.src, r"onColor: root\.isMaterial \? Appearance\.colors\.colOnPrimaryContainer : Appearance\.colors\.colPrimary")
-
-    def test_other_styles_have_no_pill_and_accent_glyphs(self):
-        self.assertRegex(self.src, r':\s*\(root\.containsMouse \? Appearance\.colors\.colLayer1Hover : "transparent"\)')
+    def test_it_is_never_the_accent_or_the_pastel_pair(self):
+        for token in ("colPrimary", "colPrimaryContainer", "colOnPrimaryContainer", "colError\b", "colOnError\b"):
+            self.assertNotRegex(self.src, r"Appearance\.colors\." + token, f"{token} is not the alarm")
 
     def test_hover_is_a_colour_not_a_dim(self):
         self.assertNotIn("0.88", self.src)

@@ -38,10 +38,10 @@ own repo; the installer pins which revision it builds.
   the same blur, shadow and background switches as Float.
 
 ### Fixed
-- **The privacy indicator is in the bar's palette.** It was a vivid error
-  pill, the one thing on the bar not drawn from its palette; it is a tonal
-  primary pill under M3 and accent glyphs on the bar under every other
-  style, with the layer's hover pill.
+- **The privacy indicator is danger-red in both themes.** In the dark theme
+  it was a pastel pink pill with a dark glyph - M3's error role flips
+  saturation with the theme - and read as decoration; it now takes the
+  saturated member of the error pair in either theme, under every bar style.
 - **The plate border follows the shell opacity.** It was mixed with the
   thinned fill and stayed an opaque ring around a see-through bar, sidebar,
   dock or popup; it is thinned by the same amount now.

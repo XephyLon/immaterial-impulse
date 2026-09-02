@@ -6603,13 +6603,16 @@ right-hand side when vertical. Settings > Bar's switch is inert outside the stat
 `tests/test_bar_edge_shadow_contract.py` pins the gate, the direction and the token
 ("feat(bar): an edge shadow behind an unpainted bar").
 
-**A bar widget is drawn from the bar's palette; the error pair is for faults.** The privacy
-indicator was a vivid `colError` pill with `colOnError` glyphs - the one thing on the bar not in
-its palette, and it read as a fault rather than a status ("sticks out like a sore thumb"). A live
-state on the bar is the accent: under M3 a tonal `colPrimaryContainer` pill like the other M3 group
-pills, under every other style no pill and `colPrimary` glyphs, hover the layer's pill as on any bar
-button. `tests/test_privacy_indicator_palette.py` refuses the error tokens there
-("fix(bar): the privacy indicator is drawn from the bar's palette").
+**The privacy indicator is an alarm: danger-red in both themes, under every bar style.** M3's error
+role flips saturation with the theme - the dark theme's `m3error` is a pastel pink and its
+`m3errorContainer` the deep red, the light theme the other way round - so a `colError` pill was pink
+with a dark glyph in the dark theme and read as decoration ("sticks out like a sore thumb, and not
+in a good way"). It is not the accent either: the maintainer's rule is that the privacy widget
+ALWAYS reads as danger-red. `Appearance.colors.colAlarm` / `colOnAlarm` / `colAlarmHover` pick the
+saturated member of the pair and its on-colour in either theme; the indicator wears them unchanged
+across styles, hover as a colour. `tests/test_privacy_indicator_palette.py` refuses the accent and
+the bare error tokens there
+("fix(bar): the privacy indicator is danger-red in both themes").
 
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
