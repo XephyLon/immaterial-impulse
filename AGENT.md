@@ -613,6 +613,14 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               the mode may work out where either panel is
   overview/                   Workspace/window overview (like GNOME Activities)
   notificationPopup/          Desktop notification popups
+  cheatsheet/                 The Super+/ window: a fixed-size FloatingWindow whose tab bar and
+                              SwipeView are drawn from ONE page list (keybinds, Elements, the
+                              typing test, and Components under developer mode). typing/ is the
+                              Monkeytype-style test - engine, surface, toolbar, word viewport,
+                              results, history, stats, settings, sounds, keyboard preview - hosted
+                              by CheatsheetTypingTest.qml; every page takes the window's width and
+                              height budgets (see the fixed-size-window note under Hyprland
+                              integration)
   settings/                   The in-shell settings UI (pages/ = one file per settings category)
   dock/, lock/, mediaControls/, overlay/, polkit/, regionSelector/, screenTranslator/,
   sessionScreen/, onScreenKeyboard/, wallpaperSelector/, verticalBar/, desktopMenu/
@@ -643,6 +651,12 @@ services/                  Singletons wrapping external state/processes - one pe
                               scripts/hyprland/keybind_overrides.py. Never edits user keybind
                               files; refuses to touch a hand-edited shim (content hash). See
                               docs/proposals/keyboard-shortcuts-editor.md
+  TypingLanguages.qml          The typing test's word packs: reads assets/typing/languages-manifest.json
+                              and loads one pack on request (FileView, read in onLoaded). Local and
+                              manifest-driven - the language list is what the assets ship
+  TypingSoundPacks.qml         Its key-press and error sound packs, from sounds-manifest.json; answers a
+                              pack's variant URLs for the SoundEffect pool the surface keeps while
+                              sounds are on. Both ported from the p3drovfx fork with the test
   PrismLauncher.qml            Prism Launcher modpacks for the launcher search, enumerated by
                               scripts/prism/list_instances.py. Feature-detected (native binary or
                               flatpak): without Prism the script never runs, `available` stays
@@ -846,8 +860,15 @@ scripts/                   Standalone helper scripts (Python/bash) invoked via P
                               checked on the cmdline - the fork matched the full command
                               line and adopted its own launcher; this repo's lint refuses
                               that form (the map is a fenced block, so it counts as code)
+  typing/                     sync_monkeytype_languages.py / sync_monkeytype_sounds.py refresh
+                              assets/typing against a pinned immutable monkeytype sha, verify
+                              every download (a real RIFF/WAVE, a pack no thinner than
+                              MINIMUM_WORDS) and never execute what they fetched. Development
+                              only; the shell never runs them
 translations/              i18n string tables (Translation.tr(...) singleton)
-assets/                    Static images/fonts bundled with the shell
+assets/                    Static images/fonts bundled with the shell; assets/typing is the vendored
+                            Monkeytype word packs and sounds (GPL-3.0-only, checksummed per manifest,
+                            provenance in ATTRIBUTION.md)
 ```
 
 ## The Config system (settings page ↔ persisted JSON)
@@ -1814,6 +1835,20 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
   other controls as that surface's siblings. Reached by measuring in
   `PhoneFeatureCard.qml`, whose three cards were the only controls in this
   shell a keyboard could not reach until they became controls at all.
+
+- **An id declared inside a `Loader`'s `sourceComponent` is not visible from a
+  binding outside it, and the failure is an empty window with the error a scroll
+  away.** The cheatsheet's page list (icon, name, `component`) was written on
+  the `Scope` root, naming `Component { id: keybindsPage }` and its siblings -
+  which are declared inside `sourceComponent: FloatingWindow { ... }`, i.e. in
+  the Loader's component scope, where a file-scoped id is not. The list threw
+  `ReferenceError: keybindsPage is not defined`, the tab list `Cannot call
+  method 'map' of undefined`, and the window opened as a 56x110 box: padding,
+  a toolbar with no tabs, and nothing in the view. Every lint and contract was
+  green, because a reference resolves at binding time. A list that names ids
+  lives in the scope that declares them - here the window - and the readers
+  follow it. Measured on the deployed shell, which is the only place it shows.
+  ("fix(cheatsheet): the page list lives on the window, where the page Components are in scope").
 
 - **A `Flow` with no width of its own and an incubated parent wraps once and
   stays wrapped.** `Flow` takes its `implicitWidth` when a layout does not
