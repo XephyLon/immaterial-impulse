@@ -345,6 +345,22 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "menu_book"
+            shape: MaterialShape.Shape.Gem
+            title: Translation.tr("Cheatsheet")
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "speed"
+                    text: Translation.tr("Typing test tab")
+                    description: Translation.tr("A Monkeytype-style typing test as a cheatsheet page; its own settings and score history live inside it")
+                    checked: Config.options.cheatsheet.enableTypingTest
+                    onToggleRequested: Config.options.cheatsheet.enableTypingTest = !Config.options.cheatsheet.enableTypingTest
+                }
+            }
+        }
+
+        ContentSection {
             icon: "code"
             shape: MaterialShape.Shape.Gem
             title: Translation.tr("Developer")
