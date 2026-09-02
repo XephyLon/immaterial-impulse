@@ -206,6 +206,11 @@ must not declare `horizontalPadding`, `verticalPadding`, `padding`, `spacing`, `
 `icon` as its own property; those are `FINAL` and overriding one is a hard compile failure. Pick a
 distinct name (`labelInset`, not `horizontalPadding`). A plain `Item`/`Rectangle` has no such
 restriction, which is why `property real padding` is fine in the many non-`Control` widgets here.
+This note did not stop the second hit - the Docker bar widget shipped a `readonly property real
+horizontalPadding` the day it became a `RippleButton`, and the bar lost the widget - so it is a
+check now: `tests/lint_final_properties.py` follows the repo's own types to every Control-derived
+root and fails the suite on a root-level declaration of a FINAL name
+("test: a Control-derived widget must not redeclare a FINAL property, mechanised").
 
 **A `qml6` probe's `console.log` goes to the journal, not to your terminal.** Qt is built with
 journald support here, so `qml6 probe.qml` prints *nothing at all* — which reads as "the probe never
