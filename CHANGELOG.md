@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-8] — 2026-09-03
+
 ### Added
 - **Terminal opacity is a shell setting.** Settings > Appearance > Terminal
   gains an opacity slider, written into the generated kitty theme, so a
