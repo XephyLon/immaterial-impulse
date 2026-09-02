@@ -9,7 +9,7 @@ import qs.modules.common
 TestCase {
     name: "BarGeometryTest"
 
-    readonly property var cornerStyles: [0, 1, 2, 3]
+    readonly property var cornerStyles: [0, 1, 2, 3, 4]
     readonly property int m3CornerStyle: 3
 
     property int savedCornerStyle: 0

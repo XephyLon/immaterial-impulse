@@ -1193,6 +1193,12 @@ if ! python3 "$SCRIPT_DIR/test_notification_list_entrance.py"; then
     exit 1
 fi
 
+echo "Running Float Islands bar style contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
+    echo "Float Islands bar style contract tests failed."
+    exit 1
+fi
+
 echo "Running calendar card tests..."
 if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
     echo "Calendar card tests failed."
