@@ -90,17 +90,22 @@ class TypingTestContractTests(unittest.TestCase):
         self.assertIn("visible: root.presence > 0", presence)
         self.assertIn("Behavior on presence", presence)
 
-    def test_every_sound_effect_names_its_output(self) -> None:
-        """A SoundEffect left on Qt's own default reports Ready and playing
-        and opens no PipeWire stream on Qt 6.11 - measured with pactl: nothing
-        for the bare effect, a `quickshell` stream on the default sink once
-        audioDevice is MediaDevices.defaultAudioOutput."""
+    def test_the_sounds_are_media_players_that_name_their_output(self) -> None:
+        """SoundEffect is silent on Qt 6.11's PipeWire backend - Ready,
+        playing, and nothing on the sink (measured on the default sink's
+        monitor: 0 for SoundEffect, 7.8k peak for a MediaPlayer on the same
+        file). The pool is MediaPlayers, and every AudioOutput names the
+        default device."""
         player = source("modules/imi/cheatsheet/typing/TypingSounds.qml")
-        effects = re.findall(r"SoundEffect \{(.*?)\n\s*\}", player, re.S)
-        self.assertGreaterEqual(len(effects), 2)
-        for body in effects:
-            self.assertIn("audioDevice: outputs.defaultAudioOutput", body, body)
+        self.assertNotIn("SoundEffect {", player)
+        players = re.findall(r"MediaPlayer \{(.*?)\n\s{12,16}\}", player, re.S)
+        self.assertGreaterEqual(len(players), 2)
+        outputs = re.findall(r"audioOutput: AudioOutput \{(.*?)\}", player, re.S)
+        self.assertEqual(len(outputs), 2)
+        for body in outputs:
+            self.assertIn("device: outputs.defaultAudioOutput", body, body)
         self.assertIn("MediaDevices { id: outputs }", player)
+        self.assertIn("player.stop();", player)
 
     def test_config_declares_every_preference_the_settings_page_writes(self) -> None:
         config = source("modules/common/Config.qml")
@@ -254,7 +259,7 @@ class TypingTestContractTests(unittest.TestCase):
         self.assertNotIn("https://", packs)
         # The pool costs an audio thread, so it only exists once enabled.
         self.assertIn("active: root.soundEnabled", player)
-        self.assertIn("SoundEffect", player)
+        self.assertIn("MediaPlayer", player)
 
 
     def test_runtime_is_local_and_input_path_has_no_process(self) -> None:
