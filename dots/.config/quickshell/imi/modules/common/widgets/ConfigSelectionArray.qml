@@ -66,6 +66,19 @@ ColumnLayout {
             }
         }
 
+        // The unlabelled path's right edge. With the Flow the only item in the
+        // row, its `Layout.alignment: Qt.AlignRight` aligned it inside a cell
+        // that was already its own width and the surplus stayed at the row's
+        // end - so in a card the chips sat left, right after the title, and
+        // four stacked cards had four different right edges. The spacer takes
+        // the surplus (the Flow's maximum is its natural width), and when the
+        // row is narrower than the chips the spacer is 0 and the Flow shrinks
+        // and wraps as before. The labelled path's label already fills.
+        Item {
+            visible: !root.text
+            Layout.fillWidth: true
+        }
+
         Flow {
             id: buttonsFlow
             Layout.fillWidth: !root.text
