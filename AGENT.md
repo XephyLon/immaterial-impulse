@@ -1164,6 +1164,25 @@ whose `minimumSize` equals its `maximumSize` is floated, sized and centred by Hy
 purely from the fixed size hints. Prefer that over a runtime rule. It also keeps the window title
 free to stay translated, since nothing is matching on it.
 
+**...and a window sized that way is exactly as tall as its tallest page, on every screen, so the
+pages have to fit the screen themselves.** The cheatsheet's `SwipeView` reports the largest of its
+pages' implicit sizes, and the Elements page was nine rows of fixed 70px tiles - ~800px with the
+window's chrome - which fits a 1080p panel at scale 1 (970px usable) and on the same panel at 1.25x
+(864 logical) put the window 17px under the bar and 17px under the dock, at 1.5x (720) 44px off the
+top of the screen. The keybinds page had a budget of `screen.height - 220`, a literal standing in
+for "the bar, the dock and the chrome" on one desktop, and the Elements page had none. "The
+screen" for a floating window is what the compositor leaves: `HyprlandData.monitors[].reserved`
+is `[left, top, right, bottom]` (matched by `screen.name`, the way the bar already reads it), and
+`modules/common/functions/cheatsheetFit.js` turns that, the gaps and the window's own padding and
+tab bar into one budget every page takes. A page that cannot re-flow scales itself as one picture
+and reports the SCALED size - a `scale` on the column under a page still reporting its natural size
+sizes the window to the natural size, which is the clipping. Before `HyprlandData` has answered the
+reserve reads as nothing, so a window that never clipped is the window it was. Measured in a nested
+Hyprland at all three sizes (`tests/tst_cheatsheet_fit.qml` carries them;
+`tests/test_cheatsheet_width_budget.py` pins the wiring): 788 → 788 / 744 / 600 against 970 / 754 /
+610 usable.
+("fix(cheatsheet): pages fit the screen the compositor leaves, not a 220px guess").
+
 **A Hyprland option the shell sets is reported back as set whether or not it did anything, and the
 complaint is on the screen rather than in the log.** `decoration:screen_shader` is the measured
 case, against 0.56.2 in a nested instance. `CHyprOpenGLImpl::applyScreenShader` calls
