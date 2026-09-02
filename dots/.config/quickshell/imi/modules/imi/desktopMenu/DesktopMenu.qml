@@ -371,20 +371,23 @@ Scope {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
                                 spacing: Appearance.spacing.space150
                                 MaterialSymbol {
-                                    text: "edit"
+                                    text: GlobalStates.editMode ? "edit_off" : "edit"
                                     iconSize: Appearance.font.pixelSize.larger
                                     color: Appearance.colors.colOnLayer1
                                 }
                                 StyledText {
                                     Layout.fillWidth: true
-                                    text: "Edit layout"
+                                    // One row, two states (maintainer, 2026-09-03): "Edit layout"
+                                    // enters the mode; while it is on the same row reads
+                                    // "Exit editing" and leaves it, beside the toolbar's Done.
+                                    text: GlobalStates.editMode ? Translation.tr("Exit editing") : Translation.tr("Edit layout")
                                     font.pixelSize: Appearance.font.pixelSize.normal
                                     color: Appearance.colors.colOnLayer1
                                 }
                             }
                             onClicked: {
                                 GlobalStates.desktopMenuOpen = false
-                                GlobalStates.editMode = true
+                                GlobalStates.editMode = !GlobalStates.editMode
                             }
                         }
 

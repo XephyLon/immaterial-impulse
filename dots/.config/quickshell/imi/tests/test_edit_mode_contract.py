@@ -851,22 +851,17 @@ def test_the_drawer_is_the_modules_rect_and_the_drop_is_the_modules_arithmetic()
 
 
 def test_the_mode_has_one_way_in_and_the_toolbar_owns_the_way_out():
-    # Two controls that disagree about what they do is the failure; two that
-    # agree is merely redundant. This picks the first: the desktop menu enters,
-    # the toolbar's Done leaves, and neither is the other's second opinion.
+    # The desktop menu's one row is the way in and, flipped while the mode is
+    # on, a way out beside the toolbar's Done (maintainer, 2026-09-03: "Exit
+    # editing"). One row with two states, never two rows that could disagree.
     menu = read(DESKTOP_MENU)
     writes = re.findall(r"GlobalStates\.editMode = ([^\n]+)", menu)
-    assert writes == ["true"], \
-        f"the desktop menu is no longer only the way in: {writes}"
-    # `rowVisible`, not `visible`. A GroupedList row hidden the second way keeps
-    # its plate - a row-height band of the group's own background with nothing
-    # in it, which is what this menu grew between Widgets and DropShelf for the
-    # whole life of the mode. GroupedList.qml says why the widget cannot simply
-    # mirror `visible`; this pins the call site that reported it.
-    assert re.search(r"property bool rowVisible:\s*!GlobalStates\.editMode", menu), \
-        "the Edit layout row must not sit in the menu doing nothing while the mode is on"
-    assert not re.search(r"^\s*visible:\s*!GlobalStates\.editMode", menu, re.M), \
-        "a GroupedList row hidden with `visible` leaves an empty plate behind"
+    assert writes == ["!GlobalStates.editMode"], \
+        f"the desktop menu's row must toggle the mode, once: {writes}"
+    assert re.search(r'text:\s*GlobalStates\.editMode \? Translation\.tr\("Exit editing"\) : Translation\.tr\("Edit layout"\)', menu), \
+        "the row must read Exit editing while the mode is on and Edit layout otherwise"
+    assert not re.search(r"rowVisible:\s*!GlobalStates\.editMode", menu), \
+        "the row hides while the mode is on; it is meant to read Exit editing then"
     assert re.search(r"GlobalStates\.editMode = false", read(CHROME_SURFACE)), \
         "the toolbar's Done is the mode's exit"
     # Leaving takes the gesture and the selection with it: Done means stop, and
