@@ -36,6 +36,7 @@ Item {
 
         Revealer {
             reveal: true
+            vertical: root.vertical
             MaterialSymbol {
                 text: Audio.sink?.audio?.muted ? "volume_off" : "volume_up"
                 iconSize: Appearance.font.pixelSize.larger

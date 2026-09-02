@@ -51,7 +51,7 @@ class SystemIconsGracefulTests(unittest.TestCase):
                           "a Revealer that always collapses width slides sideways in a vertical bar")
 
     def test_the_bell_stays_loaded_while_its_revealer_closes(self):
-        loader = re.search(r"Loader \{(.*?)\n {12}\}", self.icons, re.S)
+        loader = re.search(r"Loader \{\s*id: notifLoader(.*?)\n {12}\}", self.icons, re.S)
         self.assertIsNotNone(loader)
         self.assertRegex(loader.group(1), r"active: notifRevealer\.reveal \|\| notifRevealer\.visible",
                          "a Loader that unloads the moment the state drops slides an empty gap closed")
