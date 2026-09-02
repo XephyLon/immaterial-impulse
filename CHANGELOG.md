@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The installer's progress spinner no longer floods the screen during the
+  glibc upgrade.** It forked `sleep` and `date` every tick, and while pacman
+  replaces glibc nothing can start: each tick printed "cannot execute" and
+  the elapsed clock went negative. It keeps time and sleeps with bash
+  builtins now, and a milestone never moves backwards.
 - **The M3 bar's profile text is centred.** Its two lines sat 2 px low in
   the pill.
 - **Quick toggle edit badges belong visibly to their tile.** The remove

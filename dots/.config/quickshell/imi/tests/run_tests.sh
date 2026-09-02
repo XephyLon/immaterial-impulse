@@ -1251,6 +1251,13 @@ if ! python3 "$SCRIPT_DIR/test_quick_toggle_edit_badges.py"; then
     exit 1
 fi
 
+# The install TUI's spinner forks nothing for time or sleep, so pacman's
+# glibc replacement cannot make it spam errors or run its clock negative.
+if ! python3 "$SCRIPT_DIR/test_installer_tui_spinner.py"; then
+    echo "Installer TUI spinner tests failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."
