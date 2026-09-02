@@ -67,6 +67,29 @@ class TypingTestContractTests(unittest.TestCase):
         self.assertIn("property bool enableTypingTest: true", config)
         self.assertIn("Config.options.cheatsheet.enableTypingTest", settings)
 
+    def test_nothing_in_the_test_snaps_in_or_out_on_state(self) -> None:
+        """Gracefully entering and exiting: an element that comes and goes with
+        the test's state is a Presence (or a FadeLoader), never a bare
+        `visible:` on that state - a bare gate is a one-frame snap, and the
+        results screen shipped as exactly that."""
+        state = re.compile(r"engine\.|root\.page|restartArmed|isFinished|isRunning|hasTarget|state ===|options\.")
+        for name in ("TypingTestSurface.qml", "TypingTestToolbar.qml"):
+            text = source("modules/imi/cheatsheet/typing/" + name)
+            for line_no, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith("visible:") and state.search(stripped):
+                    self.fail(f"{name}:{line_no} gates visibility on state with a bare visible: {stripped}")
+        surface = source("modules/imi/cheatsheet/typing/TypingTestSurface.qml")
+        self.assertGreaterEqual(surface.count("Presence {"), 10)
+        self.assertEqual(surface.count("FadeLoader {"), 3)
+        # The stage and the score share one slot whose height eases, or the
+        # cross-fade lands in a layout that still jumps between the two.
+        self.assertIn("property real slotHeight:", surface)
+        self.assertIn("Behavior on slotHeight", surface)
+        presence = source("modules/common/widgets/Presence.qml")
+        self.assertIn("visible: root.presence > 0", presence)
+        self.assertIn("Behavior on presence", presence)
+
     def test_config_declares_every_preference_the_settings_page_writes(self) -> None:
         config = source("modules/common/Config.qml")
         block = config.split("property JsonObject typingTest: JsonObject {", 1)[1]
