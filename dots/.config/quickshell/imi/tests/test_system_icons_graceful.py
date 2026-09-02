@@ -57,6 +57,14 @@ class SystemIconsGracefulTests(unittest.TestCase):
                          "a Loader that unloads the moment the state drops slides an empty gap closed")
         self.assertNotIn("visible: active", loader.group(1))
 
+    def test_the_keyboard_layout_colour_is_a_binding_not_a_one_shot_assignment(self):
+        # `onLoaded: item.color = ...` froze the layout's colour at load while
+        # the icons beside it followed the palette and the pill's hover.
+        self.assertNotRegex(self.icons, r"onLoaded:\s*item\.color\s*=")
+        loader = re.search(r"Loader \{\s*id: xkbLoader(.*?)\n {8}\}", self.icons, re.S)
+        self.assertIsNotNone(loader)
+        self.assertRegex(loader.group(1), r"Binding \{[^}]*property: \"color\"[^}]*value: root\.isMaterial \? Appearance\.colors\.colOnPrimary : Appearance\.colors\.colOnLayer1")
+
     def test_the_badge_is_a_presence(self):
         self.assertRegex(self.count, r"Presence \{\s*shown: !Notifications\.silent && Notifications\.unread > 0")
         self.assertNotRegex(self.count, r"\n {8}visible: !Notifications",

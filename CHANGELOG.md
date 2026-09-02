@@ -38,6 +38,9 @@ own repo; the installer pins which revision it builds.
   the same blur, shadow and background switches as Float.
 
 ### Fixed
+- **The keyboard layout in the System Icons follows the palette.** Its colour
+  was set once at load and stayed behind when the pill's colour changed,
+  light text on the light hovered M3 pill.
 - **The privacy indicator is danger-red in both themes.** In the dark theme
   it was a pastel pink pill with a dark glyph - M3's error role flips
   saturation with the theme - and read as decoration; it now takes the
