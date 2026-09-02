@@ -1245,6 +1245,12 @@ if ! python3 "$SCRIPT_DIR/test_terminal_theme_template.py"; then
     exit 1
 fi
 
+# Quick toggle edit badges sit inside the tile, on one edge.
+if ! python3 "$SCRIPT_DIR/test_quick_toggle_edit_badges.py"; then
+    echo "Quick toggle edit badge tests failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."

@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **Quick toggle edit badges belong visibly to their tile.** The remove
+  badge hung outside the top-left corner and the resize handle outside the
+  bottom-right, so neighbours' badges met in the gutter and the bottom row's
+  handles were clipped; both now sit inside the tile on its right edge.
 - **kitty no longer refuses to start after a theme generation with no
   palette.** With the palette file missing or empty the colour generator
   copied its kitty template out with every `$placeholder` intact, and kitty
