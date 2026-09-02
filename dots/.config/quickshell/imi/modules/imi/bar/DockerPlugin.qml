@@ -92,14 +92,17 @@ RippleButton {
     colRipple: Appearance.colors.colLayer1Active
 
     // The button's background hugs the content rather than the bar-height
-    // hit area, the tray overflow button's shape: the hover pill and the
-    // anchor outline both draw on it, and at bar height the outline was a
-    // hoop around the gauge and the count with air above and below.
+    // hit area: the hover pill and the anchor outline both draw on it, and
+    // at bar height the outline was a hoop around the gauge and the count
+    // with air above and below. EXPLICIT width and height, not implicit: a
+    // Control forces its background to its own size unless the size is set
+    // outright, so an implicit size with anchors.centerIn changes nothing -
+    // which is why the first attempt at this still filled the hit area.
     background.anchors.centerIn: this
-    background.implicitWidth: root.vertical
+    background.width: root.vertical
         ? (contentLoader.item?.implicitWidth ?? 0) + Appearance.spacing.space50 * 2
         : (contentLoader.item?.implicitWidth ?? 0) + root.sidePadding * 2
-    background.implicitHeight: root.vertical
+    background.height: root.vertical
         ? (contentLoader.item?.implicitHeight ?? 0) + root.sidePadding * 2
         : (contentLoader.item?.implicitHeight ?? 0) + Appearance.spacing.space50 * 2
 

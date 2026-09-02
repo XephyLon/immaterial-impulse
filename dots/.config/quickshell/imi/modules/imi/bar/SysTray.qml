@@ -100,8 +100,10 @@ Item {
             downAction: () => root.trayOverflowOpen = !root.trayOverflowOpen
 
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
-            background.implicitWidth: 24
-            background.implicitHeight: 24
+            // Explicit, not implicit: a Control forces its background to its
+            // own size unless the size is set outright.
+            background.width: 24
+            background.height: 24
             background.anchors.centerIn: this
 
             // The open state is the bar's dashed anchor outline around the
