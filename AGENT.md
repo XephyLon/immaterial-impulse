@@ -6542,23 +6542,37 @@ and back, at a distance-proportional speed with a floor — see the entry below 
 finished, optionally giving up its room along an axis - the spelling for anything that would
 otherwise be a bare `visible:` on a state; `FadeLoader` is the same for a Loader, `Revealer` the
 size-only sibling),
-`PopupAnchorOutline` (the one open state a bar widget has while a click holds its popup open: a
-dashed primary outline in the widget's rounding that fades in with its dashes marching and fades
-back out - see the entry below before painting a toggled container on a bar widget).
+`PopupAnchorIndicator` (the one open state a bar widget has while a click holds its popup open:
+Material's active indicator, a primary bar on the bar surface's popup-facing edge as long as the
+widget's visual, growing in and fading - see the entry below before painting a toggled container or
+a ring on a bar widget).
 All in `modules/common/widgets/`.
 
-**A bar widget's open state is the dashed anchor outline, never a tonal container.** The bar had no
-open state for a widget whose popup is up; the first one tried - `RippleButton`'s toggled tonal
-container, the tray overflow button's grammar - broke every bar style but M3: a filled pill behind
-the Docker gauge's bare ring. `PopupAnchorOutline` fills the widget and binds `shown` to the
-popup's open state; it is `ShapePath` geometry (a Canvas would be a GUI-thread raster on every
-frame the dashes move), its dashes tile the perimeter in whole counts so there is no half dash at
-the seam, and it rides two tokenised tiers - the effects tier for the fade, one spatial tier for the
-march both ways. Taken from the p3drovfx fork's expressive dashboard pill, minus its Canvas, its
-literal 800ms and its snap on close. `tests/test_bar_popup_anchor_contract.py` keeps a register of
-the click-held popups and fails on a new one that ships without it, or with a tonal container.
-("feat(bar): a widget's open popup marks its anchor with a dashed outline",
-"fix(bar): the Docker widget and the tray overflow wear the anchor outline instead of a tonal pill").
+**A bar widget's open state is the edge indicator, never a container or a ring around it.** The
+bar had no open state for a widget whose popup is up. Two were tried and failed on styling: a
+`RippleButton` tonal toggled container (a filled pill behind the Docker gauge's bare ring, wrong
+under every style but M3) and a dashed ring hugging the visual, from the p3drovfx fork's expressive
+dashboard pill (needs air that the group pills and the flat bar do not give). `PopupAnchorIndicator`
+is Material's active indicator: a primary bar, `borderWidth.emphasis` thick, as long as the widget's
+visual, on the bar surface's popup-facing edge, so it is outside every group pill under every style
+and points at the popup. It is mounted on the widget's root with `wraps` (the visual), `edgeItem`
+(the root) and `edge` from `BarEdges.popupEdge(vertical, bottom)` - the bar's `bottom` flag is its
+side when vertical. The edge it lies on is the nearest PAINTED PLATE's, found by walking the root's
+ancestors for a `popupAnchorSurface`: `BarGroup` exposes its pill when it paints one (Pills,
+Separated, Islands, an M3 material pill), else the section exposes its plate - the M3 section
+pill, the Float Islands island, the centre-only pill, or the bar background - and a bar that paints
+nothing (Islands with transparent groups) falls back to the root's own edge. Not the root's edge
+in general (a vertical bar's widgets are narrower than the bar) and not the window's (taller than
+the plate by shadows and gaps, unevenly - measured: the line landed below every plate but Hug's).
+Two tokenised tiers: effects for the fade, one spatial tier for the grow both ways.
+`tests/test_bar_popup_anchor_contract.py` keeps a register of the click-held popups and fails on
+one that ships without it, with a tonal container, or on a section that stops naming its plate.
+Verified by nested screenshots, five corner styles by three group styles horizontal plus three
+vertical: the line sits inside the plate flush with its popup-facing edge, as long as the visual,
+in every one. `BarAnchorProbe.qml` measures the length and centring headlessly (IPC `probe arm`,
+`probe boxes`).
+("feat(bar): a widget's open popup is marked by an indicator on the bar's edge").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background

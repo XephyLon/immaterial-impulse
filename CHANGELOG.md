@@ -13,11 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
-- **A bar widget's open popup marks its anchor.** While a click holds a
-  popup open - Docker, Discord voice, the tray's overflow - the widget wears
-  a dashed outline in the primary colour, in its own rounding, that fades in
-  with the dashes marching and fades back out. It replaces the tonal
-  container the tray's overflow button used to paint, which only read on M3.
+- **A bar widget's open popup is marked on the bar's edge.** While a click
+  holds a popup open - Docker, Discord voice, the tray's overflow - a primary
+  indicator as long as the widget lies on the bar's popup-facing edge under
+  it, growing in and fading out, under every bar style and group style. It
+  replaces the tonal container the tray's overflow button used to paint,
+  which only read on M3.
 - **Float Islands bar style.** A fifth bar style (Settings > Bar > Bar style,
   also on the Quick page): M3's three sections - left, centre, right - each
   drawn as Float's plate, with the window rounding, the layer border and a
@@ -33,7 +34,7 @@ own repo; the installer pins which revision it builds.
   the bar's orientation, and the unread badge fades.
 - **The Docker bar widget answers a click.** It opened its container popup
   with no feedback at all; it is a button now - the press squish, the ripple
-  from the press point - and its open state is the bar's new anchor outline.
+  from the press point - and its open state is the bar's new edge indicator.
 - **Settings > Quick's Bar & Screen cards hold their chips.** With a fifth
   bar style the Bar style chips ran past their card, and Bar position's had
   been overflowing their padding all along: the page is 720 wide, and two
