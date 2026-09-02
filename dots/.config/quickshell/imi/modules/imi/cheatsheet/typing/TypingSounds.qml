@@ -53,6 +53,14 @@ Item {
         sourceComponent: Item {
             readonly property alias errorPlayer: errorEffect
 
+            // Every effect names its output. A SoundEffect left on Qt's own
+            // default reports Ready and `playing` and opens NO stream on
+            // Qt 6.11's PipeWire backend - measured with `pactl list
+            // sink-inputs`: nothing for the bare effect, a `quickshell`
+            // stream the moment `audioDevice` is the default output from
+            // MediaDevices. Bound, so a change of default sink follows.
+            MediaDevices { id: outputs }
+
             function keyAt(index) {
                 return keyPool.objectAt(index);
             }
@@ -65,6 +73,7 @@ Item {
                     required property int index
                     source: TypingSoundPacks.variantUrl(root.clickPack, index)
                     volume: root.volume
+                    audioDevice: outputs.defaultAudioOutput
                 }
             }
 
@@ -72,6 +81,7 @@ Item {
                 id: errorEffect
                 source: TypingSoundPacks.variantUrl(root.errorPack, 0)
                 volume: root.volume
+                audioDevice: outputs.defaultAudioOutput
             }
         }
     }
