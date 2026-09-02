@@ -338,6 +338,16 @@ was **entirely silent**; and with no `Inherits=` walk, `oxygen` — which ships 
 
 Three things about the replacement generalise past sound.
 
+- **A `SoundEffect` on Qt's own default output is silent on Qt 6.11's PipeWire backend, and
+  reports Ready and `playing` while it is.** The typing test's key clicks used the plain
+  `SoundEffect { source; volume }` and nothing was heard. Measured with a `qs -p` probe against
+  the live session and `pactl list sink-inputs`: the bare effect opens NO stream at all - no
+  warning, `status` 2, `playing` true - and the same effect with `audioDevice:
+  MediaDevices.defaultAudioOutput` opens a `quickshell` stream on the default sink the moment it
+  plays. Name the device (bound, so a default-sink change follows). Not a contradiction of the
+  point below: this is the one place per-keystroke latency justifies an in-process player, and the
+  contract test holds every effect there to naming its output.
+  ("fix(typing): the key sounds name their output, so they play").
 - **Playback stays a process spawn even though QtMultimedia works here.** Probed with `qml6`: it
   decodes and plays a `.oga` fine. It also takes a bare QtQuick process from 65 MiB / 133 mapped
   shared objects to **113 MiB / 238** and keeps it there for the life of the shell whether or not a

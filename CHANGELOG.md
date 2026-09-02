@@ -12,6 +12,11 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The typing test's key sounds play.** They were silent: a `SoundEffect`
+  left on Qt's default output opens no stream on Qt 6.11's PipeWire backend
+  while reporting itself playing. Every effect now names the default output.
+
 ## [1.0.0-rc-6] — 2026-09-02
 
 ### Added

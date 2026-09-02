@@ -90,6 +90,19 @@ class TypingTestContractTests(unittest.TestCase):
         self.assertIn("visible: root.presence > 0", presence)
         self.assertIn("Behavior on presence", presence)
 
+    def test_every_sound_effect_names_its_output(self) -> None:
+        """A SoundEffect left on Qt's own default reports Ready and playing
+        and opens no PipeWire stream on Qt 6.11 - measured with pactl: nothing
+        for the bare effect, a `quickshell` stream on the default sink once
+        audioDevice is MediaDevices.defaultAudioOutput."""
+        player = source("modules/imi/cheatsheet/typing/TypingSounds.qml")
+        effects = re.findall(r"SoundEffect \{(.*?)
+\s*\}", player, re.S)
+        self.assertGreaterEqual(len(effects), 2)
+        for body in effects:
+            self.assertIn("audioDevice: outputs.defaultAudioOutput", body, body)
+        self.assertIn("MediaDevices { id: outputs }", player)
+
     def test_config_declares_every_preference_the_settings_page_writes(self) -> None:
         config = source("modules/common/Config.qml")
         block = config.split("property JsonObject typingTest: JsonObject {", 1)[1]
