@@ -94,7 +94,6 @@ GEOMETRY = re.compile(
     r"corner=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
     r"markerColor=(\S+) panelColor=(\S+) cornerColor=(\S+) "
     r"toolbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
-    r"tabbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
     r"area=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
     r"reserved=([\d.]+),([\d.]+) chromeColor=(\S+)")
 
@@ -152,10 +151,9 @@ class EditModeChromeTest(unittest.TestCase):
                 "panelColor": _hex_to_rgb(values[22]),
                 "cornerColor": _hex_to_rgb(values[23]),
                 "toolbar": tuple(float(v) for v in values[24:28]),
-                "tabbar": tuple(float(v) for v in values[28:32]),
-                "area": tuple(float(v) for v in values[32:36]),
-                "reserved": tuple(float(v) for v in values[36:38]),
-                "chromeColor": _hex_to_rgb(values[38]),
+                "area": tuple(float(v) for v in values[28:32]),
+                "reserved": tuple(float(v) for v in values[32:34]),
+                "chromeColor": _hex_to_rgb(values[34]),
             }
         for tag in ("geometry", "midGeometry"):
             self.assertIn(tag, self.reported,
@@ -172,7 +170,6 @@ class EditModeChromeTest(unittest.TestCase):
         self.panel_rgb = settled["panelColor"]
         self.corner_rgb = settled["cornerColor"]
         self.toolbar = settled["toolbar"]
-        self.tabbar = settled["tabbar"]
         self.area = settled["area"]
         self.reserved = settled["reserved"]
         self.chrome_rgb = settled["chromeColor"]
@@ -315,7 +312,7 @@ class EditModeChromeTest(unittest.TestCase):
         # is not in scope - still reports a position, a size and a full set of
         # passing geometry checks, and draws a stub. Found exactly that way.
         frame = self.frames["editing"]
-        for name, rect in (("toolbar", self.toolbar), ("tab bar", self.tabbar)):
+        for name, rect in (("toolbar", self.toolbar),):
             xs = self._body_span(frame, rect)
             self.assertTrue(xs, f"the {name}'s body is not in the picture at all")
             drawn_x, drawn_width = xs[0], xs[-1] - xs[0] + 1

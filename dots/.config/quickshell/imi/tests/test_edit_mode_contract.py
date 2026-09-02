@@ -652,7 +652,7 @@ def test_every_pixel_that_is_not_chrome_falls_through_to_the_desktop():
     mask = re.search(r"mask: Region \{(.*?)\n    \}", text, re.S)
     assert mask, "the chrome surface publishes no input mask at all"
     items = re.findall(r"item: (chrome\.\w+)", mask.group(1))
-    assert items == ["chrome.toolbarItem", "chrome.tabBarItem", "chrome.drawerItem"], \
+    assert items == ["chrome.toolbarItem", "chrome.drawerItem"], \
         f"the mask is not exactly the three chrome rects: {items}"
     # ...and nothing else on the surface may take a press. A screen-sized
     # MouseArea would be inside the mask's own hole and eat nothing, which is
@@ -956,11 +956,12 @@ def test_the_chrome_is_placed_between_the_card_and_the_usable_area():
     content = code(CHROME_CONTENT)
     assert re.search(r"property rect area:", content), \
         "the chrome content takes the usable area as well as the card"
-    for term in ("root.area.y", "root.area.height"):
-        assert term in content, f"the chrome does not place itself off {term}"
+    # Only the top band since the tab bar moved into the toolbar: the one piece
+    # is placed off the usable area's top edge, and nothing off its bottom.
+    assert "root.area.y" in content, "the chrome does not place itself off root.area.y"
     # The screen's own edges are exactly what it may no longer measure from.
     assert not re.search(r"\(root\.height\s*-\s*root\.card", content), \
-        "the tab bar is placed against the screen's bottom edge, not the usable area's"
+        "a piece is placed against the screen's bottom edge"
     assert "EditMode.areaRect(" in code(CHROME_SURFACE), \
         "the usable area must come from the module, not be rebuilt on the surface"
 

@@ -68,8 +68,8 @@ class FloatIslandsContractTests(unittest.TestCase):
         for rel in ("modules/imi/settings/pages/BarConfig.qml", "modules/imi/settings/pages/QuickConfig.qml"):
             self.assertIn('{ displayName: Translation.tr("Float Islands"), icon: "view_week", value: 4 }', source(rel), rel)
         bar = source("modules/imi/settings/pages/BarConfig.qml")
-        self.assertEqual(bar.count("Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4"), 2,
-                         "Show Background and Bar shadow are the two switches a float plate earns")
+        self.assertEqual(bar.count("Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4"), 3,
+                         "Show Background, Bar shadow and Edge shadow are the three switches a float plate earns")
 
     def test_the_geometry_unit_test_sweeps_the_style(self):
         self.assertIn("readonly property var cornerStyles: [0, 1, 2, 3, 4]", source("tests/tst_bar_geometry.qml"))

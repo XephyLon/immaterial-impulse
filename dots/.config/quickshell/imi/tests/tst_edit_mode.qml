@@ -310,19 +310,19 @@ TestCase {
     }
 
     function test_the_desktop_leaves_the_chrome_a_band_of_its_own() {
-        // The band above and below the card is an edge margin, the toolbar, and
-        // a full margin - so the toolbar has a known gap at each end BY
-        // CONSTRUCTION rather than by whatever the ceiling left over. The two
-        // ends are deliberately UNEQUAL: the outer one is the chrome's gap from
-        // the screen edge and the inner one is its gap from the desktop, and on
-        // this axis every pixel of the outer one comes off the desktop.
+        // The band above the card is an edge margin, the toolbar, and a full
+        // margin - so the toolbar has a known gap at each end BY CONSTRUCTION
+        // rather than by whatever the ceiling left over. The two ends are
+        // deliberately UNEQUAL: the outer one is the chrome's gap from the
+        // screen edge and the inner one is its gap from the desktop, and on
+        // this axis every pixel of the outer one comes off the desktop. BELOW
+        // the card there is no chrome any more - the tab bar moved into the
+        // toolbar - so the bottom band is one margin and the desktop has the
+        // rest.
         const bandTop = framed.y - barInset;
         const bandBottom = (1440 - dockInset) - (framed.y + framed.height);
         fuzzyCompare(bandTop, 12 + chrome + 24, 0.5);
-        fuzzyCompare(bandBottom, 12 + chrome + 24, 0.5);
-        // The two bands stay the same height as each other, which is what makes
-        // the toolbar and the tab bar travel by the same amount.
-        fuzzyCompare(bandTop, bandBottom, 1e-6);
+        fuzzyCompare(bandBottom, 24, 0.5);
         // ...and the vertical constraint is what decides the scale here, which
         // is what makes the numbers above a promise rather than a coincidence
         // of the ceiling.
@@ -699,6 +699,44 @@ TestCase {
     }
 
     // ---- the undo stack (spec §7.3) -----------------------------------
+
+    // `swap` is the entry that inverts itself: running it restores the value
+    // it holds and returns the entry that restores what it displaced, which is
+    // the redo - and running THAT returns an undo again.
+    function test_swap_restores_and_returns_its_own_inverse() {
+        let store = "after";
+        const entry = EditMode.swap(() => store, (v) => { store = v; }, "before");
+        const redo = entry();
+        compare(store, "before");
+        verify(typeof redo === "function");
+        const undoAgain = redo();
+        compare(store, "after");
+        verify(typeof undoAgain === "function");
+        undoAgain();
+        compare(store, "before");
+    }
+
+    // A batch undoes from its end and redoes from its start.
+    function test_composite_runs_backwards_and_its_inverse_runs_forwards() {
+        const log = [];
+        let value = 3;
+        const steps = [1, 2, 3].map((n) => EditMode.swap(() => value, (v) => { log.push(n + ":" + v); value = v; }, n - 1));
+        const batch = EditMode.composite(steps);
+        const redo = batch();
+        compare(log.join(","), "3:2,2:1,1:0");
+        compare(value, 0);
+        log.length = 0;
+        const undo = redo();
+        compare(log.join(","), "1:1,2:2,3:3");
+        compare(value, 3);
+        verify(typeof undo === "function");
+    }
+
+    // A legacy closure that returns nothing leaves a batch without a redo.
+    function test_composite_without_full_inverses_returns_none() {
+        const batch = EditMode.composite([() => undefined, EditMode.swap(() => 1, () => {}, 0)]);
+        verify(batch() === undefined);
+    }
 
     function test_undo_push_appends_and_pop_returns_last_in() {
         // LIFO, because "the last thing I did" is what Ctrl+Z means. Entries

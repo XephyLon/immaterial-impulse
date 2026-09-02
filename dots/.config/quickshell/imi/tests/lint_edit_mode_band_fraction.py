@@ -40,6 +40,9 @@ SETS_FRACTION = re.compile(r"^\s*bandFraction:\s*\S", re.M)
 # rather than on their whole expression, so a reworded comment does not fail.
 TOOLBAR_Y = re.compile(
     r"y:\s*root\.area\.y\s*\+\s*\(root\.card\.y[^\n]*\)\s*\*\s*root\.bandFraction")
+# The mirrored placement is gone WITH the tab bar: the tabs lead the toolbar
+# now and the desktop took the band below. A second piece placed at
+# `1 - bandFraction` would be that band coming back.
 TAB_BAR_Y = re.compile(r"\*\s*\(1\s*-\s*root\.bandFraction\)")
 
 
@@ -58,14 +61,15 @@ class EditModeBandFraction(unittest.TestCase):
             "the band is no longer reserved as edgeMargin + chrome + margin, "
             "so the fraction the chrome is placed at is a split of nothing")
 
-    def test_the_content_places_both_pieces_on_the_fraction(self):
+    def test_the_content_places_the_toolbar_on_the_fraction_and_nothing_below(self):
         text = CONTENT.read_text()
         self.assertRegex(
             text, TOOLBAR_Y,
             "the toolbar is not placed at `bandFraction` through its band")
-        self.assertRegex(
+        self.assertNotRegex(
             text, TAB_BAR_Y,
-            "the tab bar is not placed at the band's mirrored fraction")
+            "a piece is placed in the mirrored band under the desktop; the tab "
+            "bar moved into the toolbar and the desktop has that band")
         # The specific regression: centring survives as `/ 2` on a band that is
         # not symmetric, which renders as a toolbar off its gap by half the
         # difference between the two margins.

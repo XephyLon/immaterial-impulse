@@ -289,10 +289,9 @@ ShellRoot {
         }
     }
 
-    // The chrome's two pieces, when there are any. Reached through the loader
-    // rather than held as ids, since they do not exist at rest.
+    // The chrome's toolbar, when there is one. Reached through the loader
+    // rather than held as an id, since it does not exist at rest.
     readonly property Item toolbar: chromeLoader.item?.toolbarItem ?? null
-    readonly property Item tabBar: chromeLoader.item?.tabBarItem ?? null
 
     readonly property matrix4x4 matrix: Qt.matrix4x4(
         harness.applied.scale, 0, 0, harness.applied.x,
@@ -313,8 +312,6 @@ ShellRoot {
             + ` cornerColor=${harness.cornerWidgetColor}`
             + ` toolbar=${harness.toolbar?.x ?? -1},${harness.toolbar?.y ?? -1}`
             + `,${harness.toolbar?.width ?? 0},${harness.toolbar?.height ?? 0}`
-            + ` tabbar=${harness.tabBar?.x ?? -1},${harness.tabBar?.y ?? -1}`
-            + `,${harness.tabBar?.width ?? 0},${harness.tabBar?.height ?? 0}`
             + ` area=${harness.area.x},${harness.area.y},${harness.area.width},${harness.area.height}`
             + ` reserved=${harness.insetTop},${harness.insetBottom}`
             + ` chromeColor=${Appearance.m3colors.m3surfaceContainer}`);
@@ -387,12 +384,10 @@ ShellRoot {
         // and one that has left the screen is not there at all. Both bands are
         // opened by the shrink itself, which is why this is asserted against
         // the card rather than against a chosen inset.
-        harness.check("the toolbar and the tab bar sit in the bands the shrink opened",
-            harness.toolbar !== null && harness.tabBar !== null
+        harness.check("the toolbar sits in the band the shrink opened above the desktop",
+            harness.toolbar !== null
                 && harness.toolbar.y >= 0
-                && harness.toolbar.y + harness.toolbar.height <= harness.card.y + 0.5
-                && harness.tabBar.y >= harness.card.y + harness.card.height - 0.5
-                && harness.tabBar.y + harness.tabBar.height <= harness.screenHeight,
+                && harness.toolbar.y + harness.toolbar.height <= harness.card.y + 0.5,
             `toolbar=${harness.toolbar?.y.toFixed(1)}+${harness.toolbar?.height.toFixed(1)}`
                 + ` band=${harness.card.y.toFixed(1)}`);
         // ...and clear of the two edges the bar and the dock own, by the edge
