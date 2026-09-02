@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-7] — 2026-09-02
+
 ### Added
 - **An edge shadow for an unpainted bar.** With the background off and the
   group style None the bar is glyphs over the wallpaper; Settings > Bar's
