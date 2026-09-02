@@ -9,10 +9,18 @@ import qs.services
  * Key-press feedback for the typing test.
  *
  * The samples are Monkeytype's own, vendored into the shell assets (see
- * scripts/typing/sync_monkeytype_sounds.py). They are played through
- * SoundEffect rather than the XDG event player: this is per-keystroke
- * feedback, so it must not be rate limited, must not go through the system
- * sound theme, and must be able to overlap itself at 100+ WPM.
+ * scripts/typing/sync_monkeytype_sounds.py). They are played in-process
+ * rather than through the XDG event player: this is per-keystroke feedback,
+ * so it must not be rate limited, must not go through the system sound
+ * theme, and must be able to overlap itself at 100+ WPM.
+ *
+ * In-process means MediaPlayer + AudioOutput, NOT SoundEffect. Measured on
+ * Qt 6.11 against a real PipeWire session with the default sink's monitor
+ * recorded: a SoundEffect - bare or with its audioDevice named - reports
+ * Ready and `playing` and puts nothing on the sink (its stream stays corked
+ * and muted, or never opens), while a MediaPlayer on the same file, same
+ * device, peaks the monitor at 7.8k. The pool is MediaPlayers, each naming
+ * the default output, restarted per keystroke.
  *
  * Nothing is instantiated until the feature is switched on — QtMultimedia
  * links its backend and starts an audio thread the moment a player exists.
@@ -36,14 +44,13 @@ Item {
             return;
         const player = poolLoader.item.keyAt(root._next);
         root._next = (root._next + 1) % root.poolSize;
-        if (player)
-            player.play();
+        poolLoader.item.trigger(player);
     }
 
     function playError() {
         if (!root.soundEnabled || !root.errorSound || !poolLoader.item)
             return;
-        poolLoader.item.errorPlayer.play();
+        poolLoader.item.trigger(poolLoader.item.errorPlayer);
     }
 
     Loader {
@@ -53,35 +60,46 @@ Item {
         sourceComponent: Item {
             readonly property alias errorPlayer: errorEffect
 
-            // Every effect names its output. A SoundEffect left on Qt's own
-            // default reports Ready and `playing` and opens NO stream on
-            // Qt 6.11's PipeWire backend - measured with `pactl list
-            // sink-inputs`: nothing for the bare effect, a `quickshell`
-            // stream the moment `audioDevice` is the default output from
-            // MediaDevices. Bound, so a change of default sink follows.
+            // Every player names its output, bound so a change of default
+            // sink follows.
             MediaDevices { id: outputs }
 
             function keyAt(index) {
                 return keyPool.objectAt(index);
             }
 
+            // stop() then play(): a player that has reached its end restarts
+            // from the top either way, one still ringing is cut and restarted,
+            // and one whose media has not loaded yet (the first beat after the
+            // pool is built) plays nothing rather than queueing a late click.
+            function trigger(player) {
+                if (!player)
+                    return;
+                player.stop();
+                player.play();
+            }
+
             Instantiator {
                 id: keyPool
                 model: root.poolSize
 
-                delegate: SoundEffect {
+                delegate: MediaPlayer {
                     required property int index
                     source: TypingSoundPacks.variantUrl(root.clickPack, index)
-                    volume: root.volume
-                    audioDevice: outputs.defaultAudioOutput
+                    audioOutput: AudioOutput {
+                        device: outputs.defaultAudioOutput
+                        volume: root.volume
+                    }
                 }
             }
 
-            SoundEffect {
+            MediaPlayer {
                 id: errorEffect
                 source: TypingSoundPacks.variantUrl(root.errorPack, 0)
-                volume: root.volume
-                audioDevice: outputs.defaultAudioOutput
+                audioOutput: AudioOutput {
+                    device: outputs.defaultAudioOutput
+                    volume: root.volume
+                }
             }
         }
     }
