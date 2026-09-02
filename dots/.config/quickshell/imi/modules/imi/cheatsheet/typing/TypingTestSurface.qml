@@ -305,307 +305,370 @@ Item {
         anchors.rightMargin: root.stageMargin
 
         // ── The test ──────────────────────────────────────────────
-        ColumnLayout {
-            anchors.fill: parent
-            visible: root.page === "test"
-            spacing: 0
+        Presence {
+            shown: root.page === "test"
 
-            TypingTestToolbar {
-                Layout.fillWidth: true
-                engine: engine
-                settingsOpen: root.page === "settings"
-                historyOpen: root.page === "history"
-                statsOpen: root.page === "stats"
-                onRequestMode: mode => root.setMode(mode)
-                onRequestZenGuided: guided => root.setZenGuided(guided)
-                onRequestTime: seconds => root.setTime(seconds)
-                onRequestWords: count => root.setWords(count)
-                onRequestTogglePunctuation: root.togglePunctuation()
-                onRequestToggleNumbers: root.toggleNumbers()
-                onRequestSettings: root.togglePage("settings")
-                onRequestHistory: root.togglePage("history")
-                onRequestStats: root.togglePage("stats")
-            }
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
 
-            Item {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.preferredHeight: 1
-            }
+                TypingTestToolbar {
+                    Layout.fillWidth: true
+                    engine: engine
+                    settingsOpen: root.page === "settings"
+                    historyOpen: root.page === "history"
+                    statsOpen: root.page === "stats"
+                    onRequestMode: mode => root.setMode(mode)
+                    onRequestZenGuided: guided => root.setZenGuided(guided)
+                    onRequestTime: seconds => root.setTime(seconds)
+                    onRequestWords: count => root.setWords(count)
+                    onRequestTogglePunctuation: root.togglePunctuation()
+                    onRequestToggleNumbers: root.toggleNumbers()
+                    onRequestSettings: root.togglePage("settings")
+                    onRequestHistory: root.togglePage("history")
+                    onRequestStats: root.togglePage("stats")
+                }
 
-            // ── Stage ─────────────────────────────────────────────
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: stageColumn.implicitHeight
-                visible: !engine.isFinished
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredHeight: 1
+                }
 
-                ColumnLayout {
-                    id: stageColumn
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    spacing: Appearance.sizes.elevationMargin / 2
+                // ── Stage, and the result that takes its place ────────
+                // One slot for both: the stage fades out as the score fades in,
+                // and the slot's height eases between the two, so neither the
+                // swap nor the layout around it snaps.
+                Item {
+                    id: stageSlot
+                    Layout.fillWidth: true
+                    property real slotHeight: engine.isFinished ? resultBlock.implicitHeight : stageColumn.implicitHeight
+                    Layout.preferredHeight: stageSlot.slotHeight
+                    Behavior on slotHeight {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
 
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.bottomMargin: Appearance.spacing.space25
-                        spacing: Appearance.sizes.elevationMargin
+                    Presence {
+                        anchors.fill: parent
+                        shown: !engine.isFinished
 
-                        StyledText {
-                            visible: !engine.zenGuided || engine.mode !== "zen"
-                            text: engine.mode === "time"
-                                ? String(Math.max(0, Math.ceil(engine.timeLimitSeconds - engine.elapsedSeconds))) + "s"
-                                : (engine.mode === "words"
-                                    ? String(engine.completedWords()) + "/" + String(engine.wordLimit)
-                                    : String(Math.floor(engine.elapsedSeconds)) + "s")
-                            font.family: Appearance.font.family.monospace
-                            font.pixelSize: Appearance.font.pixelSize.huge
-                            font.weight: Font.DemiBold
-                            color: Appearance.colors.colPrimary
-                        }
+                            ColumnLayout {
+                                id: stageColumn
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                spacing: Appearance.sizes.elevationMargin / 2
 
-                        Item { Layout.fillWidth: true }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.bottomMargin: Appearance.spacing.space25
+                                    spacing: Appearance.sizes.elevationMargin
 
-                        // The pack in use, right where the eye already is
-                        // when a test starts — and one click to change it.
-                        RippleButton {
-                            implicitWidth: languageRow.implicitWidth + 22
-                            implicitHeight: 30
-                            buttonRadius: Appearance.rounding.full
-                            enabled: !engine.isRunning
-                            colBackground: "transparent"
-                            colBackgroundHover: Appearance.colors.colSurfaceContainerHighestHover
-                            colRipple: Appearance.colors.colSurfaceContainerHighestActive
-                            onClicked: root.cycleLanguage()
+                                    Presence {
+                                        shown: !engine.zenGuided || engine.mode !== "zen"
+                                        collapseHorizontal: true
 
-                            RowLayout {
-                                id: languageRow
-                                anchors.centerIn: parent
-                                spacing: Appearance.spacing.space75
+                                        StyledText {
+                                            text: engine.mode === "time"
+                                                ? String(Math.max(0, Math.ceil(engine.timeLimitSeconds - engine.elapsedSeconds))) + "s"
+                                                : (engine.mode === "words"
+                                                    ? String(engine.completedWords()) + "/" + String(engine.wordLimit)
+                                                    : String(Math.floor(engine.elapsedSeconds)) + "s")
+                                            font.family: Appearance.font.family.monospace
+                                            font.pixelSize: Appearance.font.pixelSize.huge
+                                            font.weight: Font.DemiBold
+                                            color: Appearance.colors.colPrimary
+                                        }
+                                    }
 
-                                MaterialSymbol {
-                                    text: "language"
-                                    iconSize: Appearance.font.pixelSize.normal
-                                    color: Appearance.colors.colSubtext
+                                    Item { Layout.fillWidth: true }
+
+                                    // The pack in use, right where the eye already is
+                                    // when a test starts — and one click to change it.
+                                    RippleButton {
+                                        implicitWidth: languageRow.implicitWidth + 22
+                                        implicitHeight: 30
+                                        buttonRadius: Appearance.rounding.full
+                                        enabled: !engine.isRunning
+                                        colBackground: "transparent"
+                                        colBackgroundHover: Appearance.colors.colSurfaceContainerHighestHover
+                                        colRipple: Appearance.colors.colSurfaceContainerHighestActive
+                                        onClicked: root.cycleLanguage()
+
+                                        RowLayout {
+                                            id: languageRow
+                                            anchors.centerIn: parent
+                                            spacing: Appearance.spacing.space75
+
+                                            MaterialSymbol {
+                                                text: "language"
+                                                iconSize: Appearance.font.pixelSize.normal
+                                                color: Appearance.colors.colSubtext
+                                            }
+                                            StyledText {
+                                                text: TypingLanguages.languageFor(TypingLanguages.currentPack?.id)?.label
+                                                    ?? TypingLanguages.currentPack?.name ?? Translation.tr("Language")
+                                                font.pixelSize: Appearance.font.pixelSize.small
+                                                color: Appearance.colors.colSubtext
+                                            }
+                                        }
+
+                                        StyledToolTip { text: Translation.tr("Change language (Ctrl+L)") }
+                                    }
+
+                                    Item { Layout.fillWidth: true }
+
+                                    Presence {
+                                        shown: root.options.showLiveWpm && engine.isRunning
+                                        collapseHorizontal: true
+
+                                        StyledText {
+                                            text: Translation.tr("%1 wpm").arg(String(Math.round(engine.wpm)))
+                                            font.family: Appearance.font.family.monospace
+                                            font.pixelSize: Appearance.font.pixelSize.small
+                                            color: Appearance.colors.colOnSurfaceVariant
+                                        }
+                                    }
+                                    Presence {
+                                        shown: root.options.showLiveAccuracy && engine.isRunning && engine.hasTarget
+                                        collapseHorizontal: true
+
+                                        StyledText {
+                                            text: String(Math.round(engine.accuracy)) + "%"
+                                            font.family: Appearance.font.family.monospace
+                                            font.pixelSize: Appearance.font.pixelSize.small
+                                            color: Appearance.colors.colOnSurfaceVariant
+                                        }
+                                    }
                                 }
-                                StyledText {
-                                    text: TypingLanguages.languageFor(TypingLanguages.currentPack?.id)?.label
-                                        ?? TypingLanguages.currentPack?.name ?? Translation.tr("Language")
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                    color: Appearance.colors.colSubtext
+
+                                // The reading line, the free-typing line and the loading mark share
+                                // one slot and cross-fade in it; as sequential children they would
+                                // stack mid-fade and jump the layout.
+                                Item {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: viewport.implicitHeight
+
+                                    Presence {
+                                        anchors.fill: parent
+                                        shown: engine.hasTarget && engine.state !== "loading"
+
+                                        TypingWordViewport {
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                                id: viewport
+                                                engine: engine
+                                        }
+                                    }
+
+                                    Presence {
+                                        anchors.fill: parent
+                                        shown: !engine.hasTarget
+
+                                        StyledText {
+                                            anchors.fill: parent
+                                                text: engine.inputText.length > 0 ? engine.inputText : Translation.tr("Start typing freely…")
+                                                wrapMode: Text.Wrap
+                                                verticalAlignment: Text.AlignTop
+                                                font.family: Appearance.font.family.monospace
+                                                font.pixelSize: root.options.fontSize
+                                                font.weight: Font.Medium
+                                                color: engine.inputText.length > 0 ? Appearance.colors.colOnSurface : Appearance.colors.colSubtext
+                                        }
+                                    }
+
+                                    Presence {
+                                        anchors.fill: parent
+                                        shown: engine.state === "loading"
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                                spacing: Appearance.spacing.space75
+
+                                                Item { Layout.fillHeight: true }
+                                                MaterialLoadingIndicator {
+                                                    implicitWidth: 30
+                                                    implicitHeight: 30
+                                                }
+                                                StyledText {
+                                                    text: Translation.tr("Loading language…")
+                                                    color: Appearance.colors.colOnSurfaceVariant
+                                                    font.pixelSize: Appearance.font.pixelSize.small
+                                                }
+                                                Item { Layout.fillHeight: true }
+                                        }
+                                    }
                                 }
                             }
-
-                            StyledToolTip { text: Translation.tr("Change language (Ctrl+L)") }
-                        }
-
-                        Item { Layout.fillWidth: true }
-
-                        StyledText {
-                            visible: root.options.showLiveWpm && engine.isRunning
-                            text: Translation.tr("%1 wpm").arg(String(Math.round(engine.wpm)))
-                            font.family: Appearance.font.family.monospace
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
-                        StyledText {
-                            visible: root.options.showLiveAccuracy && engine.isRunning && engine.hasTarget
-                            text: String(Math.round(engine.accuracy)) + "%"
-                            font.family: Appearance.font.family.monospace
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
                     }
 
-                    TypingWordViewport {
-                        id: viewport
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: implicitHeight
-                        visible: engine.hasTarget && engine.state !== "loading"
-                        engine: engine
-                    }
+                    Presence {
+                        anchors.fill: parent
+                        shown: engine.isFinished
+                        rise: Appearance.animation.entranceRise
 
-                    StyledText {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: viewport.implicitHeight
-                        visible: !engine.hasTarget
-                        text: engine.inputText.length > 0 ? engine.inputText : Translation.tr("Start typing freely…")
-                        wrapMode: Text.Wrap
-                        verticalAlignment: Text.AlignTop
-                        font.family: Appearance.font.family.monospace
-                        font.pixelSize: root.options.fontSize
-                        font.weight: Font.Medium
-                        color: engine.inputText.length > 0 ? Appearance.colors.colOnSurface : Appearance.colors.colSubtext
-                    }
-
-                    ColumnLayout {
-                        Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredHeight: viewport.implicitHeight
-                        visible: engine.state === "loading"
-                        spacing: Appearance.spacing.space75
-
-                        Item { Layout.fillHeight: true }
-                        MaterialLoadingIndicator {
-                            Layout.alignment: Qt.AlignHCenter
-                            implicitWidth: 30
-                            implicitHeight: 30
+                        TypingResults {
+                            id: resultBlock
+                            anchors.fill: parent
+                            implicitHeight: stageColumn.implicitHeight + Appearance.sizes.elevationMargin * 4
+                            // It used to snap in on the frame the timer ran out. It arrives
+                            // instead: opacity and a small rise on the one scalar, the enter
+                            // tier taken whole. A restart still takes it down in one frame
+                            // (visible), which is what a restart should do; the opacity it
+                            // leaves behind is what the next result fades up from.
+                            transform: Translate {
+                                y: (1 - resultBlock.opacity) * Appearance.animation.entranceRise
+                            }
+                            Behavior on opacity {
+                                animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+                            }
+                            engine: engine
+                            personalBest: root.personalBest
+                            onRestart: root.restart(false)
+                            onRepeat: root.restart(true)
                         }
-                        StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: Translation.tr("Loading language…")
-                            color: Appearance.colors.colOnSurfaceVariant
-                            font.pixelSize: Appearance.font.pixelSize.small
-                        }
-                        Item { Layout.fillHeight: true }
-                    }
-                }
-            }
-
-            // ── Result ────────────────────────────────────────────
-            TypingResults {
-                id: resultBlock
-                Layout.fillWidth: true
-                Layout.preferredHeight: stageColumn.implicitHeight + Appearance.sizes.elevationMargin * 4
-                visible: engine.isFinished
-                // It used to snap in on the frame the timer ran out. It arrives
-                // instead: opacity and a small rise on the one scalar, the enter
-                // tier taken whole. A restart still takes it down in one frame
-                // (visible), which is what a restart should do; the opacity it
-                // leaves behind is what the next result fades up from.
-                opacity: engine.isFinished ? 1 : 0
-                transform: Translate {
-                    y: (1 - resultBlock.opacity) * Appearance.animation.entranceRise
-                }
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-                }
-                engine: engine
-                personalBest: root.personalBest
-                onRestart: root.restart(false)
-                onRepeat: root.restart(true)
-            }
-
-            Item {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.preferredHeight: 1
-            }
-
-            TypingKeyboardPreview {
-                id: keyboard
-                Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Appearance.sizes.elevationMargin
-                visible: root.options.keyboard.enable && !engine.isFinished
-                nextChar: engine.nextExpectedChar.toLowerCase()
-                opacity: engine.isRunning ? 0.85 : 1
-            }
-
-            RippleButton {
-                id: restartButton
-                Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Appearance.sizes.elevationMargin / 2
-                visible: !engine.isFinished
-                implicitWidth: root.restartArmed ? armedContent.implicitWidth + 28 : 40
-                implicitHeight: 40
-                buttonRadius: Appearance.rounding.full
-                colBackground: root.restartArmed ? Appearance.colors.colPrimaryContainer : "transparent"
-                colBackgroundHover: root.restartArmed
-                    ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colSurfaceContainerHighestHover
-                colRipple: root.restartArmed
-                    ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colSurfaceContainerHighestActive
-                onClicked: root.restart(false)
-
-                Behavior on implicitWidth {
-                    NumberAnimation {
-                        duration: Appearance.animation.elementMoveFast.duration
-                        easing.type: Appearance.animation.elementMoveFast.type
-                        easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
                     }
                 }
 
-                RowLayout {
-                    id: armedContent
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space75
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredHeight: 1
+                }
 
-                    MaterialSymbol {
-                        text: "refresh"
-                        iconSize: Appearance.font.pixelSize.huge
-                        color: root.restartArmed
-                            ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
-                    }
+                Presence {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: Appearance.sizes.elevationMargin
+                    shown: root.options.keyboard.enable && !engine.isFinished
+                    collapseVertical: true
 
-                    StyledText {
-                        visible: root.restartArmed
-                        text: Translation.tr("Enter to restart")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colOnPrimaryContainer
+                    TypingKeyboardPreview {
+                        id: keyboard
+                        nextChar: engine.nextExpectedChar.toLowerCase()
+                        opacity: engine.isRunning ? 0.85 : 1
+                        Behavior on opacity {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
                     }
                 }
 
-                StyledToolTip { text: Translation.tr("Restart (Ctrl+R, or Tab then Enter)") }
+                Presence {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: Appearance.sizes.elevationMargin / 2
+                    shown: !engine.isFinished
+
+                    RippleButton {
+                        id: restartButton
+                        implicitWidth: root.restartArmed ? armedContent.implicitWidth + 28 : 40
+                        implicitHeight: 40
+                        buttonRadius: Appearance.rounding.full
+                        colBackground: root.restartArmed ? Appearance.colors.colPrimaryContainer : "transparent"
+                        colBackgroundHover: root.restartArmed
+                            ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colSurfaceContainerHighestHover
+                        colRipple: root.restartArmed
+                            ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colSurfaceContainerHighestActive
+                        onClicked: root.restart(false)
+
+                        Behavior on implicitWidth {
+                            NumberAnimation {
+                                duration: Appearance.animation.elementMoveFast.duration
+                                easing.type: Appearance.animation.elementMoveFast.type
+                                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                            }
+                        }
+
+                        RowLayout {
+                            id: armedContent
+                            anchors.centerIn: parent
+                            spacing: Appearance.spacing.space75
+
+                            MaterialSymbol {
+                                text: "refresh"
+                                iconSize: Appearance.font.pixelSize.huge
+                                color: root.restartArmed
+                                    ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
+                            }
+
+                            Presence {
+                                shown: root.restartArmed
+                                collapseHorizontal: true
+
+                                StyledText {
+                                    text: Translation.tr("Enter to restart")
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
+                            }
+                        }
+
+                        StyledToolTip { text: Translation.tr("Restart (Ctrl+R, or Tab then Enter)") }
+                    }
+                }
             }
         }
 
         // ── Settings and history pages ────────────────────────────
-        ColumnLayout {
-            anchors.fill: parent
-            visible: root.page !== "test"
-            spacing: Appearance.sizes.elevationMargin / 2
+        Presence {
+            shown: root.page !== "test"
 
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.bottomMargin: Appearance.sizes.elevationMargin / 2
+            ColumnLayout {
+                anchors.fill: parent
                 spacing: Appearance.sizes.elevationMargin / 2
 
-                RippleButton {
-                    implicitWidth: 34
-                    implicitHeight: 34
-                    buttonRadius: Appearance.rounding.full
-                    colBackground: Appearance.colors.colSurfaceContainerHigh
-                    colBackgroundHover: Appearance.colors.colSurfaceContainerHighestHover
-                    colRipple: Appearance.colors.colSurfaceContainerHighestActive
-                    onClicked: root.showPage("test")
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Appearance.sizes.elevationMargin / 2
+                    spacing: Appearance.sizes.elevationMargin / 2
 
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        text: "arrow_back"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnSurfaceVariant
+                    RippleButton {
+                        implicitWidth: 34
+                        implicitHeight: 34
+                        buttonRadius: Appearance.rounding.full
+                        colBackground: Appearance.colors.colSurfaceContainerHigh
+                        colBackgroundHover: Appearance.colors.colSurfaceContainerHighestHover
+                        colRipple: Appearance.colors.colSurfaceContainerHighestActive
+                        onClicked: root.showPage("test")
+
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: "arrow_back"
+                            iconSize: Appearance.font.pixelSize.large
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        animateChange: true
+                        text: root.page === "settings" ? Translation.tr("Typing test settings")
+                            : (root.page === "stats" ? Translation.tr("Statistics") : Translation.tr("Score history"))
+                        font.pixelSize: Appearance.font.pixelSize.large
+                        font.weight: Font.DemiBold
+                        color: Appearance.colors.colOnSurface
                     }
                 }
 
-                StyledText {
+                // The three pages cross-fade in one slot; a FadeLoader keeps a page
+                // built until its fade out has finished.
+                Item {
                     Layout.fillWidth: true
-                    text: root.page === "settings" ? Translation.tr("Typing test settings")
-                        : (root.page === "stats" ? Translation.tr("Statistics") : Translation.tr("Score history"))
-                    font.pixelSize: Appearance.font.pixelSize.large
-                    font.weight: Font.DemiBold
-                    color: Appearance.colors.colOnSurface
+                    Layout.fillHeight: true
+
+                    FadeLoader {
+                        anchors.fill: parent
+                        shown: root.page === "settings"
+                        sourceComponent: TypingSettingsPage {}
+                    }
+                    FadeLoader {
+                        anchors.fill: parent
+                        shown: root.page === "history"
+                        sourceComponent: TypingHistoryPage {}
+                    }
+                    FadeLoader {
+                        anchors.fill: parent
+                        shown: root.page === "stats"
+                        sourceComponent: TypingStatsPage {}
+                    }
                 }
-            }
-
-            Loader {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                active: root.page === "settings"
-                visible: active
-                sourceComponent: TypingSettingsPage {}
-            }
-
-            Loader {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                active: root.page === "history"
-                visible: active
-                sourceComponent: TypingHistoryPage {}
-            }
-
-            Loader {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                active: root.page === "stats"
-                visible: active
-                sourceComponent: TypingStatsPage {}
             }
         }
 

@@ -127,25 +127,30 @@ Item {
         anchors.centerIn: parent
         spacing: Appearance.spacing.space125
 
-        PillGroup {
-            // Both modifiers decorate the generated target, so they follow the
-            // target rather than the mode: free zen has nothing to decorate,
-            // guided zen has exactly what the other modes have.
-            visible: Boolean(root.engine?.hasTarget)
+        // Both modifiers decorate the generated target, so they follow the
+        // target rather than the mode: free zen has nothing to decorate,
+        // guided zen has exactly what the other modes have. The group folds
+        // away and back rather than vanishing.
+        Presence {
+            shown: Boolean(root.engine?.hasTarget)
+            collapseHorizontal: true
 
-            PillButton {
-                pillIcon: "format_quote"
-                pillLabel: Translation.tr("punctuation")
-                active: Boolean(root.engine?.punctuation)
-                enabled: root.controlsEnabled
-                onClicked: root.requestTogglePunctuation()
-            }
-            PillButton {
-                pillIcon: "tag"
-                pillLabel: Translation.tr("numbers")
-                active: Boolean(root.engine?.numbers)
-                enabled: root.controlsEnabled
-                onClicked: root.requestToggleNumbers()
+            PillGroup {
+
+                PillButton {
+                    pillIcon: "format_quote"
+                    pillLabel: Translation.tr("punctuation")
+                    active: Boolean(root.engine?.punctuation)
+                    enabled: root.controlsEnabled
+                    onClicked: root.requestTogglePunctuation()
+                }
+                PillButton {
+                    pillIcon: "tag"
+                    pillLabel: Translation.tr("numbers")
+                    active: Boolean(root.engine?.numbers)
+                    enabled: root.controlsEnabled
+                    onClicked: root.requestToggleNumbers()
+                }
             }
         }
 
