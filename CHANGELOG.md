@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Float Islands bar style.** A fifth bar style (Settings > Bar > Bar style,
+  also on the Quick page): M3's three sections - left, centre, right - each
+  drawn as Float's plate, with the window rounding, the layer border and a
+  gap off the screen edge and the windows, and the widget groups inside them
+  exactly as Float draws them. Works for the bottom and vertical bars, takes
+  the same blur, shadow and background switches as Float.
+
 ### Fixed
 - **The typing test's key sounds play.** They were silent: Qt 6.11's
   `SoundEffect` reports itself playing while its PipeWire stream stays corked
