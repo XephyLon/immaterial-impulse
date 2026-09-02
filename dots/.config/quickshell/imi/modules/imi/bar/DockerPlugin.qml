@@ -13,8 +13,8 @@ import "../../common/plugins/bundled/docker" as DockerPackage
 // A RippleButton, not a MouseArea: a click here opens the container popup,
 // and a bare area answered it with nothing - no ripple, no press, no state
 // while the popup was up. The button brings the interaction model (the
-// press squish and the ripple from the press point) and a tonal toggled
-// container while its popup is open, the tray's overflow button's grammar.
+// press squish and the ripple from the press point); the open state is the
+// bar's dashed anchor outline while the popup is up.
 RippleButton {
     id: root
 
@@ -86,14 +86,32 @@ RippleButton {
     implicitHeight: root.vertical
         ? (contentLoader.item?.implicitHeight ?? 0)
         : Appearance.sizes.barHeight
-    toggled: root.popupOpen
     buttonRadius: Appearance.rounding.full
     colBackground: "transparent"
     colBackgroundHover: Appearance.colors.colLayer1Hover
     colRipple: Appearance.colors.colLayer1Active
-    colBackgroundToggled: Appearance.colors.colSecondaryContainer
-    colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
-    colRippleToggled: Appearance.colors.colSecondaryContainerActive
+
+    // The button's background hugs the content rather than the bar-height
+    // hit area, the tray overflow button's shape: the hover pill and the
+    // anchor outline both draw on it, and at bar height the outline was a
+    // hoop around the gauge and the count with air above and below.
+    background.anchors.centerIn: this
+    background.implicitWidth: root.vertical
+        ? (contentLoader.item?.implicitWidth ?? 0) + Appearance.spacing.space50 * 2
+        : (contentLoader.item?.implicitWidth ?? 0) + root.sidePadding * 2
+    background.implicitHeight: root.vertical
+        ? (contentLoader.item?.implicitHeight ?? 0) + root.sidePadding * 2
+        : (contentLoader.item?.implicitHeight ?? 0) + Appearance.spacing.space50 * 2
+
+    // The open state is the dashed anchor outline, not a tonal container: a
+    // filled pill behind a bare gauge broke every bar style but M3.
+    PopupAnchorOutline {
+        parent: root.background
+        anchors.fill: parent
+        z: 1
+        shown: root.popupOpen
+        radius: root.buttonRadius
+    }
 
     downAction: () => {
         root.popupOpen = !root.popupOpen;

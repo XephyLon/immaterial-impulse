@@ -21,6 +21,13 @@ MouseArea {
     cursorShape: Qt.PointingHandCursor
     onClicked: root.popupOpen = !root.popupOpen
 
+    // The bar's one open state: a dashed anchor outline while the popup is up.
+    PopupAnchorOutline {
+        anchors.fill: parent
+        z: 1
+        shown: root.popupOpen
+    }
+
     RowLayout {
         id: content
         anchors.centerIn: parent

@@ -97,16 +97,22 @@ Item {
         RippleButton {
             id: trayOverflowButton
             visible: root.showOverflowMenu && root.unpinnedItems.length > 0
-            toggled: root.trayOverflowOpen
             downAction: () => root.trayOverflowOpen = !root.trayOverflowOpen
 
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
             background.implicitWidth: 24
             background.implicitHeight: 24
             background.anchors.centerIn: this
-            colBackgroundToggled: Appearance.colors.colSecondaryContainer
-            colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
-            colRippleToggled: Appearance.colors.colSecondaryContainerActive
+
+            // The open state is the bar's dashed anchor outline around the
+            // button's own 24px background, not a tonal container.
+            PopupAnchorOutline {
+                parent: trayOverflowButton.background
+                anchors.fill: parent
+                z: 1
+                shown: root.trayOverflowOpen
+                radius: trayOverflowButton.buttonRadius
+            }
 
             contentItem: MaterialSymbol {
                 verticalAlignment: Text.AlignVCenter
@@ -114,7 +120,7 @@ Item {
                 iconSize: Appearance.font.pixelSize.larger
                 text: Config.options.bar.bottom ? "keyboard_control_key" : "expand_more"
                 horizontalAlignment: Text.AlignHCenter
-                color: root.trayOverflowOpen ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer2
+                color: root.trayOverflowOpen ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer2
                 rotation: (root.trayOverflowOpen ? 180 : 0) - (90 * root.vertical) + (180 * root.invertSide)
                 Behavior on rotation {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
