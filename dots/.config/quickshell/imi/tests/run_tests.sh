@@ -1187,6 +1187,12 @@ if ! python3 "$SCRIPT_DIR/test_cliphist_decode_lifetime.py"; then
     exit 1
 fi
 
+echo "Running notification list entrance tests..."
+if ! python3 "$SCRIPT_DIR/test_notification_list_entrance.py"; then
+    echo "Notification list entrance tests failed."
+    exit 1
+fi
+
 echo "Running calendar card tests..."
 if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
     echo "Calendar card tests failed."
