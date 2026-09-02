@@ -23,7 +23,9 @@ BAR_CONFIG = ROOT / "modules/imi/settings/pages/BarConfig.qml"
 CONFIG = ROOT / "modules/common/Config.qml"
 APPEARANCE = ROOT / "modules/common/Appearance.qml"
 
-GATE = r"visible: Config\.options\.bar\.edgeShadow && !Config\.options\.bar\.showBackground\s*&& Config\.options\.bar\.borderless === \"transparent\""
+STYLES = r"\(Config\.options\.bar\.cornerStyle === 0 \|\| Config\.options\.bar\.cornerStyle === 1 \|\| Config\.options\.bar\.cornerStyle === 4\)"
+GATE = (r"visible: Config\.options\.bar\.edgeShadow && !Config\.options\.bar\.showBackground\s*&& Config\.options\.bar\.borderless === \"transparent\"\s*&& "
+        + STYLES)
 
 
 def strip_comments(text):
@@ -55,7 +57,9 @@ class EdgeShadowTests(unittest.TestCase):
         text = strip_comments(BAR_CONFIG.read_text(encoding="utf-8"))
         block = re.search(r'ConfigSwitch \{(?=[^}]*Translation\.tr\("Edge shadow"\))(.*?)\n\s{16}\}', text, re.S)
         self.assertIsNotNone(block, "Settings > Bar carries an Edge shadow switch")
-        self.assertRegex(block.group(1), r'enabled: !Config\.options\.bar\.showBackground && Config\.options\.bar\.borderless === "transparent"')
+        # Live under exactly the shade's own three conditions - never while
+        # the Show Background switch above it is greyed out (M3, Islands).
+        self.assertRegex(block.group(1), r'enabled: ' + STYLES + r'\s*&& !Config\.options\.bar\.showBackground && Config\.options\.bar\.borderless === "transparent"')
         self.assertRegex(block.group(1), r"checked: Config\.options\.bar\.edgeShadow")
 
 

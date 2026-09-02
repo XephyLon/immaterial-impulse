@@ -147,8 +147,12 @@ Item {
     Rectangle {
         id: edgeShadow
         anchors.fill: parent
+        // Only where Show Background APPLIES - Hug, Float, Float Islands; M3
+        // and Islands paint their own containers whatever the switch says -
+        // and then only with it off and the groups transparent.
         visible: Config.options.bar.edgeShadow && !Config.options.bar.showBackground
             && Config.options.bar.borderless === "transparent"
+            && (Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4)
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0; color: Config.options.bar.bottom ? "transparent" : Appearance.colors.colBarEdgeShade }

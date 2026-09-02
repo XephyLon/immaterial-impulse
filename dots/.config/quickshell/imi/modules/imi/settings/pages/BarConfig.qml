@@ -379,7 +379,12 @@ ContentPage {
                     buttonIcon: "gradient"
                     text: Translation.tr("Edge shadow")
                     description: Translation.tr("Shade the screen edge behind an unpainted bar, for legibility")
-                    enabled: !Config.options.bar.showBackground && Config.options.bar.borderless === "transparent"
+                    // The same three conditions the shade itself is drawn under:
+                    // a style where Show Background applies, that switch off,
+                    // and the groups transparent - so the row is never live
+                    // while the switch above it is greyed out.
+                    enabled: (Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4)
+                        && !Config.options.bar.showBackground && Config.options.bar.borderless === "transparent"
                     checked: Config.options.bar.edgeShadow
                     onToggleRequested: Config.options.bar.edgeShadow = !Config.options.bar.edgeShadow
                 }

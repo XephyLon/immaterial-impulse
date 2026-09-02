@@ -6596,7 +6596,9 @@ colLayer0Base), backgroundTransparency)` now, the fill's own amount
 ("fix(appearance): the plate border thins with the fill instead of ringing it").
 
 **An unpainted bar can shade the screen edge behind it.** With `bar.showBackground` off and
-`bar.borderless` "transparent" the bar is glyphs over the wallpaper; `bar.edgeShadow` draws
+`bar.borderless` "transparent" - and only under a style where Show Background APPLIES (Hug, Float,
+Float Islands; M3 and Islands paint their own containers whatever the switch says, and the shade
+showed under M3's pills the day it shipped) - the bar is glyphs over the wallpaper; `bar.edgeShadow` draws
 `colBarEdgeShade` at the screen edge fading to transparent across the bar, in both bar contents
 behind the plate, gated on exactly that state - the bottom flag flips the gradient, and is the
 right-hand side when vertical. Settings > Bar's switch is inert outside the state.

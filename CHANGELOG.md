@@ -12,6 +12,12 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The edge shadow is offered only where Show Background applies.** It was
+  live under M3, whose pills paint themselves, and drew under them; the
+  switch and the shade now need Hug, Float or Float Islands with Show
+  Background off and group style None, all three.
+
 ## [1.0.0-rc-8] — 2026-09-03
 
 ### Added
