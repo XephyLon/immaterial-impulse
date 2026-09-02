@@ -1204,6 +1204,13 @@ if ! python3 "$SCRIPT_DIR/test_notification_list_entrance.py"; then
     exit 1
 fi
 
+# The System Icons bar widget: every icon that comes and goes slides through
+# a Revealer, and the bell's badge fades. Recorded snapping in and out.
+if ! python3 "$SCRIPT_DIR/test_system_icons_graceful.py"; then
+    echo "System icons graceful tests failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."

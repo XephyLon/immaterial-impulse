@@ -21,6 +21,11 @@ own repo; the installer pins which revision it builds.
   the same blur, shadow and background switches as Float.
 
 ### Fixed
+- **The System Icons bar widget no longer snaps icons in and out.** The
+  notification bell appeared and vanished between two frames with the icons
+  beside it jumping to close the gap, and Bluetooth and VPN did the same. Each
+  now slides through the same revealer the mic-mute icon always had, following
+  the bar's orientation, and the unread badge fades.
 - **The Docker bar widget answers a click.** It opened its container popup
   with no feedback at all; it is a button now - the press squish, the ripple
   from the press point, a tonal container while the popup is up.
