@@ -885,6 +885,59 @@ Singleton {
                     property int key: Appearance.font.pixelSize.smaller
                     property int comment: Appearance.font.pixelSize.smaller
                 }
+
+                // The typing test tab (Monkeytype-style, ported from the p3drovfx
+                // fork). On by default: the tab is the only host it has here.
+                property bool enableTypingTest: true
+                property JsonObject typingTest: JsonObject {
+                    property string language: "english_1k"
+                    property string mode: "time"
+                    // Zen without a target is free typing; guided zen keeps the
+                    // generated words but drops both limits, so the test only
+                    // ends when the user says so.
+                    property bool zenGuided: false
+                    property int time: 30
+                    property int words: 50
+                    property bool punctuation: false
+                    property bool numbers: false
+                    property bool showLiveWpm: false
+                    property bool showLiveAccuracy: false
+                    property bool smoothCaret: true
+                    // Typing surface. fontSize is the target text size in px:
+                    // the test is the hero of the page, so it does not follow
+                    // the shell's body scale.
+                    property int fontSize: 26
+                    property int visibleLines: 3
+                    property string caretStyle: "line" // line, block, underline, off
+                    // Highlight everything but the current word at reduced
+                    // emphasis, the way Monkeytype's word highlight does.
+                    property bool highlightCurrentWord: false
+                    property bool blindMode: false
+                    // Tab restarts the test, as on Monkeytype. Off by default
+                    // because Tab also walks the page's controls.
+                    property bool quickRestart: false
+                    // Finish a words/quote test on the last word without
+                    // needing a trailing space.
+                    property bool finishOnLastWord: true
+                    property JsonObject keyboard: JsonObject {
+                        property bool enable: true
+                        property string layout: "qwerty" // qwerty, qwertz, azerty, dvorak, colemak
+                        property bool highlightNextKey: true
+                    }
+                    property JsonObject sounds: JsonObject {
+                        property bool enable: true
+                        // Monkeytype pack ids, catalogued in
+                        // assets/typing/sounds-manifest.json.
+                        property string theme: "click1"
+                        property string errorTheme: "error1"
+                        property int volume: 55
+                        property bool errorSound: true
+                    }
+                    property JsonObject history: JsonObject {
+                        property bool enable: true
+                        property int maxEntries: 100
+                    }
+                }
             }
 
             property JsonObject background: JsonObject {
