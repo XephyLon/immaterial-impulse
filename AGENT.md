@@ -1850,6 +1850,27 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
   follow it. Measured on the deployed shell, which is the only place it shows.
   ("fix(cheatsheet): the page list lives on the window, where the page Components are in scope").
 
+- **A singleton's `Component.onCompleted` runs again on any reload that rebuilds
+  the singleton, so "cleanup on init" runs under whatever is on screen.**
+  `Directories` wiped the clipboard decode directory in its `onCompleted`,
+  reasoning that it ran once per process. A hot reload that changes a file in
+  the singleton's dependency graph (a deploy touching `Config.qml`, an update)
+  rebuilds it - the log shows its `[Directories]` line after every
+  `Configuration Loaded` - and the `rm -rf` ran under the launcher's live
+  previews: eight `Cannot open: file:///tmp/quickshell/media/cliphist/<id>`
+  lines, each just before a `Configuration Loaded`, and blank boxes where the
+  images were. Two more holes in the same ownership: the path was one
+  directory for every `qs` process, so a nested harness wiped the session's
+  previews on start, and each `CliphistImage` deleted "its" file on
+  destruction while the launcher rebuilds every row per keystroke. Reproduced
+  in a nested Hyprland: a content change to `Config.qml` took the directory
+  from 6 files to 0 with the images up. The directory is per process
+  (`Quickshell.processId`), the start-up sweep spares any sibling whose pid is
+  alive, and a preview is a held file - `Cliphist.acquireDecode`/`releaseDecode`
+  from the row, removed by a sweep only once nothing holds it. Before putting
+  a `rm` in an `onCompleted`, ask what a reload does to it.
+  ("fix(cliphist): a decoded preview lives while anything shows it").
+
 - **A `Flow` with no width of its own and an incubated parent wraps once and
   stays wrapped.** `Flow` takes its `implicitWidth` when a layout does not
   give it a width, and computes that implicit width from the width it

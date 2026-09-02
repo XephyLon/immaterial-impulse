@@ -24,6 +24,14 @@ own repo; the installer pins which revision it builds.
   is on by default and can be switched off in Settings > General > Cheatsheet.
 
 ### Fixed
+- **Clipboard image previews stop going blank.** The launcher's decoded
+  previews lived in one `/tmp` directory that the shell wiped on every reload
+  that rebuilt its `Directories` singleton (a deploy, an update) and that a
+  second shell process wiped on start, and every row deleted its file when
+  the launcher rebuilt its rows on a keystroke - so the `Image` behind a
+  preview lost its file and drew the placeholder. The directory is
+  per-process now, dead siblings are swept on start, and a preview is held
+  by the rows showing it and removed a few seconds after the last lets go.
 - **The cheatsheet fits a 1080p laptop screen.** Its window is fixed-size and
   as tall as its tallest page, and the Elements page was ~800px of fixed tiles
   on any screen - so at a fractional scale (864 or 720 logical px) the window
