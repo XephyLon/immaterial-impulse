@@ -1238,6 +1238,13 @@ if ! python3 "$SCRIPT_DIR/test_privacy_indicator_palette.py"; then
     exit 1
 fi
 
+# The generated kitty theme is never a file kitty refuses: no palette, no
+# theming; a placeholder left means no install; no // in the template.
+if ! python3 "$SCRIPT_DIR/test_terminal_theme_template.py"; then
+    echo "Terminal theme template tests failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."

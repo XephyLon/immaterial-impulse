@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **kitty no longer refuses to start after a theme generation with no
+  palette.** With the palette file missing or empty the colour generator
+  copied its kitty template out with every `$placeholder` intact, and kitty
+  rejected its whole config. The generator now stops without a palette,
+  never installs a theme with a placeholder left, and the template's one
+  inline `//` comment, which kitty read as part of a colour, is gone.
 - **Settings > Quick's Bar & Screen chips line up on the right.** In the
   stacked cards the chip rows sat left, right after each title, leaving four
   different right edges; a segmented row without a label now earns the right
