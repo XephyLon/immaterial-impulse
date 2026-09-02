@@ -6630,6 +6630,21 @@ setting into `user.conf` from a script, and never ship a `user.conf`
 ("fix(installer): a user's kitty settings survive an update",
 "feat(settings): terminal opacity as shell config").
 
+**Edit Mode's chrome is ONE toolbar, tabs first, undo and redo before Done; the band under the
+desktop is the desktop's.** The Desktop/Lockscreen tab bar was a second `Toolbar` in a band that
+mirrored the toolbar's under the card; the maintainer asked for it in the toolbar and for the
+desktop to take the space. `viewportGeometry` reserves `edgeMargin + chrome + margin` above and one
+`margin` below now, and centres the card in the room those unequal bands leave, not in the usable
+area (which would put half the top band back under the desktop). `chromeBandFraction` places the
+one toolbar; `lint_edit_mode_band_fraction.py` fails a piece placed at `1 - bandFraction`. Redo
+is edit_mode.js's `swap(read, write, value)`: an entry that restores `value` and RETURNS the entry
+restoring what it displaced, so `editUndo` keeps the return on `editRedoStack` and `editRedo`
+keeps its return back on the undo stack; `composite` folds a gesture's batch the same way (undone
+from the end, redone from the start). Every push site is a `swap` over its one literal store path -
+a new site that pushes a bare closure still undoes, but its undo has no redo. A new mutation empties
+the redo stack. The snap toggle's glyph is `grid_on`/`grid_off`; the alignment glyph read as a
+text control ("feat(editMode): one toolbar with the tabs first, and undo/redo").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background

@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **Edit Mode has one toolbar.** The Desktop and Lockscreen tabs lead it,
+  and the tab bar that sat under the desktop is gone; the desktop takes the
+  band it occupied. The edge-snapping toggle shows a grid, on or off.
+
+### Added
+- **Undo and redo in Edit Mode.** Two toolbar buttons beside Done, and
+  Ctrl+Shift+Z or Ctrl+Y alongside Ctrl+Z. Every undoable change - moves,
+  spans, adds, removes, bar and dock reorders, lock islands - can be redone;
+  a new change clears the redo history.
+
 ### Fixed
 - **The edge shadow is offered only where Show Background applies.** It was
   live under M3, whose pills paint themselves, and drew under them; the

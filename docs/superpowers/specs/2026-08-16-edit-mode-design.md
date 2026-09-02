@@ -119,6 +119,10 @@ closed and inset with it open, opening the drawer would be a resize.
 
 ### 1.4 A tab bar below the viewport: Desktop and Lockscreen
 
+> **Amended 2026-09-03:** the tabs lead the toolbar above the viewport now; the band below the
+> viewport went back to the desktop, and the toolbar carries undo and redo (§7.3, no longer
+> deferred). The rest of this section still holds: the tab is a filter, not a mode.
+
 Below the viewport sit two tabs: **Desktop** and **Lockscreen**.
 
 The lock screen is a *tab*, not a mode and not a state. Switching to it changes what the viewport
