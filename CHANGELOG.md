@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **A typing test in the cheatsheet.** A Monkeytype-style test as a new
+  cheatsheet tab (ported from the p3drovfx fork): time / words / zen modes,
+  punctuation and numbers, seven Monkeytype word packs (English, Portuguese,
+  Spanish, French, German, Italian, Russian - vendored, checksummed, offline),
+  a results screen with a WPM graph and character breakdown, personal bests,
+  history and a stats page with an activity map, Monkeytype's key-press and
+  error sounds, a live keyboard preview for five layouts, and an in-page
+  settings page for all of it. Scores stay local and aggregate-only. The tab
+  is on by default and can be switched off in Settings > General > Cheatsheet.
+
 ### Fixed
 - **The cheatsheet fits a 1080p laptop screen.** Its window is fixed-size and
   as tall as its tallest page, and the Elements page was ~800px of fixed tiles
