@@ -13,21 +13,28 @@ import "../../common/functions/cheatsheetFit.js" as CheatsheetFit
 
 Scope { // Scope
     id: root
-    // The Components tab is developer-mode only, so the list is computed and
-    // NOT a literal: the tab bar and the SwipeView are indexed in lockstep,
-    // and a tab that appears in one but not the other silently shows the wrong
-    // page. One source for both, plus the clamp below for the index that was
-    // persisted while the tab existed.
+    // The tab bar and the SwipeView are indexed in lockstep, and a tab that
+    // appears in one but not the other silently shows the wrong page - so
+    // both are drawn from ONE list of pages, and every optional page is an
+    // entry in it rather than a Loader parked in the view: two optional pages
+    // as parked Loaders can never agree with a tab list that skips one of
+    // them. The Components tab is developer-mode only, the typing test has a
+    // switch of its own, plus the clamp below for the index that was
+    // persisted while a tab existed.
     readonly property bool showComponents: Config.options?.developer?.enable ?? false
-    readonly property var tabButtonList: {
-        const tabs = [
-            { "icon": "keyboard", "name": Translation.tr("Keybinds") },
-            { "icon": "experiment", "name": Translation.tr("Elements") },
+    readonly property bool showTypingTest: Config.options?.cheatsheet?.enableTypingTest ?? true
+    readonly property var pages: {
+        const list = [
+            { "icon": "keyboard", "name": Translation.tr("Keybinds"), "component": keybindsPage },
+            { "icon": "experiment", "name": Translation.tr("Elements"), "component": elementsPage },
         ];
+        if (root.showTypingTest)
+            list.push({ "icon": "speed", "name": Translation.tr("Typing test"), "component": typingTestPage });
         if (root.showComponents)
-            tabs.push({ "icon": "widgets", "name": Translation.tr("Components") });
-        return tabs;
+            list.push({ "icon": "widgets", "name": Translation.tr("Components"), "component": componentsPage });
+        return list;
     }
+    readonly property var tabButtonList: root.pages.map(page => ({ "icon": page.icon, "name": page.name }))
 
     Loader {
         id: cheatsheetLoader
@@ -172,6 +179,49 @@ Scope { // Scope
                     }
                 }
 
+                Component {
+                    id: keybindsPage
+                    CheatsheetKeybinds {
+                        // The room the card may use before it starts growing
+                        // past the screen - what decides the column count.
+                        // Columns trade height for width, so a screen with
+                        // height to spare but not width was asked for more
+                        // columns than fit and the outer ones ran off both
+                        // edges; both budgets come from the window, which
+                        // reads the screen.
+                        maxContentHeight: cheatsheetRoot.pageHeightBudget
+                        maxContentWidth: cheatsheetRoot.pageWidthBudget
+                        onEditRequested: bindingData => {
+                            cheatsheetRoot.editingBinding = bindingData;
+                        }
+                    }
+                }
+                Component {
+                    id: elementsPage
+                    CheatsheetPeriodicTable {
+                        maxContentHeight: cheatsheetRoot.pageHeightBudget
+                        maxContentWidth: cheatsheetRoot.pageWidthBudget
+                    }
+                }
+                Component {
+                    id: typingTestPage
+                    CheatsheetTypingTest {
+                        maxContentHeight: cheatsheetRoot.pageHeightBudget
+                        maxContentWidth: cheatsheetRoot.pageWidthBudget
+                        // The loader the SwipeView holds is this page's parent.
+                        tabActive: cheatsheetRoot.visible && (parent?.current ?? false)
+                    }
+                }
+                // The gallery builds every shared widget in the library, and
+                // doing that behind a tab nobody opened would cost the
+                // cheatsheet its open time for a surface that is off by
+                // default - which is why it is a page in the list only while
+                // developer mode is on, and built only then.
+                Component {
+                    id: componentsPage
+                    CheatsheetComponents {}
+                }
+
                 ColumnLayout { // Real content
                     id: cheatsheetColumnLayout
                     anchors.centerIn: parent
@@ -202,7 +252,7 @@ Scope { // Scope
                         // which leaves a SwipeView pointing past its own end -
                         // an empty page and a tab bar highlighting nothing.
                         currentIndex: Math.min(Persistent.states.cheatsheet.tabIndex,
-                                               root.tabButtonList.length - 1)
+                                               root.pages.length - 1)
                         onCurrentIndexChanged: {
                             Persistent.states.cheatsheet.tabIndex = currentIndex;
                         }
@@ -220,35 +270,17 @@ Scope { // Scope
                             }
                         }
 
-                        CheatsheetKeybinds {
-                            // The room the card may use before it starts
-                            // growing past the screen - what decides the
-                            // column count. Columns trade height for width,
-                            // so a screen with height to spare but not width
-                            // was asked for more columns than fit and the
-                            // outer ones ran off both edges; both budgets come
-                            // from the window, which reads the screen.
-                            maxContentHeight: cheatsheetRoot.pageHeightBudget
-                            maxContentWidth: cheatsheetRoot.pageWidthBudget
-                            onEditRequested: bindingData => {
-                                cheatsheetRoot.editingBinding = bindingData;
+                        Repeater {
+                            model: root.pages
+                            delegate: Loader {
+                                id: pageLoader
+                                required property var modelData
+                                // What a page reads to know it is the one on
+                                // screen; the SwipeView attaches it to its
+                                // items, which are these loaders.
+                                readonly property bool current: pageLoader.SwipeView.isCurrentItem
+                                sourceComponent: modelData.component
                             }
-                        }
-                        CheatsheetPeriodicTable {
-                            maxContentHeight: cheatsheetRoot.pageHeightBudget
-                            maxContentWidth: cheatsheetRoot.pageWidthBudget
-                        }
-
-                        // A Loader rather than the page itself: the gallery
-                        // builds every shared widget in the library, and doing
-                        // that behind a tab nobody opened would cost the
-                        // cheatsheet its open time for a surface that is off by
-                        // default. `active` follows the toggle so turning the
-                        // mode off also takes the built page down.
-                        Loader {
-                            active: root.showComponents
-                            visible: active
-                            sourceComponent: CheatsheetComponents {}
                         }
                     }
                 }

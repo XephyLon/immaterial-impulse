@@ -115,6 +115,7 @@ ShellRoot {
                 // The cheatsheet only compiles when the user presses Super+/,
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),
+                Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetTypingTest.qml"),
                 Quickshell.shellPath("modules/common/widgets/KeybindEditor.qml"),
                 Quickshell.shellPath("modules/common/widgets/KeybindChordCapture.qml"),
                 // Every bar popup and the one surface they now share. A popup
