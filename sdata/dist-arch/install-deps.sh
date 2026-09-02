@@ -88,6 +88,33 @@ case $SKIP_SYSUPDATE in
   *) v sudo pacman -Syu $syuflags;;
 esac
 
+# A partially upgraded system fails *inside* a package build, after the clone
+# and the prepare step, with a message that names a library and not the
+# cause: "cmake: error while loading shared libraries: libjsoncpp.so.26" was a
+# user's report from the microtex build - cmake had been built against a newer
+# jsoncpp than the one installed, which is what a `pacman -Syu` that was
+# skipped, interrupted or partial leaves behind. Check the build tools the
+# PKGBUILDs run BEFORE the first makepkg, and say what the fix is. A tool that
+# is simply absent is fine here - makepkg -s installs it - so only the load
+# failure is fatal.
+ensure_toolchain_runs(){
+  local tool out broken=()
+  for tool in cmake gcc ninja meson python3 git; do
+    command -v "$tool" >/dev/null 2>&1 || continue
+    if ! out=$("$tool" --version 2>&1 >/dev/null) && grep -q "error while loading shared libraries" <<<"$out"; then
+      broken+=("$tool: $out")
+    fi
+  done
+  if (( ${#broken[@]} )); then
+    echo -e "${STY_RED}[$0]: The system is partially upgraded - a build tool cannot load a library it was built against:${STY_RST}"
+    printf '  %s\n' "${broken[@]}"
+    echo -e "${STY_RED}[$0]: Run \"sudo pacman -Syu\" (without --skip-sysupdate), reboot if the kernel or glibc moved, then run the installer again.${STY_RST}"
+    return 1
+  fi
+}
+showfun ensure_toolchain_runs
+v ensure_toolchain_runs
+
 # Use yay. Because paru does not support cleanbuild.
 # Also see https://wiki.hyprland.org/FAQ/#how-do-i-update
 if ! command -v yay >/dev/null 2>&1;then
