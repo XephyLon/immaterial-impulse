@@ -1940,6 +1940,12 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
   path keeps its aligned natural width, since the label beside it has no minimum and would be
   what yields.
   ("fix(settings): a segmented row without a label wraps inside its card instead of overflowing").
+  **And wrapping is the last resort, not the layout.** The Quick page is 720 wide; two card columns
+  hand each card 316px of content, and only one of its four chip rows fits that - so once they
+  could wrap, three rows had an orphan chip on a second line beside a neighbour of another height.
+  Before letting chips wrap, check whether the container can hold the row at all; the cards stack
+  now, title left and chips right, every row on one line (measured 461px in a 720px row).
+  ("fix(settings): the Bar & Screen cards stack so every chip row sits on one line").
 
 - **CI's Qt is older than yours, and its JS parser is too.** The workflow
   installs Ubuntu's `qt6-declarative-dev`; a developer here runs Arch's

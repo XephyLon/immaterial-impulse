@@ -24,10 +24,14 @@ own repo; the installer pins which revision it builds.
 - **The Docker bar widget answers a click.** It opened its container popup
   with no feedback at all; it is a button now - the press squish, the ripple
   from the press point, a tonal container while the popup is up.
-- **Settings > Quick's Bar style row no longer runs past its card.** With a
-  fifth style the chips outgrew the card and overflowed instead of wrapping;
-  a segmented row without a label now fills its cell up to its natural width,
-  so it wraps when the card is narrower and still sits on the right when not.
+- **Settings > Quick's Bar & Screen cards hold their chips.** With a fifth
+  bar style the Bar style chips ran past their card, and Bar position's had
+  been overflowing their padding all along: the page is 720 wide, and two
+  columns leave each card room for only one of the four chip rows. The cards
+  stack now, one row each with the title on the left and the chips on the
+  right, so every row sits on one line and the cards line up. A segmented row
+  without a label also fills its cell up to its natural width, so a narrower
+  cell wraps it instead of being overflowed.
 - **Bar icons in circles are outlined rings under every style but M3.** The
   media widget's progress circle and the Docker widget's container gauge
   were filled discs whatever the bar style; both are outline progress rings
