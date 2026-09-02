@@ -307,6 +307,25 @@ ContentPage {
             }
 
             GroupedList {
+                // kitty's window opacity as shell config, so a preset carries
+                // it and an update cannot lose it (a hand-edited kitty.conf
+                // was rewritten on every update). Blur is the compositor's.
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    buttonIcon: "opacity"
+                    text: Translation.tr("Terminal opacity")
+                    from: 0.3
+                    to: 1
+                    usePercentTooltip: true
+                    value: Config.options.appearance.terminal.opacity
+                    onValueModified: {
+                        const rounded = Math.round(newValue * 20) / 20
+                        if (rounded !== Config.options.appearance.terminal.opacity) {
+                            Config.options.appearance.terminal.opacity = rounded
+                            page.scheduleTerminalBackgroundApply()
+                        }
+                    }
+                }
                 ConfigSwitch {
                     buttonIcon: "texture"
                     text: Translation.tr("Background pattern")

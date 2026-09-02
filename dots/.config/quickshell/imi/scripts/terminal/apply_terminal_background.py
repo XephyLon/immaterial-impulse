@@ -36,11 +36,35 @@ def without_managed_block(text: str) -> str:
 
 
 def render(theme_text: str, settings: dict) -> str:
-    """Replace the managed block using validated terminal background settings."""
-    clean = without_managed_block(theme_text)
-    if not settings.get("enabled", False):
-        return clean
+    """Replace the managed block from the terminal settings.
 
+    `settings` is `appearance.terminal`: `opacity` (the window's
+    background_opacity, 1 = opaque) and `background` (the pattern). A bare
+    pattern dict is accepted too, as the older callers and tests pass one.
+    """
+    clean = without_managed_block(theme_text)
+    # The pattern dict has an `opacity` of its own (the pattern's visibility),
+    # so only the `background` key tells the two shapes apart.
+    if "background" in settings:
+        pattern = settings.get("background", {}) or {}
+        window_opacity = max(0.0, min(1.0, float(settings.get("opacity", 1.0))))
+    else:
+        pattern = settings
+        window_opacity = 1.0
+
+    opacity_lines = []
+    if window_opacity < 1.0:
+        opacity_lines = [
+            f"background_opacity {window_opacity:.2f}",
+            "dynamic_background_opacity yes",
+        ]
+
+    if not pattern.get("enabled", False):
+        if not opacity_lines:
+            return clean
+        return clean + "\n" + "\n".join([START_MARKER, *opacity_lines, END_MARKER]) + "\n"
+
+    settings = pattern
     raw_path = str(settings.get("imagePath", "")).strip()
     if not raw_path or "\n" in raw_path or "\r" in raw_path:
         raise ValueError("Choose a valid terminal pattern image")
@@ -56,6 +80,7 @@ def render(theme_text: str, settings: dict) -> str:
 
     block = [
         START_MARKER,
+        *opacity_lines,
         f"background_image {image_path}",
         f"background_image_layout {layout}",
         f"background_tint {tint:.2f}",
@@ -67,7 +92,7 @@ def render(theme_text: str, settings: dict) -> str:
 
 def load_settings(config_path: Path) -> dict:
     data = json.loads(config_path.read_text(encoding="utf-8"))
-    return data.get("appearance", {}).get("terminal", {}).get("background", {})
+    return data.get("appearance", {}).get("terminal", {})
 
 
 def write_atomic(path: Path, text: str) -> None:

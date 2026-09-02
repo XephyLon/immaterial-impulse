@@ -677,6 +677,11 @@ Singleton {
                     property real contentTransparency: 0.57
                 }
                 property JsonObject terminal: JsonObject {
+                    // kitty's window opacity (background_opacity), 1 = opaque.
+                    // Written into the generated theme's managed block, so it
+                    // is shell config - a preset carries it with appearance -
+                    // rather than a hand edit an update would lose.
+                    property real opacity: 1.0
                     property JsonObject background: JsonObject {
                         property bool enabled: false
                         property string imagePath: ""
