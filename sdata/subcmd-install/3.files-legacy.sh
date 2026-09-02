@@ -97,7 +97,7 @@ EOF
 case "${SKIP_MISCCONF}" in
   true) true;;
   *)
-    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'tmux' -exec basename {} \;); do
+    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'tmux' ! -name 'kitty' -exec basename {} \;); do
 #      i="dots/.config/$i"
       echo "[$0]: Found target: dots/.config/$i"
       if [ -d "dots/.config/$i" ];then install_dir__sync "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
@@ -125,6 +125,12 @@ case "${SKIP_FISH}" in
     install_dir__sync_exclude dots/.config/fish "$XDG_CONFIG_HOME"/fish "conf.d"
     ;;
 esac
+
+# kitty likewise: MISC's sync would `--delete` the two files the shipped
+# kitty.conf includes but never contains - user.conf (the user's own settings;
+# a user's transparency lines vanished on every update while kitty.conf was
+# synced whole) and colors-matugen.conf (written by matugen from the palette).
+install_dir__sync_exclude dots/.config/kitty "$XDG_CONFIG_HOME"/kitty "user.conf" "colors-matugen.conf"
 
 # tmux gets its own gated step (not MISC) because MISC's sync would `--delete`
 # the two things the shipped config sources but never contains: plugins/ (tpm
