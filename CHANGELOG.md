@@ -12,7 +12,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Terminal opacity is a shell setting.** Settings > Appearance > Terminal
+  gains an opacity slider, written into the generated kitty theme, so a
+  preset carries it and an update cannot lose it. Blur is the compositor's.
+
 ### Fixed
+- **Your kitty edits survive an update.** kitty.conf was rewritten on every
+  update and the directory synced with `--delete`; it now includes
+  `~/.config/kitty/user.conf` last, a file the installer never ships or
+  deletes, and matugen's generated palette file is left alone too.
 - **The installer's progress spinner no longer floods the screen during the
   glibc upgrade.** It forked `sleep` and `date` every tick, and while pacman
   replaces glibc nothing can start: each tick printed "cannot execute" and

@@ -1258,6 +1258,13 @@ if ! python3 "$SCRIPT_DIR/test_installer_tui_spinner.py"; then
     exit 1
 fi
 
+# A user's kitty settings survive an update: user.conf included last and
+# never synced over; opacity is shell config a preset carries.
+if ! python3 "$SCRIPT_DIR/test_kitty_user_config.py"; then
+    echo "Kitty user config tests failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."

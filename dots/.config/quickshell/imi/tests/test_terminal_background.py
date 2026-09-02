@@ -52,6 +52,25 @@ class TerminalBackgroundTests(unittest.TestCase):
             )
         self.assertIn("background_tint 0.00", rendered)
 
+    # The window opacity rides the same managed block, pattern or not, and a
+    # bare pattern dict (the older shape) still renders as before.
+    def test_opacity_alone_writes_background_opacity_once(self):
+        rendered = MODULE.render("foreground #ffffff\n", {"opacity": 0.85, "background": {"enabled": False}})
+        rerendered = MODULE.render(rendered, {"opacity": 0.85, "background": {"enabled": False}})
+        self.assertIn("background_opacity 0.85", rerendered)
+        self.assertIn("dynamic_background_opacity yes", rerendered)
+        self.assertEqual(rerendered.count(MODULE.START_MARKER), 1)
+
+    def test_full_opacity_and_no_pattern_leaves_no_block(self):
+        rendered = MODULE.render("foreground #ffffff\n", {"opacity": 1.0, "background": {"enabled": False}})
+        self.assertEqual(rendered, "foreground #ffffff\n")
+
+    def test_opacity_is_clamped_to_the_unit_range(self):
+        rendered = MODULE.render("", {"opacity": 1.7, "background": {"enabled": False}})
+        self.assertNotIn(MODULE.START_MARKER, rendered)
+        rendered = MODULE.render("", {"opacity": -2, "background": {"enabled": False}})
+        self.assertIn("background_opacity 0.00", rendered)
+
     def test_relative_or_missing_image_is_rejected(self):
         for image_path in ("pattern.png", "/definitely/missing/pattern.png"):
             with self.subTest(image_path=image_path):

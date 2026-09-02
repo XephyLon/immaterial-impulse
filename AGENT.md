@@ -6614,6 +6614,20 @@ across styles, hover as a colour. `tests/test_privacy_indicator_palette.py` refu
 the bare error tokens there
 ("fix(bar): the privacy indicator is danger-red in both themes").
 
+**kitty.conf is managed; the user's kitty settings live in `user.conf`, and opacity is shell
+config.** The kitty directory is deployed with a `--delete` sync, so a hand edit to the shipped
+kitty.conf vanished on every update ("transparency or blur values just disappear after an update").
+The shipped file says it is managed and includes `user.conf` LAST - the user's own file, never
+shipped, excluded from the sync along with matugen's `colors-matugen.conf` the way fish keeps
+`conf.d` and tmux its plugins. The knob most people were hand-editing, `background_opacity`, is
+`appearance.terminal.opacity`, written into the generated theme's managed block by
+`scripts/terminal/apply_terminal_background.py` (pattern or not) and set from Settings > Appearance
+> Terminal - shell config, so a preset carries it with `appearance`. kitty's `background_blur` is
+macOS-only; on Hyprland the compositor blurs a translucent kitty. Never move a shipped kitty
+setting into `user.conf` from a script, and never ship a `user.conf`
+("fix(installer): a user's kitty settings survive an update",
+"feat(settings): terminal opacity as shell config").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background
