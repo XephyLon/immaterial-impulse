@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Settings > Bar's resource switches no longer overlap.** The last row
+  packed three switches; "GPU Temperature" needed more than a third of the
+  row and its switch was drawn over the VRAM label. Two per row, like the
+  rows above.
+- **The installer explains a partially upgraded system before building.**
+  A build tool that cannot load a library it was built against (a user's
+  `cmake` missing `libjsoncpp.so.26`) used to fail deep inside the MicroTeX
+  build; the installer now checks the toolchain runs before the first
+  package and says to finish `pacman -Syu`.
+
 ## [1.0.0-rc-7] — 2026-09-02
 
 ### Added
