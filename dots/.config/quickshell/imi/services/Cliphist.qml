@@ -32,6 +32,46 @@ Singleton {
             present: !!live
         };
     })
+    // Decoded previews are shared files (one per entry) with many short-lived
+    // readers: the launcher rebuilds its rows on every keystroke and a hot
+    // reload rebuilds every one of them, and a row that deleted "its" file on
+    // destruction took it from the row built a frame later - the Image logged
+    // `Cannot open` and drew its placeholder. A file lives while anything
+    // holds it and for a beat after the last holder let go, so a rebuilt row
+    // reclaims it instead of racing a detached rm.
+    property var decodeHolders: ({})
+    property list<string> decodeReleased: []
+    function acquireDecode(path: string): void {
+        const holders = root.decodeHolders;
+        holders[path] = (holders[path] ?? 0) + 1;
+        root.decodeHolders = holders;
+    }
+    function releaseDecode(path: string): void {
+        const holders = root.decodeHolders;
+        const left = (holders[path] ?? 0) - 1;
+        if (left > 0) {
+            holders[path] = left;
+            root.decodeHolders = holders;
+            return;
+        }
+        delete holders[path];
+        root.decodeHolders = holders;
+        if (!root.decodeReleased.includes(path))
+            root.decodeReleased = [...root.decodeReleased, path];
+    }
+    Timer {
+        id: decodeSweep
+        interval: 3000
+        repeat: true
+        running: root.decodeReleased.length > 0
+        onTriggered: {
+            const stale = root.decodeReleased.filter(path => !(path in root.decodeHolders));
+            root.decodeReleased = [];
+            if (stale.length > 0)
+                Quickshell.execDetached(["rm", "-f", ...stale]);
+        }
+    }
+
     readonly property var preparedEntries: entries.map(a => ({
         name: Fuzzy.prepare(`${a.replace(/^\s*\S+\s+/, "")}`),
         entry: a

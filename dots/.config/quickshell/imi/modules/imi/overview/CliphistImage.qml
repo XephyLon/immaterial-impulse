@@ -48,12 +48,16 @@ Rectangle {
     implicitWidth: imageWidth * scale
 
     Component.onCompleted: {
+        Cliphist.acquireDecode(root.imageDecodeFilePath);
         decodeImageProcess.running = true;
     }
 
     Process {
         id: decodeImageProcess
-        command: ["bash", "-c", `[ -f ${imageDecodeFilePath} ] || echo '${StringUtils.shellSingleQuoteEscape(root.entry)}' | ${Cliphist.cliphistBinary} decode > '${imageDecodeFilePath}'`]
+        // Decoded beside the file and moved into place, so a second row for
+        // the same entry never loads a half-written PNG; `-s`, not `-f`, so an
+        // empty file from an interrupted decode is decoded again.
+        command: ["bash", "-c", `[ -s '${imageDecodeFilePath}' ] || { echo '${StringUtils.shellSingleQuoteEscape(root.entry)}' | ${Cliphist.cliphistBinary} decode > '${imageDecodeFilePath}.part' && mv -f '${imageDecodeFilePath}.part' '${imageDecodeFilePath}'; }`]
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
                 root.source = imageDecodeFilePath;
@@ -64,9 +68,9 @@ Rectangle {
         }
     }
 
-    Component.onDestruction: {
-        Quickshell.execDetached(["bash", "-c", `[ -f '${imageDecodeFilePath}' ] && rm -f '${imageDecodeFilePath}'`]);
-    }
+    // The file is Cliphist's to remove, once nothing holds it - see
+    // Cliphist.releaseDecode for the race a per-row rm ran.
+    Component.onDestruction: Cliphist.releaseDecode(root.imageDecodeFilePath)
 
     layer.enabled: true
     layer.effect: OpacityMask {

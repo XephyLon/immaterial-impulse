@@ -75,7 +75,16 @@ Singleton {
     property string notificationsPath: FileUtils.trimFileProtocol(`${Directories.cache}/notifications/notifications.json`)
     property string generatedMaterialThemePath: FileUtils.trimFileProtocol(`${Directories.state}/user/generated/colors.json`)
     property string generatedWallpaperCategoryPath: FileUtils.trimFileProtocol(`${Directories.state}/user/generated/wallpaper/category.txt`)
-    property string cliphistDecode: FileUtils.trimFileProtocol(`/tmp/quickshell/media/cliphist`)
+    // Decoded clipboard previews. Per PROCESS under a parent every instance
+    // shares: two shells (a nested harness beside the session) used to decode
+    // into one directory and each wiped the other's files on start, and a
+    // reload that rebuilds this singleton re-runs the cleanup below - which
+    // took the files out from under the launcher's live previews. The
+    // cleanup sweeps only siblings whose process is gone (and files left by
+    // the old flat layout), so nothing accumulates past a session and nothing
+    // alive is touched.
+    readonly property string cliphistDecodeRoot: FileUtils.trimFileProtocol(`/tmp/quickshell/media/cliphist`)
+    property string cliphistDecode: `${cliphistDecodeRoot}/${Quickshell.processId}`
     property string screenshotTemp: "/tmp/quickshell/media/screenshot"
     property string wallpaperSwitchScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/colors/switchwall.sh`)
     property string defaultAiPrompts: Quickshell.shellPath("defaults/ai/prompts")
@@ -145,7 +154,10 @@ Singleton {
         Quickshell.execDetached(["bash", "-c", `rm -rf '${coverArt}'; mkdir -p '${coverArt}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${booruPreviews}'; mkdir -p '${booruPreviews}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${latexOutput}'; mkdir -p '${latexOutput}'`])
-        Quickshell.execDetached(["bash", "-c", `rm -rf '${cliphistDecode}'; mkdir -p '${cliphistDecode}'`])
+        Quickshell.execDetached(["bash", "-c",
+            `mkdir -p '${cliphistDecodeRoot}'; for d in '${cliphistDecodeRoot}'/*; do n=$(basename "$d"); `
+            + `[ "$n" = '${Quickshell.processId}' ] && continue; [ -d "$d" ] && [ -d "/proc/$n" ] && continue; rm -rf "$d"; done; `
+            + `mkdir -p '${cliphistDecode}'`])
         Quickshell.execDetached(["mkdir", "-p", `${aiChats}`])
         Quickshell.execDetached(["mkdir", "-p", `${aiSessions}`])
         Quickshell.execDetached(["rm", "-rf", `${tempImages}`])
