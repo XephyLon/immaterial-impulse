@@ -45,5 +45,29 @@ class SelectionArrayFlowTests(unittest.TestCase):
                          f"leaves out is the one that latches one chip per line")
 
 
+    # The other half, found when a fifth bar style joined: an aligned child is
+    # handed its preferred size and never resized, so a row narrower than its
+    # chips OVERFLOWED rather than wrapping - the Quick page's Bar style card
+    # drew its last chip past the card's edge (461px Flow, 442px card). On the
+    # unlabelled path the Flow fills its cell up to the natural width as a
+    # maximum; measured through QuickPageProbe.qml: 316px, two lines, 0 over.
+    def test_an_unlabelled_flow_fills_up_to_its_natural_width_so_it_can_wrap(self):
+        text = strip_comments(SOURCE.read_text(encoding="utf-8"))
+        match = re.search(r"Layout\.maximumWidth:\s*(.+)", text)
+        self.assertIsNotNone(match, "the Flow hands the layout no maximum, so it can never be given less")
+        self.assertEqual(match.group(1).strip(),
+                         "root.text ? Number.POSITIVE_INFINITY : buttonsFlow.naturalWidth")
+        self.assertRegex(text, r"Layout\.fillWidth:\s*!root\.text")
+
+    def test_the_quick_pages_card_rows_take_their_cards_width(self):
+        quick = strip_comments((ROOT / "modules/imi/settings/pages/QuickConfig.qml").read_text(encoding="utf-8"))
+        arrays = re.findall(r"ConfigSelectionArray \{(.*?)\n\s{24}\}", quick, re.S)
+        card_rows = [a for a in arrays if "currentValue: Config.options.bar." in a]
+        self.assertGreaterEqual(len(card_rows), 2)
+        for body in card_rows:
+            self.assertNotIn("Layout.fillWidth: false", body,
+                             "a row that refuses width cannot wrap, and overflows its card instead")
+
+
 if __name__ == "__main__":
     unittest.main()
