@@ -6559,6 +6559,11 @@ literal 800ms and its snap on close. `tests/test_bar_popup_anchor_contract.py` k
 the click-held popups and fails on a new one that ships without it, or with a tonal container.
 ("feat(bar): a widget's open popup marks its anchor with a dashed outline",
 "fix(bar): the Docker widget and the tray overflow wear the anchor outline instead of a tonal pill").
+**A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
+background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
+plus `background.anchors.centerIn` changes nothing, and the outline parented to that background
+stayed the bar-height hoop it was meant to shrink. Set `background.width`/`background.height`
+("fix(bar): the Docker and tray overflow backgrounds are sized outright, so they can hug the content").
 
 **A catalogue's rows are one component, and it is deliberately not a control.** Edit Mode's drawer,
 every settings row and the widget store's cards all draw the same thing — a leading icon, a name, a
