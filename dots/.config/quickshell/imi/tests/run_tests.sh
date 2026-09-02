@@ -1232,6 +1232,12 @@ if ! python3 "$SCRIPT_DIR/test_bar_edge_shadow_contract.py"; then
     exit 1
 fi
 
+# The privacy indicator draws from the bar's palette, never the error pair.
+if ! python3 "$SCRIPT_DIR/test_privacy_indicator_palette.py"; then
+    echo "Privacy indicator palette tests failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."

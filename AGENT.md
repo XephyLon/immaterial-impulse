@@ -6603,6 +6603,14 @@ right-hand side when vertical. Settings > Bar's switch is inert outside the stat
 `tests/test_bar_edge_shadow_contract.py` pins the gate, the direction and the token
 ("feat(bar): an edge shadow behind an unpainted bar").
 
+**A bar widget is drawn from the bar's palette; the error pair is for faults.** The privacy
+indicator was a vivid `colError` pill with `colOnError` glyphs - the one thing on the bar not in
+its palette, and it read as a fault rather than a status ("sticks out like a sore thumb"). A live
+state on the bar is the accent: under M3 a tonal `colPrimaryContainer` pill like the other M3 group
+pills, under every other style no pill and `colPrimary` glyphs, hover the layer's pill as on any bar
+button. `tests/test_privacy_indicator_palette.py` refuses the error tokens there
+("fix(bar): the privacy indicator is drawn from the bar's palette").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background
