@@ -462,9 +462,22 @@ Item {
 
             // ── Result ────────────────────────────────────────────
             TypingResults {
+                id: resultBlock
                 Layout.fillWidth: true
                 Layout.preferredHeight: stageColumn.implicitHeight + Appearance.sizes.elevationMargin * 4
                 visible: engine.isFinished
+                // It used to snap in on the frame the timer ran out. It arrives
+                // instead: opacity and a small rise on the one scalar, the enter
+                // tier taken whole. A restart still takes it down in one frame
+                // (visible), which is what a restart should do; the opacity it
+                // leaves behind is what the next result fades up from.
+                opacity: engine.isFinished ? 1 : 0
+                transform: Translate {
+                    y: (1 - resultBlock.opacity) * Appearance.animation.entranceRise
+                }
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+                }
                 engine: engine
                 personalBest: root.personalBest
                 onRestart: root.restart(false)
