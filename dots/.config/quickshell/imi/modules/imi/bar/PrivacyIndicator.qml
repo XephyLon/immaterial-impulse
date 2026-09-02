@@ -23,10 +23,18 @@ MouseArea {
     readonly property bool replayOn: ScreenRecord.replaying
     readonly property bool shown: micOn || cameraOn || screencastOn || recordingOn || replayOn
 
-    // Vivid error fill with its matching on-color. The BASE error pair is M3's
-    // high-contrast pairing; the *container* variants can be low-contrast.
-    readonly property color pillColor: Appearance.colors.colError
-    readonly property color onColor: Appearance.colors.colOnError
+    // Drawn from the bar's own palette, not the error pair: a vivid colError
+    // pill was the one thing on the bar not in its palette and read as a
+    // fault, not a status. Under M3 it is a tonal primary-container pill like
+    // the other M3 group pills; under every other style there is no pill -
+    // the glyphs sit on the bar in the accent, the way a live state reads
+    // elsewhere on it - and the hover pill is the layer's, as on any bar
+    // button.
+    readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
+    readonly property color pillColor: root.isMaterial
+        ? (root.containsMouse ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colPrimaryContainer)
+        : (root.containsMouse ? Appearance.colors.colLayer1Hover : "transparent")
+    readonly property color onColor: root.isMaterial ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
 
     // Stay visible while collapsing so the pill can fade/scale out instead of
     // vanishing; the width still animates for a smooth bar reflow.
@@ -81,8 +89,12 @@ MouseArea {
         anchors.horizontalCenterOffset: root.vertical ? Appearance.sizes.barStandalonePillOffset : 0
         radius: Appearance.rounding.full
         color: root.pillColor
-        // Fade + scale with the whole show/hide so it eases in and out.
-        opacity: root.shown ? (root.containsMouse ? 0.88 : 1) : 0
+        Behavior on color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
+        // Fade + scale with the whole show/hide so it eases in and out; hover
+        // is the colour above, not a dim.
+        opacity: root.shown ? 1 : 0
         scale: root.shown ? 1 : 0.7
         transformOrigin: Item.Center
         Behavior on opacity {
