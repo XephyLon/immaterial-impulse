@@ -1199,6 +1199,12 @@ if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     exit 1
 fi
 
+echo "Running bar icon ring contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_icon_ring_contract.py"; then
+    echo "Bar icon ring contract tests failed."
+    exit 1
+fi
+
 echo "Running calendar card tests..."
 if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
     echo "Calendar card tests failed."
