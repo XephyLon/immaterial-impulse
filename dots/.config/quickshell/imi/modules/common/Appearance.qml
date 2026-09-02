@@ -153,7 +153,11 @@ Singleton {
         property color colOnLayer0: m3colors.m3onBackground
         property color colLayer0Hover: ColorUtils.transparentize(ColorUtils.mix(colLayer0, colOnLayer0, 0.9, root.contentTransparency))
         property color colLayer0Active: ColorUtils.transparentize(ColorUtils.mix(colLayer0, colOnLayer0, 0.8, root.contentTransparency))
-        property color colLayer0Border: ColorUtils.mix(root.m3colors.m3outlineVariant, colLayer0, 0.4)
+        // Thinned by the same amount as colLayer0, not mixed with it: mixing an
+        // opaque outline with a thinned fill left the border at 0.4 + 0.6 of the
+        // fill's alpha, an opaque ring around a see-through plate as the shell
+        // opacity slider went down.
+        property color colLayer0Border: ColorUtils.transparentize(ColorUtils.mix(root.m3colors.m3outlineVariant, colLayer0Base, 0.4), root.backgroundTransparency)
         // The bar's own background chrome (bar/pill fills, hug corners) thins
         // colLayer0 by the user's bar opacity (Config.options.bar.backgroundOpacity,
         // 1 = fully opaque = unchanged). Kept separate from colLayer0 so only the
