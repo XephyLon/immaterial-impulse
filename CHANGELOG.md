@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **Settings > Quick's Bar & Screen chips line up on the right.** In the
+  stacked cards the chip rows sat left, right after each title, leaving four
+  different right edges; a segmented row without a label now earns the right
+  edge and still wraps when the row is narrower than its chips.
 - **Settings > Bar's resource switches no longer overlap.** The last row
   packed three switches; "GPU Temperature" needed more than a third of the
   row and its switch was drawn over the VRAM label. Two per row, like the
