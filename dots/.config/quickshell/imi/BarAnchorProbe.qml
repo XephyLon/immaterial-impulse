@@ -16,7 +16,6 @@ ShellRoot {
     FloatingWindow {
         id: win
         implicitWidth: 600; implicitHeight: 200
-        color: Appearance.colors.colLayer0
         Row {
             anchors.centerIn: parent
             spacing: 40
