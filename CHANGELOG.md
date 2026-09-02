@@ -13,6 +13,13 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **A shell opacity slider.** Settings > Quick, beside the transparency
+  switches: one opacity for every blurred shell surface - the bar, the
+  sidebars, the dock, the settings window, the cheatsheet. Inert while
+  Automatic picks the amount from the wallpaper.
+- **Widgets can follow the shell opacity.** Settings > Widgets gains "Follow
+  shell opacity": widget panels take the shell's value, and the widgets' own
+  slider shows it and yields.
 - **A bar widget's open popup is marked on the bar's edge.** While a click
   holds a popup open - Docker, Discord voice, the tray's overflow - a primary
   indicator as long as the widget lies on the bar's popup-facing edge under

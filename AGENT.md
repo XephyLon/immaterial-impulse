@@ -6573,6 +6573,18 @@ in every one. `BarAnchorProbe.qml` measures the length and centring headlessly (
 `probe boxes`).
 ("feat(bar): a widget's open popup is marked by an indicator on the bar's edge").
 
+**One opacity for the blurred shell surfaces, and widgets follow it through `PluginState`.** Every
+blurred surface - the bar, the sidebars, the dock, the settings window, the cheatsheet - draws on
+`colLayer0`, which `Appearance` thins by `backgroundTransparency`; Settings > Quick's "Shell
+opacity" slider is that amount inverted (`1 - appearance.transparency.backgroundTransparency`),
+inert while Automatic derives it from the wallpaper or while transparency is off. There is no
+per-surface slider: the surfaces share one colour. Desktop widgets keep their own slider
+(`plugins.blurOpacity`) unless `plugins.followShellOpacity` is on, in which case
+`PluginState.configuredBackgroundOpacity` hands every panel `1 - Appearance.backgroundTransparency`
+- PluginState is the one place every widget's panel alpha already passes, so no widget reads
+`plugins.blurOpacity` itself (`tests/test_shell_opacity_contract.py` fails one that does).
+("feat(settings): a shell opacity slider, and widgets that follow it").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background
