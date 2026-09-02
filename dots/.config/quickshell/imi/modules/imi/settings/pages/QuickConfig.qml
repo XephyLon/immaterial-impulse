@@ -517,9 +517,17 @@ ContentPage {
             shape: MaterialShape.Shape.ClamShell
             Layout.fillWidth: true
 
+            // One card per row. The page is 720 wide, so two columns hand each
+            // card 316px of content, and only Group style's chips fit that: Bar
+            // position overflowed its padding and Bar style, five chips since
+            // Float Islands, ran past the card's edge. Wrapping instead left
+            // three of the four rows with an orphan chip on a second line and
+            // the cards in a row standing at different heights. As a single
+            // row each - title left, chips right - every card holds its chips
+            // on one line with room to spare.
             GridLayout {
                 Layout.fillWidth: true
-                columns: 2
+                columns: 1
                 rowSpacing: Appearance.spacing.space100
                 columnSpacing: Appearance.spacing.space100
 
@@ -531,30 +539,29 @@ ContentPage {
                     border.width: Appearance.borderWidth.standard
                     border.color: "transparent"
 
-                    ColumnLayout {
+                    RowLayout {
                         id: barPosCol
                         anchors { fill: parent; margins: Appearance.spacing.space150 }
                         spacing: Appearance.spacing.space100
 
-                        RowLayout {
-                            spacing: Appearance.spacing.space100
-                            MaterialSymbol {
-                                text: "swap_vert"
-                                iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colOnLayer1
-                            }
-                            StyledText {
-                                text: Translation.tr("Bar position")
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnLayer1
-                                font.weight: Font.Medium
-                            }
+                        MaterialSymbol {
+                            text: "swap_vert"
+                            iconSize: Appearance.font.pixelSize.normal + 4
+                            color: Appearance.colors.colOnLayer1
+                        }
+                        StyledText {
+                            text: Translation.tr("Bar position")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnLayer1
+                            font.weight: Font.Medium
                         }
 
                         ConfigSelectionArray {
                             id: barPosArray
-                            Layout.fillWidth: false
-                            Layout.alignment: Qt.AlignRight
+                            // Takes the rest of the row: the array's own Flow keeps its
+                            // natural width as a maximum and right-aligns, so the chips
+                            // sit on the right and wrap only when the row cannot hold them.
+                            Layout.fillWidth: true
                             currentValue: (Config.options.bar.bottom ? 1 : 0) | (Config.options.bar.vertical ? 2 : 0)
                             onSelected: newValue => {
                                 Config.options.bar.bottom = (newValue & 1) !== 0;
@@ -578,31 +585,28 @@ ContentPage {
                     border.width: Appearance.borderWidth.standard
                     border.color: "transparent"
 
-                    ColumnLayout {
+                    RowLayout {
                         id: barStyleCol
                         anchors { fill: parent; margins: Appearance.spacing.space150 }
                         spacing: Appearance.spacing.space100
 
-                        RowLayout {
-                            spacing: Appearance.spacing.space100
-                            MaterialSymbol {
-                                text: "settop_component"
-                                iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colOnLayer1
-                            }
-                            StyledText {
-                                text: Translation.tr("Bar style")
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnLayer1
-                                font.weight: Font.Medium
-                            }
+                        MaterialSymbol {
+                            text: "settop_component"
+                            iconSize: Appearance.font.pixelSize.normal + 4
+                            color: Appearance.colors.colOnLayer1
+                        }
+                        StyledText {
+                            text: Translation.tr("Bar style")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnLayer1
+                            font.weight: Font.Medium
                         }
 
                         ConfigSelectionArray {
                             id: barStyleArray
-                            // Fills its card: the array's own Flow keeps its natural
-                            // width as a maximum and right-aligns, so what this gives
-                            // up is only the overflow.
+                            // Takes the rest of the row: the array's own Flow keeps its
+                            // natural width as a maximum and right-aligns, so the chips
+                            // sit on the right and wrap only when the row cannot hold them.
                             Layout.fillWidth: true
                             currentValue: Config.options.bar.cornerStyle
                             onSelected: newValue => { Config.options.bar.cornerStyle = newValue; }
@@ -623,31 +627,28 @@ ContentPage {
                     Layout.preferredHeight: groupStyleCol.implicitHeight + Appearance.spacing.space150 * 2
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
-                    ColumnLayout {
+                    RowLayout {
                         id: groupStyleCol
                         anchors { fill: parent; margins: Appearance.spacing.space150 }
                         spacing: Appearance.spacing.space100
 
-                        RowLayout {
-                            spacing: Appearance.spacing.space100
-                            MaterialSymbol {
-                                text: "tab_group"
-                                iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colOnLayer1
-                            }
-                            StyledText {
-                                text: Translation.tr("Group style")
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnLayer1
-                                font.weight: Font.Medium
-                            }
+                        MaterialSymbol {
+                            text: "tab_group"
+                            iconSize: Appearance.font.pixelSize.normal + 4
+                            color: Appearance.colors.colOnLayer1
+                        }
+                        StyledText {
+                            text: Translation.tr("Group style")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnLayer1
+                            font.weight: Font.Medium
                         }
 
                         ConfigSelectionArray {
                             id: groupStyleArray
-                            // Fills its card: the array's own Flow keeps its natural
-                            // width as a maximum and right-aligns, so what this gives
-                            // up is only the overflow.
+                            // Takes the rest of the row: the array's own Flow keeps its
+                            // natural width as a maximum and right-aligns, so the chips
+                            // sit on the right and wrap only when the row cannot hold them.
                             Layout.fillWidth: true
                             currentValue: Config.options.bar.borderless
                             onSelected: newValue => { Config.options.bar.borderless = newValue; }
@@ -667,30 +668,29 @@ ContentPage {
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
 
-                    ColumnLayout {
+                    RowLayout {
                         id: screenRoundCol
                         anchors { fill: parent; margins: Appearance.spacing.space150 }
                         spacing: Appearance.spacing.space100
 
-                        RowLayout {
-                            spacing: Appearance.spacing.space100
-                            MaterialSymbol {
-                                text: "rounded_corner"
-                                iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colOnLayer1
-                            }
-                            StyledText {
-                                text: Translation.tr("Screen round corner")
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnLayer1
-                                font.weight: Font.Medium
-                            }
+                        MaterialSymbol {
+                            text: "rounded_corner"
+                            iconSize: Appearance.font.pixelSize.normal + 4
+                            color: Appearance.colors.colOnLayer1
+                        }
+                        StyledText {
+                            text: Translation.tr("Screen round corner")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnLayer1
+                            font.weight: Font.Medium
                         }
 
                         ConfigSelectionArray {
                             id: screenRoundArray
-                            Layout.fillWidth: false
-                            Layout.alignment: Qt.AlignRight
+                            // Takes the rest of the row: the array's own Flow keeps its
+                            // natural width as a maximum and right-aligns, so the chips
+                            // sit on the right and wrap only when the row cannot hold them.
+                            Layout.fillWidth: true
                             currentValue: Config.options.appearance.fakeScreenRounding
                             onSelected: newValue => { Config.options.appearance.fakeScreenRounding = newValue; }
                             options: [
