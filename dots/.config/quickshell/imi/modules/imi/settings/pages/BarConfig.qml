@@ -373,6 +373,16 @@ ContentPage {
                         ]
                     }
                 }
+                // Only meaningful with the background off and the groups
+                // transparent, which is when the bar is glyphs over the wallpaper.
+                ConfigSwitch {
+                    buttonIcon: "gradient"
+                    text: Translation.tr("Edge shadow")
+                    description: Translation.tr("Shade the screen edge behind an unpainted bar, for legibility")
+                    enabled: !Config.options.bar.showBackground && Config.options.bar.borderless === "transparent"
+                    checked: Config.options.bar.edgeShadow
+                    onToggleRequested: Config.options.bar.edgeShadow = !Config.options.bar.edgeShadow
+                }
                 ConfigSwitch {
                     buttonIcon: "ev_shadow"
                     text: Translation.tr("Bar shadow")

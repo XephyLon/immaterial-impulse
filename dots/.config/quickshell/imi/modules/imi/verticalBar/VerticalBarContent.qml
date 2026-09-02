@@ -139,6 +139,22 @@ Item {
             target: barBackground
         }
     }
+    // The edge shadow: with the background off and the groups transparent the
+    // bar is glyphs straight over the wallpaper, so this shades the screen
+    // edge behind them and fades to nothing across the bar - from whichever
+    // edge the bar sits on - the bottom flag is the right-hand side here. Drawn only in that state, and only when asked.
+    Rectangle {
+        id: edgeShadow
+        anchors.fill: parent
+        visible: Config.options.bar.edgeShadow && !Config.options.bar.showBackground
+            && Config.options.bar.borderless === "transparent"
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0; color: Config.options.bar.bottom ? "transparent" : Appearance.colors.colBarEdgeShade }
+            GradientStop { position: 1; color: Config.options.bar.bottom ? Appearance.colors.colBarEdgeShade : "transparent" }
+        }
+    }
+
     Rectangle {
         id: barBackground
         anchors {

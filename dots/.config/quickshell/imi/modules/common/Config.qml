@@ -1146,6 +1146,10 @@ Singleton {
                 property string borderless: "pills"
                 property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/imi/assets/icons
                 property bool showBackground: true
+                // With the background off and the groups transparent, a shade
+                // from the screen edge fading across the bar, so glyphs stay
+                // legible over a bright wallpaper. Drawn only in that state.
+                property bool edgeShadow: false
                 // Opacity of the bar's background chrome (bar/pill fills, hug
                 // corners), 0-1. 1 = fully opaque (unchanged). Multiplies the
                 // global appearance.transparency alpha rather than replacing it,

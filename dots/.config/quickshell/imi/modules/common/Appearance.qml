@@ -158,6 +158,9 @@ Singleton {
         // fill's alpha, an opaque ring around a see-through plate as the shell
         // opacity slider went down.
         property color colLayer0Border: ColorUtils.transparentize(ColorUtils.mix(root.m3colors.m3outlineVariant, colLayer0Base, 0.4), root.backgroundTransparency)
+        // The edge shadow behind an unpainted bar: the shade at the screen edge,
+        // fading to nothing across the bar.
+        property color colBarEdgeShade: ColorUtils.transparentize(root.m3colors.m3shadow, 0.45)
         // The bar's own background chrome (bar/pill fills, hug corners) thins
         // colLayer0 by the user's bar opacity (Config.options.bar.backgroundOpacity,
         // 1 = fully opaque = unchanged). Kept separate from colLayer0 so only the
