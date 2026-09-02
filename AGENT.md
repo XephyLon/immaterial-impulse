@@ -1931,6 +1931,15 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
   conditional preferred width.
   4ef84e521 ("fix(settings): a segmented row's chips lay out on the width the row has"),
   0a44ed17c ("fix(settings): a segmented row without a label lays out on its natural width too").
+  **And the preferred width alone still overflows a cell narrower than the chips**, because an
+  aligned child is handed its preferred size and never resized: a fifth bar style made the Quick
+  page's Bar style Flow 461px in a 442px card and it drew past the edge. On the unlabelled path the
+  Flow now fills its cell up to the natural width as a `Layout.maximumWidth` - a wider cell leaves
+  it at its natural width, right-aligned, a narrower one gives it less and the chips wrap for the
+  real reason. Measured through `QuickPageProbe.qml`: 316px, two lines, nothing over. The labelled
+  path keeps its aligned natural width, since the label beside it has no minimum and would be
+  what yields.
+  ("fix(settings): a segmented row without a label wraps inside its card instead of overflowing").
 
 - **CI's Qt is older than yours, and its JS parser is too.** The workflow
   installs Ubuntu's `qt6-declarative-dev`; a developer here runs Arch's

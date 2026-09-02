@@ -21,6 +21,13 @@ own repo; the installer pins which revision it builds.
   the same blur, shadow and background switches as Float.
 
 ### Fixed
+- **The Docker bar widget answers a click.** It opened its container popup
+  with no feedback at all; it is a button now - the press squish, the ripple
+  from the press point, a tonal container while the popup is up.
+- **Settings > Quick's Bar style row no longer runs past its card.** With a
+  fifth style the chips outgrew the card and overflowed instead of wrapping;
+  a segmented row without a label now fills its cell up to its natural width,
+  so it wraps when the card is narrower and still sits on the right when not.
 - **Bar icons in circles are outlined rings under every style but M3.** The
   media widget's progress circle and the Docker widget's container gauge
   were filled discs whatever the bar style; both are outline progress rings
