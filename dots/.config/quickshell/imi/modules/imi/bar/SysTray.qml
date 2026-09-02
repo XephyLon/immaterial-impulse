@@ -7,6 +7,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../common/functions/barEdges.js" as BarEdges
 
 Item {
     id: root
@@ -106,14 +107,13 @@ Item {
             background.height: 24
             background.anchors.centerIn: this
 
-            // The open state is the bar's dashed anchor outline around the
-            // button's own 24px background, not a tonal container.
-            PopupAnchorOutline {
-                parent: trayOverflowButton.background
-                anchors.fill: parent
-                z: 1
+            // The open state is the bar's anchor indicator on the popup-facing
+            // edge under the button, not a tonal container.
+            PopupAnchorIndicator {
+                wraps: trayOverflowButton.background
+                edgeItem: root
+                edge: BarEdges.popupEdge(Config.options.bar.vertical, Config.options.bar.bottom)
                 shown: root.trayOverflowOpen
-                radius: trayOverflowButton.buttonRadius
             }
 
             contentItem: MaterialSymbol {

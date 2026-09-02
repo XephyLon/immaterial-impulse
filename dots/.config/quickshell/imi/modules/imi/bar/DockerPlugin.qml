@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../common/functions/barEdges.js" as BarEdges
 import "../../common/plugins/bundled/docker" as DockerPackage
 
 // Native bar adapter for the bundled Docker manager. Its geometry follows the
@@ -106,14 +107,14 @@ RippleButton {
         ? (contentLoader.item?.implicitHeight ?? 0) + root.sidePadding * 2
         : (contentLoader.item?.implicitHeight ?? 0) + Appearance.spacing.space50 * 2
 
-    // The open state is the dashed anchor outline, not a tonal container: a
-    // filled pill behind a bare gauge broke every bar style but M3.
-    PopupAnchorOutline {
-        parent: root.background
-        anchors.fill: parent
-        z: 1
+    // The open state is the bar's anchor indicator on the popup-facing edge,
+    // as long as the content - the gauge and its count, whichever way they
+    // are laid out - not a tonal container, which broke every style but M3.
+    PopupAnchorIndicator {
+        wraps: contentLoader
+        edgeItem: root
+        edge: BarEdges.popupEdge(Config.options.bar.vertical, Config.options.bar.bottom)
         shown: root.popupOpen
-        radius: root.buttonRadius
     }
 
     downAction: () => {

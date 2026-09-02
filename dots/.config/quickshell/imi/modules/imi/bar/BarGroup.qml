@@ -87,6 +87,12 @@ Item {
 
     default property alias items: gridLayout.children
 
+    // The surface a widget's popup-open indicator lies on, when this group
+    // paints its pill: the pill. A transparent group (M3 without a material
+    // pill, the "No" group style) exposes nothing, and the indicator walks
+    // on up to the section's plate or the bar background.
+    readonly property Item popupAnchorSurface: background.color.a > 0 ? background : null
+
     // A group whose content has collapsed to nothing paints nothing. The
     // standalone pills (timer, submap, privacy) animate their implicitWidth
     // to 0 when idle and hide themselves - and this group's padding was

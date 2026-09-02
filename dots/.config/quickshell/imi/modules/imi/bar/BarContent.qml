@@ -244,6 +244,12 @@ Item {
         // Left
         Item {
             id: leftSection
+            // The plate behind this section, for a widget's popup-open
+            // indicator when its own group paints no pill: the material pill,
+            // the island, or the bar background - whichever this style paints.
+            readonly property Item popupAnchorSurface: root.isMaterial ? leftMaterialPill
+                : root.isFloatIslands ? leftIsland
+                : barBackground.color.a > 0 ? barBackground : null
             anchors.left: parent.left
             anchors.leftMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.top: parent.top
@@ -361,6 +367,10 @@ Item {
         // Center
         Item {
             id: absoluteCenter
+            readonly property Item popupAnchorSurface: root.isMaterial ? centerMaterialPill
+                : root.isFloatIslands ? centerIsland
+                : centerPill.visible ? centerPill
+                : barBackground.color.a > 0 ? barBackground : null
             anchors.centerIn: parent
             width: root.isMaterial ? centerMaterialPill.implicitWidth : middleRow.implicitWidth
             height: parent.height
@@ -475,6 +485,9 @@ Item {
         // Right
         Item {
             id: rightSection
+            readonly property Item popupAnchorSurface: root.isMaterial ? rightMaterialPill
+                : root.isFloatIslands ? rightIsland
+                : barBackground.color.a > 0 ? barBackground : null
             anchors.right: parent.right
             anchors.rightMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.top: parent.top

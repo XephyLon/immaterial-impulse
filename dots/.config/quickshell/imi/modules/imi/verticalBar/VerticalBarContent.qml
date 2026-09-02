@@ -238,6 +238,11 @@ Item {
         // Top
         Item {
             id: topSection
+            // The plate behind this section, for a widget's popup-open indicator
+            // when its own group paints no pill.
+            readonly property Item popupAnchorSurface: root.isMaterial ? topMaterialPill
+                : root.isFloatIslands ? topIsland
+                : barBackground.color.a > 0 ? barBackground : null
             anchors.top: parent.top
             anchors.topMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.left: parent.left
@@ -337,6 +342,12 @@ Item {
         // Center
         Item {
             id: absoluteCenter
+            // The plate behind this section, for a widget's popup-open indicator
+            // when its own group paints no pill.
+            readonly property Item popupAnchorSurface: root.isMaterial ? centerMaterialPill
+                : root.isFloatIslands ? centerIsland
+                : centerPill.visible ? centerPill
+                : barBackground.color.a > 0 ? barBackground : null
             anchors.centerIn: parent
             width: parent.width
             height: root.isMaterial ? centerMaterialPill.implicitHeight : middleCol.implicitHeight
@@ -434,6 +445,11 @@ Item {
         // Bottom
         Item {
             id: bottomSection
+            // The plate behind this section, for a widget's popup-open indicator
+            // when its own group paints no pill.
+            readonly property Item popupAnchorSurface: root.isMaterial ? bottomMaterialPill
+                : root.isFloatIslands ? bottomIsland
+                : barBackground.color.a > 0 ? barBackground : null
             anchors.bottom: parent.bottom
             anchors.bottomMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.left: parent.left

@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../common/functions/barEdges.js" as BarEdges
 import qs.modules.common.plugins
 import "../../common/plugins/bundled/discordVoice" as DiscordPackage
 
@@ -21,10 +22,12 @@ MouseArea {
     cursorShape: Qt.PointingHandCursor
     onClicked: root.popupOpen = !root.popupOpen
 
-    // The bar's one open state: a dashed anchor outline while the popup is up.
-    PopupAnchorOutline {
-        anchors.fill: parent
-        z: 1
+    // The bar's one open state: the anchor indicator on the popup-facing
+    // edge, as long as the glyph and whatever avatars sit beside it.
+    PopupAnchorIndicator {
+        wraps: content
+        edgeItem: root
+        edge: BarEdges.popupEdge(Config.options.bar.vertical, Config.options.bar.bottom)
         shown: root.popupOpen
     }
 
@@ -37,8 +40,9 @@ MouseArea {
             iconSize: 17
             color: DiscordVoice.inVoice
                 ? Appearance.colors.colPrimaryContainer : Appearance.colors.colLayer2
-            iconColor: DiscordVoice.inVoice
-                ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
+            // Primary while the popup is up, with the indicator.
+            iconColor: root.popupOpen ? Appearance.colors.colPrimary
+                : DiscordVoice.inVoice ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
         }
         Row {
             visible: !root.vertical && DiscordVoice.participantCount > 0
