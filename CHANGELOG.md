@@ -13,6 +13,8 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The M3 bar's profile text is centred.** Its two lines sat 2 px low in
+  the pill.
 - **Quick toggle edit badges belong visibly to their tile.** The remove
   badge hung outside the top-left corner and the resize handle outside the
   bottom-right, so neighbours' badges met in the gutter and the bottom row's

@@ -250,10 +250,11 @@ Item {
                         }
                     }
 
+                    // Centred in the pill with no top margin: the 2px it carried
+                    // sat the two lines low, more air above than below.
                     ColumnLayout {
                         spacing: -Appearance.spacing.space50
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: Appearance.spacing.space25
 
                         StyledText {
                             text: Config.options.profile.displayName === "" ? SystemInfo.username : Config.options.profile.displayName
