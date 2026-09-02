@@ -21,6 +21,16 @@ colorstrings=''
 colorlist=()
 colorvalues=()
 
+# No palette, no theming: with material_colors.scss missing or empty (a fresh
+# install before the first generation, a generation that failed) the lists
+# below are empty, every template was copied out with its `$placeholders`
+# intact, and kitty refused to start on "Invalid color name: '#$primary #'"
+# (a user's report). Leaving the previous generated files in place is the
+# right answer then; writing broken ones is not.
+if [ ! -s "$STATE_DIR/user/generated/material_colors.scss" ]; then
+  echo "[applycolor] $STATE_DIR/user/generated/material_colors.scss is missing or empty; nothing to apply." >&2
+  exit 1
+fi
 colornames=$(cat $STATE_DIR/user/generated/material_colors.scss | cut -d: -f1)
 colorstrings=$(cat $STATE_DIR/user/generated/material_colors.scss | cut -d: -f2 | cut -d ' ' -f2 | cut -d ";" -f1)
 IFS=$'\n'
@@ -40,6 +50,14 @@ apply_kitty() {
   for i in "${!colorlist[@]}"; do
     sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
   done
+  # A placeholder the palette did not name is a colour kitty cannot parse, and
+  # kitty refuses the whole config for one. Never hand it such a file.
+  if grep -q '#\$' "$STATE_DIR"/user/generated/terminal/kitty-theme.conf; then
+    echo "[applycolor] kitty theme still has unreplaced placeholders; not installing it:" >&2
+    grep -n '#\$' "$STATE_DIR"/user/generated/terminal/kitty-theme.conf >&2
+    rm -f "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+    return
+  fi
 
   # Re-append the managed Kitty background block after regenerating colors.
   python3 "$SCRIPT_DIR/../terminal/apply_terminal_background.py" \
