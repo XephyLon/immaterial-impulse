@@ -499,6 +499,17 @@ if ! python3 "$SCRIPT_DIR/lint_clickable_cursor.py"; then
     exit 1
 fi
 
+# Static lint: a Control-derived widget (anything rooted in RippleButton and
+# its kin) does not redeclare a FINAL property such as horizontalPadding. That
+# is "Cannot override FINAL property" at load and a widget that is never
+# created, which nothing else in this suite can see; it happened twice with
+# the rule already in AGENT.md.
+echo "Running FINAL-property lint..."
+if ! python3 "$SCRIPT_DIR/lint_final_properties.py"; then
+    echo "FINAL-property lint failed."
+    exit 1
+fi
+
 # Static lint: a ConfigSwitch click is an intent. Assigning to `checked` - in
 # the widget or at a call site - destroys the binding every settings page hangs
 # on it, and the switch silently detaches from the config it is showing.
