@@ -6588,6 +6588,21 @@ fainter than the card ("feat(bar): the popup card follows the shell opacity"). D
 `plugins.blurOpacity` itself (`tests/test_shell_opacity_contract.py` fails one that does).
 ("feat(settings): a shell opacity slider, and widgets that follow it").
 
+**A border is thinned like its fill, never mixed with it.** `colLayer0Border` was
+`mix(m3outlineVariant, colLayer0, 0.4)`: an opaque outline mixed with a fill the shell opacity
+slider thins leaves the border at 0.4 + 0.6 of the fill's alpha - an opaque ring around a
+see-through plate, reported the day the slider shipped. It is `transparentize(mix(outline,
+colLayer0Base), backgroundTransparency)` now, the fill's own amount
+("fix(appearance): the plate border thins with the fill instead of ringing it").
+
+**An unpainted bar can shade the screen edge behind it.** With `bar.showBackground` off and
+`bar.borderless` "transparent" the bar is glyphs over the wallpaper; `bar.edgeShadow` draws
+`colBarEdgeShade` at the screen edge fading to transparent across the bar, in both bar contents
+behind the plate, gated on exactly that state - the bottom flag flips the gradient, and is the
+right-hand side when vertical. Settings > Bar's switch is inert outside the state.
+`tests/test_bar_edge_shadow_contract.py` pins the gate, the direction and the token
+("feat(bar): an edge shadow behind an unpainted bar").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background

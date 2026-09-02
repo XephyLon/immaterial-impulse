@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **An edge shadow for an unpainted bar.** With the background off and the
+  group style None the bar is glyphs over the wallpaper; Settings > Bar's
+  "Edge shadow" shades the screen edge behind it, fading across the bar from
+  whichever edge it sits on, the way a macOS menu bar does.
 - **A shell opacity slider.** Settings > Quick, beside the transparency
   switches: one opacity for every blurred shell surface - the bar, the
   sidebars, the dock, the settings window, the cheatsheet, and the bar's
@@ -34,6 +38,9 @@ own repo; the installer pins which revision it builds.
   the same blur, shadow and background switches as Float.
 
 ### Fixed
+- **The plate border follows the shell opacity.** It was mixed with the
+  thinned fill and stayed an opaque ring around a see-through bar, sidebar,
+  dock or popup; it is thinned by the same amount now.
 - **The System Icons bar widget no longer snaps icons in and out.** The
   notification bell appeared and vanished between two frames with the icons
   beside it jumping to close the gap, and Bluetooth and VPN did the same. Each

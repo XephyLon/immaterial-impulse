@@ -1225,6 +1225,13 @@ if ! python3 "$SCRIPT_DIR/test_shell_opacity_contract.py"; then
     exit 1
 fi
 
+# An unpainted bar can shade the screen edge behind it (Settings > Bar), and
+# the plate border thins with the fill.
+if ! python3 "$SCRIPT_DIR/test_bar_edge_shadow_contract.py"; then
+    echo "Bar edge shadow contract failed."
+    exit 1
+fi
+
 echo "Running Float Islands bar style contract tests..."
 if ! python3 "$SCRIPT_DIR/test_bar_float_islands_contract.py"; then
     echo "Float Islands bar style contract tests failed."
