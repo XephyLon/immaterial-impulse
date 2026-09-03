@@ -6903,6 +6903,9 @@ while open - the `sidebarLeftTab` shape), not a signal, because the sidebar's co
 that exists only while the panel is shown and a signal fired before it is built reaches nothing.
 `Icons.getBluetoothDeviceMaterialSymbol` maps BlueZ's `input-gaming` to `stadia_controller` ahead of
 the generic fallback, so the same controller is named in the dialog, on the bar and in At-a-glance.
+Nothing on a test machine puts a ring on this widget, so `tests/run_bluetooth_battery_probe.sh`
+fakes the connected list in a COPY of the tree under a nested Hyprland and reads the rings, the
+hover and the click back over IPC; its header carries the numbers it measured.
 ("feat(bar): a Bluetooth battery widget, one ring per device")
 
 **An icon in a circle on the bar is an OUTLINED ring under every bar style but M3.** The
