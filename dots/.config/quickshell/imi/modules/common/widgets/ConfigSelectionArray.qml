@@ -56,6 +56,11 @@ ColumnLayout {
             StyledText {
                 id: labelWidget
                 Layout.fillWidth: true
+                // The label keeps its width when the row is short of room, so
+                // it is the chips that yield and wrap - not the label that is
+                // drawn under them (the clock's "Cookie: minute hand" row lost
+                // its last word under five chips).
+                Layout.minimumWidth: labelWidget.implicitWidth
                 text: root.text
                 color: Appearance.colors.colOnSecondaryContainer
                 opacity: root.enabled ? 1 : 0.4
@@ -81,7 +86,10 @@ ColumnLayout {
 
         Flow {
             id: buttonsFlow
-            Layout.fillWidth: !root.text
+            // Fills on both paths now, capped at its natural width: with the
+            // label holding its minimum, a row too narrow for label and chips
+            // gives the Flow less and the chips wrap, labelled or not.
+            Layout.fillWidth: true
             Layout.alignment: Qt.AlignRight
             spacing: Appearance.spacing.space25
 
@@ -126,9 +134,9 @@ ColumnLayout {
             // the Flow FILLS its cell up to the natural width as a maximum: a
             // wider cell leaves it at the natural width, right-aligned, and a
             // narrower one gives it less, which is when the chips wrap for the
-            // real reason. The labelled path keeps its aligned natural width -
-            // the label beside it is what would yield, and it has no minimum.
-            Layout.maximumWidth: root.text ? Number.POSITIVE_INFINITY : buttonsFlow.naturalWidth
+            // real reason - on the labelled path too, since the label holds its
+            // own minimum width and cannot be the thing that yields.
+            Layout.maximumWidth: buttonsFlow.naturalWidth
 
             Repeater {
                 model: root.options
