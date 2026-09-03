@@ -137,4 +137,42 @@ TestCase {
         compare(BluetoothStatus.activeDeviceCount, 1)
         verify(BluetoothStatus.firstActiveDevice === earbuds)
     }
+
+    function test_battery_level_comes_from_bluez_then_upower_then_nothing() {
+        compare(BluetoothStatus.batteryLevelOf(null), -1)
+        compare(BluetoothStatus.batteryLevelOf(undefined), -1)
+        compare(BluetoothStatus.batteryLevelOf(keyboard), -1)
+        compare(BluetoothStatus.batteryLevelOf({ batteryAvailable: true, battery: 0.85 }), 0.85)
+        compare(BluetoothStatus.batteryLevelOf({ batteryAvailable: false, battery: 0.5 }), -1)
+
+        UPower.devices.values = [
+            { isLaptopBattery: true, nativePath: "BAT0", percentage: 0.99 },
+            { isLaptopBattery: false, nativePath: "ps-controller-battery-14:3a:9a:7c:45:47", percentage: 0.45 }
+        ]
+        compare(BluetoothStatus.batteryLevelOf({ batteryAvailable: false, address: "14:3A:9A:7C:45:47" }), 0.45)
+        compare(BluetoothStatus.batteryLevelOf({ batteryAvailable: true, battery: 0.6, address: "14:3A:9A:7C:45:47" }), 0.6)
+        compare(BluetoothStatus.batteryLevelOf({ batteryAvailable: false, address: "AA:BB:CC:DD:EE:FF" }), -1)
+        // The suffix is the level, formatted - never a second lookup.
+        compare(BluetoothStatus.formatBatterySuffix({ batteryAvailable: false, address: "14:3A:9A:7C:45:47" }), " • 45%")
+        UPower.devices.values = []
+    }
+
+    function test_battery_devices_are_the_connected_ones_with_a_level_in_sort_order() {
+        UPower.devices.values = [
+            { isLaptopBattery: false, nativePath: "hid-14:3a:9a:7c:45:47-battery", percentage: 0.3 }
+        ]
+        Bluetooth.devices.values = [
+            { name: "Zeta Buds", connected: true, paired: true, batteryAvailable: true, battery: 0.9 },
+            { name: "Pad", connected: true, paired: true, batteryAvailable: false, address: "14:3A:9A:7C:45:47" },
+            { name: "Mute Mouse", connected: true, paired: true, batteryAvailable: false, address: "AA:BB:CC:DD:EE:FF" },
+            { name: "Away Keys", connected: false, paired: true, batteryAvailable: true, battery: 0.1 }
+        ]
+        compare(BluetoothStatus.batteryDevices.map(d => d.name), ["Pad", "Zeta Buds"])
+        compare(BluetoothStatus.lowestBatteryDevice.name, "Pad")
+
+        Bluetooth.devices.values = []
+        compare(BluetoothStatus.batteryDevices.length, 0)
+        verify(BluetoothStatus.lowestBatteryDevice === null)
+        UPower.devices.values = []
+    }
 }

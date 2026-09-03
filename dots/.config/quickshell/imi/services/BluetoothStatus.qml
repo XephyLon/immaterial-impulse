@@ -16,24 +16,32 @@ Singleton {
     readonly property int activeDeviceCount: Bluetooth.defaultAdapter?.devices.values.filter(device => device.connected).length ?? 0
     readonly property bool connected: Bluetooth.devices.values.some(d => d.connected)
 
-    // " • NN%" for a device whose battery level is reported, "" otherwise.
+    // The one battery lookup every consumer shares - the quick toggle and
+    // the device dialog through formatBatterySuffix, At-a-glance, the bar's
+    // BluetoothBattery widget: 0..1 when known, -1 when neither source does.
     // Primary source is Quickshell.Bluetooth's BluetoothDevice (BlueZ Battery1
     // interface): `batteryAvailable` gates it, `battery` is a 0..1 fraction.
     // Many devices never get Battery1 (HID controllers like the DualSense, or
     // bluetoothd without Experimental=true), but the kernel exposes them as a
     // power_supply that UPower picks up with the MAC in its nativePath - fall
     // back to that, matched by address.
-    function formatBatterySuffix(device) {
+    function batteryLevelOf(device) {
         if (device?.batteryAvailable)
-            return ` • ${Math.round(device.battery * 100)}%`;
+            return device.battery;
         const addr = device?.address?.toLowerCase() ?? "";
         if (addr) {
             const fallback = (UPower.devices?.values ?? []).find(d =>
                 d && !d.isLaptopBattery && (d.nativePath ?? "").toLowerCase().includes(addr));
             if (fallback)
-                return ` • ${Math.round(fallback.percentage * 100)}%`;
+                return fallback.percentage;
         }
-        return "";
+        return -1;
+    }
+
+    // " • NN%" for a device whose battery level is known, "" otherwise.
+    function formatBatterySuffix(device) {
+        const level = batteryLevelOf(device);
+        return level < 0 ? "" : ` • ${Math.round(level * 100)}%`;
     }
 
     function sortFunction(a, b) {
@@ -48,6 +56,13 @@ Singleton {
         return a.name.localeCompare(b.name);
     }
     property list<var> connectedDevices: Bluetooth.devices.values.filter(d => d.connected).sort(sortFunction)
+    // Connected devices with a known level, in the same order - what the bar
+    // widget draws a ring for. A binding: batteryLevelOf reads each device's
+    // batteryAvailable/battery and UPower.devices inside it, so a level that
+    // arrives after the connection re-evaluates the list.
+    readonly property list<var> batteryDevices: connectedDevices.filter(d => batteryLevelOf(d) >= 0)
+    readonly property var lowestBatteryDevice: batteryDevices.reduce((low, d) =>
+        low === null || batteryLevelOf(d) < batteryLevelOf(low) ? d : low, null)
     property list<var> pairedButNotConnectedDevices: Bluetooth.devices.values.filter(d => d.paired && !d.connected).sort(sortFunction)
     property list<var> unpairedDevices: Bluetooth.devices.values.filter(d => !d.paired && !d.connected).sort(sortFunction)
     property list<var> friendlyDeviceList: [
