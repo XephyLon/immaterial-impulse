@@ -12,9 +12,17 @@ if status is-interactive
         enable_transience
     end
     
-    # Colors
-    if test -f ~/.local/state/quickshell/user/generated/terminal/sequences.txt
-        cat ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+    # Colors. Inside tmux only the pane-safe file goes to the pane: the full
+    # one carries OSC 10/11/12, which tmux 3.4+ adopts as the pane's OWN
+    # default colours and then paints opaque - the rule applycolor.sh follows
+    # when it pushes into pane ttys (AGENT.md, "A tmux pane never receives
+    # the terminal's default colours").
+    set -l imi_seq ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+    if set -q TMUX
+        set imi_seq ~/.local/state/quickshell/user/generated/terminal/sequences-pane.txt
+    end
+    if test -f $imi_seq
+        cat $imi_seq
     end
 
     # Aliases
