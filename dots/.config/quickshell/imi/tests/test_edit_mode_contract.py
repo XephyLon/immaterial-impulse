@@ -1579,20 +1579,9 @@ def test_the_clock_previews_its_locked_look_through_one_derivation():
     assert re.search(r"readonly property bool lockLook:\s*GlobalStates\.screenLocked"
                      r"\s*\n?\s*\|\|\s*GlobalStates\.editLockPreview", clock), \
         "the clock no longer derives its locked look once"
-    # The STYLE is the one of the four that no longer reads `lockLook`: since
-    # widget options fork per surface (2026-09-03) it is the plain `style`
-    # option, and PluginState.option's default surface is currentSurface,
-    # which reads GlobalStates.lockLookActive - the same derivation, one
-    # level down, shared with every position read. A second local selector
-    # here would be the twin the fold-in removed.
-    assert re.search(r'readonly property string style:\s*PluginState\.option\("clock", "style", "cookie"\)', clock), \
-        "the clock's style must be the plain option, read on the current surface"
-    assert re.search(r"clockStyle:\s*root\.style\b", clock), \
-        "the clock's clockStyle is the style option, not a lock-look selector"
-    assert "styleLocked" not in clock.replace("`styleLocked`", ""), \
-        "the clock must not grow its second style key back"
     for name, pattern in (
             ("forceCenter", r"forceCenter:\s*root\.lockLook"),
+            ("clockStyle", r"clockStyle:\s*root\.lockLook"),
             ("shouldShow", r"shouldShow:\s*!root\.showOnlyWhenLocked\s*\|\|\s*root\.lockLook"),
             ("the Locked caption", r"shown:\s*root\.lockLook\s*&&\s*Config\.options\.lock\.showLockedText")):
         assert re.search(pattern, clock), \
