@@ -5,6 +5,7 @@ import QtQuick
 QtObject {
     property string name: ""
     property string address: ""
+    property string icon: ""
     property bool connected: false
     property bool paired: false
     property bool batteryAvailable: false
