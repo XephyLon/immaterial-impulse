@@ -103,6 +103,51 @@ def test_every_undoable_position_write_captures_its_surface_at_push_time():
         "the re-link must be undoable"
 
 
+def test_every_widget_option_read_and_write_names_its_surface():
+    # A widget's own settings fork per surface too (2026-09-03: the resource
+    # monitor rotated for the lock screen was rotated on the desktop). The
+    # store's accessors take a trailing surface with the position API's
+    # default; Settings names its surface on EVERY call, because its switch
+    # and not the look the desktop is showing is what the user pressed.
+    state = code(STATE)
+    for fn in ("option", "setOption"):
+        sig = re.search(rf"function {fn}\(([^)]*)\)", state)
+        assert sig and "surface" in sig.group(1), \
+            f"PluginState.{fn} must take an explicit surface parameter"
+    assert "Surfaces.rawOption(root.state, surface ?? root.currentSurface" in state, \
+        "option() must read through layout_surfaces.rawOption on the default surface"
+    assert "Surfaces.withOption(root.state, surface ?? root.currentSurface" in state, \
+        "setOption() must write through layout_surfaces.withOption on the default surface"
+    assert re.search(r"lockOptions: parsed\.lockOptions", state), \
+        "loadText must carry lockOptions, or a restart forgets every lock setting"
+
+    options = code(ROOT / "modules/common/plugins/PluginOptions.qml")
+    assert 'property string surface: PluginState.desktopSurface' in options, \
+        "PluginOptions must own the surface its rows edit"
+    calls = re.findall(r"PluginState\.(?:option|setOption)\([^;]*?\)", options, re.S)
+    assert len(calls) >= 15, f"expected the card's reads and writes, found {len(calls)}"
+    naked = [call for call in calls if "root.surface" not in call]
+    assert naked == [], \
+        "every PluginOptions read and write must pass root.surface:\n" + "\n".join(naked)
+    assert "Surfaces.isSharedOptionKey(modelData.key)" in options, \
+        "the lock card must hide the shared policy toggles"
+    assert "(!root.onLock && root.offeredSizes.length > 1)" in options, \
+        "the lock card offers no size row - the lock's span lives in its layout record"
+
+    presets = read(ROOT / "scripts/presets.sh")
+    assert presets.count("lockOptions: (.lockOptions // {})") == 3, \
+        "presets.sh must capture lockOptions in every state shape it builds"
+    assert 'if ($preset | has("lockOptions"))' in presets, \
+        "presets.sh must apply lockOptions under the has() rule lockPositions follows"
+    assert ".lockOptions[$id] = $current.lockOptions[$id]" in presets, \
+        "the presetPersist carve-out must shield a plugin's lock settings too"
+
+    widget = code(WIDGET)
+    for key in ("positionLocked", "clickThrough"):
+        assert re.search(rf'PluginState\.option\(manifest\.id, "{key}", [^)]*\)\n', widget), \
+            f"PluginWidget reads {key} with no surface - it is a shared key and must stay so"
+
+
 def test_every_span_read_and_write_goes_through_the_surface_api():
     # The span forks with the position: a widget at 3x2 on the desktop and
     # 1x2 on the lock (the report) needs the lock's span in the lock record.
