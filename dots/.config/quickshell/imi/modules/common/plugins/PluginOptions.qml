@@ -35,6 +35,32 @@ ColumnLayout {
         return PluginState.option(root.manifest.id, key, root.optionDefaults[key]);
     }
 
+    // Options declared with the same `group`, consecutively, render under one
+    // subsection heading that names the group, so the manifest does not have
+    // to spell it into every label ("Cookie: sides", "Cookie: hour marks" ...
+    // eleven rows deep - the maintainer's complaint). A run without a group
+    // renders as plain rows. A heading shows only while one of its rows does,
+    // so a digital clock carries no "Cookie clock" heading over nothing.
+    readonly property var optionRuns: {
+        const runs = [];
+        let current = null;
+        for (const option of root.widgetOptions) {
+            const group = option.group || "";
+            if (current === null || current.group !== group) {
+                current = { group: group, options: [] };
+                runs.push(current);
+            }
+            current.options.push(option);
+        }
+        return runs;
+    }
+    function runVisible(run) {
+        for (const option of run.options)
+            if (OptionVisibility.visible(option, key => root.readOption(key)))
+                return true;
+        return false;
+    }
+
     // Host blur is a desktop-widget mechanism (PluginWidget frost); bar/
     // overlay-only plugins were getting a dead "Blur background" toggle.
     readonly property bool hasBlurSurface: manifest.desktopWidget !== undefined
@@ -108,8 +134,37 @@ ColumnLayout {
     }] : []
 
     Repeater {
-        model: root.widgetOptions
-        delegate: optionRow
+        model: root.optionRuns
+        delegate: Loader {
+            id: runLoader
+            required property var modelData
+            Layout.fillWidth: true
+            readonly property bool shown: root.runVisible(modelData)
+            visible: shown
+            Layout.preferredHeight: shown ? implicitHeight : 0
+            sourceComponent: modelData.group === "" ? plainRun : groupedRun
+
+            Component {
+                id: plainRun
+                ColumnLayout {
+                    spacing: root.spacing
+                    Repeater {
+                        model: runLoader.modelData.options
+                        delegate: optionRow
+                    }
+                }
+            }
+            Component {
+                id: groupedRun
+                ContentSubsection {
+                    title: runLoader.modelData.group
+                    Repeater {
+                        model: runLoader.modelData.options
+                        delegate: optionRow
+                    }
+                }
+            }
+        }
     }
 
     // Every host row reads as one group rather than as more of the widget's own
@@ -290,8 +345,7 @@ ColumnLayout {
             }
 
             // Material shapes are their own preview: a name-chip row for 31
-            // shapes is both unreadable and unlabelable (ConfigSelectionArray's
-            // chip Flow only wraps when it has no label). Draw the shape.
+            // shapes is unreadable even wrapped. Draw the shape.
             Component {
                 id: shapeOption
                 ConfigSelectionShapeArray {

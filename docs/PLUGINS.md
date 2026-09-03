@@ -180,8 +180,13 @@ short values such as currency codes.
 `shape` takes the same `choices` array as `choice` but renders each entry as the Material shape it
 names rather than as a text chip, via `ConfigSelectionShapeArray`. Values must be `MaterialShape.Shape`
 enum names (`Cookie4Sided`, `Heart`, …); an unrecognised name falls back to `Cookie4Sided`. Use it
-whenever the value *is* a shape — a 31-entry name-chip row is unreadable, and `ConfigSelectionArray`'s
-chip `Flow` only wraps when the row has no label, so such a row cannot be labelled either.
+whenever the value *is* a shape — a 31-entry name-chip row is unreadable even wrapped.
+
+Options that belong together take a `"group": "<heading>"`. Consecutive options with the same group
+render under one subsection heading with that title, shown only while one of its rows is, so the
+heading carries the shared word and the labels do not ("Cookie clock" over `sides`, `hour marks`,
+`dial style`, rather than eleven labels each starting "Cookie:"). Keep a group's options together in
+the manifest: the grouping is by run, and the same name twice apart is two headings.
 
 An option can be shown only while another option has a given value. `"visibleWhen"` takes a
 rule — `{ "key": "style", "in": ["cookie"] }`, `{ "key": "quoteEnable", "equals": true }`, a bare
