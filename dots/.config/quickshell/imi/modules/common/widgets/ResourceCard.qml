@@ -13,6 +13,18 @@ Rectangle {
     required property string sublabel
     property color sublabelColor: Appearance.colors.colOnSurfaceVariant
     property int cardWidth: 150 
+    // Which end of the bar is the trouble end. A usage card runs hot at the
+    // top (a full disk is the problem); a LEVEL card - a battery, a health -
+    // runs out at the bottom, and painting its full state in the error
+    // colour alarms at exactly the state that is fine. `strain` is the
+    // distance from the good end either way; the ramp and the warning
+    // border read it, never `value`.
+    property bool lowIsWarning: false
+    // Where the warning starts, on strain - 0.9 is "over 90% used"; a
+    // battery card passes 1 minus its low threshold.
+    property real warnAt: 0.9
+    readonly property real strain: root.lowIsWarning ? 1 - root.value : root.value
+    readonly property bool warning: root.strain >= root.warnAt
 
     width: cardWidth
     height: 96 
@@ -21,8 +33,9 @@ Rectangle {
     color: Appearance.colors.colSurfaceContainerLow
 
     function usageColor(v) {
-        if (v > 0.9) return Appearance.colors.colError
-        if (v > 0.6) return Appearance.colors.colTertiary || Appearance.m3colors.m3tertiary
+        const s = root.lowIsWarning ? 1 - v : v
+        if (s >= root.warnAt) return Appearance.colors.colError
+        if (s > 0.6) return Appearance.colors.colTertiary || Appearance.m3colors.m3tertiary
         return Appearance.colors.colPrimary
     }
 
@@ -90,6 +103,6 @@ Rectangle {
         }
     }
 
-    border.width: root.value > 0.9 ? Appearance.borderWidth.emphasis : 0
-    border.color: root.value > 0.9 ? Appearance.colors.colError : "transparent"
+    border.width: root.warning ? Appearance.borderWidth.emphasis : 0
+    border.color: root.warning ? Appearance.colors.colError : "transparent"
 }
