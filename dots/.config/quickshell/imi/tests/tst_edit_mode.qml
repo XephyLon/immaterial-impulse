@@ -366,8 +366,16 @@ TestCase {
         const area = framed.area;
         fuzzyCompare(framed.x - area.x,
             (area.x + area.width) - (framed.x + framed.width), 1e-6);
-        fuzzyCompare(framed.y - area.y,
-            (area.y + area.height) - (framed.y + framed.height), 1e-6);
+        // Vertically the card is centred in the room BETWEEN the bands, not
+        // in the area: the top band is edgeMargin + chrome + margin (the one
+        // toolbar's own space), the bottom band a bare margin - the tab bar
+        // that lived there is gone and the desktop took its room (see the
+        // 2026-08-16 spec's amendment). Equal slack above and below THOSE.
+        const bandTop = 12 + chrome + 24;
+        const bandBottom = 24;
+        fuzzyCompare(framed.y - area.y - bandTop,
+            (area.y + area.height - bandBottom) - (framed.y + framed.height), 1e-6);
+        verify(framed.y - area.y >= bandTop);
         verify(framed.y >= barInset);
         verify(framed.y + framed.height <= 1440 - dockInset);
     }
