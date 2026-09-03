@@ -269,5 +269,61 @@ class PageIncubationContractTests(unittest.TestCase):
         self.assertIn("warmHold.restart()", self.source)
 
 
+class SettingsPageParkingTests(unittest.TestCase):
+    """Pages built ahead of the user wait outside the window until first shown.
+
+    The warm-up builds all fifteen pages (~24,500 items) while the settings
+    window has never been opened, and Quickshell creates the backing window on
+    the first `visible`: it re-parents the whole prebuilt tree into it and
+    polishes every layout that queued a polish while windowless. Measured in a
+    nested Hyprland, that assignment blocked the GUI thread 88-92 ms and the
+    window's first sync another ~50 ms - for pages that were not even visible.
+    With only the page on screen in the window's tree: 6 ms and 22 ms.
+
+    `tests/test_settings_page_incubation_runtime.py` checks the detachment for
+    real; this pins the wiring that produces it.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.source = SETTINGS.read_text(encoding="utf-8")
+        cls.page_loader = braced_block(cls.source, "id: pageLoader")
+        cls.parking = braced_block(cls.source, "id: pageParking")
+
+    def test_the_parking_is_detached_after_completion_not_by_a_declared_parent(self):
+        # `parent: null` as a declaration is applied while the item is being
+        # built and then overwritten when the enclosing item appends it to
+        # its children - measured, the parking stayed in the tree and 22,290
+        # items were still re-parented at the open.
+        self.assertNotRegex(self.parking, r"\n\s*parent:\s*null")
+        self.assertIn("Component.onCompleted: parent = null", self.parking)
+
+    def test_the_parking_is_sized_from_live_values_not_the_host(self):
+        # Layouts do not polish without a window (QTBUG-126704): the host's
+        # size is stale until the first open, and a parking that followed it
+        # was re-laid out - 14 pages deep - inside that same assignment.
+        self.assertIn("width: root.contentPaneWidth", self.parking)
+        self.assertIn("height: root.contentPaneHeight", self.parking)
+        self.assertNotIn("pageHost.width", self.parking)
+        self.assertNotIn("pageHost.height", self.parking)
+        self.assertRegex(self.source, r"readonly property real contentPaneWidth: root\.width - navRailWrapper\.implicitWidth")
+        self.assertRegex(self.source, r"readonly property real contentPaneHeight: root\.height")
+
+    def test_a_page_parks_at_creation_unless_it_is_on_screen(self):
+        completed = re.search(r"Component\.onCompleted:\s*\{(.*?)\n\s*\}", self.page_loader, re.S)
+        self.assertIsNotNone(completed, "the page loader must decide where it lives when it is built")
+        self.assertIn("if (!isActive) parent = pageParking", completed.group(1))
+
+    def test_a_page_joins_the_window_the_first_time_it_is_shown(self):
+        # Before anything reads `item`: the page has to be in the window when
+        # it becomes the one on screen, and it stays there afterwards (a page
+        # left behind is kept, never re-parked - the cost is paid once).
+        self.assertIn("if (isActive && parent !== pageHost) parent = pageHost;", self.page_loader)
+        self.assertNotIn("parent = pageParking;\n", self.page_loader.split("onIsActiveChanged")[1])
+
+    def test_the_parking_is_reachable_by_the_runtime_harness(self):
+        self.assertIn("readonly property Item parkedPages: pageParking", self.source)
+
+
 if __name__ == "__main__":
     unittest.main()

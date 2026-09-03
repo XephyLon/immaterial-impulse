@@ -2332,6 +2332,35 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   39c70df85 ("perf(settings): warm the pages one at a time, while the window is open"),
   2581cafae ("fix(settings): the warm-up is gated on Config.ready, not on the window"),
   de2b31b13 ("test(settings): drive when the settings host builds its pages").
+  **And a page built ahead of the user waits OUTSIDE the window until first shown.** Quickshell
+  creates the backing `QQuickWindow` on the first `visible`: it re-parents the whole prebuilt
+  content tree into it and then polishes every layout that queued a polish while windowless. With
+  fifteen warmed pages (~24,500 items) in that tree the assignment blocked the GUI thread 88–92ms
+  and the window's first sync another 70–77ms, for fourteen pages nobody was looking at — the
+  ~16-frame stutter on the first open after a restart; with only the page on screen in the tree
+  (the control), 7ms and 18ms. The page loaders now park in an `Item` off the window and join the
+  host on their first `isActive`; a page left behind is kept, never re-parked. Two measured
+  gotchas shape the parking. A declared `parent: null` does NOT detach it: the binding is applied
+  while the item is built and then overwritten when the enclosing item appends it to its children
+  — the parking stayed in the tree and 22,290 items were still re-parented at the open — so it is
+  detached in `Component.onCompleted`. And it is sized from values that are live before the window
+  exists (`contentPaneWidth/Height`: the root's size, the rail's implicit width, the paddings, the
+  search bar's height, the column's spacing), NOT from the host: layouts do not polish without a
+  window (QTBUG-126704), so the host sits at a stale width until the open, and a parking that
+  followed it was re-laid out fourteen pages deep inside that same assignment. The runtime harness
+  walks the parking as well as the window (a walk of the visual tree alone never sees a warmed page
+  again), checks the detachment for real, and reads the parking's size against the page on screen.
+  93e5147ed ("perf(settings): pages built ahead wait outside the window until first shown").
+- **A `layer` on a shared widget is on only while the effect it exists for is drawn.** A layer is
+  an offscreen texture and a render pass of its own, and it breaks batching around it. `RippleButton`
+  kept one on every background, always, to clip the ripple to the rounded corners — and the button
+  is in every row, chip and sidebar entry of the shell. Measured in a nested Hyprland, the settings
+  window's first frame synced ~2,700 elements into 946 draw batches through those layers and blocked
+  the GUI thread 165ms; gated on hover-or-ripple (`root.hovered || ripple.opacity > 0`), 121ms and
+  1,101 batches before anything else changed. At rest the background is a plain rounded `Rectangle`;
+  the layer comes up on hover so its texture exists before the press lands, and stays while a ripple
+  fades. `tests/test_ripple_layer_gate.py` pins the gate.
+  82e2627d5 ("perf(ripple): the button's mask layer is on only while a ripple is drawn").
 - **Do not put dynamic object maps in a `JsonAdapter`, including through a `property var`.** Plugin
   ids and monitor names are not known when QML compiles, while `JsonObject` only supports declared
   properties. Writing undeclared children caused `JsonAdapter::deserializeRec` to segfault on the

@@ -108,7 +108,11 @@ ShellRoot {
     }
 
     function everything() {
-        return loader.item ? harness.walk(loader.item, []) : [];
+        // Both trees: the window's, and the parking where pages built ahead
+        // of the user wait - detached from the window, so a walk of the
+        // visual tree alone would never see a warmed page again.
+        if (!loader.item) return [];
+        return harness.walk(loader.item, []).concat(harness.walk(loader.item.parkedPages, []));
     }
 
     readonly property var pageTypes: ["QuickConfig", "AppearanceConfig", "CursorConfig",
@@ -266,6 +270,8 @@ ShellRoot {
             harness.check(`a warmed page is on screen the moment it is asked for,`
                           + ` status=${bar?.status}`,
                           bar !== null && bar.item !== null && bar.status === Loader.Ready);
+            harness.check("...and it joined the window when asked for, leaving the parking",
+                          bar !== null && bar.parent !== loader.item.parkedPages && bar.QsWindow.window !== null);
         },
 
         () => harness.finish()
@@ -286,6 +292,34 @@ ShellRoot {
                         + ` (warmedThrough=${through}), worst GUI block ${harness.hbMax}ms`);
             harness.check(`the warm-up reaches every page, got ${pages.length}`,
                           pages.length === harness.pageTypes.length);
+            // ---- and where the warmed pages wait ----------------------------
+            // Out of the window: Quickshell re-parents the content tree into
+            // the backing window on the first open and polishes every queued
+            // layout, which cost 88 ms for ~22,000 items of pages nobody was
+            // looking at. A declared `parent: null` did not detach the parking
+            // (the enclosing item's children append overwrote it), so the
+            // detachment is checked here for real, not read off the source.
+            const parking = loader.item.parkedPages;
+            harness.check("the parking is detached from the window's item tree",
+                          parking !== null && parking.parent === null && parking.QsWindow.window === null);
+            const shown = ["QuickConfig", harness.farPage];
+            const waiting = harness.pageTypes.filter(name => !shown.includes(name))
+                .map(name => harness.pageLoader(name));
+            harness.check(`every page built ahead of the user waits in the parking with no window,`
+                          + ` got ${waiting.filter(l => l && l.parent === parking && l.QsWindow.window === null).length}`
+                          + ` of ${waiting.length}`,
+                          waiting.length === harness.pageTypes.length - shown.length
+                          && waiting.every(l => l && l.parent === parking && l.QsWindow.window === null));
+            harness.check(`...and the pages that were shown are in the window, not parked`,
+                          shown.map(harness.pageLoader).every(l => l && l.parent !== parking && l.QsWindow.window !== null));
+            // The parking is sized from values that are live before the window
+            // exists, not from the host; this is where that derivation meets
+            // the host's real, polished size. Read off the page ON SCREEN: a
+            // page that is not carries a top margin while it waits to slide in.
+            const onScreen = harness.pageLoader(harness.farPage);
+            harness.check(`the parking is the page pane's size, got ${parking.width}x${parking.height}`
+                          + ` against ${onScreen?.width}x${onScreen?.height}`,
+                          onScreen !== null && parking.width === onScreen.width && parking.height === onScreen.height);
             steps.running = true;
         }
     }

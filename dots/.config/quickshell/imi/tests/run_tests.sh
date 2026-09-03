@@ -1520,6 +1520,15 @@ if ! python3 "$SCRIPT_DIR/test_settings_navigation.py"; then
     exit 1
 fi
 
+# The button's ripple mask layer is on only while a ripple is drawn. Always on,
+# it was an offscreen render target per button across the whole shell - the
+# settings window's first frame drew 946 batches through it.
+echo "Running ripple layer gate tests..."
+if ! python3 "$SCRIPT_DIR/test_ripple_layer_gate.py"; then
+    echo "Ripple layer gate tests failed."
+    exit 1
+fi
+
 # WHEN the settings host builds its fifteen pages. It used to build all of them
 # synchronously in one turn at Config.ready - 622ms of frozen GUI thread paid by
 # the whole shell at startup, measured on the harness's own heartbeat, and

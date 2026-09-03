@@ -57,7 +57,7 @@ HARNESS = ROOT / "SettingsPageIncubationRuntimeTest.qml"
 # A literal, never read back out of the harness's own output: a step list that
 # loses an entry must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 12
+EXPECTED_CHECKS = 17
 
 
 @unittest.skipUnless(nested_display.available(),
