@@ -32,6 +32,11 @@ own repo; the installer pins which revision it builds.
   a new change clears the redo history.
 
 ### Fixed
+- **tmux panes stay translucent.** Every colour change pushed the terminal's
+  default background into each tmux pane, and tmux adopted it as the pane's
+  own and painted it as a solid slab inside an otherwise blurred kitty.
+  Panes now receive only the palette, plus a reset of any default they had
+  adopted before, and inherit the background from the terminal itself.
 - **The settings rows no longer shake on the first open.** Every chip in
   every selection row grew for twenty frames while its row wrapped and
   unwrapped behind it: the button animated a width the window's first

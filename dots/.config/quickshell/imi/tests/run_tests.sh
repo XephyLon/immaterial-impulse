@@ -1538,6 +1538,15 @@ if ! python3 "$SCRIPT_DIR/test_group_button_settle.py"; then
     exit 1
 fi
 
+# A tmux pane never receives the terminal's default colours: tmux adopts an
+# OSC 11 it is sent as the pane's own background and paints it explicitly, and
+# a translucent kitty turns into a solid slab.
+echo "Running applycolor tmux pane tests..."
+if ! python3 "$SCRIPT_DIR/test_applycolor_tmux_panes.py"; then
+    echo "Applycolor tmux pane tests failed."
+    exit 1
+fi
+
 # WHEN the settings host builds its fifteen pages. It used to build all of them
 # synchronously in one turn at Config.ready - 622ms of frozen GUI thread paid by
 # the whole shell at startup, measured on the harness's own heartbeat, and

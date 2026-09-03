@@ -410,6 +410,23 @@ read-only, and "the run printed nothing" is what a swallowed traceback also
 looks like. (fix(colors): one app's broken config no longer starves the rest
 of their themes.)
 
+- **A tmux pane never receives the terminal's default colours.** `scripts/colors/applycolor.sh`
+  pushes the generated OSC sequences into every interactive pty so open terminals recolour live. A
+  tmux pane's pty is one of those, and tmux (3.4+) adopts an OSC 10/11/12 it is sent as the pane's
+  OWN default foreground/background/cursor — and from then on paints the pane's background
+  explicitly, every cell, instead of leaving it to the terminal. kitty applies `background_opacity`
+  only to its default background colour, so the pane became a solid slab while the padding around it
+  stayed blurred. Measured on the live shell: `tmux list-panes -a -F '#{pane_bg}'` read `#1b1b17` on
+  every pane; a plain tmux with `sleep` inside was as translucent as kitty alone (cell-area
+  correlation with the blurred backdrop 0.69 against 0.67 — the first three "opaque" verdicts were a
+  flat patch of wallpaper under the tiling slot, so measure against the backdrop, not by eye); an
+  OSC 111 written to the pane's tty brought `default` and the blur back. Pane ttys are collected
+  from every server socket under `/tmp/tmux-<uid>/` and get `terminal/pane_safe.sh`'s output — the
+  palette (OSC 4) plus OSC 110/111/112 resets so a pane coloured by an earlier push recovers — while
+  the tmux client's own pty still gets the full set and the panes inherit from it.
+  `tests/test_applycolor_tmux_panes.py` runs the filter and pins the routing.
+  c7dbe2340 ("fix(colors): a tmux pane never receives the terminal's default colours").
+
 ## The suite checkout, and why the updater cannot just reset it
 
 `get.sh` keeps the whole suite in `~/.local/share/immaterial-impulse/src` (`Directories.suiteSrc`),
