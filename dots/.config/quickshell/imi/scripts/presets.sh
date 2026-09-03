@@ -50,6 +50,7 @@ case "$action" in
                 desktopPositions: (.desktopPositions // {}),
                 lockPositions: (.lockPositions // {}),
                 lockPresence: (.lockPresence // null),
+                lockOptions: (.lockOptions // {}),
                 pluginOptions: (.pluginOptions // {})
             }' 2>/dev/null)" || plugin_state=""
         else
@@ -61,9 +62,10 @@ case "$action" in
             desktopPositions: (.desktopPositions // {}),
             lockPositions: (.lockPositions // {}),
             lockPresence: (.lockPresence // null),
+            lockOptions: (.lockOptions // {}),
             pluginOptions: (.pluginOptions // {})
         }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-            || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"lockPresence":null,"pluginOptions":{}}')"
+            || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"lockPresence":null,"lockOptions":{},"pluginOptions":{}}')"
         fi
         # A preset is a document people SHARE, and `config.json` holds the
         # user's own OpenWeatherMap key. Saving one used to copy it verbatim,
@@ -139,10 +141,11 @@ case "$action" in
                 desktopPositions: (.desktopPositions // {}),
                 lockPositions: (.lockPositions // {}),
                 lockPresence: (.lockPresence // null),
+                lockOptions: (.lockOptions // {}),
                 pluginOptions: (.pluginOptions // {}),
                 presetPersist: (.presetPersist // {})
             }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-                || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"lockPresence":null,"pluginOptions":{},"presetPersist":{}}')"
+                || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"lockPresence":null,"lockOptions":{},"pluginOptions":{},"presetPersist":{}}')"
             # Top-level merging keeps fields omitted by older position-only
             # presets, while a new preset's complete maps replace current state.
             jq -n --argjson current "$current_plugin_state" --argjson preset "$preset_plugin_state" \
@@ -161,11 +164,17 @@ case "$action" in
                     | .pluginOptions = (if ($preset | has("pluginOptions"))
                         then ($preset.pluginOptions // {})
                         else ($current.pluginOptions // {}) end)
+                    | .lockOptions = (if ($preset | has("lockOptions"))
+                        then ($preset.lockOptions // {})
+                        else ($current.lockOptions // {}) end)
                     | .presetPersist = ($current.presetPersist // {})
                     | reduce $persistIds[] as $id (.;
                         (if ($current.pluginOptions // {}) | has($id)
                          then .pluginOptions[$id] = $current.pluginOptions[$id]
                          else .pluginOptions |= del(.[$id]) end)
+                        | (if ($current.lockOptions // {}) | has($id)
+                         then .lockOptions[$id] = $current.lockOptions[$id]
+                         else .lockOptions |= del(.[$id]) end)
                         | ($current.desktopPositions // {}) as $cpos
                         | .desktopPositions = (reduce (((.desktopPositions // {}) + $cpos) | keys_unsorted[]) as $screen (.desktopPositions // {};
                             if ($cpos[$screen] // {}) | has($id)
