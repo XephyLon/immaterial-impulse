@@ -190,8 +190,10 @@ class TheHostBooleansAreAToggleBar(unittest.TestCase):
         self.assertIsNone(
             re.search(r"\btoggled\s*=(?![=~])", self.source),
             "a toggle assigns to `toggled` - that is the binding destroyed by hand")
+        # The surface is named on the read and the write alike: the card's
+        # Desktop / Lock screen switch, not the look the desktop is showing.
         self.assertIn("toggled: PluginState.option(root.manifest.id, modelData.key, "
-                      "modelData.default)", self.section)
+                      "modelData.default, root.surface)", self.section)
         self.assertIn("PluginState.setOption(root.manifest.id, modelData.key,", self.section)
         self.assertIn("toggled: PluginState.presetPersisted(root.manifest.id)", self.section)
         self.assertIn("PluginState.setPresetPersist(root.manifest.id,", self.section)
