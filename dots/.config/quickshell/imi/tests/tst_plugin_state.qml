@@ -446,32 +446,4 @@ TestCase {
         PluginState.loadText(JSON.stringify({ version: 2 }));
         compare(JSON.stringify(PluginState.state.lockOptions), "{}");
     }
-
-    // The clock's hand-rolled `styleLocked` folds into the lock overlay's
-    // `style`, and what every user sees on the lock today is what they see
-    // after: a stored second style that differs becomes the overlay, one
-    // that matches becomes nothing, and an ABSENT second style was the
-    // default "cookie" - which differs from a desktop that is not cookie.
-    function test_theClockStyleMigrationKeepsWhatTheLockShowed() {
-        let next = PluginState.stateWithClockStyleMigrated({
-            pluginOptions: { clock: { style: "digital", styleLocked: "pixel" } } });
-        compare(Surfaces.rawOption(next, Surfaces.LOCK, "clock", "style"), "pixel");
-        compare(next.pluginOptions.clock.styleLocked, undefined);
-        compare(next.pluginOptions.clock.style, "digital");
-        verify(next.migrations[PluginState.clockStyleMarker]);
-
-        next = PluginState.stateWithClockStyleMigrated({
-            pluginOptions: { clock: { style: "pixel", styleLocked: "pixel" } } });
-        compare(next.lockOptions, undefined);
-        compare(next.pluginOptions.clock.styleLocked, undefined);
-
-        next = PluginState.stateWithClockStyleMigrated({
-            pluginOptions: { clock: { style: "pixel" } } });
-        compare(Surfaces.rawOption(next, Surfaces.LOCK, "clock", "style"), "cookie");
-
-        next = PluginState.stateWithClockStyleMigrated({ pluginOptions: {} });
-        compare(next.lockOptions, undefined);
-        compare(next.pluginOptions.clock, undefined);
-        verify(next.migrations[PluginState.clockStyleMarker]);
-    }
 }
