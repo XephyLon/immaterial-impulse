@@ -14,6 +14,22 @@ own repo; the installer pins which revision it builds.
 
 ### Fixed
 - **Desktop widgets keep separate settings for the desktop and the lock
+### Added
+  screen.** Every widget card in Settings > Plugins has a Desktop / Lock
+  screen switch; a setting changed on the lock side applies to the lock
+  screen only and the rest keep following the desktop, with a "Reset to
+  desktop" to re-link. The widgets' own knobs (the system monitor's rotate
+  button, for one) write whichever surface they are used on. Presets carry
+  the lock side too.
+- **Widget shadows can be turned off.** Settings > Plugins > Widget settings
+  gains a "Widget shadows" switch, on by default; off, no desktop widget
+  casts one.
+
+### Changed
+- **The clock's "Clock style (locked)" row is gone.** Its value moved to the
+  lock side of the ordinary "Clock style" row; what the lock screen showed
+  is what it still shows.
+
   screen.** Rotating the System Monitor or GPU Monitor on Edit Mode's
   Lockscreen tab rotated it on the desktop too; every widget setting now
   follows the surface it is changed on, and the desktop's stays where it
