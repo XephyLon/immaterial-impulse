@@ -1556,6 +1556,14 @@ if ! python3 "$SCRIPT_DIR/test_bluetooth_battery_widget.py"; then
     exit 1
 fi
 
+# Desktop widget shadows have one switch, gating the one shadow every widget
+# casts (WidgetElevation), on by default.
+echo "Running widget shadow toggle tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_shadow_toggle.py"; then
+    echo "Widget shadow toggle tests failed."
+    exit 1
+fi
+
 # WHEN the settings host builds its fifteen pages. It used to build all of them
 # synchronously in one turn at Config.ready - 622ms of frozen GUI thread paid by
 # the whole shell at startup, measured on the harness's own heartbeat, and
