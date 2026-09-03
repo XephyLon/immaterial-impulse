@@ -1,7 +1,9 @@
 import QtQuick
 import QtTest
+import qs
 import qs.modules.common
 import qs.modules.common.plugins
+import "../modules/common/plugins/layout_surfaces.js" as Surfaces
 
 TestCase {
     name: "PluginStateTest"
@@ -20,6 +22,11 @@ TestCase {
         // leaves every later test reading a fork it did not make.
         Config.options.plugins.enabled = savedEnabled;
         PluginState.resetLockPresence();
+        // Options fork per plugin, not per test: drop the lock maps a test
+        // made, and put the default surface back on the desktop.
+        for (const id of ["surf_monitor", "surf_follow", "surf_shared"])
+            PluginState.resetLockOptions(id);
+        GlobalStates.editLockPreview = false;
     }
 
     function test_positionDefaultsWhenUnset() {
@@ -390,5 +397,81 @@ TestCase {
         const next = PluginState.stateWithSizeModesMigrated(state, [weatherManifest()]);
         compare(next.desktopPositions["DP-1"].nandoroid_weather.x, 12);
         compare(next.presetPersist.nandoroid_weather, true);
+    }
+
+    // ---- options, forked per surface ----------------------------------------
+
+    function test_aLockOptionInheritsTheDesktopUntilWritten() {
+        PluginState.setOption("surf_monitor", "vertical", false, PluginState.desktopSurface);
+        compare(PluginState.option("surf_monitor", "vertical", true, PluginState.lockSurface), false);
+        verify(!PluginState.lockOptionsForked("surf_monitor"));
+
+        PluginState.setOption("surf_monitor", "vertical", true, PluginState.lockSurface);
+        compare(PluginState.option("surf_monitor", "vertical", false, PluginState.lockSurface), true);
+        compare(PluginState.option("surf_monitor", "vertical", true, PluginState.desktopSurface), false);
+        verify(PluginState.lockOptionsForked("surf_monitor"));
+
+        PluginState.resetLockOptions("surf_monitor");
+        compare(PluginState.option("surf_monitor", "vertical", true, PluginState.lockSurface), false);
+        verify(!PluginState.lockOptionsForked("surf_monitor"));
+    }
+
+    function test_theDefaultSurfaceFollowsTheLockLook() {
+        // A caller that names no surface - every widget binding that predates
+        // the fork - reads and writes whichever face the desktop is showing.
+        compare(PluginState.currentSurface, PluginState.desktopSurface);
+        PluginState.setOption("surf_follow", "vertical", false);
+        GlobalStates.editLockPreview = true;
+        compare(PluginState.currentSurface, PluginState.lockSurface);
+        compare(PluginState.option("surf_follow", "vertical", true), false);
+        PluginState.setOption("surf_follow", "vertical", true);
+        compare(PluginState.option("surf_follow", "vertical", false), true);
+        GlobalStates.editLockPreview = false;
+        compare(PluginState.option("surf_follow", "vertical", true), false);
+        compare(PluginState.option("surf_follow", "vertical", false, PluginState.lockSurface), true);
+    }
+
+    function test_aSharedKeyLandsOnTheDesktopFromEitherSurface() {
+        PluginState.setOption("surf_shared", "positionLocked", true, PluginState.lockSurface);
+        compare(PluginState.option("surf_shared", "positionLocked", false, PluginState.desktopSurface), true);
+        verify(!PluginState.lockOptionsForked("surf_shared"));
+    }
+
+    function test_loadTextKeepsALockOptionsMapAndDropsAList() {
+        PluginState.loadText(JSON.stringify({ version: 2, pluginOptions: { m: { vertical: false } },
+            lockOptions: { m: { vertical: true } } }));
+        compare(PluginState.option("m", "vertical", false, PluginState.lockSurface), true);
+        PluginState.loadText(JSON.stringify({ version: 2, lockOptions: ["m"] }));
+        compare(JSON.stringify(PluginState.state.lockOptions), "{}");
+        PluginState.loadText(JSON.stringify({ version: 2 }));
+        compare(JSON.stringify(PluginState.state.lockOptions), "{}");
+    }
+
+    // The clock's hand-rolled `styleLocked` folds into the lock overlay's
+    // `style`, and what every user sees on the lock today is what they see
+    // after: a stored second style that differs becomes the overlay, one
+    // that matches becomes nothing, and an ABSENT second style was the
+    // default "cookie" - which differs from a desktop that is not cookie.
+    function test_theClockStyleMigrationKeepsWhatTheLockShowed() {
+        let next = PluginState.stateWithClockStyleMigrated({
+            pluginOptions: { clock: { style: "digital", styleLocked: "pixel" } } });
+        compare(Surfaces.rawOption(next, Surfaces.LOCK, "clock", "style"), "pixel");
+        compare(next.pluginOptions.clock.styleLocked, undefined);
+        compare(next.pluginOptions.clock.style, "digital");
+        verify(next.migrations[PluginState.clockStyleMarker]);
+
+        next = PluginState.stateWithClockStyleMigrated({
+            pluginOptions: { clock: { style: "pixel", styleLocked: "pixel" } } });
+        compare(next.lockOptions, undefined);
+        compare(next.pluginOptions.clock.styleLocked, undefined);
+
+        next = PluginState.stateWithClockStyleMigrated({
+            pluginOptions: { clock: { style: "pixel" } } });
+        compare(Surfaces.rawOption(next, Surfaces.LOCK, "clock", "style"), "cookie");
+
+        next = PluginState.stateWithClockStyleMigrated({ pluginOptions: {} });
+        compare(next.lockOptions, undefined);
+        compare(next.pluginOptions.clock, undefined);
+        verify(next.migrations[PluginState.clockStyleMarker]);
     }
 }
