@@ -263,7 +263,16 @@ Button {
             animation: Appearance?.animation.elementMoveFast.colorAnimation.createObject(this)
         }
 
-        layer.enabled: true
+        // The layer exists for the ripple: an OpacityMask that clips the
+        // expanding circle to the rounded corners. It is NOT on at rest. A
+        // layer is an offscreen texture and a render pass of its own, and
+        // this button is in every row, chip and sidebar entry of the shell -
+        // the settings window's first frame synced ~2,700 elements into 946
+        // batches with it always on, a 165 ms stall on the first open. At
+        // rest the background is a plain rounded Rectangle drawn directly;
+        // the layer comes up on hover, so the texture is allocated before
+        // the press lands, and stays while a ripple is still fading.
+        layer.enabled: root.hovered || ripple.opacity > 0
         layer.effect: OpacityMask {
             maskSource: Rectangle {
                 width: buttonBackground.width
