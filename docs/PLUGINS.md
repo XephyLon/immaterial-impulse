@@ -204,13 +204,9 @@ cannot read (no `key`) shows the row: a wrongly hidden row is a setting the user
 nothing logs. The older `"enabledWhen": "<booleanKey>"` is the same thing for one boolean and, despite
 its name, hides rather than greys — both fields go through `option_visibility.js`, and when both are
 present both must pass. The clock is the worked example: every `digital*` / `cookie*` / `pixel*` row
-is gated on `style` alone. The desktop and the lock screen can still differ - a widget's options
-fork per surface (`lockOptions` in `plugin-state.json`, reached through the Desktop / Lock screen
-switch on the plugin's card), and the rule is evaluated against whichever surface that switch
-names (`tests/test_clock_options_contract.py` holds that; `tests/tst_option_visibility.qml` holds
-the evaluator). A widget that needs a setting to differ between the two surfaces therefore declares
-ONE option and reads it with `PluginState.option(id, key, default)`, which follows the face the
-desktop is showing; it never declares a second `*Locked` key.
+is gated on its style being chosen for the desktop **or** the lock screen, since the two can differ
+(`tests/test_clock_options_contract.py` holds that; `tests/tst_option_visibility.qml` holds the
+evaluator).
 
 `color` renders a row of palette swatches (`ColorSelectionArray`) instead of chips. Its `choices` are
 `Appearance.colors` role names without the `col` prefix (`primary`, `secondaryContainer`, `layer0`, …).

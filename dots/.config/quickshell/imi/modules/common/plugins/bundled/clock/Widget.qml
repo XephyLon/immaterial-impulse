@@ -59,12 +59,8 @@ Item {
     readonly property var hostScreen: Quickshell.screens.find(screen => screen.name === root.screenName) ?? null
     readonly property real hostScreenWidth: root.hostScreen?.width ?? 0
 
-    // The style follows the face the desktop is showing: PluginState.option
-    // reads the lock's own `style` (lockOptions) under the lock look and the
-    // desktop's otherwise - the second manifest row this widget used to
-    // carry, `styleLocked`, folded into that store (PluginState's
-    // clockStyleLocked migration).
     readonly property string style: PluginState.option("clock", "style", "cookie")
+    readonly property string styleLocked: PluginState.option("clock", "styleLocked", "cookie")
     readonly property bool showOnlyWhenLocked: PluginState.option("clock", "showOnlyWhenLocked", false)
 
     readonly property bool digitalVertical: PluginState.option("clock", "digitalVertical", false)
@@ -83,7 +79,7 @@ Item {
     readonly property string quoteText: PluginState.option("clock", "quoteText", "")
     readonly property bool quoteFollowClock: PluginState.option("clock", "quoteFollowClock", false)
 
-    readonly property string clockStyle: root.style
+    readonly property string clockStyle: root.lockLook ? root.styleLocked : root.style
     readonly property bool shouldShow: !root.showOnlyWhenLocked || root.lockLook
 
     readonly property string customClockColorKey: PluginState.option("clock", "color", "")
