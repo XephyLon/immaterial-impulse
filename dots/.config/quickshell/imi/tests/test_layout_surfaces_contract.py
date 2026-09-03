@@ -107,8 +107,9 @@ def test_every_widget_option_read_and_write_names_its_surface():
     # A widget's own settings fork per surface too (2026-09-03: the resource
     # monitor rotated for the lock screen was rotated on the desktop). The
     # store's accessors take a trailing surface with the position API's
-    # default; Settings names its surface on EVERY call, because its switch
-    # and not the look the desktop is showing is what the user pressed.
+    # default, so a widget's own knobs write the surface on screen; Settings
+    # names the desktop on EVERY call - its rows are desktop-only by
+    # construction, and the surface is Edit Mode's tab, not a card switch.
     state = code(STATE)
     for fn in ("option", "setOption"):
         sig = re.search(rf"function {fn}\(([^)]*)\)", state)
@@ -122,17 +123,16 @@ def test_every_widget_option_read_and_write_names_its_surface():
         "loadText must carry lockOptions, or a restart forgets every lock setting"
 
     options = code(ROOT / "modules/common/plugins/PluginOptions.qml")
-    assert 'property string surface: PluginState.desktopSurface' in options, \
-        "PluginOptions must own the surface its rows edit"
+    assert 'readonly property string surface: PluginState.desktopSurface' in options, \
+        ("PluginOptions edits the DESKTOP by construction - the surface is Edit Mode's tab, not "
+         "a per-card selector (the maintainer's rule, 2026-09-03)")
+    assert '"Lock screen"' not in options and "lockOptionsForked" not in options, \
+        "no surface switch and no lock-side affordance on the widget's card"
     calls = re.findall(r"PluginState\.(?:option|setOption)\([^;]*?\)", options, re.S)
     assert len(calls) >= 15, f"expected the card's reads and writes, found {len(calls)}"
     naked = [call for call in calls if "root.surface" not in call]
     assert naked == [], \
         "every PluginOptions read and write must pass root.surface:\n" + "\n".join(naked)
-    assert "Surfaces.isSharedOptionKey(modelData.key)" in options, \
-        "the lock card must hide the shared policy toggles"
-    assert "root.onLock ? [] : GridSizes.offeredSizes(manifest.grid)" in options, \
-        "the lock card offers no size row - the lock's span lives in its layout record"
 
     presets = read(ROOT / "scripts/presets.sh")
     assert presets.count("lockOptions: (.lockOptions // {})") == 3, \
