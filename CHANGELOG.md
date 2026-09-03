@@ -13,9 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Changed
-- **The clock's options are grouped.** Digital, Cookie, Pixel and Quote rows
-  sit in a titled card each, with the style's icon, instead of repeating the
-  style in every label; a card appears only while its rows do.
+- **The clock's options are organised.** Digital, Cookie, Pixel and Quote
+  rows sit under a header each, with the style's icon, instead of repeating
+  the style in every label; switches pair up two to a line and chip rows
+  stack their chips under the label, so the cookie clock's options take
+  about the height they did while reading as four groups. A header appears
+  only while its rows do.
 - **Edit Mode has one toolbar.** The Desktop and Lockscreen tabs lead it,
   and the tab bar that sat under the desktop is gone; the desktop takes the
   band it occupied. The edge-snapping toggle shows a grid, on or off.

@@ -91,6 +91,10 @@ class SelectionArrayFlowTests(unittest.TestCase):
         self.assertRegex(text, r"readonly property bool stacked: root\.text !== \"\"\s*&& labelGroup\.implicitWidth \+ rowGrid\.columnSpacing \+ buttonsFlow\.naturalWidth > rowGrid\.width")
         self.assertRegex(text, r"Layout\.row: rowGrid\.stacked \? 1 : 0")
         self.assertRegex(text, r"Layout\.columnSpan: rowGrid\.stacked \? 3 : 1")
+        # ...and a caller may ask for the stacked shape outright, for a block
+        # of sibling rows that reads better all one way.
+        self.assertRegex(text, r"property bool forceStacked: false")
+        self.assertRegex(text, r"stacked: root\.text !== \"\" && \(root\.forceStacked")
 
 
 if __name__ == "__main__":
