@@ -93,6 +93,9 @@ StyledPopup {
                 iconText: "heart_check"
                 iconShape: MaterialShape.Shape.Clover4Leaf
                 value: Battery.health / 100
+                // Health is a level: a full one is the good news, not a
+                // 90%-used alarm.
+                lowIsWarning: true
                 sublabel: Battery.chargeCycles > 0
                     ? `${Battery.chargeCycles} ${Translation.tr("cycles")}`
                     : Translation.tr("N/A")
