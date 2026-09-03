@@ -149,6 +149,14 @@ Item {
                         ]
                     }
 
+                    ConfigSwitch {
+                        buttonIcon: "ev_shadow"
+                        text: Translation.tr("Widget shadows")
+                        description: Translation.tr("Desktop widgets cast a shadow on the wallpaper")
+                        checked: Config.options.plugins.shadows
+                        onToggleRequested: Config.options.plugins.shadows = !Config.options.plugins.shadows
+                    }
+
                     // Widgets can take the shell's opacity - Settings > Quick's
                     // "Shell opacity", what the bar, the sidebars and the dock
                     // draw at - instead of their own slider, which then shows
