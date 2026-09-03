@@ -13,6 +13,14 @@ pane back to `default` and the blur back through it.
 So a pane gets the palette (OSC 4) and a reset of the three defaults (OSC
 110/111/112); the outer terminal, whose own pty runs the tmux client, still
 gets the full set and the panes inherit from it.
+
+The push is one of TWO ways the sequences reach a pane. The other is the shell
+rc: every new shell `cat`s the generated file on start-up, and tmux starts a
+shell in every new pane - so the panes came back opaque the day after the push
+was fixed (`#{pane_bg}` read #1b1b17 on both panes of a fresh session; tmux's
+default-command was fish and config.fish cat the full file). The rc files ship
+in dots/, so they are pinned here too: inside tmux (`$TMUX` set) they send the
+pane-safe file and never the full one.
 """
 
 from pathlib import Path
@@ -22,6 +30,9 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DOTS = ROOT.parents[2]
+ZSH_RC = DOTS / ".config/zshrc.d/dots-hyprland.zsh"
+FISH_RC = DOTS / ".config/fish/config.fish"
 APPLY = ROOT / "scripts/colors/applycolor.sh"
 FILTER = ROOT / "scripts/colors/terminal/pane_safe.sh"
 
@@ -74,6 +85,29 @@ class ApplyColorRoutesPanesTests(unittest.TestCase):
         self.assertIn('cat "$payload" >"$file"', loop)
         self.assertNotIn('cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"', loop,
                          "the full set must go through the routing, not straight to every pty")
+
+
+class ShellRcRoutesPanesTests(unittest.TestCase):
+    """A new shell inside tmux sends the pane-safe file, never the full one."""
+
+    FULL = "~/.local/state/quickshell/user/generated/terminal/sequences.txt"
+    PANE = "~/.local/state/quickshell/user/generated/terminal/sequences-pane.txt"
+
+    def test_zsh_picks_the_pane_file_under_tmux(self):
+        rc = ZSH_RC.read_text(encoding="utf-8")
+        self.assertIn('if [ -n "$TMUX" ]', rc, "the choice has to hang on $TMUX")
+        self.assertIn(self.PANE, rc)
+        self.assertNotIn(f"cat {self.FULL}", rc,
+                         "the full file must never be cat directly - it has to go through the choice")
+        self.assertRegex(rc, r'cat "\$_imi_seq"', "the one cat reads the chosen file")
+
+    def test_fish_picks_the_pane_file_under_tmux(self):
+        rc = FISH_RC.read_text(encoding="utf-8")
+        self.assertIn("if set -q TMUX", rc, "the choice has to hang on $TMUX")
+        self.assertIn(self.PANE, rc)
+        self.assertNotIn(f"cat {self.FULL}", rc,
+                         "the full file must never be cat directly - it has to go through the choice")
+        self.assertRegex(rc, r"cat \$imi_seq", "the one cat reads the chosen file")
 
 
 if __name__ == "__main__":
