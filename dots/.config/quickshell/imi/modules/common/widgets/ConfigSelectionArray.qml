@@ -42,11 +42,25 @@ ColumnLayout {
     Layout.leftMargin: Appearance.spacing.space100
     Layout.rightMargin: Appearance.spacing.space100
 
-    RowLayout {
+    // A grid, not a row: a labelled row whose chips cannot share the line with
+    // the label STACKS - label above, chips on a row of their own beneath,
+    // right-aligned and still able to wrap - instead of wrapping the chips
+    // beside a vertically centred label, which put "Bold" alone on a second
+    // line next to "Minute hand" and read as a mistake. The cells move by
+    // Layout.row/column; the same three children serve both shapes.
+    GridLayout {
+        id: rowGrid
         Layout.fillWidth: true
-        spacing: Appearance.spacing.space150
+        columns: 3
+        columnSpacing: Appearance.spacing.space150
+        rowSpacing: Appearance.spacing.space50
+        readonly property bool stacked: root.text !== ""
+            && labelGroup.implicitWidth + rowGrid.columnSpacing + buttonsFlow.naturalWidth > rowGrid.width
 
         RowLayout {
+            id: labelGroup
+            Layout.row: 0
+            Layout.column: 0
             spacing: Appearance.spacing.space150
             visible: root.text !== ""
             OptionalMaterialSymbol {
@@ -80,12 +94,20 @@ ColumnLayout {
         // row is narrower than the chips the spacer is 0 and the Flow shrinks
         // and wraps as before. The labelled path's label already fills.
         Item {
-            visible: !root.text
+            Layout.row: 0
+            Layout.column: 1
+            // On the label's row: fills the unlabelled row so the chips earn
+            // the right edge, and fills a stacked row's remainder beside the
+            // label so the label keeps the left.
+            visible: !root.text || rowGrid.stacked
             Layout.fillWidth: true
         }
 
         Flow {
             id: buttonsFlow
+            Layout.row: rowGrid.stacked ? 1 : 0
+            Layout.column: rowGrid.stacked ? 0 : 2
+            Layout.columnSpan: rowGrid.stacked ? 3 : 1
             // Fills on both paths now, capped at its natural width: with the
             // label holding its minimum, a row too narrow for label and chips
             // gives the Flow less and the chips wrap, labelled or not.
