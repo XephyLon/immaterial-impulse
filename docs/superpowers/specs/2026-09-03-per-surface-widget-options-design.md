@@ -17,6 +17,17 @@ one key. The two monitors declare no `grid`, so `vertical` is their whole
 shape and it is shared. The only per-surface setting today is the clock's
 hand-rolled `style` / `styleLocked` pair.
 
+## Revision (2026-09-03, after review)
+
+The maintainer rejected the per-card Desktop / Lock screen switch: Edit Mode's
+Desktop / Lockscreen tab is the surface selector, and a second one inside each
+widget's card duplicates it. Settings > Widgets rows are desktop-only by
+construction (the size row's existing rule); a lock-side value is written by
+the widget's own controls while the Lockscreen tab or the real lock is showing,
+through the accessors' `currentSurface` default. The clock keeps its "Clock
+style (locked)" row (no fold-in, no migration), since it has no in-widget style
+knob. The Settings UI and Clock sections below are superseded by this note.
+
 ## Decisions (user)
 
 1. Surface-scoped option store, not per-manifest opt-in, not a second copy

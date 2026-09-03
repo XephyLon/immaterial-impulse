@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Revised after review:** Tasks 3 and 4 were withdrawn (no per-card switch; the clock keeps `styleLocked`). Settings rows pass `PluginState.desktopSurface` explicitly. See the spec's Revision note.
+
 **Goal:** A widget's settings fork per surface (desktop / lock screen) the way its position, span and presence already do, with a Settings switch to reach the lock's values and the clock's hand-rolled `styleLocked` folded in.
 
 **Architecture:** `lockOptions[pluginId][key]` beside `pluginOptions` in `plugin-state.json`; absence of a key is per-key inheritance from the desktop. The pure rules live in `layout_surfaces.js`; `PluginState.option/setOption` gain a trailing `surface` defaulting to `currentSurface`, so every existing caller follows the look. `PluginOptions` owns a Desktop / Lock screen switch and passes the surface explicitly. A one-shot migration moves the clock's `styleLocked` into the overlay.
