@@ -29,6 +29,19 @@ ColumnLayout {
         },
     ]
     property var currentValue: null
+    // Dense: when every option carries an icon, the chips are icon-only and
+    // name themselves on hover, and the row's label carries the current
+    // option's name - four text chips took ~350px, four icons take ~150, and
+    // a group's choice rows all fit beside their labels. A choice with a
+    // text-only option keeps its text chips.
+    property bool compact: false
+    readonly property bool iconOnly: root.compact && root.options.length > 0
+        && root.options.every(option => (option.icon ?? "").length > 0)
+    readonly property string currentName: {
+        for (const option of root.options)
+            if (option.value == root.currentValue) return option.displayName ?? "";
+        return "";
+    }
     // A full-width row beneath the choice, for what the current option means
     // on this machine. Empty for every caller that does not set it, and an
     // empty RowLayout has no height, so it costs nothing elsewhere. The gap
@@ -82,6 +95,15 @@ ColumnLayout {
                 Layout.minimumWidth: labelWidget.implicitWidth
                 text: root.text
                 color: Appearance.colors.colOnSecondaryContainer
+                opacity: root.enabled ? 1 : 0.4
+            }
+            // The current choice by name, since dense chips do not spell it.
+            StyledText {
+                visible: root.iconOnly && root.currentName.length > 0
+                Layout.minimumWidth: implicitWidth
+                text: root.currentName
+                font.pixelSize: Appearance.font.pixelSize.small
+                color: Appearance.colors.colSubtext
                 opacity: root.enabled ? 1 : 0.4
             }
             InfoTooltipIcon {
@@ -184,7 +206,12 @@ ColumnLayout {
                     leftmost: index === 0
                     rightmost: index === root.options.length - 1
                     buttonIcon: modelData.icon || ""
-                    buttonText: modelData.displayName
+                    buttonText: root.iconOnly ? "" : modelData.displayName
+                    // An icon-only chip names itself on hover.
+                    StyledToolTip {
+                        extraVisibleCondition: root.iconOnly
+                        text: modelData.displayName ?? ""
+                    }
                     toggled: root.currentValue == modelData.value
                     // An option the shell declines. It is still drawn, and still
                     // drawn as current if a stored config already holds it -

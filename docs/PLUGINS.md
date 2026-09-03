@@ -187,7 +187,11 @@ Consecutive options with the same group render under one header - a hairline, th
 name - shown only while one of its rows is, so the heading carries the shared word and the labels do
 not ("Cookie clock" over `Sides`, `Hour marks`, `Dial style`, rather than eleven labels each starting
 "Cookie:"). Inside a group the rows pack: consecutive booleans two to a line, everything else a full
-row; a choice row keeps its label beside its chips and stacks them beneath only when they cannot fit. Keep a group's options together in the
+row; a choice row keeps its label beside its chips and stacks them beneath only when they cannot fit.
+Give every `choice` an `icon`: a choice whose options all carry one renders DENSE - icon-only chips
+that name themselves on hover, with the current option's name beside the row's label - which is what
+lets four or five options sit on one line with the label. One option without an icon and the whole
+row falls back to text chips. Keep a group's options together in the
 manifest: the grouping is by run, and the same name twice apart is two headers. Order booleans next
 to each other if you want them paired.
 

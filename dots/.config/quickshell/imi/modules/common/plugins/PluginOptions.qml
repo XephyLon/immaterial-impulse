@@ -415,6 +415,10 @@ ColumnLayout {
             id: choiceOption
             ConfigSelectionArray {
                 Layout.fillWidth: true
+                // Dense chips when every choice has an icon (the clock's all
+                // do): icon-only, named on hover, the current one named in
+                // the label - the text chips did not fit beside their labels.
+                compact: true
                 text: optionLoader.optionData.label
                 icon: optionLoader.optionData.icon || "tune"
                 options: optionLoader.optionData.choices || []
