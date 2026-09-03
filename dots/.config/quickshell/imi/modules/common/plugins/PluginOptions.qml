@@ -7,12 +7,25 @@ import qs.modules.common
 import qs.modules.common.widgets
 import "gridSizes.js" as GridSizes
 import "option_visibility.js" as OptionVisibility
+import "layout_surfaces.js" as Surfaces
 
 ColumnLayout {
     id: root
 
     required property var manifest
     spacing: Appearance.spacing.space25
+
+    // Which face of the desktop these rows read and write. A widget's own
+    // settings fork per surface (layout_surfaces.js: lockOptions, inheriting
+    // per key), and this card is where the lock's values are reached - so the
+    // surface is named on EVERY read and write below rather than left to
+    // PluginState's default, which follows the look the desktop is showing
+    // and not the switch the user just pressed.
+    property string surface: PluginState.desktopSurface
+    readonly property bool onLock: root.surface === PluginState.lockSurface
+    // Only a desktop widget has a lock face; a bar- or overlay-only plugin
+    // gets no switch and its rows stay the desktop's.
+    readonly property bool hasLockFace: manifest.desktopWidget !== undefined
 
     // The widget's own options come first, because they are what the user
     // opened this page for. The host's rows used to be concatenated in FRONT of
@@ -32,7 +45,7 @@ ColumnLayout {
         return defaults;
     }
     function readOption(key) {
-        return PluginState.option(root.manifest.id, key, root.optionDefaults[key]);
+        return PluginState.option(root.manifest.id, key, root.optionDefaults[key], root.surface, root.surface);
     }
 
     // Options declared with the same `group`, consecutively, render under one
@@ -151,8 +164,11 @@ ColumnLayout {
     // Not every widget is resizable, and offering a size where the widget has
     // no layout for it is worse than offering nothing - so this is omitted
     // rather than disabled unless the manifest names more than one span.
+    // The desktop's span only: the lock's forks in its layout record and is
+    // set on the Lockscreen tab (PluginState.gridSize), so the lock card
+    // offers no size row.
     readonly property var offeredSizes: GridSizes.offeredSizes(manifest.grid)
-    readonly property var sizeRows: root.offeredSizes.length > 1 ? [{
+    readonly property var sizeRows: (!root.onLock && root.offeredSizes.length > 1) ? [{
         key: "__gridSize",
         type: "choice",
         label: "Size",
@@ -163,6 +179,55 @@ ColumnLayout {
             value: GridSizes.formatSize(size)
         }))
     }] : []
+
+    // Desktop / Lock screen: which face the rows below edit. The lock's
+    // settings follow the desktop's per key until one is changed here; the
+    // caption says so, and turns into the re-link once any has.
+    ConfigSelectionArray {
+        id: surfaceSwitch
+        visible: root.hasLockFace
+        Layout.fillWidth: true
+        text: Translation.tr("Applies to")
+        icon: "desktop_windows"
+        currentValue: root.surface
+        onSelected: value => root.surface = value
+        options: [
+            { displayName: Translation.tr("Desktop"), icon: "desktop_windows", value: PluginState.desktopSurface },
+            { displayName: Translation.tr("Lock screen"), icon: "lock", value: PluginState.lockSurface }
+        ]
+    }
+    RowLayout {
+        visible: root.hasLockFace && root.onLock
+        Layout.fillWidth: true
+        spacing: Appearance.spacing.space100
+        StyledText {
+            Layout.fillWidth: true
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            color: Appearance.colors.colSubtext
+            wrapMode: Text.WordWrap
+            text: PluginState.lockOptionsForked(root.manifest.id)
+                ? Translation.tr("The lock screen has settings of its own here; the rest follow the desktop.")
+                : Translation.tr("Follows the desktop until you change a setting here.")
+        }
+        RippleButton {
+            visible: PluginState.lockOptionsForked(root.manifest.id)
+            implicitHeight: 32
+            buttonRadius: Appearance.rounding.full
+            colBackground: Appearance.colors.colSecondaryContainer
+            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+            colRipple: Appearance.colors.colSecondaryContainerActive
+            onClicked: PluginState.resetLockOptions(root.manifest.id)
+            contentItem: StyledText {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                leftPadding: Appearance.spacing.space150
+                rightPadding: Appearance.spacing.space150
+                font.pixelSize: Appearance.font.pixelSize.small
+                color: Appearance.colors.colOnSecondaryContainer
+                text: Translation.tr("Reset to desktop")
+            }
+        }
+    }
 
     Repeater {
         model: root.optionRuns
@@ -271,7 +336,9 @@ ColumnLayout {
                 on.push(behaviourSection.presetPersistLabel);
             for (let index = 0; index < root.behaviourRows.length; ++index) {
                 const behaviourRow = root.behaviourRows[index];
-                if (PluginState.option(root.manifest.id, behaviourRow.key, behaviourRow.default))
+                if (root.onLock && Surfaces.isSharedOptionKey(behaviourRow.key))
+                    continue;
+                if (PluginState.option(root.manifest.id, behaviourRow.key, behaviourRow.default, root.surface))
                     on.push(behaviourRow.label);
             }
             return on.join("  ·  ");
@@ -288,6 +355,9 @@ ColumnLayout {
             // the rest of it survives a preset.
             BehaviourToggle {
                 id: presetPersistToggle
+                // Not a per-surface thing: the flag shields the plugin's
+                // settings on BOTH surfaces through a preset.
+                visible: !root.onLock
                 label: behaviourSection.presetPersistLabel
                 buttonIcon: "push_pin"
                 toggled: PluginState.presetPersisted(root.manifest.id)
@@ -299,11 +369,17 @@ ColumnLayout {
                 model: root.behaviourRows
                 delegate: BehaviourToggle {
                     required property var modelData
+                    // On the lock surface only the LOOK toggles: pin and
+                    // click-through are Edit Mode policy with one writer and
+                    // one meaning (SHARED_OPTION_KEYS), and a toggle that
+                    // wrote the desktop's value from the lock's card would
+                    // be a lie.
+                    visible: !root.onLock || !Surfaces.isSharedOptionKey(modelData.key)
                     label: modelData.label
                     buttonIcon: modelData.icon
-                    toggled: PluginState.option(root.manifest.id, modelData.key, modelData.default)
+                    toggled: PluginState.option(root.manifest.id, modelData.key, modelData.default, root.surface)
                     onClicked: PluginState.setOption(root.manifest.id, modelData.key,
-                        !PluginState.option(root.manifest.id, modelData.key, modelData.default))
+                        !PluginState.option(root.manifest.id, modelData.key, modelData.default, root.surface), root.surface)
                 }
             }
         }
@@ -405,9 +481,9 @@ ColumnLayout {
                 rightPadding: 0
                 buttonIcon: optionLoader.optionData.icon || "tune"
                 text: optionLoader.optionData.label
-                checked: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
+                checked: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface)
                 onToggleRequested: PluginState.setOption(root.manifest.id, optionLoader.optionData.key,
-                    !PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default))
+                    !PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface), root.surface)
             }
         }
 
@@ -422,8 +498,8 @@ ColumnLayout {
                 text: optionLoader.optionData.label
                 icon: optionLoader.optionData.icon || "tune"
                 options: optionLoader.optionData.choices || []
-                currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
-                onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
+                currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface)
+                onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value, root.surface)
             }
         }
 
@@ -441,8 +517,8 @@ ColumnLayout {
                     .filter(choice => choice && choice.enabledWhen !== undefined
                         && !OptionVisibility.rule(choice.enabledWhen, key => root.readOption(key)))
                     .map(choice => choice.value)
-                currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
-                onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
+                currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface)
+                onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value, root.surface)
             }
         }
 
@@ -458,8 +534,8 @@ ColumnLayout {
                 text: optionLoader.optionData.label
                 options: (optionLoader.optionData.choices || [])
                     .map(choice => choice.value ?? choice)
-                currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
-                onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
+                currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface)
+                onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value, root.surface)
             }
         }
 
@@ -476,12 +552,12 @@ ColumnLayout {
                     || (optionLoader.optionData.to ?? 100) <= 1
                 from: optionLoader.optionData.from ?? 0
                 to: optionLoader.optionData.to ?? 100
-                value: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
+                value: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface)
                 onValueModified: {
                     const step = optionLoader.optionData.step ?? 1;
                     const rounded = Math.round(newValue / step) * step;
-                    if (rounded !== PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default))
-                        PluginState.setOption(root.manifest.id, optionLoader.optionData.key, rounded);
+                    if (rounded !== PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface))
+                        PluginState.setOption(root.manifest.id, optionLoader.optionData.key, rounded, root.surface);
                 }
             }
         }
@@ -494,17 +570,15 @@ ColumnLayout {
                 text: optionLoader.optionData.label
                 placeholderText: optionLoader.optionData.placeholder || ""
                 fieldWidth: 160
-                value: String(PluginState.option(root.manifest.id,
-                    optionLoader.optionData.key, optionLoader.optionData.default))
+                value: String(PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface))
                 onValueChanged: {
                     const trimmed = value.trim();
                     if (trimmed.length === 0) return;
                     const transformed = optionLoader.optionData.uppercase === true
                         ? trimmed.toUpperCase() : trimmed;
                     const normalized = transformed.slice(0, optionLoader.optionData.maxLength ?? 64);
-                    if (normalized !== PluginState.option(root.manifest.id,
-                            optionLoader.optionData.key, optionLoader.optionData.default))
-                        PluginState.setOption(root.manifest.id, optionLoader.optionData.key, normalized);
+                    if (normalized !== PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default, root.surface))
+                        PluginState.setOption(root.manifest.id, optionLoader.optionData.key, normalized, root.surface);
                 }
             }
         }
