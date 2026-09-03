@@ -102,6 +102,11 @@ StyledPopup {
                     value: Math.max(0, level)
                     sublabel: level >= 0 ? root.percentOf(modelData) : Translation.tr("No battery report")
                     sublabelColor: Appearance.colors.colOnSurfaceVariant
+                    // A level, not a usage: empty is the alarm, and it sounds
+                    // at the same threshold as the ring on the bar. A device
+                    // with no report has no level to alarm about.
+                    lowIsWarning: level >= 0
+                    warnAt: 1 - Config.options.battery.low / 100
                     cardWidth: 160
                 }
             }
