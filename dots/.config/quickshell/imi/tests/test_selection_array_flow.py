@@ -97,5 +97,19 @@ class SelectionArrayFlowTests(unittest.TestCase):
         self.assertNotIn("forceStacked", text)
 
 
+    # Dense chips: with every option iconed, icon-only chips that name
+    # themselves on hover, and the current name beside the label - four text
+    # chips took ~350px and did not fit beside a label.
+    def test_compact_rows_draw_icon_only_chips_named_on_hover_and_in_the_label(self):
+        text = strip_comments(ROW.read_text(encoding="utf-8"))
+        self.assertRegex(text, r"property bool compact: false")
+        self.assertRegex(text, r"readonly property bool iconOnly: root\.compact && root\.options\.length > 0\s*&& root\.options\.every\(option => \(option\.icon \?\? \"\"\)\.length > 0\)")
+        self.assertRegex(text, r'buttonText: root\.iconOnly \? "" : modelData\.displayName')
+        self.assertRegex(text, r"StyledToolTip \{\s*extraVisibleCondition: root\.iconOnly\s*text: modelData\.displayName")
+        self.assertRegex(text, r"visible: root\.iconOnly && root\.currentName\.length > 0")
+        options = strip_comments((ROOT / "modules/common/plugins/PluginOptions.qml").read_text(encoding="utf-8"))
+        self.assertRegex(options, r"ConfigSelectionArray \{\s*Layout\.fillWidth: true\s*compact: true")
+
+
 if __name__ == "__main__":
     unittest.main()
