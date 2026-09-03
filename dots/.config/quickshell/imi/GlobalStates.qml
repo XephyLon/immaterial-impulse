@@ -30,6 +30,12 @@ Singleton {
     // SidebarLeftContent so the bar button's glyph can follow the page.
     property string sidebarLeftTabIcon: ""
     property bool sidebarRightOpen: false
+    // A dialog the right sidebar opens next time it shows ("bluetooth"),
+    // consumed and cleared by SidebarRightContent the way sidebarLeftTab is.
+    // A property, not a signal: the sidebar's content is a Loader that only
+    // exists while the panel is shown, so a signal fired from the bar before
+    // the panel has been built reaches nothing.
+    property string sidebarRightDialog: ""
     property bool mediaControlsOpen: false
     property bool sysTrayOverflowOpen: false
     // The idle path: hypridle's listener blanks every screen, and the ladder
