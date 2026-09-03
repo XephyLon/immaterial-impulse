@@ -203,6 +203,19 @@ Item {
 
     // Every page up to here has been asked for, so it is built and kept. This
     // only grows: a page built once stays built (`built` below).
+    // Where pages built ahead of the user wait until first shown (see the
+    // page host). Exposed so a harness walking the visual tree can find them.
+    readonly property Item parkedPages: pageParking
+    // The page pane's size, from values that are live BEFORE the window
+    // exists: the root's size, the rail's implicit width, the paddings, the
+    // search bar's fixed height and the column's spacing. Not `pageHost`'s
+    // size - layouts do not polish without a window (QTBUG-126704), so until
+    // the first open the host sits at whatever the column arranged before the
+    // rail expanded, and the forced polish at open moves it. Anything sized
+    // off the host is re-laid out in that move; the parked pages must not be.
+    readonly property real searchBarHeight: 46
+    readonly property real contentPaneWidth: root.width - navRailWrapper.implicitWidth - root.contentPadding * 3
+    readonly property real contentPaneHeight: root.height - root.contentPadding * 2 - root.searchBarHeight - mainColumn.spacing
     property int warmedThrough: -1
 
     // Restarted by every navigation, and never bound: `Timer.restart()` writes
@@ -298,18 +311,18 @@ Item {
     }
 
     ColumnLayout {
+        id: mainColumn
         anchors {
             fill: parent
             margins: contentPadding
         }
 
         Rectangle {
-            readonly property real contentPaneWidth: root.width - navRailWrapper.implicitWidth - (root.contentPadding * 3)
-            readonly property real searchWidth: Math.min(520, contentPaneWidth)
+            readonly property real searchWidth: Math.min(520, root.contentPaneWidth)
             Layout.preferredWidth: searchWidth
-            Layout.preferredHeight: 46
+            Layout.preferredHeight: root.searchBarHeight
             Layout.leftMargin: navRailWrapper.implicitWidth + root.contentPadding
-                + Math.max(0, (contentPaneWidth - searchWidth) / 2)
+                + Math.max(0, (root.contentPaneWidth - searchWidth) / 2)
             radius: Appearance.rounding.full
             color: Appearance.colors.colLayer1
 
@@ -736,7 +749,32 @@ Item {
                 color: "transparent"
                 radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut
 
+                // Pages built ahead of the user wait HERE, out of the window,
+                // until the first time each is shown. The warm-up builds all
+                // fifteen (~24,500 items) while the window has never been
+                // opened, and Quickshell creates the backing window on the
+                // first `visible` - re-parenting the whole prebuilt tree into
+                // it and flushing every layout polish it queued. Measured in a
+                // nested Hyprland: that assignment blocked 92 ms and the
+                // window's first sync another ~50 ms for pages that were not
+                // even visible; with only the page on screen in the tree, 2 ms
+                // and 18 ms. Detached IMPERATIVELY, once complete: a declared
+                // `parent: null` is applied while this item is being built and
+                // is then overwritten when the enclosing item appends it to
+                // its children - measured, the parking stayed in the tree and
+                // 22,290 items were still re-parented at the open.
+                // Sized from `contentPaneWidth/Height` and NOT from the host:
+                // the host's size is stale until the open (see those
+                // properties), and pages that followed it were re-laid out in
+                // the same assignment.
                 Item {
+                    id: pageParking
+                    width: root.contentPaneWidth
+                    height: root.contentPaneHeight
+                    Component.onCompleted: parent = null
+                }
+                Item {
+                    id: pageHost
                     anchors.fill: parent
 
                     Repeater {
@@ -778,7 +816,13 @@ Item {
                             enabled: isActive
                             visible: isActive
                             anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
-
+                            // Parked at creation unless it is the page on screen;
+                            // joins the window the first time it is shown and stays
+                            // (a page left behind is kept, not re-parked - the cost
+                            // this avoids is paid once, at the window's creation).
+                            Component.onCompleted: {
+                                if (!isActive) parent = pageParking;
+                            }
                             onLoaded: {
                                 pageLoader.built = true;
                                 if (pageLoader.isActive) {
@@ -788,6 +832,7 @@ Item {
                             }
 
                             onIsActiveChanged: {
+                                if (isActive && parent !== pageHost) parent = pageHost;
                                 if (isActive && item) {
                                     GlobalStates.currentPageInstance = item;
                                     root.selectedSection = item.currentSection || "";
