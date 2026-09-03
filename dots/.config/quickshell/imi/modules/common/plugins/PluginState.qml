@@ -37,6 +37,11 @@ Singleton {
             // shows exactly the set `lock.showWidgets` shows it today.
             lockPresence: null,
             pluginOptions: {},
+            // A widget's own settings on the lock screen, per key: a key
+            // stored here is the lock's own, one absent reads through to
+            // pluginOptions (layout_surfaces.js). Same no-migration argument
+            // as the two above - absence is the correct upgrade state.
+            lockOptions: {},
             // Plugin ids whose options/positions/enabled state survive preset
             // application (never captured INTO presets - see presets.sh).
             presetPersist: {},
@@ -216,9 +221,31 @@ Singleton {
         writeTimer.restart();
     }
 
-    function option(pluginId, key, fallback) {
-        const value = root.state?.pluginOptions?.[pluginId]?.[key];
+    // A widget's option on a surface. Same default-surface rule as
+    // position(): a caller that names none - every widget binding, the
+    // in-widget knobs - reads the face the desktop is showing, so the
+    // resource monitor's rotate button on the Lockscreen tab writes the
+    // lock's `vertical`, and the desktop's binding re-evaluates when the
+    // look flips because it read currentSurface. Settings names its surface
+    // (PluginOptions), and Edit Mode's policy keys are shared whatever is
+    // passed (layout_surfaces.js SHARED_OPTION_KEYS).
+    function option(pluginId, key, fallback, surface) {
+        const value = Surfaces.rawOption(root.state, surface ?? root.currentSurface, pluginId, key);
         return value === undefined ? fallback : value;
+    }
+
+    // Has this widget any lock-screen setting of its own?
+    function lockOptionsForked(pluginId) {
+        return Surfaces.isOptionsForked(root.state, pluginId);
+    }
+
+    // Re-link one widget's lock settings to the desktop's.
+    function resetLockOptions(pluginId) {
+        const nextState = Surfaces.withoutLockOptions(root.state, pluginId);
+        if (nextState === root.state) return;
+        nextState.version = root.schemaVersion;
+        root.state = nextState;
+        writeTimer.restart();
     }
 
     // Desktop-widget panel opacity, resolved against the global transparency
@@ -357,25 +384,53 @@ Singleton {
         writeTimer.restart();
     }
 
-    function setOption(pluginId, key, value) {
+    // null means REMOVE, not store: `option()` falls back only on undefined,
+    // so a persisted null would answer every later read in place of the
+    // caller's fallback - a key that never existed, materialised on disk.
+    // Edit Mode's undo is what reaches this branch: reversing a first-ever
+    // commit restores "no stored choice", which has to leave the store the
+    // way it found it. On the lock surface the same null is the re-inherit:
+    // the lock key goes and the desktop's value reads through again.
+    function setOption(pluginId, key, value, surface) {
         if (!pluginId || !key) return;
-
-        const nextState = Object.assign({}, root.state);
-        const nextOptions = Object.assign({}, nextState.pluginOptions || {});
-        const nextPlugin = Object.assign({}, nextOptions[pluginId] || {});
-        // null means REMOVE, not store: `option()` falls back only on
-        // undefined, so a persisted null would answer every later read in
-        // place of the caller's fallback - a key that never existed,
-        // materialised on disk. Edit Mode's undo is what reaches this branch:
-        // reversing a first-ever commit restores "no stored choice", which
-        // has to leave the store the way it found it. No live caller stored
-        // null before this meaning was assigned (checked, not assumed).
-        if (value === null || value === undefined) delete nextPlugin[key];
-        else nextPlugin[key] = value;
-        nextOptions[pluginId] = nextPlugin;
+        const nextState = Surfaces.withOption(root.state, surface ?? root.currentSurface,
+            pluginId, key, value);
         nextState.version = root.schemaVersion;
-        nextState.pluginOptions = nextOptions;
         root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // The clock carried the shell's only per-surface setting by hand: a
+    // second manifest row, `styleLocked`, selected inside the widget. It
+    // folds into the lock overlay's `style` here, and what the user SEES on
+    // the lock does not change: a stored second style that differs from the
+    // desktop's becomes the overlay; one that matches becomes nothing; an
+    // absent one was the row's default, "cookie", which differs from any
+    // desktop that is not cookie and so becomes an overlay of "cookie" too.
+    // Pure, so the three cases are drivable from a TestCase; run once on
+    // load, recorded in `migrations` like the sizeMode pass.
+    readonly property string clockStyleMarker: "clockStyleLocked"
+
+    function stateWithClockStyleMigrated(state) {
+        const clock = state?.pluginOptions?.clock;
+        const stored = clock && typeof clock === "object" ? clock : {};
+        const desktop = stored.style === undefined ? "cookie" : stored.style;
+        const locked = stored.styleLocked === undefined ? "cookie" : stored.styleLocked;
+        let next = Object.assign({}, state);
+        if (locked !== desktop)
+            next = Surfaces.withOption(next, Surfaces.LOCK, "clock", "style", locked);
+        if (stored.styleLocked !== undefined)
+            next = Surfaces.withOption(next, Surfaces.DESKTOP, "clock", "styleLocked", null);
+        const nextMigrations = Object.assign({}, state?.migrations || {});
+        nextMigrations[root.clockStyleMarker] = true;
+        next.migrations = nextMigrations;
+        next.version = root.schemaVersion;
+        return next;
+    }
+
+    function migrateClockStyle() {
+        if (root.migrationRan(root.clockStyleMarker)) return;
+        root.state = root.stateWithClockStyleMigrated(root.state);
         writeTimer.restart();
     }
 
@@ -517,6 +572,11 @@ Singleton {
                     && !Array.isArray(parsed.pluginOptions)
                     ? parsed.pluginOptions
                     : {},
+                lockOptions: parsed.lockOptions
+                    && typeof parsed.lockOptions === "object"
+                    && !Array.isArray(parsed.lockOptions)
+                    ? parsed.lockOptions
+                    : {},
                 presetPersist: parsed.presetPersist
                     && typeof parsed.presetPersist === "object"
                     && !Array.isArray(parsed.presetPersist)
@@ -528,6 +588,9 @@ Singleton {
                     ? parsed.migrations
                     : {}
             };
+            // Inside the try: a file that did not parse is left on disk as
+            // it was, not replaced by an empty state carrying a marker.
+            root.migrateClockStyle();
         } catch (error) {
             console.warn("[PluginState] Ignoring invalid state file: " + error);
             root.state = root.emptyState();
