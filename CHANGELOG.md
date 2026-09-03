@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-10] — 2026-09-03
+
 ### Changed
 - **The typing test scales with the screen.** Its stage was a fixed
   1100x640 on every monitor; it now takes a share of the room the bar and
