@@ -84,6 +84,20 @@ apply_anyterm() {
 
   sed -i "s/\$alpha/$term_alpha/g" "$STATE_DIR/user/generated/terminal/sequences.txt"
 
+  # A tmux pane must not receive the default fg/bg/cursor: tmux adopts them as
+  # the pane's own and paints the background explicitly from then on, which
+  # turns a translucent kitty into a solid slab. Panes get the palette and a
+  # reset instead (scripts/colors/terminal/pane_safe.sh); the defaults reach
+  # them through the outer terminal, whose own pty is pushed the full set.
+  "$SCRIPT_DIR/terminal/pane_safe.sh" <"$STATE_DIR"/user/generated/terminal/sequences.txt \
+    >"$STATE_DIR"/user/generated/terminal/sequences-pane.txt
+  local pane_ttys=""
+  local sock
+  for sock in /tmp/tmux-"$(id -u)"/*; do
+    [[ -S $sock ]] || continue
+    pane_ttys+=$'\n'"$(tmux -S "$sock" list-panes -a -F '#{pane_tty}' 2>/dev/null)"
+  done
+
   # Only interactive shells understand these OSC sequences. Other processes can
   # hold a pty too - kded6 does - and a daemon that reads its pty as plain text
   # will happily surface the raw escape codes as a desktop notification.
@@ -97,8 +111,12 @@ apply_anyterm() {
       continue
     fi
 
+    local payload="$STATE_DIR"/user/generated/terminal/sequences.txt
+    if grep -qxF "$file" <<<"$pane_ttys"; then
+      payload="$STATE_DIR"/user/generated/terminal/sequences-pane.txt
+    fi
     {
-      cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"
+      cat "$payload" >"$file"
     } & disown || true
   done
 }
