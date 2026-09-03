@@ -610,7 +610,11 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               is the one static layer surface per screen that hosts every bar
                               popup's content on a single morphing card - it serves the vertical
                               bar too, which loads the same widget files
-                              (d29cd6e45 ("feat(bar): add the static overlay surface the popup card will live on"))
+                              (d29cd6e45 ("feat(bar): add the static overlay surface the popup card will live on")).
+                              BluetoothBattery.qml (+Popup) is the Bluetooth device battery widget:
+                              one ring per connected device with a known level, hover popup, click
+                              deep-links to the Bluetooth dialog - see "A Bluetooth device's battery
+                              has one lookup and three readers"
   sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, translator, media, the Phone tab;
                               quick settings, notifications, volume mixer). sidebarLeft/phone/ is
                               the Phone tab - the paired phone's chip, six actions, two navigation
@@ -6879,6 +6883,27 @@ mid-fade and jump the layout. Measured in a nested Hyprland with a 15s test: the
 the score at 0.01 - a lifetime past the flag, which is the whole of the rule. The typing contract
 refuses a bare `visible:` on state in the surface and the toolbar.
 ("fix(typing): nothing in the test snaps in or out on state").
+
+**A Bluetooth device's battery has one lookup and three readers.** A device's level comes from
+BlueZ's `Battery1` interface (`BluetoothDevice.batteryAvailable` gating `battery`, 0..1) or, when
+BlueZ has nothing - HID controllers like the DualSense, bluetoothd without `Experimental=true` -
+from the UPower power_supply whose `nativePath` carries the device's MAC. `services/BluetoothStatus.qml`
+knew both but handed the answer out only as the quick toggle's ` • NN%` suffix, so At-a-glance grew
+its own filter on `batteryAvailable` and lost every controller. `BluetoothStatus.batteryLevelOf(device)`
+is now the one lookup (0..1, `-1` when neither source knows), `formatBatterySuffix` formats it,
+`batteryDevices` is the connected devices with a level and `lowestBatteryDevice` the one to worry
+about; the suffix, At-a-glance and the bar's `BluetoothBattery.qml` all read those and nothing else
+(`tests/test_bluetooth_battery_widget.py` forbids `UPower` and `batteryAvailable` in the readers).
+The widget draws a ring only for devices with a level - a device with no report has nothing to
+draw - but its popup lists every CONNECTED device, "No battery report" and all, because the popup
+answers "what is connected", not "what is charged". Its click deep-links to the Bluetooth dialog
+through `GlobalStates.sidebarRightDialog = "bluetooth"` before `sidebarRightOpen = true`: a
+property consumed and cleared by `SidebarRightContent` (on completion, on the open edge, on a write
+while open - the `sidebarLeftTab` shape), not a signal, because the sidebar's content is a `Loader`
+that exists only while the panel is shown and a signal fired before it is built reaches nothing.
+`Icons.getBluetoothDeviceMaterialSymbol` maps BlueZ's `input-gaming` to `stadia_controller` ahead of
+the generic fallback, so the same controller is named in the dialog, on the bar and in At-a-glance.
+("feat(bar): a Bluetooth battery widget, one ring per device")
 
 **An icon in a circle on the bar is an OUTLINED ring under every bar style but M3.** The
 maintainer's rule (2026-09-02), with the resource monitor's four rings as the reference: a bar

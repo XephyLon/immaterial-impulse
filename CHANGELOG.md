@@ -12,6 +12,20 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **A Bluetooth battery bar widget.** "Bluetooth battery" in Settings > Bar
+  draws one ring per connected Bluetooth device that reports a level - the
+  device's glyph in the resource monitor's ring, red at the battery low
+  threshold - and collapses when nothing reports. Hover lists every
+  connected device with its level; a click opens the Bluetooth dialog.
+  Controllers whose battery only UPower knows about count too, and they
+  get their own glyph in the device dialog now.
+
+### Fixed
+- **At-a-glance shows a controller's battery.** The desktop widget only
+  counted devices BlueZ reported a battery for; it reads the same lookup as
+  the quick toggle now, UPower fallback included.
+
 ## [1.0.0-rc-10] — 2026-09-03
 
 ### Changed
