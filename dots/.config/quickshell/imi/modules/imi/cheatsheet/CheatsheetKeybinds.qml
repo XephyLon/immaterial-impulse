@@ -6,6 +6,7 @@ import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
 import "../../common/functions/cheatsheetLayout.js" as CheatsheetLayout
+import "../../common/functions/cheatsheetFit.js" as CheatsheetFit
 
 Item {
     id: root
@@ -42,35 +43,27 @@ Item {
     readonly property real rowHeight: 30
     readonly property int availableRows: Math.max(
         8, Math.floor((root.maxContentHeight > 0 ? root.maxContentHeight : 900) * 0.66 / root.rowHeight))
-    // Ceiling on the column count, lowered until the laid-out row fits the
-    // width budget. Measured rather than predicted: a column is as wide as its
-    // widest section, which is not known until the text has been shaped.
+    // Ceiling on the column count. The height budget picks the count below it
+    // (columnCount), so this only bounds a long list; a short one never fans
+    // into slivers.
     readonly property int maxColumns: 4
-    property int columnCap: root.maxColumns
     readonly property var columns: CheatsheetLayout.balance(
-        root.sections, CheatsheetLayout.columnCount(root.sections, root.availableRows, root.columnCap))
+        root.sections, CheatsheetLayout.columnCount(root.sections, root.availableRows, root.maxColumns))
 
-    function fitToWidth() {
-        if (root.maxContentWidth <= 0 || root.columnCap <= 1)
-            return;
-        if (root.implicitWidth > root.maxContentWidth)
-            root.columnCap -= 1;
-    }
-
-    // Only ever shrinks, so this settles: each drop narrows the row, and the
-    // guard stops at a single column. Anything that changes what is being laid
-    // out starts the search again from the top.
-    onImplicitWidthChanged: Qt.callLater(root.fitToWidth)
-    onMaxContentWidthChanged: {
-        root.columnCap = root.maxColumns;
-        Qt.callLater(root.fitToWidth);
-    }
-    onSectionsChanged: {
-        root.columnCap = root.maxColumns;
-        Qt.callLater(root.fitToWidth);
-    }
-    implicitWidth: row.implicitWidth + padding * 2
-    implicitHeight: row.implicitHeight + padding * 2
+    // The columns are chosen to fit the HEIGHT budget, but a full keybind set
+    // in four columns can still be wider than the screen (and, on a laptop,
+    // marginally taller than the height budget once the section chips are drawn)
+    // - and trading more columns for less height just makes it wider still.
+    // So the page fits the same way the Elements page does: keep the columns and
+    // the author order, and shrink the whole thing uniformly when it exceeds
+    // either budget. fit is 1 whenever it already fits, so a roomy screen draws
+    // full size.
+    readonly property real contentWidth: row.implicitWidth + padding * 2
+    readonly property real contentHeight: row.implicitHeight + padding * 2
+    readonly property real fit: CheatsheetFit.fitScale(
+        root.contentWidth, root.contentHeight, root.maxContentWidth, root.maxContentHeight)
+    implicitWidth: root.contentWidth * root.fit
+    implicitHeight: root.contentHeight * root.fit
     // Excellent symbol explaination and source :
     // http://xahlee.info/comp/unicode_computing_symbols.html
     // https://www.nerdfonts.com/cheat-sheet
@@ -173,7 +166,12 @@ Item {
     Row { // Keybind columns
         id: row
         spacing: root.spacing
-        
+        // Scaled about its own centre, which centerIn holds at the page's, so
+        // the shrunk columns land exactly inside the box the page asks for -
+        // the same arrangement CheatsheetPeriodicTable uses.
+        anchors.centerIn: parent
+        scale: root.fit
+
         Repeater {
             model: root.columns
 
