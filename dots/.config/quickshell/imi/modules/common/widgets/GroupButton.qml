@@ -77,13 +77,22 @@ RippleButton {
         }
     }
 
+    // The bounce is press feedback, so it animates only while the pointer is
+    // on the button - the same gate AndroidQuickToggleButton uses. An implicit
+    // size that changes for any other reason is a layout settling, and a
+    // layout settling must land, not travel: a settings window created after
+    // its rows were built polishes their content on its first frames, every
+    // chip's width jumped to its real value, and this Behavior animated the
+    // jump - 20 frames of chips growing ~2.5px a frame while the row's Flow
+    // wrapped and unwrapped behind them (measured on the "Auto dark/light"
+    // row: natural width 195 -> 245, height flapping 33 <-> 68).
     Behavior on implicitWidth {
-        enabled: root.enableImplicitWidthAnimation
+        enabled: root.enableImplicitWidthAnimation && root.hovered
         animation: Appearance.animation.clickBounce.numberAnimation.createObject(this)
     }
 
     Behavior on implicitHeight {
-        enabled: root.enableImplicitHeightAnimation
+        enabled: root.enableImplicitHeightAnimation && root.hovered
         animation: Appearance.animation.clickBounce.numberAnimation.createObject(this)
     }
 
