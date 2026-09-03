@@ -136,6 +136,24 @@ class PopupContractTests(unittest.TestCase):
         self.assertIn("id: bluetoothHeaderRow", popup)
         self.assertIn("id: deviceCards", popup)
 
+    def test_a_battery_card_alarms_at_empty_not_at_full(self):
+        # ResourceCard was written for usage, where 100% is the problem; a
+        # full battery drawn in the error colour alarms at the state that is
+        # fine (the maintainer's 100%-charge-is-not-danger-red, 2026-09-03).
+        card = source(ROOT / "modules/common/widgets/ResourceCard.qml")
+        self.assertIn("property bool lowIsWarning: false", card)
+        self.assertIn("readonly property real strain: root.lowIsWarning ? 1 - root.value : root.value", card)
+        self.assertNotRegex(card, r"border\.(width|color): root\.value >",
+                            "the warning border reads strain, never value")
+        popup = source(POPUP)
+        cards = popup.split("id: deviceCards", 1)[1]
+        self.assertIn("lowIsWarning: level >= 0", cards,
+                      "empty is the alarm - unless there is no level to alarm about")
+        self.assertIn("warnAt: 1 - Config.options.battery.low / 100", cards,
+                      "the card alarms at the same threshold as the ring on the bar")
+        health = source(ROOT / "modules/imi/bar/BatteryPopup.qml").split('Translation.tr("Health")', 1)[1].split("}", 1)[0]
+        self.assertIn("lowIsWarning: true", health, "battery health is a level too")
+
 
 if __name__ == "__main__":
     unittest.main()
