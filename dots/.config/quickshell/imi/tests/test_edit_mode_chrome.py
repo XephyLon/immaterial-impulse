@@ -280,10 +280,13 @@ class EditModeChromeTest(unittest.TestCase):
         # to be asserted here is gone and this is what replaced it: the desktop
         # travels in a STRAIGHT LINE from the whole screen to its slot, which is
         # the property the eye follows and the one a scale about the top-left
-        # still fails (it would put `top` at 0 for every t). `t` is recovered
-        # from the drawn scale, so nothing here reads the interpolation back out
-        # of the function that produced it.
-        t = (1 - drawn_scale) / (1 - self.scale)
+        # still fails (it would put `top` at 0 for every t). `t` comes from the
+        # REPORTED mid scale, which the drawn marker was asserted against above
+        # to two percent: recovered from the drawn width alone, a pixel's error
+        # over a 220px marker became 1.6% of t, and once the card's slot moved
+        # up to the toolbar's band (card y ~160 instead of ~130) that was 3.7px
+        # of expectation - the instrument, not the desktop, outside 3px.
+        t = (1 - mid["scale"]) / (1 - self.scale)
         self.assertAlmostEqual(top, self.card[1] * t, delta=3,
                                msg="the desktop does not travel in a straight line to its slot")
 

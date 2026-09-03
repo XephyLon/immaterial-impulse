@@ -432,7 +432,7 @@ ShellRoot {
                 // the toolbar in the middle of its band, and this could not see
                 // the split arrive or leave.
                 && Math.abs(gapAbove - harness.edgeMargin) < 0.5,
-            `gaps=${gapAbove.toFixed(1)},${gapBelow.toFixed(1)}`
+            `toolbar=${harness.toolbar?.x.toFixed(1)}+${harness.toolbar?.width.toFixed(1)} card=${harness.card.x.toFixed(1)}+${harness.card.width.toFixed(1)} gapAbove=${gapAbove.toFixed(1)} edgeMargin=${harness.edgeMargin}`
                 + ` edgeMargin=${harness.edgeMargin.toFixed(1)}`);
         harness.check("in the mode at rest the lattice is down",
             !widgetCanvas.gridVisible && widgetCanvas.gridStrength === 0);
