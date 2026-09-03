@@ -12,6 +12,20 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **The typing test scales with the screen.** Its stage was a fixed
+  1100x640 on every monitor; it now takes a share of the room the bar and
+  the dock leave, held to a 16:9 stage, so it grows on a larger screen
+  without becoming it.
+
+### Fixed
+- **The cheatsheet fits the screen again.** The window was sized to its
+  tallest page, so the typing test and the periodic table opened as tall as
+  the keybind table - past both screen edges on a 1080p display. The window
+  follows the tab it is showing now, and the keybind table itself shrinks
+  uniformly (the way the Elements page always has) when a full keybind set
+  is larger than the screen, instead of running off it.
+
 ## [1.0.0-rc-9] — 2026-09-03
 
 ### Changed
