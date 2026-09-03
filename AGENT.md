@@ -6650,9 +6650,10 @@ declared eleven rows labelled "Cookie: ..." (and its digital and pixel rows the 
 as a list of one word, and its "Cookie: minute hand" row lost its last word under five chips. Manifest
 options take `"group"` (and a `"groupIcon"`); `PluginOptions` renders each consecutive run of one
 group as a hairline and a `ContentSubsection` header with the icon, its visible rows PACKED beneath:
-consecutive booleans two to a line (the Bar page's switch pairs), choice rows stacked (chips under
-the label, `forceStacked`), the rest full rows - shown only while one of its rows is - and the labels
-drop the prefix. Two shapes were tried and rejected on the way: a bare heading over plain rows ("more
+consecutive booleans two to a line (the Bar page's switch pairs), the rest full rows - a choice row
+keeps its label centred beside its chips and stacks only when they cannot fit; forcing a block to
+stack read as five uncentred labels - shown only while one of its rows is - and the labels drop the
+prefix. Two shapes were tried and rejected on the way: a bare heading over plain rows ("more
 cryptic than before"), and GroupedList plates around the rows ("increasing the space isn't the
 solution" - plates add 24px per row and, in a palette where the plate is the card's colour, only air).
 Structure comes from headers and packing, never from surfaces or padding (`docs/PLUGINS.md`; `tests/test_clock_options_contract.py` refuses a style-bound clock row

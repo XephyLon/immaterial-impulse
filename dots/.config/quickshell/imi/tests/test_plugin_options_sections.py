@@ -135,7 +135,7 @@ class TheTwoGroupsStaySeparate(unittest.TestCase):
         self.assertNotIn("GroupedList", self.source[self.source.index("model: root.optionRuns"):self.source.index("id: behaviourSection")])
         self.assertIn("function packLines(options)", self.source)
         self.assertRegex(self.source, r'sourceComponent: modelData\.kind === "pair" \? pairLine : singleLine')
-        self.assertRegex(self.source, r"stackChoices: true")
+        self.assertNotIn("stackChoices", self.source, "a choice row stacks only when its chips cannot fit; nothing forces it")
 
 
 class TheHostBooleansAreAToggleBar(unittest.TestCase):

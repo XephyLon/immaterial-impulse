@@ -29,9 +29,6 @@ ColumnLayout {
         },
     ]
     property var currentValue: null
-    // A caller may ask for the stacked shape outright - a block of sibling
-    // rows reads better all stacked than as a mix of inline and stacked.
-    property bool forceStacked: false
     // A full-width row beneath the choice, for what the current option means
     // on this machine. Empty for every caller that does not set it, and an
     // empty RowLayout has no height, so it costs nothing elsewhere. The gap
@@ -60,8 +57,8 @@ ColumnLayout {
         columns: 3
         columnSpacing: Appearance.spacing.space150
         rowSpacing: Appearance.spacing.space25
-        readonly property bool stacked: root.text !== "" && (root.forceStacked
-            || labelGroup.implicitWidth + rowGrid.columnSpacing + buttonsFlow.naturalWidth > rowGrid.width)
+        readonly property bool stacked: root.text !== ""
+            && labelGroup.implicitWidth + rowGrid.columnSpacing + buttonsFlow.naturalWidth > rowGrid.width
 
         RowLayout {
             id: labelGroup

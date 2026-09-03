@@ -67,9 +67,9 @@ ColumnLayout {
     // How a group's rows pack. Consecutive booleans go two to a line - the
     // Bar page's switch pairs - since a switch is narrow and five of them
     // one under the other were most of the cookie clock's height; anything
-    // else is a line of its own, in manifest order. Choice rows inside a
-    // group stack (label above, chips beneath) so four hand rows read as one
-    // aligned block rather than a mix of inline and wrapped ones.
+    // else is a line of its own, in manifest order. (Forcing every choice row
+    // to stack was tried: five labels sitting top-left over their chips read
+    // as uncentred; a row stacks only when its chips cannot fit beside it.)
     function packLines(options) {
         const lines = [];
         for (let index = 0; index < options.length; index++) {
@@ -188,8 +188,9 @@ ColumnLayout {
             }
             // A group is a header with a hairline above it - the way "Widget
             // behaviour" below separates itself - and its rows packed under
-            // it: consecutive switches two to a line, choice rows stacked,
-            // everything else a full row. Not a card and not plates: surfaces
+            // it: consecutive switches two to a line, everything else a full
+            // row - a choice row keeps its label centred beside its chips and
+            // stacks only when the chips cannot fit beside it. Not a card and not plates: surfaces
             // around rows that are already controls read as one more list,
             // and their padding cost the height the packing exists to save.
             Component {
@@ -227,10 +228,7 @@ ColumnLayout {
                                 }
                                 Component {
                                     id: singleLine
-                                    OptionRowItem {
-                                        optionData: lineLoader.modelData.options[0]
-                                        stackChoices: true
-                                    }
+                                    OptionRowItem { optionData: lineLoader.modelData.options[0] }
                                 }
                             }
                         }
@@ -381,8 +379,6 @@ ColumnLayout {
         id: optionLoader
         Layout.fillWidth: true
         property var optionData: null
-        // A choice row in a group stacks its chips under its label.
-        property bool stackChoices: false
         // `enabledWhen` and `visibleWhen`, one evaluator - see
         // option_visibility.js for what each spells.
         visible: OptionVisibility.visible(optionData, key => root.readOption(key))
@@ -419,7 +415,6 @@ ColumnLayout {
             id: choiceOption
             ConfigSelectionArray {
                 Layout.fillWidth: true
-                forceStacked: optionLoader.stackChoices
                 text: optionLoader.optionData.label
                 icon: optionLoader.optionData.icon || "tune"
                 options: optionLoader.optionData.choices || []
