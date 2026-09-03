@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""The cheatsheet's column count has to answer to the screen's width, not only
-its height.
+"""The cheatsheet's pages have to answer to the screen's width as well as its
+height, and the window has to answer to the page on screen.
 
 `columnCount` picks columns from a *row* budget - how many keybind rows fit
 vertically before the card grows past the screen. Columns trade height for
-width, so on a display with height to spare but not width it asked for four
-columns and the outer two ran off both edges, cut off rather than wrapped.
+width, so a full keybind set can exceed BOTH budgets at once on a laptop:
+four columns were ~40px too tall for a 1080p screen and five were ~280px too
+wide (measured live), so no column count fits and lowering a cap just picks
+which axis overflows. The keybinds page therefore fits the way the Elements
+page always has - keep the columns, shrink the whole thing uniformly through
+the shared fitScale, full size again on any screen with room.
 
-Width cannot be predicted the way rows can: a column is as wide as its widest
-section, which is not known until the text has been shaped. So the cap is
-measured and lowered. That makes the loop the thing worth pinning - it must only
-ever shrink, and it must stop.
+The window half: it is fixed-size (equal min/max hints float and centre it),
+and it used to be sized to the *tallest* page - so the typing test opened as
+tall as the keybind table and the whole window ran past the screen. It sizes
+to the current page now.
 """
 
 from pathlib import Path
@@ -34,37 +38,31 @@ class CheatsheetWidthBudgetTests(unittest.TestCase):
         self.assertIn("screen?.width", self.cheatsheet,
                       "the budget has to come from the screen the cheatsheet is on")
 
-    def test_the_column_cap_is_measured_against_that_budget(self):
+    def test_the_keybinds_page_scales_itself_into_both_budgets(self):
         self.assertIn("property real maxContentWidth", self.keybinds)
-        self.assertIn("property int columnCap", self.keybinds)
-        self.assertRegex(
-            self.keybinds,
-            r"columnCount\(root\.sections, root\.availableRows, root\.columnCap\)",
-            "the cap has to reach columnCount, or lowering it changes nothing")
+        self.assertIn("property real maxContentHeight", self.keybinds)
+        self.assertRegex(self.keybinds, r"CheatsheetFit\.fitScale\(",
+                         "the shrink has to be the shared arithmetic, or it drifts from the budget")
+        # The scale has to reach what is drawn AND what is reported: a scaled
+        # row whose page still reports the natural size sizes the window to
+        # the natural size, which is the overflow this exists to remove.
+        self.assertIn("scale: root.fit", self.keybinds)
+        self.assertRegex(self.keybinds, r"implicitWidth:\s*root\.contentWidth \* root\.fit")
+        self.assertRegex(self.keybinds, r"implicitHeight:\s*root\.contentHeight \* root\.fit")
 
-    def test_the_fit_loop_only_shrinks_and_terminates(self):
-        body = re.search(r"function fitToWidth\(\)\s*\{(.*?)\n    \}", self.keybinds, re.S)
-        self.assertIsNotNone(body, "fitToWidth must exist")
-        body = body.group(1)
-
-        # Only ever downward. An increment inside the loop, with implicitWidth
-        # feeding back into it, is how this oscillates forever instead of
-        # settling.
-        self.assertIn("columnCap -= 1", body)
-        self.assertNotIn("columnCap += 1", body)
-        # And a floor, or a card wider than any single column recurses to zero
-        # columns and lays out nothing at all.
-        self.assertIn("columnCap <= 1", body)
-
-    def test_a_changed_layout_starts_the_search_again(self):
-        # Shrink-only means the cap can never recover on its own: rotate to a
-        # wider screen, or change the keybind list, and it would stay at
-        # whatever the narrowest case needed.
-        for trigger in ("onMaxContentWidthChanged", "onSectionsChanged"):
-            self.assertIn(trigger, self.keybinds, f"{trigger} must reset the cap")
-        resets = re.findall(r"columnCap = root\.maxColumns", self.keybinds)
-        self.assertGreaterEqual(len(resets), 2,
-                                "both triggers must reset the cap to the maximum")
+    def test_the_window_is_sized_to_the_current_page_not_the_tallest(self):
+        # Math.max over every page is how the typing test opened at the keybind
+        # table's height - the fixed-size window must follow the tab.
+        swipe = re.search(r"SwipeView \{(.*?)\n                    \}", self.cheatsheet, re.S)
+        self.assertIsNotNone(swipe, "the SwipeView must exist")
+        body = swipe.group(1)
+        self.assertNotIn("Math.max.apply", body,
+                         "the window must not be sized to the tallest page")
+        for axis in ("implicitWidth", "implicitHeight"):
+            self.assertRegex(
+                body,
+                axis + r":\s*\(swipeView\.contentChildren\[swipeView\.currentIndex\]\?\." + axis + r"\)",
+                f"the SwipeView's {axis} must read the current page's")
 
 
 PERIODIC = ROOT / "modules/imi/cheatsheet/CheatsheetPeriodicTable.qml"
