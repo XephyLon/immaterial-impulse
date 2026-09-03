@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "modules/common/plugins/bundled/clock/manifest.json"
 STYLES = ("digital", "cookie", "pixel")
 # Rows every style shares. Anything else must name a style.
-SHARED = {"style", "styleLocked", "showOnlyWhenLocked", "quoteEnable", "quoteFollowClock", "quoteText"}
+SHARED = {"style", "showOnlyWhenLocked", "quoteEnable", "quoteFollowClock", "quoteText"}
 # Rows whose key does not carry the style they belong to.
 STYLE_OF = {"color": "digital"}
 
@@ -50,12 +50,15 @@ def expected_style(key: str):
 
 
 def matches(rule, style: str) -> bool:
-    """Whether `rule` is exactly 'style == S on either key'."""
-    branches = rule.get("anyOf") if isinstance(rule, dict) else None
-    if not isinstance(branches, list) or len(branches) != 2:
-        return False
-    keys = sorted(b.get("key") for b in branches if isinstance(b, dict))
-    return keys == ["style", "styleLocked"] and all(b.get("in") == [style] for b in branches)
+    """Whether `rule` is exactly 'style == S'.
+
+    One key, since 2026-09-03: the lock's style is the `style` option on the
+    lock surface (PluginState.option with a surface), and Settings evaluates
+    the rule against the surface its switch names - so the old
+    'style OR styleLocked' pair would show digital rows on a cookie desktop
+    whenever the lock was digital, which is the wrong surface's answer.
+    """
+    return isinstance(rule, dict) and rule.get("key") == "style" and rule.get("in") == [style]
 
 
 def test_every_style_bound_row_is_gated_on_its_style():
