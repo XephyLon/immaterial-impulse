@@ -44,6 +44,9 @@ ColumnLayout {
     spacing: 0
     Layout.leftMargin: Appearance.spacing.space100
     Layout.rightMargin: Appearance.spacing.space100
+    // A stacked row is two lines that belong together; the air goes BETWEEN
+    // rows, not between a label and its own chips.
+    Layout.topMargin: rowGrid.stacked ? Appearance.spacing.space100 : 0
 
     // A grid, not a row: a labelled row whose chips cannot share the line with
     // the label STACKS - label above, chips on a row of their own beneath,
@@ -56,7 +59,7 @@ ColumnLayout {
         Layout.fillWidth: true
         columns: 3
         columnSpacing: Appearance.spacing.space150
-        rowSpacing: Appearance.spacing.space50
+        rowSpacing: Appearance.spacing.space25
         readonly property bool stacked: root.text !== "" && (root.forceStacked
             || labelGroup.implicitWidth + rowGrid.columnSpacing + buttonsFlow.naturalWidth > rowGrid.width)
 
@@ -64,6 +67,8 @@ ColumnLayout {
             id: labelGroup
             Layout.row: 0
             Layout.column: 0
+            // Stacked, the label sits on the bottom of its line, hugging the chips.
+            Layout.alignment: rowGrid.stacked ? (Qt.AlignLeft | Qt.AlignBottom) : Qt.AlignVCenter
             spacing: Appearance.spacing.space150
             visible: root.text !== ""
             OptionalMaterialSymbol {

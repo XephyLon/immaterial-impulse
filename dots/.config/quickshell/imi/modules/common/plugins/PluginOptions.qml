@@ -216,6 +216,11 @@ ColumnLayout {
                                     id: pairLine
                                     ConfigRow {
                                         uniform: true
+                                        // A gutter between the halves: the rows
+                                        // here carry no side padding of their own,
+                                        // so at ConfigRow's 4px the first switch's
+                                        // track touched the second row's icon.
+                                        spacing: Appearance.spacing.space300
                                         OptionRowItem { optionData: lineLoader.modelData.options[0] }
                                         OptionRowItem { optionData: lineLoader.modelData.options[1] }
                                     }
