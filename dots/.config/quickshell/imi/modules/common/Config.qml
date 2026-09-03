@@ -574,6 +574,10 @@ Singleton {
                 //            the widget (samples the live Wallpaper Engine surface
                 //            or the static image)
                 property string frostMode: "blur"
+                // Whether desktop widgets cast their shadow (WidgetElevation,
+                // the one shadow a widget casts). On by default; off is one
+                // gate at that one place, whatever a widget passes down.
+                property bool shadows: true
                 // Set once the built-in desktop widgets have been
                 // translated into `enabled`. Without it the migration
                 // re-adds a widget on every launch and the user can never

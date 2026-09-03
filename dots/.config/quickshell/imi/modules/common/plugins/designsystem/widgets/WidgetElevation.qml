@@ -38,7 +38,11 @@ Item {
     // does: re-rendering a blurred copy of the body every frame of a morph is
     // the expensive path, and the body is moving too fast to read a shadow.
     property bool motionActive: false
+    // ...and the user's own switch (Settings > Plugins > Widget shadows)
+    // sits above both: one gate here, at the one shadow every widget casts,
+    // rather than a flag every caller has to remember to pass down.
     readonly property bool shadowVisible: root.shadowEnabled && !root.motionActive
+        && Config.options.plugins.shadows
 
     property real bleed: Tension.BOW_PX * 2
 
