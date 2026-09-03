@@ -12,6 +12,20 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Desktop widgets keep separate settings for the desktop and the lock
+  screen.** Every widget card in Settings > Plugins has a Desktop / Lock
+  screen switch; a setting changed on the lock side applies to the lock
+  screen only and the rest keep following the desktop, with a "Reset to
+  desktop" to re-link. The widgets' own knobs (the system monitor's rotate
+  button, for one) write whichever surface they are used on. Presets carry
+  the lock side too.
+
+### Changed
+- **The clock's "Clock style (locked)" row is gone.** Its value moved to the
+  lock side of the ordinary "Clock style" row; what the lock screen showed
+  is what it still shows.
+
 ## [1.0.0-rc-11] — 2026-09-03
 
 ### Added

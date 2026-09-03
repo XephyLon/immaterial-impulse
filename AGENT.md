@@ -4423,6 +4423,36 @@ mode is built out of are worth not re-deriving:
   (feat(plugins): layout_surfaces.js - the lock's widget choice forks too;
   feat(plugins): a widget's presence is asked per surface, not once;
   feat(editMode): the Lock section picks which widgets the lock screen shows.)
+- **A widget's own SETTINGS fork per surface too — per key, under `lockOptions`, and the
+  accessors take the surface.** Position, span and presence each had a lock store; the widget's
+  options stayed in the flat `pluginOptions[id][key]`, and since the lock screen has no widget
+  host of its own (the desktop's widget is cross-faded by `AbstractBackgroundWidget`), the desktop
+  and lock "copies" of the resource monitor were one object reading one key — rotated for the
+  lock, rotated on the desktop (the maintainer's report, 2026-09-03). `lockOptions[id][key]` sits
+  beside `pluginOptions` and inherits PER KEY: present is the lock's own, absent reads through,
+  `null` re-inherits. Not the layout's whole-screen snapshot, on purpose — a user who rotates the
+  monitor for the lock still wants its blur to follow the desktop, and "which keys I changed" is
+  what the Settings card shows and its Reset undoes. Three keys never fork
+  (`SHARED_OPTION_KEYS`: `positionLocked`, `clickThrough`, `__gridSize`): Edit Mode policy with one
+  writer and one meaning, and the span has its own surface path. `PluginState.option()` and
+  `setOption()` take a trailing `surface` with the position API's `currentSurface` default, so
+  every widget binding and in-widget knob that predates the fork follows the face the desktop
+  is showing — the monitor's rotate button on the Lockscreen tab writes the lock's `vertical`
+  and the desktop's binding re-evaluates when the look flips. Settings (`PluginOptions`) names
+  its surface on EVERY call — the Desktop / Lock screen switch the user pressed, not the look —
+  and hides the shared toggles and the size row on the lock. Presets carry `lockOptions` under
+  the `has()` rule `lockPositions` follows. No migration for the map (absence is the upgrade
+  state), but one for the clock: its hand-rolled `styleLocked` row folds into the overlay's
+  `style`, preserving what the lock showed — a MISSING second style was the row's "cookie"
+  default, which differs from any desktop that is not cookie and becomes an overlay of cookie;
+  the pass is data-driven as well as marked because the legacy Config drain can deliver a
+  `styleLocked` after the load-time pass. The rule for plugin authors is in PLUGINS.md: a setting
+  that must differ between the surfaces is ONE option read through `PluginState.option`, never
+  a second `*Locked` key.
+  (feat(plugins): widget options fork per surface in the pure store rules;
+  feat(plugins): PluginState.option and setOption take a surface;
+  feat(settings): a Desktop / Lock screen switch on every widget's options;
+  refactor(clock): the lock's style is the style option on the lock surface.)
 - **A dragged widget holds a neighbour's edge through a Schmitt trigger, and
   both thresholds read the SHADOW — stage 10, spec §6.**
   `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
