@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-9] — 2026-09-03
+
 ### Changed
 - **The clock's options are organised.** Digital, Cookie, Pixel and Quote
   rows sit under a header each, with the style's icon, instead of repeating
