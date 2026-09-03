@@ -88,7 +88,7 @@ class SelectionArrayFlowTests(unittest.TestCase):
     # put "Bold" alone on a second line next to a centred label).
     def test_a_labelled_row_that_cannot_fit_stacks_its_chips_under_the_label(self):
         text = strip_comments(SOURCE.read_text(encoding="utf-8")) if "SOURCE" in globals() else strip_comments(ROW.read_text(encoding="utf-8"))
-        self.assertRegex(text, r"readonly property bool stacked: root\.text !== \"\"\s*&& labelGroup\.implicitWidth \+ rowGrid\.columnSpacing \+ buttonsFlow\.naturalWidth > rowGrid\.width")
+        self.assertRegex(text, r"readonly property bool stacked: root\.text !== \"\" && \(root\.forceStacked\s*\|\| labelGroup\.implicitWidth \+ rowGrid\.columnSpacing \+ buttonsFlow\.naturalWidth > rowGrid\.width\)")
         self.assertRegex(text, r"Layout\.row: rowGrid\.stacked \? 1 : 0")
         self.assertRegex(text, r"Layout\.columnSpan: rowGrid\.stacked \? 3 : 1")
         # ...and a caller may ask for the stacked shape outright, for a block
