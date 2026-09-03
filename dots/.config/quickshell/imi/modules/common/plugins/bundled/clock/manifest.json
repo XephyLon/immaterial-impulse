@@ -94,7 +94,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalShowDate",
@@ -118,7 +119,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalAnimateChange",
@@ -142,7 +144,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalAdaptiveAlignment",
@@ -166,7 +169,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "color",
@@ -201,7 +205,8 @@
         "layer1",
         "layer0"
       ],
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalFontFamily",
@@ -227,7 +232,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalFontWeight",
@@ -253,7 +259,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalFontSize",
@@ -279,7 +286,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalFontWidth",
@@ -305,7 +313,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "digitalFontRoundness",
@@ -331,7 +340,8 @@
           }
         ]
       },
-      "group": "Digital clock"
+      "group": "Digital clock",
+      "groupIcon": "timer_10"
     },
     {
       "key": "cookieUseSineCookie",
@@ -355,7 +365,8 @@
           }
         ]
       },
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieAiStyling",
@@ -379,7 +390,8 @@
           }
         ]
       },
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieSides",
@@ -405,7 +417,8 @@
           }
         ]
       },
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieConstantlyRotate",
@@ -429,7 +442,8 @@
           }
         ]
       },
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieHourMarks",
@@ -453,7 +467,8 @@
           }
         ]
       },
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieTimeIndicators",
@@ -477,7 +492,8 @@
           }
         ]
       },
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieDialNumberStyle",
@@ -523,7 +539,8 @@
           "value": "numbers"
         }
       ],
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieHourHandStyle",
@@ -569,7 +586,8 @@
           "value": "fill"
         }
       ],
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieMinuteHandStyle",
@@ -620,7 +638,8 @@
           "value": "bold"
         }
       ],
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieSecondHandStyle",
@@ -666,7 +685,8 @@
           "value": "dot"
         }
       ],
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "cookieDateStyle",
@@ -712,7 +732,8 @@
           "value": "rect"
         }
       ],
-      "group": "Cookie clock"
+      "group": "Cookie clock",
+      "groupIcon": "cookie"
     },
     {
       "key": "pixelOrientation",
@@ -748,7 +769,8 @@
           "value": "vertical"
         }
       ],
-      "group": "Pixel clock"
+      "group": "Pixel clock",
+      "groupIcon": "grid_view"
     },
     {
       "key": "quoteEnable",
@@ -756,7 +778,8 @@
       "label": "Show a quote",
       "icon": "format_quote",
       "default": false,
-      "group": "Quote"
+      "group": "Quote",
+      "groupIcon": "format_quote"
     },
     {
       "key": "quoteFollowClock",
@@ -765,7 +788,8 @@
       "icon": "font_download",
       "default": false,
       "enabledWhen": "quoteEnable",
-      "group": "Quote"
+      "group": "Quote",
+      "groupIcon": "format_quote"
     },
     {
       "key": "quoteText",
@@ -776,7 +800,8 @@
       "maxLength": 256,
       "placeholder": "Quote",
       "enabledWhen": "quoteEnable",
-      "group": "Quote"
+      "group": "Quote",
+      "groupIcon": "format_quote"
     }
   ],
   "desktopWidget": {
