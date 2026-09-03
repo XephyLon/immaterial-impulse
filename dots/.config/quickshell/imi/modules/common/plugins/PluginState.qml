@@ -400,40 +400,6 @@ Singleton {
         writeTimer.restart();
     }
 
-    // The clock carried the shell's only per-surface setting by hand: a
-    // second manifest row, `styleLocked`, selected inside the widget. It
-    // folds into the lock overlay's `style` here, and what the user SEES on
-    // the lock does not change: a stored second style that differs from the
-    // desktop's becomes the overlay; one that matches becomes nothing; an
-    // absent one was the row's default, "cookie", which differs from any
-    // desktop that is not cookie and so becomes an overlay of "cookie" too.
-    // Pure, so the three cases are drivable from a TestCase; run once on
-    // load, recorded in `migrations` like the sizeMode pass.
-    readonly property string clockStyleMarker: "clockStyleLocked"
-
-    function stateWithClockStyleMigrated(state) {
-        const clock = state?.pluginOptions?.clock;
-        const stored = clock && typeof clock === "object" ? clock : {};
-        const desktop = stored.style === undefined ? "cookie" : stored.style;
-        const locked = stored.styleLocked === undefined ? "cookie" : stored.styleLocked;
-        let next = Object.assign({}, state);
-        if (locked !== desktop)
-            next = Surfaces.withOption(next, Surfaces.LOCK, "clock", "style", locked);
-        if (stored.styleLocked !== undefined)
-            next = Surfaces.withOption(next, Surfaces.DESKTOP, "clock", "styleLocked", null);
-        const nextMigrations = Object.assign({}, state?.migrations || {});
-        nextMigrations[root.clockStyleMarker] = true;
-        next.migrations = nextMigrations;
-        next.version = root.schemaVersion;
-        return next;
-    }
-
-    function migrateClockStyle() {
-        if (root.migrationRan(root.clockStyleMarker)) return;
-        root.state = root.stateWithClockStyleMigrated(root.state);
-        writeTimer.restart();
-    }
-
     // A ported built-in's own settings have to end up in this file, but Config
     // cannot write it (and cannot import this module - it is imported *by* it).
     // Config computes the batch instead and parks it on
@@ -588,9 +554,6 @@ Singleton {
                     ? parsed.migrations
                     : {}
             };
-            // Inside the try: a file that did not parse is left on disk as
-            // it was, not replaced by an empty state carrying a marker.
-            root.migrateClockStyle();
         } catch (error) {
             console.warn("[PluginState] Ignoring invalid state file: " + error);
             root.state = root.emptyState();
