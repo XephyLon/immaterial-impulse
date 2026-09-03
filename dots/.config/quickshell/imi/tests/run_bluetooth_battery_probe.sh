@@ -16,7 +16,9 @@
 # the 12% mouse in the error colour, the controller at UPower's 100%; M3 swaps
 # them for FILLED rings; vertical draws a 56x72 column; hover opens the popup
 # with five children under deviceCards (the Repeater and four cards); the
-# click opens the dialog. No WARN names the widget's files.
+# click opens the dialog; the popup's cards read back with the 12% mouse
+# warning, the 100% controller and the no-report keyboard not. No WARN names
+# the widget's files.
 #
 # Same shape as run_bar_exclusive_zone_probe.sh: own D-Bus session, own XDG
 # dirs, SHORT runtime dir (a long one makes Hyprland's socket path too long
@@ -78,6 +80,16 @@ w = w.replace("import QtQuick.Layouts\n", "import QtQuick.Layouts\nimport Quicks
 p = (c/"modules/imi/bar/BluetoothBatteryPopup.qml").read_text()
 p = p.replace("    readonly property var lowest: BluetoothStatus.lowestBatteryDevice\n",
               "    readonly property var lowest: BluetoothStatus.lowestBatteryDevice\n    onPopupVisibleChanged: console.log(\"BTPROBE popup visible=\" + popupVisible + \" lowest=\" + (lowest ? lowest.name : \"none\") + \" cards=\" + deviceCards.children.length)\n", 1)
+p = p.replace("import QtQuick.Layouts\n", "import QtQuick.Layouts\nimport Quickshell.Io\n", 1)
+p = p.replace("    ColumnLayout {\n        spacing: Appearance.spacing.space150\n", "    ColumnLayout {\n        spacing: Appearance.spacing.space150\n" + '''
+    IpcHandler {
+        target: "btpopup"
+        function cards(): string {
+            return JSON.stringify(Array.from(deviceCards.children).filter(c => c && c.label !== undefined).map(c =>
+                `${c.label} value=${c.value.toFixed(2)} strain=${c.strain.toFixed(2)} warnAt=${c.warnAt.toFixed(2)} warning=${c.warning} border=${c.border.color} icon=${c.usageColor(c.value)}`));
+        }
+    }
+''', 1)
 (c/"modules/imi/bar/BluetoothBatteryPopup.qml").write_text(p)
 sb = (c/"modules/imi/sidebarRight/SidebarRightContent.qml").read_text()
 sb = sb.replace("    function consumeDialogRequest() {\n", "    onShowBluetoothDialogChanged: console.log(\"BTPROBE sidebar showBluetoothDialog=\" + showBluetoothDialog)\n    function consumeDialogRequest() {\n", 1)
@@ -139,6 +151,7 @@ hyprctl dispatch movecursor $((BARX+X)) $((BARY+Y)) >/dev/null; sleep 2.5
 grep "BTPROBE popup" "$TMP/shell.log" | tail -2
 hyprctl dispatch movecursor 640 600 >/dev/null; sleep 2
 grep "BTPROBE popup" "$TMP/shell.log" | tail -1
+echo "--- cards ---"; qs ipc -p "$COPY/shell.qml" call btpopup cards
 echo "--- M3 style ---"; qs ipc -p "$COPY/shell.qml" call btprobe style 3 >/dev/null; sleep 1.5; qs ipc -p "$COPY/shell.qml" call btprobe geom
 echo "--- click ---"; qs ipc -p "$COPY/shell.qml" call btprobe click; sleep 2.5
 grep "BTPROBE sidebar" "$TMP/shell.log" | tail -2
