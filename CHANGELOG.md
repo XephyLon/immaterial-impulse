@@ -22,6 +22,9 @@ own repo; the installer pins which revision it builds.
   get their own glyph in the device dialog now.
 
 ### Fixed
+- **The battery popup's Health card no longer alarms at full health.** The
+  card was written for usage, where 100% is the problem; a battery's health
+  (and a Bluetooth device's charge) is a level, where empty is.
 - **At-a-glance shows a controller's battery.** The desktop widget only
   counted devices BlueZ reported a battery for; it reads the same lookup as
   the quick toggle now, UPower fallback included.
