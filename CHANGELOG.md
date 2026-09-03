@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-12] — 2026-09-03
+
 ### Added
 - **Widget shadows can be turned off.** Settings > Plugins > Widget settings
   gains a "Widget shadows" switch, on by default; off, no desktop widget
