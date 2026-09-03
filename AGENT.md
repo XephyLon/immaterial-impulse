@@ -2695,7 +2695,10 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   is wrong, and would equally hide a real one.
   4046f1854 ("feat(widgets): the card casts a shadow, and lifts when handled").
 - **The elevation is a component of its own, and it is what a widget that is not a card reaches
-  for.** `WidgetElevation` owns the numbers, the hover/drag lift and the layer; `WidgetCard` hands
+  for.** `WidgetElevation` owns the numbers, the hover/drag lift and the layer (and the user's
+  own switch, `plugins.shadows` - Settings > Plugins > Widget shadows, on by default - is ONE gate
+  in its `shadowVisible`, beside the motion drop, never a flag callers pass down;
+  `tests/test_widget_shadow_toggle.py`); `WidgetCard` hands
   it the states and adds a surface. That split exists because five bundled widgets cannot be cards
   — a cookie dial, a punched glyph grid, a shape-masked image, and a card with an avatar bubble
   off its top edge — and each had carried its own `StyledDropShadow` at its own radius and colour
