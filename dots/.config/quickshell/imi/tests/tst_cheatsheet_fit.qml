@@ -75,4 +75,33 @@ TestCase {
     function test_the_scale_never_grows_a_page_that_already_fits() {
         compare(Fit.fitScale(100, 100, 5000, 5000), 1);
     }
+
+    function test_the_aspect_box_takes_a_share_and_holds_the_ratio() {
+        // A wide budget binds on the height: 85% of 800 is 680, and the width
+        // follows the 16:9 from there.
+        const wide = Fit.aspectBox(1830, 800, 0.85, 16 / 9);
+        fuzzyCompare(wide.height, 800 * 0.85, 0.001);
+        fuzzyCompare(wide.width, wide.height * 16 / 9, 0.001);
+        verify(wide.width <= 1830 * 0.85 + 0.001);
+
+        // A tall budget binds on the width instead.
+        const tall = Fit.aspectBox(1000, 2000, 0.85, 16 / 9);
+        fuzzyCompare(tall.width, 1000 * 0.85, 0.001);
+        fuzzyCompare(tall.height, tall.width * 9 / 16, 0.001);
+    }
+
+    function test_the_aspect_box_answers_zero_until_both_budgets_are_known() {
+        // The caller keeps its fallback stage while the window has not
+        // learned its screen; a NaN or a zero must not leak into geometry.
+        for (const box of [
+            Fit.aspectBox(0, 800, 0.85, 16 / 9),
+            Fit.aspectBox(1830, 0, 0.85, 16 / 9),
+            Fit.aspectBox(NaN, 800, 0.85, 16 / 9),
+            Fit.aspectBox(1830, 800, 0, 16 / 9),
+            Fit.aspectBox(1830, 800, 0.85, 0),
+        ]) {
+            compare(box.width, 0);
+            compare(box.height, 0);
+        }
+    }
 }

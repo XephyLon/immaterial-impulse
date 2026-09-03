@@ -6,6 +6,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.cheatsheet.typing
 import qs.services
+import "../../common/functions/cheatsheetFit.js" as CheatsheetFit
 
 /**
  * The typing test as a cheatsheet page.
@@ -21,8 +22,12 @@ Item {
 
     // The room the page may take - Cheatsheet.qml derives both from the
     // screen the window is on. The surface lays itself out in whatever it is
-    // given, so the page asks for a comfortable stage and never more than
-    // the budget; 0 means the window has not said, which is the stage alone.
+    // given - the test is the one page whose content stretches rather than
+    // having a natural size - so its size is a choice, not a fit: a share of
+    // the budget, held to a 16:9 stage, so the window scales with the screen
+    // without becoming the screen and the stage keeps one shape on every
+    // monitor. 0 means the window has not said, which falls back to a fixed
+    // stage of the same aspect.
     property real maxContentWidth: 0
     property real maxContentHeight: 0
     // Whether this page is the one on screen. The host says so, because a
@@ -31,12 +36,14 @@ Item {
     // nowhere.
     property bool tabActive: false
 
-    readonly property real preferredWidth: 1100
-    readonly property real preferredHeight: 640
-    implicitWidth: root.maxContentWidth > 0
-        ? Math.min(root.preferredWidth, root.maxContentWidth) : root.preferredWidth
-    implicitHeight: root.maxContentHeight > 0
-        ? Math.min(root.preferredHeight, root.maxContentHeight) : root.preferredHeight
+    readonly property real budgetShare: 0.85
+    readonly property real stageAspect: 16 / 9
+    readonly property real fallbackHeight: 640
+    readonly property var stageBox: CheatsheetFit.aspectBox(
+        root.maxContentWidth, root.maxContentHeight, root.budgetShare, root.stageAspect)
+    implicitWidth: root.stageBox.width > 0 ? root.stageBox.width
+        : root.fallbackHeight * root.stageAspect
+    implicitHeight: root.stageBox.height > 0 ? root.stageBox.height : root.fallbackHeight
 
     onTabActiveChanged: {
         if (root.tabActive)

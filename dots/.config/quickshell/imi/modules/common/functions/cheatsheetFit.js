@@ -53,3 +53,26 @@ function fitScale(naturalWidth, naturalHeight, budgetWidth, budgetHeight) {
         scale = Math.min(scale, budgetHeight / naturalHeight);
     return scale;
 }
+
+// The box a stretchy page takes: a share of the budget, held to an aspect
+// ratio. The typing test is the one page with no natural size - every block
+// in it fills its width - so "fit the budget" is not a fit at all but a
+// choice, and taking the whole budget shaped the stage like whatever the
+// screen minus the panels happened to be. A fraction keeps it a window
+// rather than a takeover, and the fixed aspect keeps the stage the same
+// shape on every monitor. Width-first: take the share of the width, derive
+// the height from the aspect, and if that runs past the height's share,
+// bind on the height instead. Either budget missing (0 or less) means the
+// window has not learned its screen; the caller keeps its fallback.
+function aspectBox(budgetWidth, budgetHeight, fraction, aspect) {
+    if (!(budgetWidth > 0) || !(budgetHeight > 0) || !(fraction > 0) || !(aspect > 0))
+        return { width: 0, height: 0 };
+    let width = budgetWidth * fraction;
+    let height = width / aspect;
+    const heightShare = budgetHeight * fraction;
+    if (height > heightShare) {
+        height = heightShare;
+        width = height * aspect;
+    }
+    return { width: width, height: height };
+}
