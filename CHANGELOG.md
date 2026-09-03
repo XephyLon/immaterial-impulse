@@ -13,6 +13,9 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Changed
+- **The clock's options are grouped.** Digital, Cookie, Pixel and Quote rows
+  sit under a heading each instead of repeating the style in every label,
+  and a heading appears only while its rows do.
 - **Edit Mode has one toolbar.** The Desktop and Lockscreen tabs lead it,
   and the tab bar that sat under the desktop is gone; the desktop takes the
   band it occupied. The edge-snapping toggle shows a grid, on or off.
@@ -24,6 +27,8 @@ own repo; the installer pins which revision it builds.
   a new change clears the redo history.
 
 ### Fixed
+- **A labelled row of chips wraps instead of covering its label.** The
+  clock's "minute hand" row drew its chips over the last word.
 - **The edge shadow is offered only where Show Background applies.** It was
   live under M3, whose pills paint themselves, and drew under them; the
   switch and the shade now need Hug, Float or Float Islands with Show

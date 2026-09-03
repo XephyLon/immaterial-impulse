@@ -19,6 +19,7 @@ every style again and nothing notices.
 """
 
 import json
+import re
 from pathlib import Path
 
 from contract_runner import run
@@ -76,6 +77,18 @@ def test_every_style_bound_row_is_gated_on_its_style():
             (f"clock option `{key}`'s rule is {option['visibleWhen']!r}; expected {style} on "
              "`style` OR `styleLocked` - the desktop and the lock screen can show different clocks")
     assert seen >= 20, f"only {seen} style-bound rows found - the sweep is looking at the wrong file"
+
+
+def test_style_bound_rows_are_grouped_and_carry_no_style_prefix():
+    # The style is the group's heading, not each label's first word: eleven
+    # "Cookie: ..." rows read as a list of one word (the maintainer, 2026-09-03).
+    for option in options():
+        style = expected_style(option["key"])
+        if style is None and not option["key"].startswith("quote"):
+            continue
+        assert option.get("group"), f"{option['key']} names no group; its heading is what says which style it belongs to"
+        assert not re.match(r"^(Digital|Cookie|Pixel|Quote): ", option.get("label", "")), \
+            f"{option['key']} still spells its group into its label: {option.get('label')!r}"
 
 
 def test_no_style_is_left_without_rows():

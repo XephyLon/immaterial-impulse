@@ -6645,6 +6645,18 @@ a new site that pushes a bare closure still undoes, but its undo has no redo. A 
 the redo stack. The snap toggle's glyph is `grid_on`/`grid_off`; the alignment glyph read as a
 text control ("feat(editMode): one toolbar with the tabs first, and undo/redo").
 
+**A plugin's options say their group once, as a heading, and a labelled chip row wraps.** The clock
+declared eleven rows labelled "Cookie: ..." (and its digital and pixel rows the same way), which read
+as a list of one word, and its "Cookie: minute hand" row lost its last word under five chips. Manifest
+options take `"group"`; `PluginOptions` renders each consecutive run of one group under a
+`ContentSubsection` titled with it, shown only while one of its rows is, and the labels drop the
+prefix (`docs/PLUGINS.md`; `tests/test_clock_options_contract.py` refuses a style-bound clock row
+without a group or with the prefix). `ConfigSelectionArray`'s Flow fills on the labelled path too,
+capped at its natural width, and the label holds `Layout.minimumWidth` at its implicit width, so a
+row short of room wraps the chips instead of drawing them over the label
+("feat(plugins): options group under a heading instead of repeating it in every label",
+"fix(settings): a labelled segmented row wraps its chips instead of covering its label").
+
 **A `RippleButton`'s background only shrinks when its size is set outright.** A Control forces its
 background to its own size unless `width`/`height` are set explicitly; `background.implicitWidth`
 plus `background.anchors.centerIn` changes nothing, and the outline parented to that background

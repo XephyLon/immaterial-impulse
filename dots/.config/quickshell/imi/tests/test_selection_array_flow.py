@@ -55,9 +55,12 @@ class SelectionArrayFlowTests(unittest.TestCase):
         text = strip_comments(ROW.read_text(encoding="utf-8"))
         match = re.search(r"Layout\.maximumWidth:\s*(.+)", text)
         self.assertIsNotNone(match, "the Flow hands the layout no maximum, so it can never be given less")
-        self.assertEqual(match.group(1).strip(),
-                         "root.text ? Number.POSITIVE_INFINITY : buttonsFlow.naturalWidth")
-        self.assertRegex(text, r"Layout\.fillWidth:\s*!root\.text")
+        self.assertEqual(match.group(1).strip(), "buttonsFlow.naturalWidth")
+        # Both paths fill now; the label holds its own minimum so it is the
+        # chips that yield when a labelled row is short of room.
+        flow = text[text.index("Flow {"):]
+        self.assertRegex(flow, r"Layout\.fillWidth:\s*true")
+        self.assertRegex(text, r"id: labelWidget\s*\n\s*Layout\.fillWidth: true\s*\n\s*Layout\.minimumWidth: labelWidget\.implicitWidth")
 
     def test_the_quick_pages_card_rows_take_their_cards_width(self):
         quick = strip_comments((ROOT / "modules/imi/settings/pages/QuickConfig.qml").read_text(encoding="utf-8"))
