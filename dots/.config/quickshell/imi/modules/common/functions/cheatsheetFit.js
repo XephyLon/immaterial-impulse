@@ -5,8 +5,8 @@
 //
 // The window is a fixed-size toplevel (equal minimum and maximum hints are what
 // make Hyprland float and centre it, see Cheatsheet.qml), so it never resizes
-// itself: it is exactly as tall as its tallest page. Its pages therefore have
-// to fit the screen on their own, and "the screen" is the part of it the
+// itself: it is exactly as big as the page it is showing. Its pages therefore
+// have to fit the screen on their own, and "the screen" is the part of it the
 // compositor leaves - `hyprctl monitors` reports the reserved area the bar and
 // the dock hold as [left, top, right, bottom], and a floating window is centred
 // in what is left. The Elements page was a fixed 9 rows of 70px tiles, which is

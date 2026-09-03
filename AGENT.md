@@ -1222,10 +1222,13 @@ whose `minimumSize` equals its `maximumSize` is floated, sized and centred by Hy
 purely from the fixed size hints. Prefer that over a runtime rule. It also keeps the window title
 free to stay translated, since nothing is matching on it.
 
-**...and a window sized that way is exactly as tall as its tallest page, on every screen, so the
-pages have to fit the screen themselves.** The cheatsheet's `SwipeView` reports the largest of its
-pages' implicit sizes, and the Elements page was nine rows of fixed 70px tiles - ~800px with the
-window's chrome - which fits a 1080p panel at scale 1 (970px usable) and on the same panel at 1.25x
+**...and a window sized that way is exactly as big as the page it is showing, on every screen, so
+the pages have to fit the screen themselves.** The cheatsheet's `SwipeView` reports the CURRENT
+page's implicit size (indexed out of `contentChildren` by `currentIndex`, not `currentItem`, whose
+size is unsettled on the first frame; it used to report the largest of every page's, which opened
+the typing test as tall as the keybind table - "fix(cheatsheet): size the window to the tab it is
+showing, not the tallest"), and the Elements page was nine rows of fixed 70px tiles - ~800px with
+the window's chrome - which fits a 1080p panel at scale 1 (970px usable) and on the same panel at 1.25x
 (864 logical) put the window 17px under the bar and 17px under the dock, at 1.5x (720) 44px off the
 top of the screen. The keybinds page had a budget of `screen.height - 220`, a literal standing in
 for "the bar, the dock and the chrome" on one desktop, and the Elements page had none. "The
