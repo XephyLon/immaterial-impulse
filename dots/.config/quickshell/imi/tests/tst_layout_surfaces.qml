@@ -270,4 +270,75 @@ TestCase {
         verify(!Surfaces.isForked(undefined, "DP-1"));
         verify(!Surfaces.isForked({ lockPositions: [] }, "DP-1"));
     }
+
+    // ---- options, forked per KEY -------------------------------------------
+
+    readonly property var optionsState: ({
+        pluginOptions: { monitor: { vertical: false, blurEnabled: true, positionLocked: true } },
+        lockOptions: { monitor: { vertical: true } }
+    })
+
+    function test_a_lock_option_reads_its_own_key_and_inherits_the_rest() {
+        compare(Surfaces.rawOption(optionsState, Surfaces.LOCK, "monitor", "vertical"), true);
+        compare(Surfaces.rawOption(optionsState, Surfaces.LOCK, "monitor", "blurEnabled"), true);
+        compare(Surfaces.rawOption(optionsState, Surfaces.DESKTOP, "monitor", "vertical"), false);
+        compare(Surfaces.rawOption(optionsState, Surfaces.LOCK, "monitor", "missing"), undefined);
+        compare(Surfaces.rawOption(optionsState, Surfaces.LOCK, "other", "vertical"), undefined);
+        compare(Surfaces.rawOption({}, Surfaces.LOCK, "monitor", "vertical"), undefined);
+        compare(Surfaces.rawOption(optionsState, Surfaces.LOCK, "", "vertical"), undefined);
+    }
+
+    function test_a_shared_key_never_forks() {
+        verify(Surfaces.isSharedOptionKey("positionLocked"));
+        verify(Surfaces.isSharedOptionKey("clickThrough"));
+        verify(Surfaces.isSharedOptionKey("__gridSize"));
+        verify(!Surfaces.isSharedOptionKey("vertical"));
+        verify(!Surfaces.isSharedOptionKey("blurEnabled"));
+        const pinned = Surfaces.withOption(optionsState, Surfaces.LOCK, "monitor", "positionLocked", false);
+        compare(pinned.pluginOptions.monitor.positionLocked, false);
+        compare(pinned.lockOptions.monitor.positionLocked, undefined);
+        // A lock map that somehow carries one (an older file, a hand edit)
+        // is ignored: the desktop's answer is the only answer.
+        const stray = { pluginOptions: { m: { positionLocked: true } }, lockOptions: { m: { positionLocked: false } } };
+        compare(Surfaces.rawOption(stray, Surfaces.LOCK, "m", "positionLocked"), true);
+    }
+
+    function test_a_lock_write_lands_in_the_overlay_and_leaves_the_desktop_alone() {
+        const next = Surfaces.withOption(optionsState, Surfaces.LOCK, "monitor", "blurEnabled", false);
+        compare(next.lockOptions.monitor.blurEnabled, false);
+        compare(next.pluginOptions.monitor.blurEnabled, true);
+        compare(next.lockOptions.monitor.vertical, true);
+        verify(next !== optionsState);
+        compare(optionsState.lockOptions.monitor.blurEnabled, undefined);
+        const desktop = Surfaces.withOption(optionsState, Surfaces.DESKTOP, "monitor", "blurEnabled", false);
+        compare(desktop.pluginOptions.monitor.blurEnabled, false);
+        compare(desktop.lockOptions.monitor.blurEnabled, undefined);
+        const fresh = Surfaces.withOption({}, Surfaces.LOCK, "clock", "style", "pixel");
+        compare(fresh.lockOptions.clock.style, "pixel");
+        compare(fresh.pluginOptions, undefined);
+    }
+
+    function test_null_re_inherits_on_the_lock_and_removes_on_the_desktop() {
+        const re = Surfaces.withOption(optionsState, Surfaces.LOCK, "monitor", "vertical", null);
+        compare(Surfaces.rawOption(re, Surfaces.LOCK, "monitor", "vertical"), false);
+        verify(!Surfaces.isOptionsForked(re, "monitor"));
+        const gone = Surfaces.withOption(optionsState, Surfaces.DESKTOP, "monitor", "vertical", null);
+        compare(gone.pluginOptions.monitor.vertical, undefined);
+        compare(Surfaces.rawOption(gone, Surfaces.LOCK, "monitor", "vertical"), true);
+    }
+
+    function test_forked_options_are_answered_and_reset_per_plugin() {
+        verify(Surfaces.isOptionsForked(optionsState, "monitor"));
+        verify(!Surfaces.isOptionsForked(optionsState, "other"));
+        verify(!Surfaces.isOptionsForked({ lockOptions: { m: {} } }, "m"));
+        verify(!Surfaces.isOptionsForked({ lockOptions: ["m"] }, "m"));
+        verify(!Surfaces.isOptionsForked(undefined, "m"));
+        const reset = Surfaces.withoutLockOptions(optionsState, "monitor");
+        compare(Surfaces.rawOption(reset, Surfaces.LOCK, "monitor", "vertical"), false);
+        compare(reset.pluginOptions.monitor.vertical, false);
+        compare(optionsState.lockOptions.monitor.vertical, true);
+        verify(Surfaces.withoutLockOptions(optionsState, "other") === optionsState);
+        const empty = {};
+        verify(Surfaces.withoutLockOptions(empty, "monitor") === empty);
+    }
 }

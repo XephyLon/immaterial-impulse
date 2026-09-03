@@ -280,3 +280,80 @@ function withoutLockLayout(state, screenName) {
     next.lockPositions = lock;
     return next;
 }
+
+// ---- options, forked per KEY -----------------------------------------------
+//
+// A widget's own settings were the one thing that did not fork: position,
+// span and presence each had a lock store, but `pluginOptions[id][key]` was
+// read by the same object on both surfaces (the lock has no widget host of
+// its own - the desktop's widget is cross-faded), so a resource monitor
+// rotated for the lock screen was rotated on the desktop too (the
+// maintainer's report, 2026-09-03).
+//
+// `lockOptions[id][key]` sits beside `pluginOptions` in the same shape, and
+// inherits PER KEY: a key present there is the lock's own value, a key absent
+// reads through to the desktop's. Not the layout's whole-screen snapshot, on
+// purpose - a user who rotates the monitor for the lock still wants its blur
+// to follow the desktop, and "which keys I changed for the lock" is the model
+// the Settings switch shows and its Reset undoes. Writing null removes the
+// lock key, which is the re-inherit.
+//
+// A few keys are policy rather than look and never fork: Edit Mode's pin and
+// click-through have one writer and one meaning, and the span has its own
+// surface path (rawGridSize). Asked on the lock they answer the desktop.
+
+var SHARED_OPTION_KEYS = ["positionLocked", "clickThrough", "__gridSize"];
+
+function isSharedOptionKey(key) {
+    return SHARED_OPTION_KEYS.indexOf(key) !== -1;
+}
+
+// The stored value for a widget's option on a surface, or undefined - the
+// caller supplies the manifest default, as PluginState.option always has.
+function rawOption(state, surface, pluginId, key) {
+    if (!state || !pluginId || !key)
+        return undefined;
+    if (surface === LOCK && !isSharedOptionKey(key)) {
+        var lockPlugin = isMap(state.lockOptions) ? state.lockOptions[pluginId] : undefined;
+        if (isMap(lockPlugin) && lockPlugin[key] !== undefined)
+            return lockPlugin[key];
+    }
+    var plugin = isMap(state.pluginOptions) ? state.pluginOptions[pluginId] : undefined;
+    return isMap(plugin) ? plugin[key] : undefined;
+}
+
+// The next state after writing one option on one surface. A lock write of a
+// forkable key lands in the overlay; everything else is the desktop write
+// PluginState.setOption always did, null removing the key. Never mutates the
+// state passed in.
+function withOption(state, surface, pluginId, key, value) {
+    var next = Object.assign({}, state || {});
+    var storeName = (surface === LOCK && !isSharedOptionKey(key)) ? "lockOptions" : "pluginOptions";
+    var store = Object.assign({}, next[storeName] || {});
+    var plugin = Object.assign({}, store[pluginId] || {});
+    if (value === null || value === undefined) delete plugin[key];
+    else plugin[key] = value;
+    store[pluginId] = plugin;
+    next[storeName] = store;
+    return next;
+}
+
+// Has this widget any setting of its own on the lock? An empty map is not a
+// fork - every key still reads through.
+function isOptionsForked(state, pluginId) {
+    var lockPlugin = state && isMap(state.lockOptions) ? state.lockOptions[pluginId] : undefined;
+    return isMap(lockPlugin) && Object.keys(lockPlugin).length > 0;
+}
+
+// The next state after re-linking one widget's lock settings to the desktop's:
+// its lock map goes. Unchanged (same object) when there was nothing to drop.
+function withoutLockOptions(state, pluginId) {
+    var lock = state && state.lockOptions;
+    if (!isMap(lock) || !(pluginId in lock))
+        return state;
+    var next = Object.assign({}, state);
+    var nextLock = Object.assign({}, lock);
+    delete nextLock[pluginId];
+    next.lockOptions = nextLock;
+    return next;
+}
