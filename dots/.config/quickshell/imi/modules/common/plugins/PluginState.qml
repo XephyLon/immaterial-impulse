@@ -428,13 +428,8 @@ Singleton {
         return next;
     }
 
-    // Data-driven as well as marked (the sizeMode lesson): a `styleLocked`
-    // that arrives AFTER the marker - the legacy Config drain below still
-    // carries one for a first-run upgrade - is folded whenever it is seen,
-    // and the marker alone covers the absent-key case once.
     function migrateClockStyle() {
-        const stored = root.state?.pluginOptions?.clock?.styleLocked;
-        if (stored === undefined && root.migrationRan(root.clockStyleMarker)) return;
+        if (root.migrationRan(root.clockStyleMarker)) return;
         root.state = root.stateWithClockStyleMigrated(root.state);
         writeTimer.restart();
     }
@@ -516,8 +511,6 @@ Singleton {
         nextState.pluginOptions = nextOptions;
         nextState.desktopPositions = nextScreens;
         root.state = nextState;
-        // The drain may have just delivered the clock's legacy styleLocked.
-        root.migrateClockStyle();
         writeTimer.restart();
 
         Config.pendingPluginOptions = ({});
