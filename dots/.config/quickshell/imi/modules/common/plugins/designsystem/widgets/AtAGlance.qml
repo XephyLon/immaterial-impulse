@@ -55,7 +55,7 @@ Item {
     property real _scheduleContentOpacity: 1
 
     // ── Bluetooth Integration ──
-    property var btDevices: BluetoothStatus.connectedDevices
+    property var btDevices: BluetoothStatus.batteryDevices
     property string _displayedBluetoothText: ""
     property string _pendingBluetoothText: ""
     property real _bluetoothContentOpacity: 1
@@ -69,15 +69,15 @@ Item {
     Timer { id: bluetoothFadeTimer; interval: 200; onTriggered: { _displayedBluetoothText = _pendingBluetoothText; _bluetoothContentOpacity = 1; } }
 
     function updateBluetoothInfo() {
-        const devices = BluetoothStatus.connectedDevices.filter(d => d.batteryAvailable);
+        // One lookup for "has a battery" and "how much" - BluetoothStatus's,
+        // so a controller only UPower knows about counts here too.
+        const devices = BluetoothStatus.batteryDevices;
+        const percent = d => Math.round(BluetoothStatus.batteryLevelOf(d) * 100) + "%";
         let text = "";
         if (devices.length === 1) {
-            text = devices[0].name + " \u00b7 " + Math.round(devices[0].battery * 100) + "%";
+            text = devices[0].name + " \u00b7 " + percent(devices[0]);
         } else if (devices.length > 1) {
-            let parts = [];
-            for (let i = 0; i < devices.length; i++)
-                parts.push(Math.round(devices[i].battery * 100) + "%");
-            text = devices.length + " devices \u00b7 " + parts.join(", ");
+            text = devices.length + " devices \u00b7 " + devices.map(percent).join(", ");
         }
 
         const wasVisible = _displayedBluetoothText !== "";

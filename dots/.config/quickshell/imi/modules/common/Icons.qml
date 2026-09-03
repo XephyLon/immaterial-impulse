@@ -28,6 +28,10 @@ Singleton {
             return "mouse";
         if (systemIconName.includes("keyboard"))
             return "keyboard";
+        // BlueZ names a controller input-gaming; the generic fallback hid
+        // it behind the plain Bluetooth mark in the dialog and on the bar.
+        if (systemIconName.includes("gaming") || systemIconName.includes("gamepad") || systemIconName.includes("joystick"))
+            return "stadia_controller";
         return "bluetooth";
     }
 
