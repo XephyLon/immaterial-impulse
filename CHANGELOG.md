@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-11] — 2026-09-03
+
 ### Added
 - **A Bluetooth battery bar widget.** "Bluetooth battery" in Settings > Bar
   draws one ring per connected Bluetooth device that reports a level - the
