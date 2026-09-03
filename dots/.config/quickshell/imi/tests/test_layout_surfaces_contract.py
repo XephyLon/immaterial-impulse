@@ -131,7 +131,7 @@ def test_every_widget_option_read_and_write_names_its_surface():
         "every PluginOptions read and write must pass root.surface:\n" + "\n".join(naked)
     assert "Surfaces.isSharedOptionKey(modelData.key)" in options, \
         "the lock card must hide the shared policy toggles"
-    assert "(!root.onLock && root.offeredSizes.length > 1)" in options, \
+    assert "root.onLock ? [] : GridSizes.offeredSizes(manifest.grid)" in options, \
         "the lock card offers no size row - the lock's span lives in its layout record"
 
     presets = read(ROOT / "scripts/presets.sh")
