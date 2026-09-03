@@ -167,8 +167,8 @@ ColumnLayout {
     // The desktop's span only: the lock's forks in its layout record and is
     // set on the Lockscreen tab (PluginState.gridSize), so the lock card
     // offers no size row.
-    readonly property var offeredSizes: GridSizes.offeredSizes(manifest.grid)
-    readonly property var sizeRows: (!root.onLock && root.offeredSizes.length > 1) ? [{
+    readonly property var offeredSizes: root.onLock ? [] : GridSizes.offeredSizes(manifest.grid)
+    readonly property var sizeRows: root.offeredSizes.length > 1 ? [{
         key: "__gridSize",
         type: "choice",
         label: "Size",
