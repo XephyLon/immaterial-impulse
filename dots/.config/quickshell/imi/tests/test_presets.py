@@ -311,6 +311,56 @@ class PresetTests(unittest.TestCase):
             self.assertEqual(after_old["lockPositions"]["DP-1"]["clock"]["x"], 900,
                              "a preset without lockPositions must not wipe the user's fork")
 
+    def test_the_lock_widget_options_round_trip_and_an_old_preset_keeps_the_overlay(self):
+        """A widget's settings fork per surface (2026-09-03): `lockOptions`
+        rides beside `pluginOptions` under the same `has()` rule as
+        `lockPositions`, and the presetPersist carve-out shields a plugin's
+        lock settings the way it shields its desktop ones."""
+        forked = {
+            "version": 2,
+            "desktopPositions": {},
+            "lockPositions": {},
+            "pluginOptions": {"monitor": {"vertical": False}, "clock": {"style": "pixel"}},
+            "lockOptions": {"monitor": {"vertical": True}},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            config_dir, state_file, presets, env = self._sandbox(Path(directory), forked)
+
+            subprocess.run(["bash", str(presets), "--save", "forked"], env=env, check=True)
+            preset = json.loads((config_dir / "presets/forked.json").read_text())
+            self.assertTrue(preset["_pluginState"]["lockOptions"]["monitor"]["vertical"],
+                            "a saved preset must carry the lock screen's widget options")
+
+            state_file.write_text(json.dumps({
+                "version": 2, "desktopPositions": {}, "lockPositions": {},
+                "pluginOptions": {"monitor": {"vertical": True}},
+                "lockOptions": {"monitor": {"vertical": False}, "clock": {"style": "digital"}},
+            }))
+            subprocess.run(["bash", str(presets), "--apply", "forked"], env=env, check=True)
+            restored = json.loads(state_file.read_text())
+            self.assertFalse(restored["pluginOptions"]["monitor"]["vertical"])
+            self.assertTrue(restored["lockOptions"]["monitor"]["vertical"])
+            self.assertNotIn("clock", restored["lockOptions"], "a preset's complete map replaces the current one")
+
+            old = json.loads((config_dir / "presets/forked.json").read_text())
+            del old["_pluginState"]["lockOptions"]
+            (config_dir / "presets/older.json").write_text(json.dumps(old))
+            state_file.write_text(json.dumps(forked))
+            subprocess.run(["bash", str(presets), "--apply", "older"], env=env, check=True)
+            after_old = json.loads(state_file.read_text())
+            self.assertTrue(after_old["lockOptions"]["monitor"]["vertical"],
+                            "a preset without lockOptions must not wipe the user's lock settings")
+
+            # presetPersist shields the plugin's LOCK settings too.
+            shielded = dict(forked, presetPersist={"monitor": True},
+                            lockOptions={"monitor": {"vertical": False}, "other": {"a": 1}})
+            state_file.write_text(json.dumps(shielded))
+            subprocess.run(["bash", str(presets), "--apply", "forked"], env=env, check=True)
+            after = json.loads(state_file.read_text())
+            self.assertFalse(after["lockOptions"]["monitor"]["vertical"],
+                             "a persisted plugin keeps its current lock settings through apply")
+            self.assertNotIn("other", after["lockOptions"])
+
     def test_the_lock_widget_choice_round_trips_and_an_old_preset_keeps_the_fork(self):
         """The other half of the same fork: WHICH widgets the lock shows.
 
