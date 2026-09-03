@@ -183,11 +183,13 @@ enum names (`Cookie4Sided`, `Heart`, …); an unrecognised name falls back to `C
 whenever the value *is* a shape — a 31-entry name-chip row is unreadable even wrapped.
 
 Options that belong together take a `"group": "<heading>"` and, on any of them, a `"groupIcon"`.
-Consecutive options with the same group render as one titled card - the icon and the name as a
-subsection header, the rows on a grouped list's plates - shown only while one of its rows is, so the
-heading carries the shared word and the labels do not ("Cookie clock" over `Sides`, `Hour marks`,
-`Dial style`, rather than eleven labels each starting "Cookie:"). Keep a group's options together in
-the manifest: the grouping is by run, and the same name twice apart is two cards.
+Consecutive options with the same group render under one header - a hairline, then the icon and the
+name - shown only while one of its rows is, so the heading carries the shared word and the labels do
+not ("Cookie clock" over `Sides`, `Hour marks`, `Dial style`, rather than eleven labels each starting
+"Cookie:"). Inside a group the rows pack: consecutive booleans two to a line, choice rows with the
+chips stacked under the label, everything else a full row. Keep a group's options together in the
+manifest: the grouping is by run, and the same name twice apart is two headers. Order booleans next
+to each other if you want them paired.
 
 An option can be shown only while another option has a given value. `"visibleWhen"` takes a
 rule — `{ "key": "style", "in": ["cookie"] }`, `{ "key": "quoteEnable", "equals": true }`, a bare

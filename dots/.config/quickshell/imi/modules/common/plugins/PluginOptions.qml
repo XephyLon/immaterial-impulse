@@ -64,6 +64,26 @@ ColumnLayout {
     function runVisible(run) {
         return root.visibleOptions(run).length > 0;
     }
+    // How a group's rows pack. Consecutive booleans go two to a line - the
+    // Bar page's switch pairs - since a switch is narrow and five of them
+    // one under the other were most of the cookie clock's height; anything
+    // else is a line of its own, in manifest order. Choice rows inside a
+    // group stack (label above, chips beneath) so four hand rows read as one
+    // aligned block rather than a mix of inline and wrapped ones.
+    function packLines(options) {
+        const lines = [];
+        for (let index = 0; index < options.length; index++) {
+            const option = options[index];
+            const next = options[index + 1];
+            if (option.type === "boolean" && next && next.type === "boolean") {
+                lines.push({ kind: "pair", options: [option, next] });
+                index++;
+            } else {
+                lines.push({ kind: "single", options: [option] });
+            }
+        }
+        return lines;
+    }
     // The heading's glyph: the first `groupIcon` any option of the run
     // declares (the clock reuses its style chips' icons), else the generic one.
     function runIcon(run) {
@@ -155,39 +175,58 @@ ColumnLayout {
             Layout.preferredHeight: shown ? implicitHeight : 0
             sourceComponent: modelData.group === "" ? plainRun : groupedRun
 
-            // An ungrouped run sits on the same plates, without a header, so
-            // every option row in the card shares one surface grammar.
+            // An ungrouped run is plain rows, as the card always drew them.
             Component {
                 id: plainRun
-                GroupedList {
-                    Layout.fillWidth: true
-                    model: root.visibleOptions(runLoader.modelData)
-                    rowDelegate: Component {
-                        OptionRowItem {
-                            property var modelData: null
-                            optionData: modelData
-                        }
+                ColumnLayout {
+                    spacing: root.spacing
+                    Repeater {
+                        model: runLoader.modelData.options
+                        delegate: optionRow
                     }
                 }
             }
-            // A group is a titled card: the subsection header carries the
-            // group's icon and name, and the rows sit on GroupedList's plates
-            // like every grouped row in Settings, so the boundary between
-            // groups is a surface and not a line of small grey text - which
-            // read as more of the same list. The model is the run's VISIBLE
-            // options: a model-driven group draws every entry it is given.
+            // A group is a header with a hairline above it - the way "Widget
+            // behaviour" below separates itself - and its rows packed under
+            // it: consecutive switches two to a line, choice rows stacked,
+            // everything else a full row. Not a card and not plates: surfaces
+            // around rows that are already controls read as one more list,
+            // and their padding cost the height the packing exists to save.
             Component {
                 id: groupedRun
-                ContentSubsection {
-                    icon: root.runIcon(runLoader.modelData)
-                    title: runLoader.modelData.group
-                    GroupedList {
+                ColumnLayout {
+                    spacing: root.spacing
+                    Rectangle {
                         Layout.fillWidth: true
-                        model: root.visibleOptions(runLoader.modelData)
-                        rowDelegate: Component {
-                            OptionRowItem {
-                                property var modelData: null
-                                optionData: modelData
+                        Layout.topMargin: Appearance.spacing.space100
+                        implicitHeight: 1
+                        color: Appearance.colors.colOutlineVariant
+                    }
+                    ContentSubsection {
+                        icon: root.runIcon(runLoader.modelData)
+                        title: runLoader.modelData.group
+                        Repeater {
+                            model: root.packLines(root.visibleOptions(runLoader.modelData))
+                            delegate: Loader {
+                                id: lineLoader
+                                required property var modelData
+                                Layout.fillWidth: true
+                                sourceComponent: modelData.kind === "pair" ? pairLine : singleLine
+                                Component {
+                                    id: pairLine
+                                    ConfigRow {
+                                        uniform: true
+                                        OptionRowItem { optionData: lineLoader.modelData.options[0] }
+                                        OptionRowItem { optionData: lineLoader.modelData.options[1] }
+                                    }
+                                }
+                                Component {
+                                    id: singleLine
+                                    OptionRowItem {
+                                        optionData: lineLoader.modelData.options[0]
+                                        stackChoices: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -337,6 +376,8 @@ ColumnLayout {
         id: optionLoader
         Layout.fillWidth: true
         property var optionData: null
+        // A choice row in a group stacks its chips under its label.
+        property bool stackChoices: false
         // `enabledWhen` and `visibleWhen`, one evaluator - see
         // option_visibility.js for what each spells.
         visible: OptionVisibility.visible(optionData, key => root.readOption(key))
@@ -373,6 +414,7 @@ ColumnLayout {
             id: choiceOption
             ConfigSelectionArray {
                 Layout.fillWidth: true
+                forceStacked: optionLoader.stackChoices
                 text: optionLoader.optionData.label
                 icon: optionLoader.optionData.icon || "tune"
                 options: optionLoader.optionData.choices || []
