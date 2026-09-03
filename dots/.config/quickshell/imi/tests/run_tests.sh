@@ -1529,6 +1529,15 @@ if ! python3 "$SCRIPT_DIR/test_ripple_layer_gate.py"; then
     exit 1
 fi
 
+# A GroupButton's size animates for a press, never for a layout settling: the
+# settings rows shook for ~20 frames on the first open while every chip's
+# width travelled to the value the window's first polish had just given it.
+echo "Running group button settle tests..."
+if ! python3 "$SCRIPT_DIR/test_group_button_settle.py"; then
+    echo "Group button settle tests failed."
+    exit 1
+fi
+
 # WHEN the settings host builds its fifteen pages. It used to build all of them
 # synchronously in one turn at Config.ready - 622ms of frozen GUI thread paid by
 # the whole shell at startup, measured on the harness's own heartbeat, and

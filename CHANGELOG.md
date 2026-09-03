@@ -32,11 +32,16 @@ own repo; the installer pins which revision it builds.
   a new change clears the redo history.
 
 ### Fixed
-- **The first open of Settings after a restart no longer stutters.** The
-  window blocked the shell for about sixteen frames while fourteen pages
-  that were not on screen were moved into it and laid out; pages built
-  ahead now wait outside the window until first shown. Every button in the
-  shell also stops rendering through its own offscreen layer while idle.
+- **The settings rows no longer shake on the first open.** Every chip in
+  every selection row grew for twenty frames while its row wrapped and
+  unwrapped behind it: the button animated a width the window's first
+  layout had just given it. A button's size now travels only under the
+  pointer, for the press bounce; a layout settling lands.
+- **The first open of Settings after a restart blocks the shell far less.**
+  It froze about sixteen frames while fourteen pages that were not on
+  screen were moved into the new window and laid out; pages built ahead
+  now wait outside the window until first shown. Every button in the shell
+  also stops rendering through its own offscreen layer while idle.
 - **A labelled row of chips that cannot fit stacks them under the label.**
   The clock's "minute hand" row drew its chips over the last word.
 - **The edge shadow is offered only where Show Background applies.** It was

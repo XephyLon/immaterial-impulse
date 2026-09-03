@@ -2751,6 +2751,20 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   STATE belongs to a `HoverHandler` there; the cursor and the clicks stay with the MouseArea, which
   is the same channels rule as 05bf3013f, applied the other way round.
   0b9a5df1e ("feat(media): the transport controls adopt the interaction model").
+- **A layout settling lands; only a press travels.** `GroupButton` animated EVERY `implicitWidth` and
+  `implicitHeight` change with the click-bounce tier, and a window created after its rows were built
+  polishes their content on its first frames (layouts never polish without a window — see the page
+  parking above), so every chip's width jumped to its real value right then and the Behavior turned
+  the jump into travel: ~20 frames of chips growing ~2.5px a frame while the row's `Flow` wrapped and
+  unwrapped behind them, the "options shaking" reported on the first open of Settings. Probed on the
+  "Auto dark/light" row in a nested Hyprland: natural width 195 → 245 in 2.5px steps, Flow height
+  flapping 33 ↔ 68 on alternate frames. The bounce is press feedback and the pointer is on the
+  button when it presses, so the Behaviors are gated on `root.hovered` — the gate
+  `AndroidQuickToggleButton` already used for the same reason. After: 195 → 252 in one burst inside
+  the open's own polish, before any frame, and the Flow settles once. The general rule: a `Behavior`
+  on a size or position that a LAYOUT can write needs a gate that names the user's action, or it
+  animates the layout's arithmetic. `tests/test_group_button_settle.py` pins the gate.
+  8bb388202 ("fix(group-button): a layout settling lands; only a press travels").
 - **A Behavior whose animation reads its tier from a binding carries the PREVIOUS transition.** The
   shared interaction model (`Appearance.interaction`, decided in `modules/common/interaction_motion.js`)
   gives every control the same five states, and each pair of states has its own duration and curve -
