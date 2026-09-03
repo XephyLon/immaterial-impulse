@@ -42,30 +42,6 @@
       ]
     },
     {
-      "key": "styleLocked",
-      "type": "choice",
-      "label": "Clock style (locked)",
-      "icon": "shield_watch",
-      "default": "cookie",
-      "choices": [
-        {
-          "displayName": "Digital",
-          "icon": "timer_10",
-          "value": "digital"
-        },
-        {
-          "displayName": "Cookie",
-          "icon": "cookie",
-          "value": "cookie"
-        },
-        {
-          "displayName": "Pixel",
-          "icon": "grid_view",
-          "value": "pixel"
-        }
-      ]
-    },
-    {
       "key": "showOnlyWhenLocked",
       "type": "boolean",
       "label": "Show only when locked",
@@ -79,19 +55,9 @@
       "icon": "vertical_distribute",
       "default": false,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -104,19 +70,9 @@
       "icon": "date_range",
       "default": true,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -129,19 +85,9 @@
       "icon": "animation",
       "default": true,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -154,19 +100,9 @@
       "icon": "activity_zone",
       "default": true,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -179,19 +115,9 @@
       "icon": "palette",
       "default": "",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "choices": [
@@ -217,19 +143,9 @@
       "placeholder": "Google Sans Flex",
       "maxLength": 64,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -244,19 +160,9 @@
       "from": 1,
       "to": 1000,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -271,19 +177,9 @@
       "from": 50,
       "to": 700,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -298,19 +194,9 @@
       "from": 25,
       "to": 125,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -325,19 +211,9 @@
       "from": 0,
       "to": 100,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "digital"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "digital"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "digital"
         ]
       },
       "group": "Digital clock",
@@ -350,19 +226,9 @@
       "icon": "airwave",
       "default": false,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "group": "Cookie clock",
@@ -375,19 +241,9 @@
       "icon": "wand_stars",
       "default": false,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "group": "Cookie clock",
@@ -402,19 +258,9 @@
       "from": 0,
       "to": 40,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "group": "Cookie clock",
@@ -427,19 +273,9 @@
       "icon": "autoplay",
       "default": false,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "group": "Cookie clock",
@@ -452,19 +288,9 @@
       "icon": "brightness_7",
       "default": false,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "group": "Cookie clock",
@@ -477,19 +303,9 @@
       "icon": "timer_10",
       "default": true,
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "group": "Cookie clock",
@@ -502,19 +318,9 @@
       "icon": "graph_6",
       "default": "full",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "choices": [
@@ -549,19 +355,9 @@
       "icon": "highlighter_size_2",
       "default": "fill",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "choices": [
@@ -596,19 +392,9 @@
       "icon": "eraser_size_1",
       "default": "medium",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "choices": [
@@ -648,19 +434,9 @@
       "icon": "pen_size_1",
       "default": "dot",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "choices": [
@@ -695,19 +471,9 @@
       "icon": "date_range",
       "default": "bubble",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "cookie"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "cookie"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "cookie"
         ]
       },
       "choices": [
@@ -742,19 +508,9 @@
       "icon": "screen_rotation",
       "default": "vertical",
       "visibleWhen": {
-        "anyOf": [
-          {
-            "key": "style",
-            "in": [
-              "pixel"
-            ]
-          },
-          {
-            "key": "styleLocked",
-            "in": [
-              "pixel"
-            ]
-          }
+        "key": "style",
+        "in": [
+          "pixel"
         ]
       },
       "choices": [
