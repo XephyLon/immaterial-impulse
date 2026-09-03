@@ -1547,6 +1547,15 @@ if ! python3 "$SCRIPT_DIR/test_applycolor_tmux_panes.py"; then
     exit 1
 fi
 
+# The Bluetooth battery widget: one numeric lookup on BluetoothStatus feeds
+# the bar rings, At-a-glance and the dialog suffix; the widget follows the
+# ring rule and deep-links its click to the dialog.
+echo "Running Bluetooth battery widget contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bluetooth_battery_widget.py"; then
+    echo "Bluetooth battery widget contract tests failed."
+    exit 1
+fi
+
 # WHEN the settings host builds its fifteen pages. It used to build all of them
 # synchronously in one turn at Config.ready - 622ms of frozen GUI thread paid by
 # the whole shell at startup, measured on the harness's own heartbeat, and

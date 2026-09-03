@@ -45,13 +45,15 @@ class BarIconRingContractTests(unittest.TestCase):
         self.assertEqual(media.count("ClippedOutlineCircularProgress {"), 2, "horizontal and vertical")
 
     def test_the_filled_progress_ring_stays_the_m3_or_opted_in_shape(self):
-        # Resource: the user's own Filled/Outline knob. Docker: the M3 branch.
+        # Resource: the user's own Filled/Outline knob. Docker and the Bluetooth
+        # battery widget: the M3 branch (test_bluetooth_battery_widget.py pins
+        # the spelling).
         # LockSurface predates the rule and is not a bar widget.
         users = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "modules").rglob("*.qml")
                        if "ClippedFilledCircularProgress {" in p.read_text(encoding="utf-8")
                        and p.name != "ClippedFilledCircularProgress.qml")
-        self.assertEqual(users, ["modules/imi/bar/DockerPlugin.qml", "modules/imi/bar/Resource.qml",
-                                 "modules/imi/lock/LockSurface.qml"], users)
+        self.assertEqual(users, ["modules/imi/bar/BluetoothBattery.qml", "modules/imi/bar/DockerPlugin.qml",
+                                 "modules/imi/bar/Resource.qml", "modules/imi/lock/LockSurface.qml"], users)
         docker = source("modules/imi/bar/DockerPlugin.qml")
         self.assertIn("root.isMaterial ? filledRing : outlineRing", docker)
 

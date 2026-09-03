@@ -63,6 +63,10 @@ SECTION_WAVES = {
         "hero_band": ["batteryHeaderRow"],
         "cascades": ["batteryCards"],
     },
+    f"{BAR}/BluetoothBatteryPopup.qml": {
+        "hero_band": ["bluetoothHeaderRow"],
+        "cascades": ["deviceCards"],
+    },
     f"{BAR}/ResourcesPopup.qml": {
         "hero_band": ["ramCpuColumn"],
         "cascades": ["swapDiskColumn", "gpuColumn"],
