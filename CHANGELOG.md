@@ -19,6 +19,11 @@ own repo; the installer pins which revision it builds.
   without becoming it.
 
 ### Fixed
+- **tmux panes stay translucent after a new shell opens in them.** rc-9 stopped
+  the colour push from handing a pane the terminal's default colours, but the
+  shell rc files (zsh and fish) still sent the full sequence file on every new
+  shell, and tmux starts one in every pane - so a new pane went opaque again.
+  Inside tmux the rc files now send the pane-safe file.
 - **The cheatsheet fits the screen again.** The window was sized to its
   tallest page, so the typing test and the periodic table opened as tall as
   the keybind table - past both screen edges on a 1080p display. The window

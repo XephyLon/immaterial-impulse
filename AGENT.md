@@ -426,6 +426,14 @@ of their themes.)
   the tmux client's own pty still gets the full set and the panes inherit from it.
   `tests/test_applycolor_tmux_panes.py` runs the filter and pins the routing.
   c7dbe2340 ("fix(colors): a tmux pane never receives the terminal's default colours").
+  The push is one of TWO roads into a pane: the shell rc is the other. `dots/.config/zshrc.d/
+  dots-hyprland.zsh` and `dots/.config/fish/config.fish` `cat` the generated file on every shell
+  start, tmux starts a shell in every new pane (its `default-command` here is fish), so the panes
+  came back opaque the day after the push was fixed — `#{pane_bg}` #1b1b17 on both panes of a fresh
+  session. Under `$TMUX` the rc files send `sequences-pane.txt` and never the full file; the same
+  test pins both rc files. A fix that closes one road into a state and leaves the other open is
+  half a fix: when a sequence is filtered on its way somewhere, list every writer of that sequence
+  first. ("fix(shell-rc): a shell inside tmux sends the pane-safe sequences")
 
 ## The suite checkout, and why the updater cannot just reset it
 
