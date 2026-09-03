@@ -262,8 +262,17 @@ Scope { // Scope
                             Persistent.states.cheatsheet.tabIndex = currentIndex;
                         }
 
-                        implicitWidth: Math.max.apply(null, contentChildren.map(child => child.implicitWidth || 0))
-                        implicitHeight: Math.max.apply(null, contentChildren.map(child => child.implicitHeight || 0))
+                        // The window is fixed to this size, so it must be the
+                        // CURRENT page's size, not the tallest page's. Sizing to
+                        // the max over every page (the keybind table is by far
+                        // the tallest) forced the typing test and the periodic
+                        // table to open as tall as the keybinds - the whole
+                        // window ran past the screen. Index the current page's
+                        // Loader, which the Repeater always builds, rather than
+                        // `currentItem`, whose implicit size is not settled yet
+                        // on the first frame and collapses the window.
+                        implicitWidth: (swipeView.contentChildren[swipeView.currentIndex]?.implicitWidth) ?? 0
+                        implicitHeight: (swipeView.contentChildren[swipeView.currentIndex]?.implicitHeight) ?? 0
 
                         clip: true
                         layer.enabled: true
