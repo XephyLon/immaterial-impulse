@@ -83,5 +83,15 @@ class SelectionArrayFlowTests(unittest.TestCase):
                          "the Bar & Screen cards must stack, or the chip rows cannot fit")
 
 
+    # A labelled row whose chips cannot share the line stacks them beneath the
+    # label instead of wrapping them beside it (the clock's "Minute hand" row
+    # put "Bold" alone on a second line next to a centred label).
+    def test_a_labelled_row_that_cannot_fit_stacks_its_chips_under_the_label(self):
+        text = strip_comments(SOURCE.read_text(encoding="utf-8")) if "SOURCE" in globals() else strip_comments(ROW.read_text(encoding="utf-8"))
+        self.assertRegex(text, r"readonly property bool stacked: root\.text !== \"\"\s*&& labelGroup\.implicitWidth \+ rowGrid\.columnSpacing \+ buttonsFlow\.naturalWidth > rowGrid\.width")
+        self.assertRegex(text, r"Layout\.row: rowGrid\.stacked \? 1 : 0")
+        self.assertRegex(text, r"Layout\.columnSpan: rowGrid\.stacked \? 3 : 1")
+
+
 if __name__ == "__main__":
     unittest.main()

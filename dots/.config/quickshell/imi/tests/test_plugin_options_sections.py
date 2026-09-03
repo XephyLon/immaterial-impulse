@@ -119,13 +119,19 @@ class TheTwoGroupsStaySeparate(unittest.TestCase):
         # The plugin's own options come in runs now - grouped under a heading
         # or plain - and both run shapes draw their rows through the delegate,
         # as does the size row.
-        for model in ("runLoader.modelData.options", "root.sizeRows"):
-            self.assertRegex(
-                self.source,
-                rf"model: {re.escape(model)}\s*\n\s*delegate: optionRow",
-                f"{model} no longer draws through the shared row delegate")
-        self.assertEqual(self.source.count("delegate: optionRow"), 3,
-                         "every group of rows draws through the one delegate: the plain run, the grouped run, the size row")
+        self.assertRegex(
+            self.source,
+            r"model: root\.sizeRows\s*\n\s*delegate: optionRow",
+            "root.sizeRows no longer draws through the shared row delegate")
+        self.assertEqual(self.source.count("model: root.visibleOptions(runLoader.modelData)"), 2,
+                         "both runs draw the run's visible options on a grouped list")
+        self.assertEqual(self.source.count("delegate: optionRow"), 1,
+                         "the size row draws through the one delegate")
+        # Both runs of the widget's own options are GroupedLists, whose plates
+        # load the same row item through their rowDelegate - one OptionRowItem,
+        # two ways in.
+        self.assertEqual(self.source.count("component OptionRowItem: Loader"), 1)
+        self.assertEqual(len(re.findall(r"rowDelegate: Component \{\s*OptionRowItem \{", self.source)), 2)
 
 
 class TheHostBooleansAreAToggleBar(unittest.TestCase):

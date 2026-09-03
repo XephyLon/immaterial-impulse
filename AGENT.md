@@ -6648,12 +6648,13 @@ text control ("feat(editMode): one toolbar with the tabs first, and undo/redo").
 **A plugin's options say their group once, as a heading, and a labelled chip row wraps.** The clock
 declared eleven rows labelled "Cookie: ..." (and its digital and pixel rows the same way), which read
 as a list of one word, and its "Cookie: minute hand" row lost its last word under five chips. Manifest
-options take `"group"`; `PluginOptions` renders each consecutive run of one group under a
-`ContentSubsection` titled with it, shown only while one of its rows is, and the labels drop the
-prefix (`docs/PLUGINS.md`; `tests/test_clock_options_contract.py` refuses a style-bound clock row
-without a group or with the prefix). `ConfigSelectionArray`'s Flow fills on the labelled path too,
-capped at its natural width, and the label holds `Layout.minimumWidth` at its implicit width, so a
-row short of room wraps the chips instead of drawing them over the label
+options take `"group"` (and a `"groupIcon"`); `PluginOptions` renders each consecutive run of one
+group as a titled card - a `ContentSubsection` header with the icon, the visible rows on a
+`GroupedList`'s plates (a bare heading over plain rows read as more of the same list, "more cryptic
+than before") - shown only while one of its rows is, and the labels drop the prefix (`docs/PLUGINS.md`; `tests/test_clock_options_contract.py` refuses a style-bound clock row
+without a group or with the prefix). `ConfigSelectionArray`'s row is a grid: a labelled row whose chips
+cannot share the line STACKS them beneath the label, right-aligned (wrapping beside a centred label
+put "Bold" alone on a second line), and an unlabelled row still fills and wraps
 ("feat(plugins): options group under a heading instead of repeating it in every label",
 "fix(settings): a labelled segmented row wraps its chips instead of covering its label").
 
