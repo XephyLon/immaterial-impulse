@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+import qs
 import qs.modules.common
 import qs.modules.common.models
 import qs.modules.common.widgets
@@ -25,65 +26,32 @@ Item {
     // Falls back to a YouTube thumbnail when a browser player gives no
     // art (empty mpris:artUrl) but xesam:url is a watch link.
     property var artUrl: MediaArt.resolve(player?.trackArtUrl ?? "", player?.metadata)
-    property string artDownloadLocation: Directories.coverArt
-    property string artFileName: Qt.md5(artUrl)
-    property string artFilePath: `${artDownloadLocation}/${artFileName}`
+    MediaArtSource {
+        id: artSource
+        artUrl: root.artUrl
+    }
+    readonly property string displayedArtFilePath: artSource.displayedArtFilePath
+    readonly property bool downloaded: artSource.downloaded
     property color artDominantColor: Config.options.sidebar.media.artColors
         ? ColorUtils.mix(
-            (colorQuantizer?.colors[0] ?? Appearance.colors.colPrimary),
+            (artSource.colors[0] ?? Appearance.colors.colPrimary),
             Appearance.colors.colPrimaryContainer,
             0.8
           )
         : Appearance.colors.colPrimaryContainer
-    property bool downloaded: false
-    property list<real> visualizerPoints: []
-    property real maxVisualizerValue: 1000
-    property int visualizerSmoothing: 2
-    property real radius
 
-    property string displayedArtFilePath: root.downloaded ? Qt.resolvedUrl(artFilePath) : ""
-
+    // Poke the player for a fresh position only while this control can be seen.
+    // The left sidebar is built once and never destroyed, so without the open
+    // gate this fired every updateInterval for the whole session whenever any
+    // player was playing, re-evaluating position bindings nothing was showing.
     Timer {
-        running: root.player?.playbackState == MprisPlaybackState.Playing
+        running: GlobalStates.sidebarLeftOpen
+            && root.player?.playbackState == MprisPlaybackState.Playing
         interval: Config.options.resources.updateInterval
         repeat: true
-        onTriggered: root.player?.positionChanged()  
+        onTriggered: root.player?.positionChanged()
     }
 
-    onArtFilePathChanged: {
-        if (!root.artUrl || root.artUrl.length == 0) {
-            // Never assign artDominantColor imperatively: it has a declarative
-            // binding (to the quantizer, gated by the artColors option), and a
-            // write here destroyed it, freezing the tint at a grey after the
-            // first art-less moment - which is why the sidebar showed no cover
-            // colour until a full restart caught art already present. Clearing
-            // `downloaded` empties the quantizer source, and the binding falls
-            // back to the theme colour on its own.
-            root.downloaded = false
-            return
-        }
-        coverArtDownloader.targetFile = root.artUrl
-        coverArtDownloader.artFilePath = root.artFilePath
-        root.downloaded = false
-        coverArtDownloader.running = true
-    }
-
-    Process {
-        id: coverArtDownloader
-        property string targetFile: root.artUrl
-        property string artFilePath: root.artFilePath
-        // Positional args ($1/$2), never spliced into the script body: targetFile
-        // is MPRIS artUrl (attacker-controllable), so interpolation was injectable.
-        command: ["bash", "-c", '[ -f "$1" ] || curl -sSL "$2" -o "$1"', "bash", artFilePath, targetFile]
-        onExited: (exitCode, exitStatus) => { root.downloaded = true }
-    }
-
-    ColorQuantizer {
-        id: colorQuantizer
-        source: root.displayedArtFilePath
-        depth: 0
-        rescaleSize: 1
-    }
 
     property QtObject blendedColors: AdaptedMaterialScheme {
         color: artDominantColor
@@ -290,9 +258,11 @@ Item {
                             highlightColor: blendedColors.colPrimary
                             trackColor: blendedColors.colSecondaryContainer
                             handleColor: blendedColors.colPrimary
-                            value: (root?.player?.position ?? 0) / (root?.player?.length ?? 1)
-                            onMoved: {root.player.position = value * root.player.length
-                                lyricsComp.restartLyrics()
+                            value: (root.player?.length ?? 0) > 0 ? root.player.position / root.player.length : 0
+                            onMoved: {
+                                // No lyrics refetch on seek: LyricsService
+                                // re-anchors from the new position on its own.
+                                root.player.position = value * root.player.length
                             }
                         }
                     }
@@ -309,7 +279,7 @@ Item {
                             wavy: root.player?.isPlaying ?? false  
                             highlightColor: blendedColors.colPrimary
                             trackColor: blendedColors.colSecondaryContainer
-                            value: (root.player?.position ?? 0) / (root.player?.length ?? 1)
+                            value: (root.player?.length ?? 0) > 0 ? root.player.position / root.player.length : 0
                         }
                     }
                 }

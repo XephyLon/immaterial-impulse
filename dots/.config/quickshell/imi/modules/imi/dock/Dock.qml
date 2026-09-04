@@ -370,7 +370,6 @@ Scope {
                                         Layout.topMargin: Appearance.spacing.space150
                                         Layout.bottomMargin: Appearance.spacing.space100
                                         Layout.leftMargin: 0
-                                        buttonPadding: dockRow.padding
                                     }
 
                                     Repeater {

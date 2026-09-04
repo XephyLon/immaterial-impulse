@@ -153,8 +153,8 @@ Item {
                                 highlightColor: root.blendedColors.colPrimary
                                 trackColor: root.blendedColors.colSecondaryContainer
                                 handleColor: root.blendedColors.colPrimary
-                                value: root.player?.position / root.player?.length
-                                onMoved: root.player.position = value * root.player.length
+                                value: (root.player?.length ?? 0) > 0 ? root.player.position / root.player.length : 0
+                                onMoved: if (root.player) root.player.position = value * root.player.length
                             }
                         }
 
@@ -170,7 +170,7 @@ Item {
                                 wavy: root.player?.isPlaying
                                 highlightColor: root.blendedColors.colPrimary
                                 trackColor: root.blendedColors.colSecondaryContainer
-                                value: root.player?.position / root.player?.length
+                                value: (root.player?.length ?? 0) > 0 ? root.player.position / root.player.length : 0
                             }
                         }
                     }
@@ -195,7 +195,7 @@ Item {
                     property real size: 44
                     implicitWidth: size
                     implicitHeight: size
-                    downAction: () => root.player.togglePlaying()
+                    downAction: () => root.player?.togglePlaying()
 
                     buttonRadius: root.player?.isPlaying ? Appearance?.rounding.normal : size / 2
                     colBackground: root.player?.isPlaying ? root.blendedColors.colPrimary : root.blendedColors.colSecondaryContainer

@@ -18,25 +18,21 @@ Item {
     id: root
     required property MprisPlayer player
     property var artUrl: MediaArt.resolve(player?.trackArtUrl ?? "", player?.metadata)
-    property string artDownloadLocation: Directories.coverArt
-    property string artFileName: Qt.md5(artUrl)
-    property string artFilePath: `${artDownloadLocation}/${artFileName}`
+    MediaArtSource {
+        id: artSource
+        artUrl: root.artUrl
+    }
+    readonly property string displayedArtFilePath: artSource.displayedArtFilePath
+    readonly property bool downloaded: artSource.downloaded
     property color artDominantColor: ColorUtils.mix(
-        (colorQuantizer?.colors[0] ?? Appearance.colors.colPrimary),
+        (artSource.colors[0] ?? Appearance.colors.colPrimary),
         Appearance.colors.colPrimaryContainer,
         0.8) || Appearance.m3colors.m3secondaryContainer
-    property bool downloaded: false
     property list<real> visualizerPoints: []
     property real maxVisualizerValue: 1000
     property int visualizerSmoothing: 2
     property real radius
     property bool showLyrics: false
-
-    property string displayedArtFilePath: {
-        if (!root.downloaded) return ""
-        if (root.artUrl.startsWith("file://")) return root.artUrl
-        return Qt.resolvedUrl(artFilePath)
-    }
 
     property QtObject blendedColors: AdaptedMaterialScheme {
         color: artDominantColor
@@ -47,51 +43,6 @@ Item {
         interval: Config.options.resources.updateInterval
         repeat: true
         onTriggered: root.player.positionChanged()
-    }
-
-    onArtFilePathChanged: {
-        if (!root.artUrl || root.artUrl.length === 0) {
-            // Do NOT assign artDominantColor here: it has a declarative binding
-            // (to the quantizer, above), and an imperative write destroys that
-            // binding for good - after which the tint never tracked a later
-            // track and only a full restart rebuilt it. The binding already
-            // falls back to the theme colour when there is no art, so clearing
-            // `downloaded` (which empties displayedArtFilePath -> the quantizer)
-            // is enough; the colour follows on its own.
-            root.downloaded = false
-            return
-        }
-
-        if (root.artUrl.startsWith("file://")) {
-            root.downloaded = true
-            return
-        }
-
-        coverArtDownloader.targetFile = root.artUrl
-        coverArtDownloader.artFilePath = root.artFilePath
-        root.downloaded = false
-        coverArtDownloader.running = true
-    }
-
-    Process {
-        id: coverArtDownloader
-        property string targetFile: root.artUrl
-        property string artFilePath: root.artFilePath
-        // Pass path/URL as positional args ($1/$2), never interpolated into the
-        // script body: artUrl comes from MPRIS metadata (any session-bus peer,
-        // incl. a browser tab's Media Session artwork), so splicing it into the
-        // shell string was a command-injection hole.
-        command: ["bash", "-c", '[ -f "$1" ] || curl -4 -sSL "$2" -o "$1"', "bash", artFilePath, targetFile]
-        onExited: (exitCode, exitStatus) => {
-            root.downloaded = true
-        }
-    }
-
-    ColorQuantizer {
-        id: colorQuantizer
-        source: root.displayedArtFilePath
-        depth: 0
-        rescaleSize: 1
     }
 
     StyledRectangularShadow {
