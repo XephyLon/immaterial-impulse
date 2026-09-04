@@ -12,6 +12,28 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **A Wallpaper Engine sidebar in the wallpaper selector.** Browsing WE
+  wallpapers, the selector gains a settings sidebar: frame rate, scaling,
+  audio and volume, the audio-reactive recorder, mouse/parallax/particles,
+  and each wallpaper's own project.json properties — set globally or per
+  wallpaper. Broken wallpapers are flagged by a compatibility scan. Browsing
+  local files instead, the sidebar is a "places" rail.
+- **A crop picker for the "Fill" scale mode.** When a Wallpaper Engine scene
+  or image is larger than the monitor, its thumbnail becomes a section
+  selector — drag to choose which part is shown, and the wallpaper pans live.
+  The thumbnail shows the real scene grabbed from the renderer, not the
+  wallpaper's (often portrait) preview image.
+- **A Quality dial for Wallpaper Engine wallpapers.** Native / High / Balanced
+  / Low renders the wallpaper at a fraction of native and upscales. It cuts
+  real work for video wallpapers; for a heavy scene the frame rate is the
+  better lever, and the control says so.
+
+### Fixed
+- **The dedicated GPU is left asleep.** Resource polling no longer wakes a
+  runtime-suspended NVIDIA card every tick to read its stats, and the
+  wallpaper decode is bounded to what a screen can actually draw.
+
 ## [1.0.0-rc-12] — 2026-09-03
 
 ### Added
