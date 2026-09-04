@@ -247,9 +247,19 @@ ColumnLayout {
                             // cropped to that aspect with the viewport
                             // rectangle over it. Everything - the viewport
                             // maths and the drag - works in THIS box's frame.
+                            // The box is the PREVIEW's own aspect, showing it
+                            // pristine (fit, not cropped) - because the
+                            // preview image is not the scene and cropping it
+                            // to the content's wide aspect fabricates a strip
+                            // that misrepresents the wallpaper. The viewport
+                            // rectangle's SIZE still comes from the real
+                            // content-vs-screen overflow (that fraction is
+                            // aspect-ratio-only, so it is honest over any box),
+                            // so it says "this fraction of the width is on
+                            // screen"; the live desktop is the exact feedback.
                             Item {
                                 id: fittedBox
-                                readonly property real boxAspect: root.contentAspect > 0 ? root.contentAspect : 16 / 9
+                                readonly property real boxAspect: root.previewAspect > 0 ? root.previewAspect : 16 / 9
                                 readonly property real cardAspect: previewBox.width / previewBox.height
                                 width: boxAspect >= cardAspect ? previewBox.width : previewBox.height * boxAspect
                                 height: boxAspect >= cardAspect ? previewBox.width / boxAspect : previewBox.height
@@ -258,7 +268,7 @@ ColumnLayout {
 
                                 StyledImage {
                                     anchors.fill: parent
-                                    fillMode: Image.PreserveAspectCrop
+                                    fillMode: Image.PreserveAspectFit
                                     source: root.weConfig.activePreview
                                     sourceSize.width: 400
                                     sourceSize.height: 225
@@ -266,7 +276,9 @@ ColumnLayout {
 
                                 // The viewport rectangle: the axis that
                                 // overflows uses its focus, the other stays
-                                // full-extent.
+                                // full-extent. The fraction is content-vs-
+                                // screen (aspect only), drawn over the
+                                // preview-aspect box.
                                 readonly property var vp: {
                                     const h = CropPicker.viewport(root.contentAspect,
                                         root.screenAspect, width, height, root.effective.focus.x);
