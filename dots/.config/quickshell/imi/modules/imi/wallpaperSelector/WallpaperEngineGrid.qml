@@ -36,6 +36,10 @@ Item {
     }
     readonly property var filteredProjects: root.visibleProjects.filter(project => {
         if (root.typeFilter !== "all" && root.normType(project) !== root.typeFilter) return false;
+        // A wallpaper the compatibility scan marked broken, with the switch
+        // on (sidebar > Hide broken): out of the grid, not merely badged.
+        if ((Config.options.wallpaperSelector.wallpaperEngine.hideBroken ?? false)
+            && WallpaperEngineCompat.statusFor(project) === "broken") return false;
         const query = root.searchQuery.trim().toLowerCase();
         if (!query) return true;
         const tags = Array.isArray(project.tags) ? project.tags.join(" ") : "";
@@ -193,6 +197,36 @@ Item {
                             text: "check_circle"
                             fill: 1
                             color: Appearance.colors.colPrimary
+                        }
+
+                        // The compatibility scan's verdict, where the tile
+                        // already badges its type: a wallpaper known not to
+                        // start looks different BEFORE it is clicked.
+                        Rectangle {
+                            visible: WallpaperEngineCompat.statusFor(delegateRoot.modelData) === "broken"
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: Appearance.spacing.space75
+                            implicitWidth: brokenRow.implicitWidth + Appearance.spacing.space150
+                            implicitHeight: brokenRow.implicitHeight + Appearance.spacing.space75
+                            radius: height / 2
+                            color: Appearance.m3colors.m3errorContainer
+
+                            RowLayout {
+                                id: brokenRow
+                                anchors.centerIn: parent
+                                spacing: Appearance.spacing.space50
+                                MaterialSymbol {
+                                    text: "error"
+                                    iconSize: Appearance.font.pixelSize.small
+                                    color: Appearance.m3colors.m3onErrorContainer
+                                }
+                                StyledText {
+                                    text: Translation.tr("Broken")
+                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                    color: Appearance.m3colors.m3onErrorContainer
+                                }
+                            }
                         }
                     }
 

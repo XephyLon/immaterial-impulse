@@ -51,6 +51,60 @@ def confined_preview(directory: Path, preview_name: object) -> Path:
     return candidate if candidate.is_file() else Path()
 
 
+# The five project.json property types that get a UI control; everything else
+# (text headings, groups, scenetexture, file) is display-only or unsupported.
+# The model and the serialization (booleans to "1"/"0" - the form WE's
+# --set-property takes - everything else verbatim, ordered by the author's
+# order/index keys) follow the reference implementation,
+# jagrat7/linux-wallpaper-engine's parseProjectProperties.
+PROPERTY_CONTROL_TYPES = ("bool", "slider", "combo", "color", "textinput")
+
+
+def serialize_property_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if value is None:
+        return ""
+    return str(value)
+
+
+def project_properties(data: object) -> list[dict[str, object]]:
+    general = data.get("general") if isinstance(data, dict) else None
+    props = general.get("properties") if isinstance(general, dict) else None
+    if not isinstance(props, dict):
+        return []
+    rows: list[tuple[float, dict[str, object]]] = []
+    for name, definition in props.items():
+        if not isinstance(definition, dict):
+            continue
+        if definition.get("type") not in PROPERTY_CONTROL_TYPES:
+            continue
+        options = definition.get("options")
+        row: dict[str, object] = {
+            "name": str(name),
+            "type": definition["type"],
+            "text": str(definition.get("text") or name),
+            "value": serialize_property_value(definition.get("value")),
+        }
+        for bound in ("min", "max", "step"):
+            if isinstance(definition.get(bound), (int, float)) and not isinstance(definition.get(bound), bool):
+                row[bound] = definition[bound]
+        if isinstance(options, list):
+            row["options"] = [
+                {"label": str(option["label"]), "value": serialize_property_value(option["value"])}
+                for option in options
+                if isinstance(option, dict) and "label" in option and "value" in option
+            ]
+        order = definition.get("order")
+        if not isinstance(order, (int, float)) or isinstance(order, bool):
+            order = definition.get("index")
+        if not isinstance(order, (int, float)) or isinstance(order, bool):
+            order = float("inf")
+        rows.append((float(order), row))
+    rows.sort(key=lambda item: item[0])
+    return [row for _, row in rows]
+
+
 def scan(configured: str) -> list[dict[str, object]]:
     projects_by_id: dict[str, tuple[tuple[int, int, str], dict[str, object]]] = {}
     for root in project_roots(configured):
@@ -76,6 +130,7 @@ def scan(configured: str) -> list[dict[str, object]]:
                 # An empty Path() is "." and truthy, so compare explicitly to
                 # avoid emitting "." when no preview file was found.
                 "preview": str(preview) if preview != Path() else "",
+                "properties": project_properties(data),
             }
             try:
                 file_count = sum(1 for path in directory.rglob("*") if path.is_file())

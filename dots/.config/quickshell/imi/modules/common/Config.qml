@@ -1771,6 +1771,21 @@ Singleton {
                     property int fps: 30
                     property string scaling: "fill"
                     property bool silent: true
+                    // The rest of the engine's flag set, global defaults the
+                    // per-project overrides (WallpaperEngineOverrides) fall
+                    // back to. volume is 0..100 with 100 the renderer's old
+                    // fixed "full internal volume, mix in the system mixer";
+                    // audioProcessing is WE's audio-reactive recorder, on by
+                    // default like WE's own; the three disables mirror WE's
+                    // --disable-mouse/--disable-parallax/--disable-particles.
+                    property int volume: 100
+                    property bool audioProcessing: true
+                    property bool disableMouse: false
+                    property bool disableParallax: false
+                    property bool disableParticles: false
+                    // Hide wallpapers the compatibility scan marked broken
+                    // from the selector grid (WallpaperEngineCompat).
+                    property bool hideBroken: false
                     // Which output plays the wallpaper's sound. Empty means
                     // the first screen the compositor reports.
                     //

@@ -84,4 +84,97 @@ TestCase {
         verify(WeOverrides.hasOverride({ "12345": { fps: 60 } }, "12345"))
         verify(!WeOverrides.hasOverride({ "999": { fps: 60 } }, "12345"))
     }
+
+    readonly property var fullGlobals: ({
+        fps: 30, scaling: "fill", silent: true,
+        volume: 100, audioProcessing: true,
+        disableMouse: false, disableParallax: false, disableParticles: false
+    })
+
+    function test_engine_flag_keys_resolve_with_fallback() {
+        // The reference app's ENGINE_OVERRIDE_FIELDS set, whole: volume,
+        // audio processing and the three feature switches ride the same
+        // per-key fallback as fps/scaling/silent.
+        var r = WeOverrides.resolve({}, "12345", fullGlobals)
+        compare(r.volume, 100)
+        compare(r.audioProcessing, true)
+        compare(r.disableMouse, false)
+        compare(r.disableParallax, false)
+        compare(r.disableParticles, false)
+
+        var overrides = { "12345": { volume: 40, disableParticles: true, audioProcessing: false } }
+        r = WeOverrides.resolve(overrides, "12345", fullGlobals)
+        compare(r.volume, 40)
+        compare(r.audioProcessing, false)
+        compare(r.disableParticles, true)
+        // Untouched keys still follow the globals.
+        compare(r.disableMouse, false)
+        compare(r.fps, 30)
+    }
+
+    function test_volume_zero_override_survives_falsy_check() {
+        var r = WeOverrides.resolve({ "12345": { volume: 0 } }, "12345", fullGlobals)
+        compare(r.volume, 0)
+    }
+
+    function test_project_properties_resolve_per_wallpaper() {
+        // Custom properties (project.json general.properties) are inherently
+        // per-wallpaper - there is no global to fall back to, so an absent
+        // record resolves to an empty map, never undefined.
+        var r = WeOverrides.resolve({}, "12345", fullGlobals)
+        compare(JSON.stringify(r.properties), "{}")
+
+        var overrides = { "12345": { properties: { schemecolor: "0.1 0.2 0.3", rain: "1" } } }
+        r = WeOverrides.resolve(overrides, "12345", fullGlobals)
+        compare(r.properties.schemecolor, "0.1 0.2 0.3")
+        compare(r.properties.rain, "1")
+    }
+
+    function test_set_and_clear_project_property() {
+        var m = WeOverrides.setProjectProperty({}, "12345", "rain", "1")
+        compare(m["12345"].properties.rain, "1")
+        m = WeOverrides.setProjectProperty(m, "12345", "snow", "0")
+        compare(m["12345"].properties.rain, "1")
+        compare(m["12345"].properties.snow, "0")
+        // null clears one property...
+        m = WeOverrides.setProjectProperty(m, "12345", "rain", null)
+        verify(!("rain" in m["12345"].properties))
+        // ...and clearing the last one removes the map, and with it an
+        // otherwise-empty record.
+        m = WeOverrides.setProjectProperty(m, "12345", "snow", null)
+        verify(!("12345" in m))
+    }
+
+    function test_properties_do_not_count_as_engine_override() {
+        // The "Custom settings" switch is about the ENGINE flags; a wallpaper
+        // whose only record is tweaked properties must not read as having
+        // flag overrides, or flipping the switch off would eat the user's
+        // property edits.
+        var m = WeOverrides.setProjectProperty({}, "12345", "rain", "1")
+        verify(!WeOverrides.hasOverride(m, "12345"))
+        verify(WeOverrides.hasProperties(m, "12345"))
+    }
+
+    function test_clear_engine_overrides_keeps_properties() {
+        var m = WeOverrides.setOverride({}, "12345", "fps", 60)
+        m = WeOverrides.setProjectProperty(m, "12345", "rain", "1")
+        m = WeOverrides.clearEngineOverrides(m, "12345")
+        verify(!WeOverrides.hasOverride(m, "12345"))
+        compare(m["12345"].properties.rain, "1")
+    }
+
+    function test_sanitize_keeps_string_properties_only() {
+        var m = WeOverrides.sanitize({
+            "12345": {
+                volume: 55,
+                properties: { ok: "1", nested: { bad: true }, num: 3 }
+            }
+        })
+        compare(m["12345"].volume, 55)
+        compare(m["12345"].properties.ok, "1")
+        // Non-string property values re-serialize (numbers) or drop (objects):
+        // everything WE gets is a string on its command line.
+        compare(m["12345"].properties.num, "3")
+        verify(!("nested" in m["12345"].properties))
+    }
 }
