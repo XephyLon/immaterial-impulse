@@ -1783,6 +1783,14 @@ Singleton {
                     property bool disableMouse: false
                     property bool disableParallax: false
                     property bool disableParticles: false
+                    // renderScale is a quality/performance dial: the renderer
+                    // draws into a window this fraction of the surface size and
+                    // the scene graph upscales, 0.25..1 with 1 = native. It is
+                    // the video path (composited at window size) where it cuts
+                    // real work; a SCENE renders into its own authored-
+                    // resolution FBO regardless, so for a heavy scene fps is the
+                    // lever and this only trims the final composite.
+                    property real renderScale: 1.0
                     // Hide wallpapers the compatibility scan marked broken
                     // from the selector grid (WallpaperEngineCompat).
                     property bool hideBroken: false

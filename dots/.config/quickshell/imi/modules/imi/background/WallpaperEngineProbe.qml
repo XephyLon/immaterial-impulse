@@ -26,6 +26,9 @@ Item {
     // The full-scene grab the crop picker's accurate thumbnail needs.
     readonly property bool sceneGrab: "requestSceneGrab" in probeSurface
 
+    // The render-scale quality dial (draw into a smaller window, upscale).
+    readonly property bool renderScale: "renderScale" in probeSurface
+
     WallpaperEngineSurface {
         id: probeSurface
         visible: false

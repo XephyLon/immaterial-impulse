@@ -92,6 +92,7 @@ ColumnLayout {
         else if (key === "disableMouse") root.weConfig.disableMouse = value;
         else if (key === "disableParallax") root.weConfig.disableParallax = value;
         else if (key === "disableParticles") root.weConfig.disableParticles = value;
+        else if (key === "renderScale") root.weConfig.renderScale = value;
     }
 
     StyledText {
@@ -459,6 +460,39 @@ ColumnLayout {
                         textRole: "displayName"
                         currentIndex: Math.max(0, scalingBox.values.indexOf(root.effective.scaling))
                         onActivated: index => root.writeSetting("scaling", scalingBox.values[index])
+                    }
+                }
+
+                // Quality: renderScale, gated on a renderer that reads it.
+                // Native draws at the surface's own resolution; the lower steps
+                // render smaller and upscale. Honest about its reach - for a
+                // heavy SCENE the frame rate above is the real lever, since a
+                // scene renders at its authored resolution regardless and this
+                // only trims the final composite; it is video wallpapers, drawn
+                // at window size, where a lower quality cuts real work.
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: WallpaperEngineFeatures.renderScale
+                    spacing: Appearance.spacing.space100
+                    StyledText {
+                        Layout.leftMargin: Appearance.spacing.space150
+                        Layout.fillWidth: true
+                        text: Translation.tr("Quality")
+                        font.pixelSize: Appearance.font.pixelSize.small
+                    }
+                    StyledComboBox {
+                        id: qualityBox
+                        implicitWidth: 116
+                        readonly property var values: [1.0, 0.75, 0.5, 0.25]
+                        model: [
+                            { value: 1.0, displayName: Translation.tr("Native") },
+                            { value: 0.75, displayName: Translation.tr("High (75%)") },
+                            { value: 0.5, displayName: Translation.tr("Balanced (50%)") },
+                            { value: 0.25, displayName: Translation.tr("Low (25%)") }
+                        ]
+                        textRole: "displayName"
+                        currentIndex: Math.max(0, qualityBox.values.indexOf(root.effective.renderScale))
+                        onActivated: index => root.writeSetting("renderScale", qualityBox.values[index])
                     }
                 }
 
