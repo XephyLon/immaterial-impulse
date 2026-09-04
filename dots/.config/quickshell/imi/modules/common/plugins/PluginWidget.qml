@@ -80,6 +80,10 @@ AbstractBackgroundWidget {
     property real canvasOffsetX: 0
     property real canvasOffsetY: 0
     property rect wallpaperRect: Qt.rect(0, 0, 0, 0)
+    // The decode bound the desktop's wallpaper request carries; forwarded to
+    // the frost so the two stay one pixmap-cache entry (see
+    // WallpaperBlurSurface's decodeWidth note).
+    property size wallpaperDecodeSize: Qt.size(0, 0)
 
     // This widget's top-left in the wallpaper's own coordinates - the space the
     // frost samples in. Sampling at the widget's canvas position instead is
@@ -855,6 +859,8 @@ AbstractBackgroundWidget {
             maskItem: modelData.mask ?? null
             wallpaperWidth: rootWidget.wallpaperRect.width
             wallpaperHeight: rootWidget.wallpaperRect.height
+            decodeWidth: rootWidget.wallpaperDecodeSize.width
+            decodeHeight: rootWidget.wallpaperDecodeSize.height
             surfaceX: rootWidget.frostSampleOrigin.x + x
             surfaceY: rootWidget.frostSampleOrigin.y + y
         }
