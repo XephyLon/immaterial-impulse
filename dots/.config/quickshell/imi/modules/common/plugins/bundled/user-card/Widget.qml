@@ -231,9 +231,7 @@ Item {
                 id: avatarImage
                 anchors.fill: parent
                 anchors.margins: Appearance.spacing.space50
-                source: Config.options.profile.avatarPath !== ""
-                    ? "file://" + Config.options.profile.avatarPicture
-                    : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
+                source: UserAvatar.url
                 sourceSize.width: avatarImage.width * 2
                 sourceSize.height: avatarImage.height * 2
                 fillMode: Image.PreserveAspectCrop
