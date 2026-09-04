@@ -106,6 +106,16 @@ class WordTimingTests(unittest.TestCase):
     def test_plain_lrc_has_no_words(self):
         self.assertEqual(lyrics.parse_lrc_rich("[00:10.0]hello there")[0][2], None)
 
+    def test_multi_stamp_line_drops_its_words(self):
+        # A line repeated at two timestamps carries ONE set of inline word
+        # stamps, absolute to the first occurrence; attaching them to the
+        # second position mis-times its karaoke. Both positions keep the
+        # line-level text, neither keeps the words.
+        rich = lyrics.parse_lrc_rich("[00:10.0][00:40.0]<00:10.0>hello <00:11.5>there")
+        self.assertEqual([r[0] for r in rich], [10.0, 40.0])
+        self.assertEqual([r[1] for r in rich], ["hello there", "hello there"])
+        self.assertTrue(all(r[2] is None for r in rich))
+
     def test_ttml_span_words_are_extracted(self):
         doc = ('<tt xmlns="http://www.w3.org/ns/ttml"><body><div>'
                '<p begin="10s"><span begin="10s">hello</span> '
@@ -115,7 +125,9 @@ class WordTimingTests(unittest.TestCase):
         self.assertEqual(words, [(10.0, "hello"), (11.5, "there")])
 
     def test_the_wire_is_json(self):
-        import io, contextlib, sys as _sys
+        import io, contextlib, sys as _sys, os
+        os.environ["IMI_LYRICS_NO_CACHE"] = "1"  # exercise the fetch, not the cache
+        self.addCleanup(lambda: os.environ.pop("IMI_LYRICS_NO_CACHE", None))
         argv, _sys.argv = _sys.argv, ["lyrics.py", "T", "A", "100"]
         orig = lyrics.http_json
         orig_glassy = lyrics.from_glassy
@@ -439,6 +451,91 @@ class LyricsPlusDurationRetryTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 2)  # tried with duration, then without
         self.assertIn("duration", self.calls[0])
         self.assertNotIn("duration", self.calls[1])
+
+
+class CacheTests(unittest.TestCase):
+    """The on-disk cache: a repeat of the same track must not re-walk the
+    network, and a not_found must not re-walk it for a while either."""
+
+    def setUp(self):
+        import tempfile, os
+        self.tmp = tempfile.mkdtemp()
+        self.env = os.environ.get("XDG_CACHE_HOME")
+        os.environ["XDG_CACHE_HOME"] = self.tmp
+
+    def tearDown(self):
+        import os, shutil
+        if self.env is None:
+            os.environ.pop("XDG_CACHE_HOME", None)
+        else:
+            os.environ["XDG_CACHE_HOME"] = self.env
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_positive_roundtrip(self):
+        key = lyrics.cache_key("Provider", "Sleep Token", 222)
+        payload = {"ok": True, "source": "LRCLIB", "lines": [{"t": 1.0, "text": "hi"}]}
+        lyrics.cache_put(key, payload)
+        self.assertEqual(lyrics.cache_get(key), payload)
+
+    def test_negative_roundtrip(self):
+        key = lyrics.cache_key("Nope", "Nobody", 100)
+        lyrics.cache_put(key, "not_found")
+        self.assertEqual(lyrics.cache_get(key), "not_found")
+
+    def test_key_is_case_and_duration_stable_but_track_specific(self):
+        self.assertEqual(lyrics.cache_key("Provider", "Sleep Token", 222),
+                         lyrics.cache_key("provider", "sleep token", 222))
+        self.assertNotEqual(lyrics.cache_key("Provider", "Sleep Token", 222),
+                            lyrics.cache_key("Provider", "Sleep Token", 250))
+        self.assertNotEqual(lyrics.cache_key("A", "X", 100),
+                            lyrics.cache_key("B", "X", 100))
+
+    def test_expired_positive_is_a_miss(self):
+        import os, json, time
+        key = lyrics.cache_key("Old", "Song", 100)
+        path = os.path.join(lyrics.cache_dir(), key + ".json")
+        os.makedirs(lyrics.cache_dir(), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump({"ts": time.time() - lyrics.POSITIVE_TTL - 10,
+                       "result": {"ok": True, "lines": []}}, f)
+        self.assertIsNone(lyrics.cache_get(key))
+
+    def test_expired_negative_is_a_miss(self):
+        import os, json, time
+        key = lyrics.cache_key("Old", "Miss", 100)
+        os.makedirs(lyrics.cache_dir(), exist_ok=True)
+        with open(os.path.join(lyrics.cache_dir(), key + ".json"), "w") as f:
+            json.dump({"ts": time.time() - lyrics.NEGATIVE_TTL - 10,
+                       "result": "not_found"}, f)
+        self.assertIsNone(lyrics.cache_get(key))
+
+    def test_main_serves_the_second_call_from_cache(self):
+        import io, contextlib, sys as _sys
+        calls = {"n": 0}
+        def counting(url):
+            calls["n"] += 1
+            return {"lyrics": "[00:01.0]hi", "format": "lrc"} if "unison" in url else None
+        orig_http, orig_glassy = lyrics.http_json, lyrics.from_glassy
+        lyrics.from_glassy = lambda *a, **k: None
+        lyrics.http_json = counting
+        argv = _sys.argv
+        try:
+            for _ in range(2):
+                _sys.argv = ["lyrics.py", "Provider", "Sleep Token", "222"]
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    lyrics.main()
+                self.assertTrue(json.loads(out.getvalue())["ok"])
+            first_call_count = calls["n"]
+            # A third identical call still adds nothing: the network ran once.
+            _sys.argv = ["lyrics.py", "Provider", "Sleep Token", "222"]
+            with contextlib.redirect_stdout(io.StringIO()):
+                lyrics.main()
+            self.assertEqual(calls["n"], first_call_count)
+            self.assertGreater(first_call_count, 0)
+        finally:
+            lyrics.http_json, lyrics.from_glassy = orig_http, orig_glassy
+            _sys.argv = argv
 
 
 if __name__ == "__main__":

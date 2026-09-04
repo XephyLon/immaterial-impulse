@@ -33,11 +33,80 @@ Output: one JSON line - {"ok": true, "lines": [{"t": sec, "text": "...",
 when the source carried word-level timing (enhanced LRC inline stamps, TTML
 span timings); the shell synthesizes an even sweep otherwise.
 """
+import glob
+import hashlib
 import json
+import os
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
+
+
+# On-disk cache. Every fetch otherwise re-walks up to five providers - each a
+# urlopen at timeout=12, plus Glassy's CDP poll (GLASSY_RENDER_WAIT = 9) - so a
+# replay of the same song, a sidebar reopen, or any spurious refetch re-hits
+# the whole network chain. Cache the final answer keyed by the NORMALIZED
+# (title, artist, int duration), the same inputs that determine the result.
+# Positive answers are cached long (lyrics do not change); a not_found is cached
+# briefly, so a later-added lyric is found on the next play rather than masked
+# for a month. Bounded by entry count, oldest pruned first.
+CACHE_MAX_ENTRIES = 512
+POSITIVE_TTL = 30 * 24 * 3600
+NEGATIVE_TTL = 6 * 3600
+
+
+def cache_dir():
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    return os.path.join(base, "immaterial-impulse", "lyrics")
+
+
+def cache_key(title, artist, duration):
+    raw = "\x1f".join([(title or "").casefold(), (artist or "").casefold(),
+                       str(int(duration or 0))])
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+def cache_get(key):
+    try:
+        with open(os.path.join(cache_dir(), key + ".json")) as f:
+            entry = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(entry, dict):
+        return None
+    result = entry.get("result")
+    ttl = NEGATIVE_TTL if result == "not_found" else POSITIVE_TTL
+    if time.time() - entry.get("ts", 0) > ttl:
+        return None
+    return result
+
+
+def cache_put(key, result):
+    directory = cache_dir()
+    try:
+        os.makedirs(directory, exist_ok=True)
+        tmp = os.path.join(directory, key + ".json.tmp")
+        with open(tmp, "w") as f:
+            json.dump({"ts": time.time(), "result": result}, f)
+        os.replace(tmp, os.path.join(directory, key + ".json"))
+        _prune(directory)
+    except OSError:
+        pass
+
+
+def _prune(directory):
+    try:
+        files = sorted(glob.glob(os.path.join(directory, "*.json")),
+                       key=os.path.getmtime)
+    except OSError:
+        return
+    for path in files[:-CACHE_MAX_ENTRIES]:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 # A browser-ish UA: several of these hosts (LyricsPlus behind Cloudflare)
@@ -77,8 +146,14 @@ def parse_lrc_rich(text):
                 if fragment:
                     words.append((int(stamp.group(1)) * 60 + float(stamp.group(2)), fragment))
             words = words or None
-        for stamp in re.finditer(r"\[(\d+):(\d+(?:\.\d+)?)\]", raw):
-            lines.append((int(stamp.group(1)) * 60 + float(stamp.group(2)), words_text, words))
+        # The inline word stamps are absolute to this line's FIRST timestamp,
+        # so a line repeated at several timestamps ([t1][t2] text) can only
+        # carry its words at the first; attaching the same array to the others
+        # mis-times them. A repeated line keeps its text, drops its words.
+        line_stamps = list(re.finditer(r"\[(\d+):(\d+(?:\.\d+)?)\]", raw))
+        line_words = words if len(line_stamps) == 1 else None
+        for stamp in line_stamps:
+            lines.append((int(stamp.group(1)) * 60 + float(stamp.group(2)), words_text, line_words))
     lines.sort(key=lambda entry: entry[0])
     return lines
 
@@ -403,6 +478,16 @@ def main():
         duration = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
     except ValueError:
         duration = 0.0
+    use_cache = not os.environ.get("IMI_LYRICS_NO_CACHE")
+    key = cache_key(title, artist, duration)
+    if use_cache:
+        cached = cache_get(key)
+        if cached == "not_found":
+            print("not_found")
+            return 0
+        if isinstance(cached, dict):
+            print(json.dumps(cached))
+            return 0
     PROVIDER_NAMES = {
         "from_glassy": "Glassy", "from_lyricsplus": "LyricsPlus",
         "from_cubey": "BetterLyrics", "from_unison": "Unison", "from_lrclib": "LRCLIB",
@@ -424,8 +509,13 @@ def main():
                 if translated:
                     entry["translated"] = translated
                 emitted.append(entry)
-            print(json.dumps({"ok": True, "source": source, "lines": emitted}))
+            payload = {"ok": True, "source": source, "lines": emitted}
+            if use_cache:
+                cache_put(key, payload)
+            print(json.dumps(payload))
             return 0
+    if use_cache:
+        cache_put(key, "not_found")
     print("not_found")
     return 0
 
