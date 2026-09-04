@@ -41,6 +41,29 @@ WallpaperEngineSurface {
         if ("audioEnabled" in root) {
             root.audioEnabled = Qt.binding(() => root.audioWanted);
         }
+        // The rest of the engine's flag set (qs-wallpaperengine 0.3+), bound
+        // dynamically for the same reason as audioEnabled: on an older binary
+        // each absent property is a silent no-op instead of a load-breaking
+        // assignment, and the sidebar hides the controls it cannot honour
+        // (WallpaperEngineFeatures reports which of these exist).
+        if ("volume" in root) {
+            root.volume = Qt.binding(() => WallpaperEngineOverrides.active.volume);
+        }
+        if ("audioProcessing" in root) {
+            root.audioProcessing = Qt.binding(() => WallpaperEngineOverrides.active.audioProcessing);
+        }
+        if ("mouseDisabled" in root) {
+            root.mouseDisabled = Qt.binding(() => WallpaperEngineOverrides.active.disableMouse);
+        }
+        if ("parallaxDisabled" in root) {
+            root.parallaxDisabled = Qt.binding(() => WallpaperEngineOverrides.active.disableParallax);
+        }
+        if ("particlesDisabled" in root) {
+            root.particlesDisabled = Qt.binding(() => WallpaperEngineOverrides.active.disableParticles);
+        }
+        if ("properties" in root) {
+            root.properties = Qt.binding(() => WallpaperEngineOverrides.active.properties);
+        }
         // `occluded` idles the RENDER THREAD while this output is covered, which
         // is the half QML cannot otherwise reach: suppressing the contents stops
         // Qt drawing the surface, but the WE thread keeps producing frames

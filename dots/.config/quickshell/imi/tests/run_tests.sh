@@ -341,6 +341,15 @@ if ! python3 "$SCRIPT_DIR/test_we_overrides_wiring.py"; then
     exit 1
 fi
 
+# Source contract: the compatibility scan runs in a spawned scanner process
+# (a wedged wallpaper kills the scanner, not the shell) and every reader of a
+# verdict goes through WallpaperEngineCompat.statusFor.
+echo "Running Wallpaper Engine compatibility wiring contract..."
+if ! python3 "$SCRIPT_DIR/test_we_compat_wiring.py"; then
+    echo "Wallpaper Engine compatibility wiring contract failed."
+    exit 1
+fi
+
 # Static lint: an Appearance token a QML file reads must be declared. An
 # undeclared one is `undefined`, which renders 0 after a single warning - or
 # NaN, with no warning at all, where the call site does arithmetic on it.

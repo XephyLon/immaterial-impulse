@@ -35,7 +35,12 @@ Singleton {
         ({
             fps: Config.options.wallpaperSelector.wallpaperEngine.fps,
             scaling: Config.options.wallpaperSelector.wallpaperEngine.scaling,
-            silent: Config.options.wallpaperSelector.wallpaperEngine.silent ?? true
+            silent: Config.options.wallpaperSelector.wallpaperEngine.silent ?? true,
+            volume: Config.options.wallpaperSelector.wallpaperEngine.volume ?? 100,
+            audioProcessing: Config.options.wallpaperSelector.wallpaperEngine.audioProcessing ?? true,
+            disableMouse: Config.options.wallpaperSelector.wallpaperEngine.disableMouse ?? false,
+            disableParallax: Config.options.wallpaperSelector.wallpaperEngine.disableParallax ?? false,
+            disableParticles: Config.options.wallpaperSelector.wallpaperEngine.disableParticles ?? false
         }))
 
     // The same resolution with the globals as an argument, for tests.
@@ -55,13 +60,56 @@ Singleton {
         writeTimer.restart();
     }
 
-    function clearOverrides(projectId) {
+    // Clear the project's ENGINE flags; property edits survive (the module's
+    // hasOverride/clearEngineOverrides split - flipping the Custom settings
+    // switch off must not eat the user's property tweaks).
+    function clearEngineOverrides(projectId) {
         if (!projectId || !WeOverrides.hasOverride(root.overrides, projectId))
             return;
-        const next = {};
-        for (const id in root.overrides)
-            if (id !== projectId)
-                next[id] = root.overrides[id];
+        root.overrides = WeOverrides.clearEngineOverrides(root.overrides, projectId);
+        writeTimer.restart();
+    }
+
+    // Seed a project's engine flags from the resolved settings, so flipping
+    // the Custom settings switch on changes nothing until a control moves.
+    function seedOverrides(projectId, effective) {
+        if (!projectId)
+            return;
+        let next = root.overrides;
+        next = WeOverrides.setOverride(next, projectId, "fps", effective.fps);
+        next = WeOverrides.setOverride(next, projectId, "scaling", effective.scaling);
+        next = WeOverrides.setOverride(next, projectId, "silent", effective.silent);
+        next = WeOverrides.setOverride(next, projectId, "volume", effective.volume);
+        next = WeOverrides.setOverride(next, projectId, "audioProcessing", effective.audioProcessing);
+        next = WeOverrides.setOverride(next, projectId, "disableMouse", effective.disableMouse);
+        next = WeOverrides.setOverride(next, projectId, "disableParallax", effective.disableParallax);
+        next = WeOverrides.setOverride(next, projectId, "disableParticles", effective.disableParticles);
+        root.overrides = next;
+        writeTimer.restart();
+    }
+
+    function hasProperties(projectId) {
+        return WeOverrides.hasProperties(root.overrides, projectId);
+    }
+
+    // Set (string value) or clear (null) one of the wallpaper's own
+    // project.json properties.
+    function setProjectProperty(projectId, name, value) {
+        if (!projectId || !name)
+            return;
+        root.overrides = WeOverrides.setProjectProperty(root.overrides, projectId, name, value);
+        writeTimer.restart();
+    }
+
+    // Take every property edit off the project - back to the wallpaper's own
+    // defaults.
+    function clearProperties(projectId) {
+        if (!WeOverrides.hasProperties(root.overrides, projectId))
+            return;
+        let next = root.overrides;
+        const names = Object.keys(root.overrides[projectId].properties);
+        for (const name of names)
+            next = WeOverrides.setProjectProperty(next, projectId, name, null);
         root.overrides = next;
         writeTimer.restart();
     }

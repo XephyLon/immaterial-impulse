@@ -225,7 +225,20 @@ wait and re-check before concluding the code is broken.
 
 ## External binaries the shell drives
 
-Two non-obvious traps live here, both found the expensive way.
+**WE_REF pins the renderer, so a `WallpaperEngineSurface` property the shell reads may not exist in
+the binary a user is running.** The embedded Wallpaper Engine renderer is a patched Quickshell built
+by the satellite repo `XephyLon/qs-wallpaperengine`; the hub pins which revision in
+`sdata/subcmd-install/4.wallpaperengine.sh` as `WE_REF`, and a feature added to the module ships to
+nobody until that pin moves to a tag that has it. So a shell reading `surface.volume` or
+`surface.properties` can be running a binary from before those existed. Two mechanisms keep that from
+being a load-breaking assignment: `WallpaperEngineLayer.qml` binds every extended property inside an
+`"x" in root` guard (an absent one is a silent no-op, exactly as `audioEnabled`/`occluded` already
+were), and `services/WallpaperEngineFeatures.qml` probes the same way once and gates the selector
+sidebar's controls, so an older binary shows only the knobs it answers rather than dead ones. When
+adding a renderer property: extend the module in that repo, tag it, move `WE_REF`, AND gate every
+shell-side read - the last step is what makes the intervening versions safe.
+
+Beyond that, two non-obvious traps live here, both found the expensive way.
 
 **`DT_RUNPATH` is not transitive, and `LD_LIBRARY_PATH` is.** The Wallpaper Engine build the shell
 loads (`~/.cache/immaterial-impulse/prebuilt/<ver>/`) bundles its own libraries. Setting a correct
@@ -871,21 +884,49 @@ services/                  Singletons wrapping external state/processes - one pe
                               takes to appear, the original persisted in Persistent so a
                               restart mid-swap still undoes it - see the entry under
                               "External binaries the shell drives"
-  WallpaperEngineOverrides.qml Per-project Wallpaper Engine settings (fps, scaling, audio), keyed
-                              by runtime project ids so it is a raw FileView over
-                              wallpaper-engine-overrides.json on the PluginState pattern - never
-                              a JsonAdapter. services/we_overrides.js is the resolution (per-key
-                              fallback to the globals, clear-on-null, sanitation); `active` is
-                              THE one live derivation, read by WallpaperEngineLayer's
-                              fps/scaleMode, Background's audio routing and the selector
-                              sidebar's controls - tests/test_we_overrides_wiring.py refuses a
+  WallpaperEngineOverrides.qml Per-project Wallpaper Engine settings (fps, scaling, audio on/off
+                              + volume, audio-reactive, mouse/parallax/particles) AND each
+                              wallpaper's own project.json properties, keyed by runtime project
+                              ids so it is a raw FileView over wallpaper-engine-overrides.json on
+                              the PluginState pattern - never a JsonAdapter. services/
+                              we_overrides.js is the resolution: per-key fallback to the globals
+                              for the ENGINE flags, and a separate `properties` map with no
+                              global side (hasOverride/clearEngineOverrides leave it alone, so
+                              turning the Custom settings switch off never eats a property
+                              edit). `active` is THE one live derivation, read by
+                              WallpaperEngineLayer's dynamic bindings, Background's audio routing
+                              and the sidebar - tests/test_we_overrides_wiring.py refuses a
                               raw-config read beside it. The sidebar
                               (modules/imi/wallpaperSelector/WallpaperSelectorSidebar.qml) is the
                               editor: a places rail over local files (selector_places.js), the
-                              engine's configuration over Wallpaper Engine, and only the knobs
-                              WallpaperEngineSurface actually answers - a control for a flag the
-                              renderer does not read would be a fake action
+                              engine's whole flag set + the wallpaper's own properties
+                              (WallpaperPropertyControl, one control per project.json type) over
+                              Wallpaper Engine, gated on WallpaperEngineFeatures so an older
+                              renderer binary shows only what it answers - a control for a flag
+                              the renderer does not read would be a fake action
                               ("feat(wallpaperSelector): a sidebar - places over files, engine config over WE")
+  WallpaperEngineFeatures.qml  Which properties THIS binary's embedded renderer has, probed once
+                              by building a bare WallpaperEngineSurface (no project, so no thread
+                              or GL) and asking `"x" in surface`. The extended controls (the
+                              qs-wallpaperengine 0.3 flag set, per-project properties) gate on
+                              it; WallpaperEngineLayer binds the same properties dynamically for
+                              the same reason. See "WE_REF pins the renderer" below
+  WallpaperEngineCompat.qml    Per-wallpaper compatibility verdicts, the reference app's bulk
+                              scanner: the scan runs in a SPAWNED `qs -p` scanner process
+                              (scripts/wallpapers/we_compat_scan.qml) loading each project into a
+                              real surface, so a wallpaper that wedges or crashes the renderer
+                              kills the scanner and not the shell - this service owns the queue,
+                              respawns past the corpse (a death mid-project is that project's
+                              verdict), and records ok/broken. Its own raw-JSON store
+                              (wallpaper-engine-compat.json), NOT the overrides file: verdicts
+                              are scan-managed state, not user settings (the reference's
+                              SCAN_MANAGED_KEYS split as a file boundary). web/application are
+                              "unsupported" by construction, unscanned. The scanner speaks its
+                              verdicts on STDERR because qs's stdout is block-buffered off a tty.
+                              Decisions in services/we_compat.js; the grid badges broken tiles
+                              and the sidebar's Hide broken filters them, both through
+                              statusFor - tests/test_we_compat_wiring.py pins the one reader
+                              ("feat(wallpaperSelector): a compatibility scan that marks the wallpapers the renderer cannot start")
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper
