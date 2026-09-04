@@ -332,6 +332,15 @@ if ! python3 "$SCRIPT_DIR/test_resource_usage_polling.py"; then
     exit 1
 fi
 
+# Source contract: per-project Wallpaper Engine settings reach the renderer
+# through the one resolution (WallpaperEngineOverrides.active) - a raw config
+# read makes every sidebar override a silent no-op.
+echo "Running Wallpaper Engine overrides wiring contract..."
+if ! python3 "$SCRIPT_DIR/test_we_overrides_wiring.py"; then
+    echo "Wallpaper Engine overrides wiring contract failed."
+    exit 1
+fi
+
 # Static lint: an Appearance token a QML file reads must be declared. An
 # undeclared one is `undefined`, which renders 0 after a single warning - or
 # NaN, with no warning at all, where the call site does arithmetic on it.

@@ -871,6 +871,21 @@ services/                  Singletons wrapping external state/processes - one pe
                               takes to appear, the original persisted in Persistent so a
                               restart mid-swap still undoes it - see the entry under
                               "External binaries the shell drives"
+  WallpaperEngineOverrides.qml Per-project Wallpaper Engine settings (fps, scaling, audio), keyed
+                              by runtime project ids so it is a raw FileView over
+                              wallpaper-engine-overrides.json on the PluginState pattern - never
+                              a JsonAdapter. services/we_overrides.js is the resolution (per-key
+                              fallback to the globals, clear-on-null, sanitation); `active` is
+                              THE one live derivation, read by WallpaperEngineLayer's
+                              fps/scaleMode, Background's audio routing and the selector
+                              sidebar's controls - tests/test_we_overrides_wiring.py refuses a
+                              raw-config read beside it. The sidebar
+                              (modules/imi/wallpaperSelector/WallpaperSelectorSidebar.qml) is the
+                              editor: a places rail over local files (selector_places.js), the
+                              engine's configuration over Wallpaper Engine, and only the knobs
+                              WallpaperEngineSurface actually answers - a control for a flag the
+                              renderer does not read would be a fake action
+                              ("feat(wallpaperSelector): a sidebar - places over files, engine config over WE")
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper

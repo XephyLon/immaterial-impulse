@@ -47,20 +47,9 @@ MouseArea {
         }
     }
 
-    property var quickDirs: [
-        { icon: "home",       name: "Home   ",       path: `${Directories.home}`,                alwaysVisible: Config.options.wallpaperSelector.showHomePath },
-        { icon: "wallpaper",  name: "Wallpapers   ", path: `${Directories.pictures}/Wallpapers`, alwaysVisible: true },
-        { icon: "imagesmode", name: "Homework   ",   path: `${Directories.pictures}/homework`,   alwaysVisible: Config.options.policies.weeb },
-        { icon: "casino",     name: "Random   ",     path: `${Directories.pictures}/Random`,     alwaysVisible: true },
-        { 
-            icon: "image",     
-            name: Config.options.wallpaperSelector.userPath?.trim().length > 0 
-                ? Config.options.wallpaperSelector.userPath.split("/").filter(s => s.length > 0).pop() + "   "
-                : "Custom   ",
-            path: Config.options.wallpaperSelector.userPath, 
-            alwaysVisible: Config.options.wallpaperSelector.userPath?.trim().length > 0 
-        }
-    ]
+    // The folder shortcuts moved into the sidebar's places rail
+    // (WallpaperSelectorSidebar.qml over selector_places.js) - one list, so
+    // the chips and the rail cannot drift apart.
 
     function updateThumbnails() {
         const item = gridLoader.item;
@@ -297,6 +286,29 @@ MouseArea {
             spacing: -Appearance.spacing.space50
             z: 1
 
+            // The left sidebar: a places rail over local files, the engine's
+            // configuration over Wallpaper Engine, nothing over the online
+            // sources (their controls live in the top toolbar). The grids
+            // keep the leftover width.
+            WallpaperSelectorSidebar {
+                id: selectorSidebar
+                source: root.source
+                visible: root.source === "local" || root.source === "wallpaperEngine"
+                // A child that is itself a layout defaults Layout.fillWidth
+                // to true inside a RowLayout - stated false, or the rail
+                // splits the window with the grid instead of keeping to its
+                // rail width (the ToolbarTextField trap, on the other axis).
+                Layout.fillWidth: false
+                Layout.preferredWidth: 232
+                Layout.minimumWidth: 232
+                Layout.maximumWidth: 232
+                Layout.fillHeight: true
+                Layout.topMargin: Appearance.spacing.space200
+                Layout.bottomMargin: Appearance.spacing.space200
+                Layout.leftMargin: Appearance.spacing.space100
+                Layout.rightMargin: Appearance.spacing.space200
+            }
+
             ColumnLayout {
                 id: gridColumnLayout
                 Layout.fillWidth: true
@@ -331,45 +343,10 @@ MouseArea {
                     Toolbar {
                         anchors.centerIn: parent
 
-                        Loader {
-                            active: root.source === "local"
-                            visible: active
-                            sourceComponent: RowLayout {
-                                spacing: Appearance.spacing.space50
-                                Repeater {
-                                    model: root.quickDirs
-                                    delegate: RippleButton {
-                                        id: dirBtn
-                                        required property var modelData
-                                        implicitHeight: 38
-                                        buttonRadius: height / 2
-                                        visible: modelData.alwaysVisible
-                                        toggled: Wallpapers.directory === Qt.resolvedUrl(modelData.path)
-                                        colBackgroundToggled: Appearance.colors.colSecondaryContainer
-                                        colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
-                                        colRippleToggled: Appearance.colors.colSecondaryContainerActive
-                                        onClicked: Wallpapers.setDirectory(modelData.path)
-                                        contentItem: RowLayout {
-                                            anchors.fill: parent
-                                            anchors.leftMargin: Appearance.spacing.space150
-                                            anchors.rightMargin: Appearance.spacing.space150
-                                            spacing: Appearance.spacing.space100
-                                            MaterialSymbol {
-                                                text: dirBtn.modelData.icon
-                                                iconSize: Appearance.font.pixelSize.larger
-                                                color: dirBtn.toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1
-                                                fill: dirBtn.toggled ? 1 : 0
-                                            }
-                                            StyledText {
-                                                text: dirBtn.modelData.name
-                                                color: dirBtn.toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
+                        // The places chips and the Wallpaper Engine config
+                        // row both moved into the left sidebar
+                        // (WallpaperSelectorSidebar.qml) - the toolbar keeps
+                        // only what has no home there.
                         Loader {
                             active: root.source !== "local" && root.source !== "wallpaperEngine"
                             visible: active
@@ -401,100 +378,9 @@ MouseArea {
                         Loader {
                             active: root.source === "wallpaperEngine"
                             visible: active
-                            sourceComponent: RowLayout {
-                                spacing: Appearance.spacing.space100
-
-                                StyledText {
-                                    text: Translation.tr("Steam Workshop")
-                                    color: Appearance.colors.colOnLayer2
-                                }
-
-                                StyledComboBox {
-                                    implicitWidth: 92
-                                    model: [
-                                        { value: 24, displayName: "24 FPS" },
-                                        { value: 30, displayName: "30 FPS" },
-                                        { value: 60, displayName: "60 FPS" }
-                                    ]
-                                    textRole: "displayName"
-                                    Component.onCompleted: {
-                                        const configured = Config.options.wallpaperSelector.wallpaperEngine.fps;
-                                        currentIndex = configured === 24 ? 0 : configured === 60 ? 2 : 1;
-                                    }
-                                    onActivated: index => Config.options.wallpaperSelector.wallpaperEngine.fps = model[index].value
-                                }
-
-                                StyledComboBox {
-                                    implicitWidth: 90
-                                    model: [
-                                        { value: "fill", displayName: Translation.tr("Fill") },
-                                        { value: "fit", displayName: Translation.tr("Fit") },
-                                        { value: "stretch", displayName: Translation.tr("Stretch") }
-                                    ]
-                                    textRole: "displayName"
-                                    Component.onCompleted: {
-                                        const configured = Config.options.wallpaperSelector.wallpaperEngine.scaling;
-                                        currentIndex = configured === "fit" ? 1 : configured === "stretch" ? 2 : 0;
-                                    }
-                                    onActivated: index => Config.options.wallpaperSelector.wallpaperEngine.scaling = model[index].value
-                                }
-
-                                // Which screen plays the sound. Offered beside
-                                // the volume button because that is where the
-                                // user turns sound on, and only where the
-                                // question exists: one screen, or muted, and
-                                // there is nothing to choose.
-                                //
-                                // There is one renderer per output, so before
-                                // this the audio played once per monitor (#338).
-                                StyledComboBox {
-                                    id: audioOutputBox
-                                    implicitWidth: 116
-                                    visible: !Config.options.wallpaperSelector.wallpaperEngine.silent
-                                        && (Quickshell.screens?.length ?? 0) > 1
-
-                                    readonly property var outputs: [{
-                                        value: "",
-                                        displayName: Translation.tr("Auto")
-                                    }].concat((Quickshell.screens ?? []).map(screen => ({
-                                        value: screen.name,
-                                        displayName: screen.name
-                                    })))
-
-                                    model: audioOutputBox.outputs
-                                    textRole: "displayName"
-                                    // Bound rather than set once on completion:
-                                    // a screen can arrive or leave while this is
-                                    // on screen, and the neighbours above only
-                                    // get away with Component.onCompleted
-                                    // because their options are a fixed list.
-                                    currentIndex: Math.max(0, audioOutputBox.outputs
-                                        .findIndex(output => output.value
-                                            === (Config.options.wallpaperSelector.wallpaperEngine.audioMonitor ?? "")))
-                                    onActivated: index =>
-                                        Config.options.wallpaperSelector.wallpaperEngine.audioMonitor
-                                            = audioOutputBox.outputs[index].value
-
-                                    StyledToolTip {
-                                        text: Translation.tr("Screen that plays the wallpaper's sound")
-                                    }
-                                }
-
-                                RippleButton {
-                                    implicitWidth: 38
-                                    implicitHeight: 38
-                                    buttonRadius: height / 2
-                                    toggled: Config.options.wallpaperSelector.wallpaperEngine.silent
-                                    onClicked: Config.options.wallpaperSelector.wallpaperEngine.silent = !Config.options.wallpaperSelector.wallpaperEngine.silent
-                                    contentItem: MaterialSymbol {
-                                        anchors.centerIn: parent
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        text: Config.options.wallpaperSelector.wallpaperEngine.silent ? "volume_off" : "volume_up"
-                                        color: parent.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer2
-                                    }
-                                    StyledToolTip { text: Translation.tr("Wallpaper audio") }
-                                }
+                            sourceComponent: StyledText {
+                                text: Translation.tr("Steam Workshop")
+                                color: Appearance.colors.colOnLayer2
                             }
                         }
                     }
