@@ -42,6 +42,15 @@ Item {
     property real surfaceX: 0
     property real surfaceY: 0
 
+    // The decode bound Background's own wallpaper request carries
+    // (bgRoot.wallpaperDecodeSize). A sourceSize is part of the pixmap cache
+    // key, so this must be byte-identical to the desktop's or every surface
+    // decodes for itself again - which is #147 with a fifth request parameter.
+    // 0 means unbounded, for a caller standing in front of an unbounded
+    // request.
+    property int decodeWidth: 0
+    property int decodeHeight: 0
+
     readonly property string wallpaperUrl: root.wallpaperSource
         ? "file://" + root.wallpaperSource.split('/').map(s => encodeURIComponent(s)).join('/')
         : ""
@@ -70,18 +79,19 @@ Item {
     // ---- Static image path: the whole wallpaper, laid out exactly as the
     // desktop draws it, so the slice behind this surface is just a sub-rect.
     //
-    // Asking for the plain file - no sourceSize, no sourceClipRect, cache on -
-    // is the fix for #147, not an oversight. Those are the request parameters a
-    // QQuickPixmap cache key is built from, so the per-surface clip rect this
-    // used to carry gave every surface a key of its own, and `cache: false`
-    // stopped even identical requests from being shared: eight widgets meant
-    // sixteen full-resolution decodes of one file queued on Qt's single
-    // pixmap-reader thread, and the frost came back one widget at a time, ~0.6s
-    // apart. Sharing the key means every surface - and Background's own
-    // wallpaper Image, which asks for it the same way - waits on one decode, and
-    // a surface created after that decode is Ready in the frame it is built. It
-    // also stops a drag re-requesting the wallpaper on every pixel of travel:
-    // only the sample rect below moves now.
+    // Asking for the plain file - no sourceClipRect, cache on, and exactly the
+    // decode bound the desktop's request carries - is the fix for #147, not an
+    // oversight. Those are the request parameters a QQuickPixmap cache key is
+    // built from, so the per-surface clip rect this used to carry gave every
+    // surface a key of its own, and `cache: false` stopped even identical
+    // requests from being shared: eight widgets meant sixteen full-resolution
+    // decodes of one file queued on Qt's single pixmap-reader thread, and the
+    // frost came back one widget at a time, ~0.6s apart. Sharing the key means
+    // every surface - and Background's own wallpaper Image, which asks for it
+    // the same way - waits on one decode, and a surface created after that
+    // decode is Ready in the frame it is built. It also stops a drag
+    // re-requesting the wallpaper on every pixel of travel: only the sample
+    // rect below moves now.
     Image {
         id: wallpaperImage
         width: root.wallpaperWidth
@@ -91,6 +101,16 @@ Item {
         asynchronous: true
         cache: true
         visible: false
+
+        // Applied through a gated Binding rather than a ternary on the
+        // property, because "no bound" has to leave sourceSize at its default
+        // (an invalid QSize) - a written 0x0 is a different request key.
+        Binding {
+            target: wallpaperImage
+            property: "sourceSize"
+            value: Qt.size(root.decodeWidth, root.decodeHeight)
+            when: root.decodeWidth > 0 && root.decodeHeight > 0
+        }
     }
 
     // One sampler for both paths: the source covers the whole wallpaper either

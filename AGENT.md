@@ -3208,9 +3208,16 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   re-pays on every pixel of a drag, since the rect tracks the widget's position. Take the slice
   with a `ShaderEffectSource`'s `sourceRect` over a shared, unclipped, cached `Image` instead: the
   rect is free to move, and matching the request Background's own wallpaper `Image` makes means a
-  surface built while that wallpaper is on screen needs no decode at all.
+  surface built while that wallpaper is on screen needs no decode at all. That request now carries
+  a fifth parameter: a `sourceSize` bound (`bgRoot.wallpaperDecodeSize`, screen x configured zoom,
+  stable across lock), so an 8K file no longer decodes at 8K for a 1.1x-screen viewport — and every
+  sharer (the frost's `decodeWidth`/`decodeHeight`, the depth cutout's `decodeSize`) must carry the
+  SAME bound or #147 comes back with a new spelling. Qt preserves the picture's aspect under
+  `PreserveAspectCrop` + `sourceSize` (measured: 7680x2160 bounded to 2112x1188 decodes 4224x1188),
+  which is what keeps the depth registration's `coverRect` — an aspect-only computation — correct.
   33139b688 ("fix(widgets): give every desktop widget's frost one shared wallpaper decode"),
-  e15b9f166 ("test(widgets): pin the desktop frost to one shared wallpaper request").
+  e15b9f166 ("test(widgets): pin the desktop frost to one shared wallpaper request"),
+  ("perf(background): bound the wallpaper decode to what a screen can draw").
 - Desktop plugin delegates are retained for every available manifest and gated through an animated
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their

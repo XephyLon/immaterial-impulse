@@ -24,16 +24,19 @@ TestCase {
     // decoded the file by the time any desktop widget is built. Declared with
     // exactly that image's request parameters, because every one of them is part
     // of the cache key: a bare path rather than the file:// URL the surface
-    // builds, no sourceSize, no sourceClipRect, and PreserveAspectCrop - a fill
-    // mode that preserves aspect sets flags in the request, so the same file
-    // asked for with the default Stretch is a different request and decodes
-    // again.
+    // builds, no sourceClipRect, PreserveAspectCrop - a fill mode that preserves
+    // aspect sets flags in the request, so the same file asked for with the
+    // default Stretch is a different request and decodes again - and the
+    // sourceSize bound. The bound is part of the key too, so the frost surface
+    // has to ask with the same one or #147's per-surface decode comes back with
+    // a different spelling.
     Image {
         id: backgroundWallpaper
         fillMode: Image.PreserveAspectCrop
         cache: true
         asynchronous: true
         visible: false
+        sourceSize: Qt.size(5478, 1541)
     }
 
     Component {
@@ -52,6 +55,10 @@ TestCase {
             // pixmap cache key, which is what keeps #147 fixed.
             wallpaperWidth: 5478,
             wallpaperHeight: 1541,
+            // The decode bound Background's own request carries - the fifth
+            // request parameter, and like the others it must match exactly.
+            decodeWidth: 5478,
+            decodeHeight: 1541,
             surfaceX: 100 + index * 400,
             surfaceY: 220,
             width: 320,

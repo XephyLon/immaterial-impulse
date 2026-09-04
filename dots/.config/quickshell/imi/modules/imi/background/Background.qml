@@ -235,6 +235,31 @@ Variants {
         readonly property real parallaxWidth: bgRoot.width * bgRoot.parallaxZoom
         readonly property real parallaxHeight: bgRoot.height * bgRoot.parallaxZoom
 
+        // The static wallpaper's decode bound: the most pixels this screen can
+        // ever draw of it (screen x the configured zoom). Without one, the
+        // wallpaper decodes at FILE resolution - an 8K picture is a ~130MB
+        // decode plus a full-size texture, for a 1.1x-screen viewport. Three
+        // properties of the bound are load-bearing:
+        // - it reads the SCREEN's size, not bgRoot.width: geometry is 0 for
+        //   the first frames, and a sourceSize that starts 0 (= unbounded) and
+        //   then lands is one full-res decode plus one bounded re-decode per
+        //   startup (the triple-decode trap the selector's own bound records);
+        // - it reads the configured zoom, not parallaxZoom: that collapses to
+        //   1 while the session is locked, and a bound that moves with it
+        //   re-decodes the wallpaper on every lock and unlock;
+        // - it is part of the pixmap cache key, so every sharer of this
+        //   request (the widget frost, the depth cutout) must carry the SAME
+        //   value - tests/tst_wallpaper_blur_sharing.qml holds the frost half.
+        // Qt keeps the picture's aspect under PreserveAspectCrop (measured:
+        // 7680x2160 bounded to 2112x1188 decodes 4224x1188), so everything
+        // reading the item's implicit size for the picture's aspect - the
+        // depth registration's coverRect - is unchanged by it.
+        readonly property size wallpaperDecodeSize: Qt.size(
+            Math.round(bgRoot.modelData.width
+                * Math.max(1, Config.options.background.parallax.workspaceZoom ?? 1)),
+            Math.round(bgRoot.modelData.height
+                * Math.max(1, Config.options.background.parallax.workspaceZoom ?? 1)))
+
         // Portrait wallpapers have vertical room to spare and no horizontal
         // story to tell, so they pan down the picture instead of across it.
         // Only stills can be measured this way - a WE project reports nothing -
@@ -948,6 +973,7 @@ Variants {
                 cache: true
                 smooth: true
                 asynchronous: true
+                sourceSize: bgRoot.wallpaperDecodeSize
                 layer.enabled: bgRoot.wallpaperAnimation !== ""
                     && bgRoot.transitionProgress < 1
                 visible: false
@@ -960,6 +986,7 @@ Variants {
                 cache: true
                 smooth: true
                 asynchronous: true
+                sourceSize: bgRoot.wallpaperDecodeSize
                 layer.enabled: bgRoot.wallpaperAnimation !== ""
                     && bgRoot.transitionProgress < 1
                 // The plain image is the wallpaper. It is always drawn (a
@@ -1417,6 +1444,7 @@ Variants {
                             ? Qt.rect(0, 0, bgRoot.width, bgRoot.height)
                             : Qt.rect(parallaxViewport.x, parallaxViewport.y,
                                 parallaxViewport.width, parallaxViewport.height)
+                        wallpaperDecodeSize: bgRoot.wallpaperDecodeSize
                     }
                 }
             }
@@ -1533,6 +1561,11 @@ Variants {
                 // outgoing frame, and reading the path would put the incoming
                 // image under the outgoing image's mask for the length of it.
                 wallpaperSource: wallpaper.source
+                // The same decode bound the wallpaper item carries - it is
+                // part of the request, and the one-decode sharing this file
+                // documents on the cutout's own Image holds only while every
+                // parameter matches.
+                decodeSize: bgRoot.wallpaperDecodeSize
                 // The live surface, never its still (spec §8.3): a masked
                 // still would freeze every animated pixel inside the
                 // silhouette. weLiveSource is the texture the WE transition

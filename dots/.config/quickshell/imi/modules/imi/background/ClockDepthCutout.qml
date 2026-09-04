@@ -35,6 +35,9 @@ Item {
     // every call site but the desktop layer's.
     property Item liveSource: null
     readonly property Item paintedSource: root.liveSource ?? cutoutWallpaper
+    // The wallpaper's decode bound, when the call site's sibling wallpaper
+    // request carries one (the desktop layer's does). Zero = unbounded.
+    property size decodeSize: Qt.size(0, 0)
     property string maskPath: ""
     // A token that changes when the mask file's bytes do, hung on the URL as a
     // fragment. Qt caches a pixmap by URL and a mask is rewritten at the SAME
@@ -64,16 +67,29 @@ Item {
         id: cutoutWallpaper
         anchors.fill: parent
         // Every one of these matches the `wallpaper` item inside the viewport
-        // on purpose. Same source, same size, same fill mode means the
-        // per-screen crop matches with no geometry of its own - and it means
-        // Qt's image cache serves both from ONE decode, since a fill mode's
-        // aspect flags are part of the request and a Stretch copy of the same
-        // file would decode all over again.
+        // on purpose. Same source, same size, same fill mode, same decode
+        // bound means the per-screen crop matches with no geometry of its own
+        // - and it means Qt's image cache serves both from ONE decode, since a
+        // fill mode's aspect flags and a sourceSize are both part of the
+        // request; a Stretch copy of the same file, or one asked for at a
+        // different bound, would decode all over again.
         source: root.wallpaperSource
         fillMode: Image.PreserveAspectCrop
         cache: true
         smooth: true
         asynchronous: true
+
+        // "No bound" must leave sourceSize at its default invalid QSize (a
+        // written 0x0 is a different request key), hence the gated Binding.
+        // The picker and the desktop selector pass none and keep the
+        // unbounded request they always made; only the desktop layer, whose
+        // sibling wallpaper item is bounded, passes the same bound in.
+        Binding {
+            target: cutoutWallpaper
+            property: "sourceSize"
+            value: root.decodeSize
+            when: root.decodeSize.width > 0 && root.decodeSize.height > 0
+        }
         // Drawn by the OpacityMask below, not by itself.
         visible: false
     }
