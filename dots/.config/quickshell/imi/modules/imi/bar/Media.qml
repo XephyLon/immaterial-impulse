@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.imi.mediaControls
 import qs.modules.common.functions
 import qs.services
 import qs.modules.common.models
@@ -18,7 +19,6 @@ Item {
     id: root
     
     property bool vertical: false
-    property bool borderless: Config.options.bar.borderless
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
 
@@ -30,41 +30,12 @@ Item {
     property bool   isPlaying:   activePlayer?.isPlaying   ?? false
     property bool   hasTrack:    trackTitle.length > 0
 
-    property string artDownloadLocation: Directories.coverArt
-    property string artFileName:         Qt.md5(artUrl)
-    property string artFilePath:         `${artDownloadLocation}/${artFileName}`
-    property bool   artDownloaded:       false
-
-    property string displayedArtFilePath: {
-        if (!root.artDownloaded) return ""
-        if (root.artUrl.startsWith("file://")) return root.artUrl
-        return Qt.resolvedUrl(artFilePath)
+    MediaArtSource {
+        id: artSource
+        artUrl: root.artUrl
     }
-
-    onArtFilePathChanged: {
-        if (!root.artUrl || root.artUrl.length === 0) {
-            root.artDownloaded = false
-            return
-        }
-        if (root.artUrl.startsWith("file://")) {
-            root.artDownloaded = true
-            return
-        }
-        artDownloader.targetFile  = root.artUrl
-        artDownloader.artFilePath = root.artFilePath
-        root.artDownloaded = false
-        artDownloader.running = true
-    }
-
-    Process {
-        id: artDownloader
-        property string targetFile:  root.artUrl
-        property string artFilePath: root.artFilePath
-        // Positional args ($1/$2), never spliced into the script body: targetFile
-        // is MPRIS artUrl (attacker-controllable), so interpolation was injectable.
-        command: ["bash", "-c", '[ -f "$1" ] || curl -sSL "$2" -o "$1"', "bash", artFilePath, targetFile]
-        onExited: { root.artDownloaded = true }
-    }
+    readonly property string displayedArtFilePath: artSource.displayedArtFilePath
+    readonly property bool artDownloaded: artSource.downloaded
 
     Layout.fillHeight: true
     implicitWidth: vertical 
@@ -108,7 +79,7 @@ Item {
         sourceComponent: ClippedOutlineCircularProgress {
             implicitSize: 20
             lineWidth: Appearance.rounding.unsharpen
-            value: root.activePlayer?.position / root.activePlayer?.length
+            value: (root.activePlayer?.length ?? 0) > 0 ? root.activePlayer.position / root.activePlayer.length : 0
             colPrimary: Appearance.colors.colOnSecondaryContainer
             enableAnimation: false
             Item {
@@ -157,7 +128,7 @@ Item {
                 Layout.leftMargin: Appearance.spacing.space50
                 implicitSize: 20
                 lineWidth: Appearance.rounding.unsharpen
-                value: root.activePlayer?.position / root.activePlayer?.length
+                value: (root.activePlayer?.length ?? 0) > 0 ? root.activePlayer.position / root.activePlayer.length : 0
                 colPrimary: Appearance.colors.colOnSecondaryContainer
                 enableAnimation: false
                 Item {

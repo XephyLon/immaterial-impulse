@@ -29,9 +29,13 @@ Canvas { // Visualizer
         var n = points.length;
         if (n < 2) return;
 
-        // Smoothing: simple moving average (optional)
+        // Smoothing: simple moving average (optional). Reuse the buffer across
+        // paints - reallocating it every frame (this runs at ~display rate per
+        // visible visualizer) churned the GC for nothing; only the band count
+        // changing needs a new array.
         var smoothWindow = root.smoothing; // adjust for more/less smoothing
-        root.smoothPoints = [];
+        var sp = root.smoothPoints;
+        if (sp.length !== n) { sp = new Array(n); root.smoothPoints = sp; }
         for (var i = 0; i < n; ++i) {
             var sum = 0, count = 0;
             for (var j = -smoothWindow; j <= smoothWindow; ++j) {
@@ -39,9 +43,8 @@ Canvas { // Visualizer
                 sum += points[idx];
                 count++;
             }
-            root.smoothPoints.push(sum / count);
+            sp[i] = root.live ? sum / count : 0; // not playing -> flat line
         }
-        if (!root.live) root.smoothPoints.fill(0); // If not playing, show no points
 
         ctx.beginPath();
         ctx.moveTo(0, h);
