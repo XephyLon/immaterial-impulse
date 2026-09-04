@@ -132,6 +132,11 @@ Singleton {
         onTriggered: overridesFile.reload()
     }
 
+    // A corrupt store is moved aside exactly once per session (a persistently
+    // unreadable file would otherwise re-quarantine on every watch reload).
+    property bool _quarantined: false
+    Process { id: quarantineProc }
+
     Timer {
         id: writeTimer
         interval: 100
@@ -150,7 +155,19 @@ Singleton {
             try {
                 root.overrides = WeOverrides.sanitize(JSON.parse(overridesFile.text()));
             } catch (e) {
-                console.warn("[WallpaperEngineOverrides] unreadable store, keeping in-memory state: " + e);
+                // The file exists but does not parse (a hand edit gone wrong, a
+                // truncated write, a foreign format). Continuing with {} and
+                // letting the next setOverride write over it would DESTROY
+                // whatever the user had. Move the bad file aside once, so a
+                // clean file can take its place without swallowing the original.
+                console.warn("[WallpaperEngineOverrides] unreadable store, quarantining: " + e);
+                if (!root._quarantined) {
+                    root._quarantined = true;
+                    quarantineProc.command = ["bash", "-c",
+                        `mv -n -- "${root.filePath}" "${root.filePath}.corrupt-$(date +%s)"`];
+                    quarantineProc.running = true;
+                }
+                root.overrides = ({});
             }
             root.ready = true;
         }

@@ -60,6 +60,16 @@ hl.window_rule({match = {class = "^(plasma-changeicons)$" }, no_initial_focus = 
 hl.window_rule({match = {class = "^(plasma-changeicons)$" }, move = {999999, 999999}})
 -- stupid dolphin copy
 hl.window_rule({match = {title = "^(Copying — Dolphin)$" }, move = {40, 80}})
+-- The wallpaper compatibility scanner (qs -p we_compat_scan.qml) needs a
+-- MAPPED window - `rendered` is its whole instrument and an unmapped surface
+-- never produces a frame - but it is not for the user to see. Without a rule
+-- Hyprland tiles it into the active workspace and focuses it on every spawn
+-- and respawn, once per broken wallpaper. Float it, deny initial focus, and
+-- park it offscreen (same shape as plasma-changeicons above) so it stays
+-- mapped but out of the way.
+hl.window_rule({match = {title = "^(Wallpaper compatibility scan)$" }, float = true})
+hl.window_rule({match = {title = "^(Wallpaper compatibility scan)$" }, no_initial_focus = true})
+hl.window_rule({match = {title = "^(Wallpaper compatibility scan)$" }, move = {999999, 999999}})
 
 -- Tiling
 hl.window_rule({match = {class = "^dev\\.warp\\.Warp$" }, tile = true})

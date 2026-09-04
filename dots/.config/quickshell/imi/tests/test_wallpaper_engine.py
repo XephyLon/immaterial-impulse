@@ -87,6 +87,37 @@ class WallpaperEngineScannerTests(unittest.TestCase):
             self.assertEqual(by_name["mode"]["options"],
                              [{"label": "A", "value": "a"}, {"label": "B", "value": "b"}])
 
+    def test_combo_numeric_option_values_are_integer_keyed(self):
+        # WE keys combo options by std::to_string(int), so a numeric option
+        # value must serialize as an integer string - "2", not "2.0"/"1.5" -
+        # or --set-property's lookup never matches and the choice is dropped.
+        # A slider's value stays a float (WE reads it with stof), so the int
+        # cast is combo-options-only.
+        scanner = load_scanner()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "7"
+            project.mkdir()
+            (project / "project.json").write_text(json.dumps({
+                "title": "Numeric combo",
+                "type": "scene",
+                "general": {"properties": {
+                    "quality": {"type": "combo", "text": "Quality", "value": 2, "order": 1,
+                                "options": [{"label": "Low", "value": 1},
+                                            {"label": "High", "value": 2.0}]},
+                    "speed": {"type": "slider", "text": "Speed", "value": 1.5,
+                              "min": 0, "max": 3, "step": 0.1, "order": 2},
+                }},
+            }))
+
+            by_name = {p["name"]: p for p in scanner.scan(str(root))[0]["properties"]}
+            self.assertEqual(by_name["quality"]["options"],
+                             [{"label": "Low", "value": "1"}, {"label": "High", "value": "2"}])
+            # The combo's own current value is integer-keyed the same way...
+            self.assertEqual(by_name["quality"]["value"], "2")
+            # ...but the slider keeps its float.
+            self.assertEqual(by_name["speed"]["value"], "1.5")
+
     def test_scanner_properties_default_to_an_empty_list(self):
         scanner = load_scanner()
         with tempfile.TemporaryDirectory() as directory:

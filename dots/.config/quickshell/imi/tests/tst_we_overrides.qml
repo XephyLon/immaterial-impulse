@@ -161,6 +161,29 @@ TestCase {
         verify(!("4" in m))
     }
 
+    function test_sanitize_coerces_or_drops_mistyped_flags() {
+        // A hand edit or a foreign file can carry the right key with the wrong
+        // type; unchecked it reaches WallpaperEngineSurface.fps as a QML type
+        // error on every re-read. sanitize coerces the numeric flags and drops
+        // a flag it cannot type honestly, rather than guessing.
+        var m = WeOverrides.sanitize({
+            "1": { fps: "60", volume: "40", silent: "no", audioProcessing: 1, scaling: 5 },
+            "2": { fps: 30, silent: false, scaling: "fit" }
+        })
+        // Numeric flags coerce from a numeric string.
+        compare(m["1"].fps, 60)
+        compare(m["1"].volume, 40)
+        // A non-string scaling drops (never stringified to "5")...
+        verify(!("scaling" in m["1"]))
+        // ...and a non-boolean bool drops rather than reading "no" as true.
+        verify(!("silent" in m["1"]))
+        verify(!("audioProcessing" in m["1"]))
+        // Correctly typed values pass untouched.
+        compare(m["2"].fps, 30)
+        compare(m["2"].silent, false)
+        compare(m["2"].scaling, "fit")
+    }
+
     function test_project_properties_resolve_per_wallpaper() {
         // Custom properties (project.json general.properties) are inherently
         // per-wallpaper - there is no global to fall back to, so an absent

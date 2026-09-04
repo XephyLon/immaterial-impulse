@@ -126,29 +126,45 @@ Singleton {
                 } catch (e) { /* a stray print; the watchdog owns silence */ }
             }
         }
-        onExited: {
+        onExited: (exitCode, exitStatus) => {
             silenceWatchdog.stop();
             if (!root.scanning)
                 return;
-            // A death mid-project is that project's verdict: the renderer
-            // took the scanner down trying to load it. A death with NO
-            // marker and NO progress this run is the same verdict for the
-            // queue's head - the scanner starts at the head, so a crash
-            // early enough to lose its own marker still names its victim by
-            // position, and without this the respawn walks into the same
-            // crash until the ladder is spent.
+            // QProcess::ExitStatus: NormalExit = 0, CrashExit = 1. A CrashExit
+            // is a signal death - the renderer taking the scanner down on a
+            // wallpaper. A NormalExit, even with a non-zero code, is the
+            // scanner process ending on its own: a finished run, or a startup
+            // failure (a stock binary with no Quickshell.WallpaperEngine, an
+            // exec error, an oversized env) that never loaded anything.
+            const crashed = exitStatus !== 0;
             if (root.inFlightId !== "") {
+                // It announced which wallpaper it was loading and then died
+                // before that verdict - a scanner reaching a "testing" marker
+                // is up and running, so the wallpaper is the culprit whether
+                // the death was a crash or a normal non-zero exit.
                 root.recordVerdict({
                     id: root.inFlightId,
                     status: "broken",
                     error: "the renderer crashed loading this wallpaper"
                 });
-            } else if (!root.progressThisRun && root.pendingQueue.length > 0) {
+            } else if (crashed && !root.progressThisRun && root.pendingQueue.length > 0) {
+                // Crashed before its first marker: the scanner starts at the
+                // head, so a crash early enough to lose its own marker still
+                // names its victim by position, and without this the respawn
+                // walks into the same crash until the ladder is spent.
                 root.recordVerdict({
                     id: root.pendingQueue[0].id,
                     status: "broken",
                     error: "the renderer crashed loading this wallpaper"
                 });
+            } else if (!root.progressThisRun && root.pendingQueue.length > 0) {
+                // A NORMAL exit with no marker and no verdict: the scanner
+                // never got going. Blaming the head by position here would
+                // persist a false "broken" for the whole front of the queue as
+                // the respawn ladder marches down it. Stop, and record nothing.
+                root.scanning = false;
+                root.pendingQueue = [];
+                return;
             }
             if (root.pendingQueue.length > 0 && root.respawnsLeft > 0) {
                 root.respawnsLeft -= 1;
