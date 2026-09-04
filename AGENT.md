@@ -327,6 +327,21 @@ Four things around that are worth not re-deriving:
   both *and* whose 3×3 neighbourhood is uniform (which kills subpixel edges), and report RMSE plus
   what code 255 became.
 
+**`nvidia-smi` powers up a runtime-suspended dGPU on every invocation, so a periodic poll of it
+IS the thing that keeps a hybrid laptop's dGPU awake.** On this machine (AMD iGPU driving the
+display, RTX 3060 with fine-grained runtime D3) the resource monitor's 3s `nvidia-smi` poll held
+the dGPU's `runtime_status` at `active` for an entire 18h session — the wake it costs per query is
+longer than the idle window the driver needs to gate, so the GPU never sleeps and the poll always
+reads "awake". Nothing errors and the numbers look right, which is what hid it. There is no
+wake-free NVIDIA query (no sysfs busy counter; every `nvidia-smi`/NVML call wakes the device), so
+`ResourceUsage.qml` reads the dGPU's `power/runtime_status` (a plain PCI sysfs file, free) each
+tick and spawns `nvidia-smi` only while it says the GPU is already awake — a suspended GPU is 0%
+busy by definition. The same change moved every reading the kernel exposes as a file (hwmon CPU
+temperature, amdgpu busy/temp/VRAM) onto FileViews resolved once by a startup probe, and df onto
+its own 30s clock: a tick used to spawn ~9 processes and now spawns none on this machine.
+`tests/test_resource_usage_polling.py` pins the gate, the df cadence and the sysfs reads.
+7ef4e762 ("perf(resources): poll through files, and stop waking a sleeping dGPU").
+
 **A sound event is one `pw-play` on a path the shell resolved, and neither half of that sentence
 was true before.** `Audio.playSystemSound()` built
 `/usr/share/sounds/<theme>/stereo/<event>.oga` and the same with `.ogg`, spawned an `ffplay` at
@@ -684,7 +699,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               subdirectory and extension rules, the .disabled marker), and this
                               singleton owns the process lifetimes. Playback is a spawned
                               `pw-play` - see "External binaries the shell drives"
-  ResourceUsage.qml           Polls /proc/meminfo, /proc/stat, df, nvidia-smi on a timer
+  ResourceUsage.qml           Polls /proc/meminfo, /proc/stat and the hwmon/amdgpu sysfs files a
+                              startup probe resolves, all through FileViews; subprocesses only
+                              where no file exists (nvidia-smi behind a runtime-status gate, df on
+                              its own 30s clock, sensors as the no-hwmon fallback) - see the
+                              nvidia-smi entry under "External binaries the shell drives"
   HyprlandData.qml            Polls `hyprctl clients/monitors/layers/workspaces -j` on Hyprland IPC
                               events - the source of truth for "what does hyprctl currently see",
                               since Quickshell's own Hyprland IPC bindings don't expose everything
