@@ -30,6 +30,16 @@ var KEYS = [
     "renderScale"
 ];
 
+// Each flag's type, so sanitize can reject a mistyped stored value before it
+// reaches the matching WallpaperEngineSurface property. renderScale is numeric
+// too but has a bounded domain, so it is clamped by _clampScale, not here.
+var NUMERIC_KEYS = { fps: 1, volume: 1 };
+var BOOL_KEYS = {
+    silent: 1, audioProcessing: 1,
+    disableMouse: 1, disableParallax: 1, disableParticles: 1
+};
+var STRING_KEYS = { scaling: 1 };
+
 // renderScale's domain: WallpaperEngineSurface renders into a window this
 // fraction of its pixel size and upscales, 0.25..1 (1 = native). A stored
 // value outside the range is clamped, not dropped, so a hand edit degrades to
@@ -205,11 +215,28 @@ function sanitize(loaded) {
         var clean = {};
         for (var i = 0; i < KEYS.length; i++) {
             var key = KEYS[i];
-            if (record[key] !== undefined && record[key] !== null)
-                clean[key] = record[key];
+            var raw = record[key];
+            if (raw === undefined || raw === null)
+                continue;
+            // Each flag reaches a typed WallpaperEngineSurface property, so a
+            // hand edit or a foreign file with the right key and the wrong type
+            // is a QML type error on every read. Coerce the numeric flags,
+            // keep a string/bool only when it already is one, and drop anything
+            // that cannot be typed honestly rather than guessing ("no" is not
+            // false). renderScale is the bounded numeric, clamped below.
+            if (key === "renderScale") {
+                clean[key] = raw; // clamped after the loop
+            } else if (BOOL_KEYS[key]) {
+                if (typeof raw === "boolean") clean[key] = raw;
+            } else if (NUMERIC_KEYS[key]) {
+                var n = Number(raw);
+                if (isFinite(n)) clean[key] = n;
+            } else if (STRING_KEYS[key]) {
+                if (typeof raw === "string") clean[key] = raw;
+            }
         }
-        // renderScale is the one numeric flag with a bounded domain: clamp a
-        // legal-but-out-of-range value to the edge, drop a non-number.
+        // renderScale's bounded domain: clamp a legal-but-out-of-range value to
+        // the edge, drop a non-number.
         if ("renderScale" in clean) {
             var scale = _clampScale(clean.renderScale);
             if (scale === null) delete clean.renderScale;

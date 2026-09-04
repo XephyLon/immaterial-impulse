@@ -524,10 +524,21 @@ ColumnLayout {
                         from: 0
                         to: 100
                         stepSize: 1
-                        value: root.effective.volume
                         onPressedChanged: {
                             if (!pressed)
                                 root.writeSetting("volume", Math.round(value));
+                        }
+                        // A drag sets `value` imperatively, which would break a
+                        // plain `value:` binding for good - after the first drag
+                        // the handle would stop following a project switch or a
+                        // Custom-settings toggle. A Binding element re-asserts
+                        // whenever the resolved volume changes, so it keeps
+                        // tracking without fighting the drag (effective.volume
+                        // does not change mid-drag; it is written on release).
+                        Binding {
+                            target: volumeSlider
+                            property: "value"
+                            value: root.effective.volume
                         }
                     }
                 }

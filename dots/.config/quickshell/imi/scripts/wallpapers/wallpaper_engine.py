@@ -68,6 +68,19 @@ def serialize_property_value(value: object) -> str:
     return str(value)
 
 
+def serialize_combo_value(value: object) -> str:
+    # WE keys combo options by std::to_string(int), so a numeric option value
+    # has to be an integer string - "2", never "2.0" or "1.5" - or the
+    # --set-property lookup never matches and the selection is silently
+    # dropped. Non-numeric keys (strings) pass through unchanged. This is
+    # combo-only: a slider value stays a float, which WE reads with stof.
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, (int, float)):
+        return str(int(value))
+    return serialize_property_value(value)
+
+
 def project_properties(data: object) -> list[dict[str, object]]:
     general = data.get("general") if isinstance(data, dict) else None
     props = general.get("properties") if isinstance(general, dict) else None
@@ -80,18 +93,20 @@ def project_properties(data: object) -> list[dict[str, object]]:
         if definition.get("type") not in PROPERTY_CONTROL_TYPES:
             continue
         options = definition.get("options")
+        is_combo = definition["type"] == "combo"
+        serialize_value = serialize_combo_value if is_combo else serialize_property_value
         row: dict[str, object] = {
             "name": str(name),
             "type": definition["type"],
             "text": str(definition.get("text") or name),
-            "value": serialize_property_value(definition.get("value")),
+            "value": serialize_value(definition.get("value")),
         }
         for bound in ("min", "max", "step"):
             if isinstance(definition.get(bound), (int, float)) and not isinstance(definition.get(bound), bool):
                 row[bound] = definition[bound]
         if isinstance(options, list):
             row["options"] = [
-                {"label": str(option["label"]), "value": serialize_property_value(option["value"])}
+                {"label": str(option["label"]), "value": serialize_combo_value(option["value"])}
                 for option in options
                 if isinstance(option, dict) and "label" in option and "value" in option
             ]

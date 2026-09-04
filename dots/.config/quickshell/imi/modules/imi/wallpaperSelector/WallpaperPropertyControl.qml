@@ -4,6 +4,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
+import "we_color.js" as WeColor
 
 // One row of a Wallpaper Engine project's own settings (project.json
 // general.properties): a control per property type, in the sidebar's rail
@@ -34,11 +35,11 @@ ColumnLayout {
 
     // Parse an "r g b" float triplet; a garbage value degrades to black
     // rather than NaN channels (Math.max(0, NaN) is NaN - guard with
-    // comparisons, the Appearance-token lesson).
+    // comparisons, the Appearance-token lesson). we_color reads a dot-less
+    // triplet as 0..255 (WE's own convention), so an integer project default
+    // like "255 128 0" is not clamped flat to (1,1,0).
     function channel(index) {
-        const parts = String(root.currentValue).trim().split(/\s+/)
-        const value = parseFloat(parts[index])
-        return value >= 0 ? Math.min(1, value) : 0
+        return WeColor.parseChannel(root.currentValue, index)
     }
 
     // ---- bool: a switch row --------------------------------------------
@@ -185,7 +186,7 @@ ColumnLayout {
                                     channels[channelRow.modelData.index] = value
                                     // Serialized at a precision WE round-trips;
                                     // full doubles make the stored file churn.
-                                    root.committed(channels.map(c => Math.round(c * 1000) / 1000).join(" "))
+                                    root.committed(WeColor.formatChannels(channels))
                                 }
                             }
                         }
