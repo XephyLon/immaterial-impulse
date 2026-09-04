@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-13] — 2026-09-04
+
 ### Added
 - **A Wallpaper Engine sidebar in the wallpaper selector.** Browsing WE
   wallpapers, the selector gains a settings sidebar: frame rate, scaling,
