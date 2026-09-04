@@ -323,6 +323,15 @@ if ! python3 "$SCRIPT_DIR/test_sni_watchdog.py"; then
     exit 1
 fi
 
+# Source contract: ResourceUsage polls through FileViews, keeps df off the
+# fast tick, and never starts nvidia-smi outside the runtime-status gate -
+# the ungated spawn is what holds a hybrid laptop's dGPU out of suspend.
+echo "Running resource usage polling contract..."
+if ! python3 "$SCRIPT_DIR/test_resource_usage_polling.py"; then
+    echo "Resource usage polling contract failed."
+    exit 1
+fi
+
 # Static lint: an Appearance token a QML file reads must be declared. An
 # undeclared one is `undefined`, which renders 0 after a single warning - or
 # NaN, with no warning at all, where the call site does arithmetic on it.
