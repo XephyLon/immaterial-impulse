@@ -66,6 +66,13 @@ ColumnLayout {
     property real previewAspect: 0
     readonly property real contentAspect: GlobalStates.weContentAspect > 0
         ? GlobalStates.weContentAspect : root.previewAspect
+    // The renderer's grabbed full-scene image for THIS project - the real
+    // 32:9 content, not the preview. Empty when it is for another project or
+    // not grabbed (a video, an older binary): the picker then falls back to
+    // the preview at its own aspect, honest but not the scene.
+    readonly property string sceneImage: GlobalStates.weSceneGrabProject === root.activeProjectId
+        ? GlobalStates.weSceneGrabPath : ""
+    readonly property bool haveSceneImage: root.sceneImage !== ""
     readonly property bool canCrop: root.activeProjectId !== ""
         && root.effective.scaling === "fill"
         && WallpaperEngineFeatures.cropFocus
@@ -247,19 +254,21 @@ ColumnLayout {
                             // cropped to that aspect with the viewport
                             // rectangle over it. Everything - the viewport
                             // maths and the drag - works in THIS box's frame.
-                            // The box is the PREVIEW's own aspect, showing it
-                            // pristine (fit, not cropped) - because the
-                            // preview image is not the scene and cropping it
-                            // to the content's wide aspect fabricates a strip
-                            // that misrepresents the wallpaper. The viewport
-                            // rectangle's SIZE still comes from the real
-                            // content-vs-screen overflow (that fraction is
-                            // aspect-ratio-only, so it is honest over any box),
-                            // so it says "this fraction of the width is on
-                            // screen"; the live desktop is the exact feedback.
+                            // The picker box is the CONTENT's real aspect
+                            // (e.g. 32:9), filled with the renderer's grabbed
+                            // scene image - the actual wallpaper, cropped to
+                            // fill the box exactly because the grab IS at the
+                            // content aspect. Only when that grab exists: it is
+                            // the whole point, because the preview image does
+                            // not depict the scene. Without it (a video, an
+                            // older binary) the box falls back to the preview's
+                            // own aspect, shown whole and honest but not the
+                            // scene.
                             Item {
                                 id: fittedBox
-                                readonly property real boxAspect: root.previewAspect > 0 ? root.previewAspect : 16 / 9
+                                readonly property real boxAspect: root.haveSceneImage && root.contentAspect > 0
+                                    ? root.contentAspect
+                                    : (root.previewAspect > 0 ? root.previewAspect : 16 / 9)
                                 readonly property real cardAspect: previewBox.width / previewBox.height
                                 width: boxAspect >= cardAspect ? previewBox.width : previewBox.height * boxAspect
                                 height: boxAspect >= cardAspect ? previewBox.width / boxAspect : previewBox.height
@@ -268,17 +277,19 @@ ColumnLayout {
 
                                 StyledImage {
                                     anchors.fill: parent
-                                    fillMode: Image.PreserveAspectFit
-                                    source: root.weConfig.activePreview
-                                    sourceSize.width: 400
-                                    sourceSize.height: 225
+                                    // The grabbed scene fills its content-aspect
+                                    // box exactly (crop); the preview fallback
+                                    // is shown whole (fit) rather than butchered.
+                                    fillMode: root.haveSceneImage ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                                    source: root.haveSceneImage ? root.sceneImage : root.weConfig.activePreview
+                                    sourceSize.width: 640
+                                    sourceSize.height: 360
                                 }
 
                                 // The viewport rectangle: the axis that
                                 // overflows uses its focus, the other stays
                                 // full-extent. The fraction is content-vs-
-                                // screen (aspect only), drawn over the
-                                // preview-aspect box.
+                                // screen (aspect only).
                                 readonly property var vp: {
                                     const h = CropPicker.viewport(root.contentAspect,
                                         root.screenAspect, width, height, root.effective.focus.x);

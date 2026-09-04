@@ -924,7 +924,11 @@ Variants {
                     target: weLoader
                     enabled: bgRoot.ownsGreeterStill
                     function onActiveChanged() {
-                        if (!weLoader.active) GlobalStates.weContentAspect = 0;
+                        if (!weLoader.active) {
+                            GlobalStates.weContentAspect = 0;
+                            GlobalStates.weSceneGrabProject = "";
+                            GlobalStates.weSceneGrabPath = "";
+                        }
                     }
                 }
 
@@ -947,6 +951,36 @@ Variants {
                         // needs a still just as much as a switch does.
                         if (weLoader.item?.rendered)
                             greeterStillDelay.restart();
+                        // Grab the full uncropped scene for the crop picker,
+                        // once the scene is really rendering. Screen 0 only -
+                        // one grab, one file. The `?rev` is Qt's pixmap-cache
+                        // buster (a rewrite at the same path is not reloaded).
+                        if (bgRoot.ownsGreeterStill && weLoader.item?.rendered
+                                && ("requestSceneGrab" in weLoader.item)) {
+                            weSceneGrabDelay.restart();
+                        }
+                    }
+                }
+
+                Timer {
+                    id: weSceneGrabDelay
+                    interval: 400 // let the scene settle past its warmup frame
+                    onTriggered: {
+                        if (weLoader.item && ("requestSceneGrab" in weLoader.item))
+                            // A plain path (trimmed of file://) - the module's
+                            // QImage::save wants a filesystem path. The stills
+                            // dir is already created (Directories mkdir).
+                            weLoader.item.requestSceneGrab(
+                                `${Directories.wallpaperEngineStills}/scene-crop-grab.png`);
+                    }
+                }
+                Connections {
+                    target: weLoader.item
+                    enabled: weLoader.item !== null && bgRoot.ownsGreeterStill
+                        && ("sceneGrabReady" in (weLoader.item ?? ({})))
+                    function onSceneGrabReady(path) {
+                        GlobalStates.weSceneGrabProject = Config.options.wallpaperSelector.wallpaperEngine.activeProject;
+                        GlobalStates.weSceneGrabPath = "file://" + path + "?" + Date.now();
                     }
                 }
             }
