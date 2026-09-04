@@ -14,37 +14,94 @@ import Quickshell.Hyprland
 Scope {
     id: root
 
-    property string focusedScreenName: Hyprland.focusedMonitor?.name ?? ""
+    // The window is persistent now - one per screen, mapped at boot - because
+    // creating it per open blocked the shell's one GUI thread ~61ms while the
+    // new window got its render thread, GL context and scene graph (the
+    // sidebars' measured number, and this is a screen-sized surface). Closed,
+    // each window is a Top-layer surface with a null input mask, keyboard
+    // focus None and nothing drawn - the bar's own idle shape. The layer is
+    // promoted to Overlay only while open over a true fullscreen window
+    // (the overview's #339 rule): a permanently-mapped Overlay surface would
+    // hold the compositor's fullscreen fast path shut for every game.
+    //
+    // One surface PER SCREEN, with the open edge latching the focused
+    // monitor - the overview's #297 shape, checked by
+    // tests/test_persistent_surface_screen.py's SURFACES registry.
+    property string targetScreen: ""
+    property PanelWindow activeWindow: null
 
-    property var focusedScreen: Quickshell.screens.find(s => s.name === root.focusedScreenName)
-        ?? Quickshell.screens[0]
+    function latchTarget() {
+        root.targetScreen = WM.focusedMonitor?.name ?? "";
+    }
 
-    Loader {
-        id: sessionLoader
-        active: GlobalStates.sessionOpen
-        onActiveChanged: {
-            if (sessionLoader.active)
+    function windowForFocusedMonitor() {
+        root.latchTarget();
+        const windows = sessionWindows.instances;
+        return windows.find(w => w.modelData.name === root.targetScreen)
+            ?? windows[0] ?? null;
+    }
+
+    // One dispatcher at the scope: the latch is written, THEN the one target
+    // opens. Per-window handlers would each read the latch with nothing
+    // ordering them against it being written.
+    Connections {
+        target: GlobalStates
+        function onSessionOpenChanged() {
+            if (GlobalStates.sessionOpen) {
                 SessionWarnings.refresh();
-        }
-
-        Connections {
-            target: GlobalStates
-            function onScreenLockedChanged() {
-                if (GlobalStates.screenLocked) {
-                    GlobalStates.sessionOpen = false;
-                }
+                root.activeWindow = root.windowForFocusedMonitor();
+                root.activeWindow?.open();
+            } else {
+                root.activeWindow?.close();
             }
         }
+        function onScreenLockedChanged() {
+            if (GlobalStates.screenLocked) {
+                GlobalStates.sessionOpen = false;
+            }
+        }
+    }
 
-        sourceComponent: PanelWindow { // Session menu
+    Variants {
+        id: sessionWindows
+        model: Quickshell.screens
+
+        PanelWindow { // Session menu
             id: sessionRoot
-            screen: root.focusedScreen
-            visible: sessionLoader.active
+            required property ShellScreen modelData
+            screen: modelData
+            readonly property bool isTarget: root.activeWindow === sessionRoot
+            // The content outlives the flag by exactly one exit animation -
+            // the wallpaper selector's `reallyOpen` rule. The exit's
+            // `finished` is what clears it.
+            property bool reallyOpen: false
             property string subtitle
             property bool rebootPickerOpen: false
-            onVisibleChanged: {
-                rebootPickerOpen = false;
-                if (visible) EfiBoot.refresh();
+
+            function open() {
+                sessionRoot.reallyOpen = true;
+                sessionRoot.rebootPickerOpen = false;
+                sessionRoot.subtitle = "";
+                EfiBoot.refresh();
+                // A persistent window is created once, at boot, without
+                // keyboard focus - an open has to say where keys go, or the
+                // window activates with no focus item and every key is
+                // dropped (the sidebars' lesson).
+                sessionLock.forceActiveFocus();
+                // Park-then-enter, not enter alone: the grid is persistent
+                // now, so after the first open every member is already at
+                // full strength and a bare enter() would have nothing to
+                // animate.
+                sessionEntrance.park();
+                sessionEntrance.enter();
+                enterAnim.stop();
+                exitAnim.stop();
+                enterAnim.start();
+            }
+
+            function close() {
+                enterAnim.stop();
+                exitAnim.start();
             }
 
             function hide() {
@@ -53,9 +110,35 @@ Scope {
 
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.namespace: "quickshell:session"
-            WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-            color: ColorUtils.transparentize(Appearance.m3colors.m3background, Appearance.m3colors.darkmode ? 0.05 : 0.12)
+            // Overlay only while open over a true fullscreen window on this
+            // monitor: fullscreen windows composite above Top, so the menu
+            // opened behind a game - but a mapped Overlay surface holds the
+            // fullscreen fast path shut, which a session menu that is closed
+            // all day may not do.
+            readonly property bool monitorHasFullscreen:
+                HyprlandData.fullscreenByMonitorName[sessionRoot.screen?.name ?? ""] ?? false
+            WlrLayershell.layer: (GlobalStates.sessionOpen && sessionRoot.isTarget && sessionRoot.monitorHasFullscreen)
+                ? WlrLayer.Overlay : WlrLayer.Top
+            // Gated on being the target as well as the flag: every sibling
+            // would otherwise go Exclusive on the same open and the
+            // compositor would pick which surface swallows the keyboard.
+            WlrLayershell.keyboardFocus: (GlobalStates.sessionOpen && sessionRoot.isTarget)
+                ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            // A literal, with the scrim painted by a child (scrimRect): a
+            // window colour bound to a theme token is the #143 latch, and on
+            // a persistent surface there is no rebuild to recover it.
+            color: "transparent"
+
+            // The whole surface takes input while open (a click anywhere
+            // cancels), and none of it while closed - a persistent surface
+            // with an ungated mask eats every click on the screen.
+            Item {
+                id: inputRegionProxy
+                anchors.fill: parent
+            }
+            mask: Region {
+                item: (GlobalStates.sessionOpen && sessionRoot.isTarget) ? inputRegionProxy : null
+            }
 
             anchors {
                 top: true
@@ -63,12 +146,48 @@ Scope {
                 right: true
             }
 
-            implicitWidth: root.focusedScreen?.width ?? 0
-            implicitHeight: root.focusedScreen?.height ?? 0
+            implicitWidth: sessionRoot.modelData?.width ?? 0
+            implicitHeight: sessionRoot.modelData?.height ?? 0
+
+            // One scalar drives the scrim and the content together, started
+            // rather than a Behavior because the exit's `finished` owns
+            // `reallyOpen` and a Behavior never raises it.
+            property real openProgress: 0
+
+            NumberAnimation {
+                id: enterAnim
+                target: sessionRoot
+                property: "openProgress"
+                to: 1
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Appearance.animation.elementMoveFast.type
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+            }
+
+            NumberAnimation {
+                id: exitAnim
+                target: sessionRoot
+                property: "openProgress"
+                to: 0
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Appearance.animation.elementMoveFast.type
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                onFinished: sessionRoot.reallyOpen = false
+            }
+
+            Rectangle {
+                id: scrimRect
+                anchors.fill: parent
+                visible: sessionRoot.reallyOpen
+                opacity: sessionRoot.openProgress
+                color: ColorUtils.transparentize(Appearance.m3colors.m3background,
+                    Appearance.m3colors.darkmode ? 0.05 : 0.12)
+            }
 
             MouseArea {
                 id: sessionMouseArea
                 anchors.fill: parent
+                enabled: sessionRoot.reallyOpen
                 onClicked: {
                     sessionRoot.hide();
                 }
@@ -78,6 +197,8 @@ Scope {
                 id: contentColumn
                 anchors.centerIn: parent
                 spacing: Appearance.spacing.space200
+                visible: sessionRoot.reallyOpen
+                opacity: sessionRoot.openProgress
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) {
@@ -132,13 +253,11 @@ Scope {
                         target: sessionGrid
                         step: Appearance.animation.staggerStep
                     }
-                    Component.onCompleted: sessionEntrance.enter()
                     columnSpacing: Appearance.spacing.space200
                     rowSpacing: Appearance.spacing.space200
 
                     SessionActionButton {
                         id: sessionLock
-                        focus: sessionRoot.visible
                         buttonIcon: "lock"
                         buttonText: Translation.tr("Lock")
                         onClicked: {
@@ -391,10 +510,12 @@ Scope {
                     horizontalCenter: contentColumn.horizontalCenter
                 }
                 spacing: Appearance.spacing.space150
+                visible: sessionRoot.reallyOpen
+                opacity: sessionRoot.openProgress
 
                 Loader {
                     Layout.alignment: Qt.AlignHCenter
-                    active: SessionWarnings.downloadRunning
+                    active: sessionRoot.reallyOpen && SessionWarnings.downloadRunning
                     visible: active
                     sourceComponent: DescriptionLabel {
                         text: Translation.tr("There might be a download in progress. Check your Downloads folder.")
@@ -405,7 +526,7 @@ Scope {
 
                 Loader {
                     Layout.alignment: Qt.AlignHCenter
-                    active: SessionWarnings.packageManagerRunning
+                    active: sessionRoot.reallyOpen && SessionWarnings.packageManagerRunning
                     visible: active
                     sourceComponent: DescriptionLabel {
                         text: Translation.tr("Your package manager is running")
@@ -452,6 +573,12 @@ Scope {
 
         function open(): void {
             GlobalStates.sessionOpen = true;
+        }
+
+        // Which screen's window the last open landed on - what the
+        // persistent-surface focus probe reads. Empty until the first open.
+        function activeScreen(): string {
+            return root.activeWindow?.modelData.name ?? "";
         }
     }
 

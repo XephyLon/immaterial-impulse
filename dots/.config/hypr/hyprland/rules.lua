@@ -201,7 +201,14 @@ hl.layer_rule({ match = { namespace = "quickshell:regionSelector" }, no_anim = t
 hl.layer_rule({ match = { namespace = "quickshell:screenshot" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, blur = true})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, no_anim = true})
-hl.layer_rule({ match = { namespace = "quickshell:session" }, ignore_alpha = 0})
+-- 0.4, not 0: the session surface stays mapped while closed now, and at
+-- ignore_alpha = 0 its fully transparent idle pixels would still clear the
+-- threshold - a permanently-mapped screen-sized surface asking the compositor
+-- to blur the entire screen. The scrim sits at ~0.88+ alpha, so 0.4 blurs it
+-- exactly as before and ignores the closed surface. Failure direction: too
+-- high unblurs the scrim (flat but harmless), too low re-frosts the idle
+-- screen.
+hl.layer_rule({ match = { namespace = "quickshell:session" }, ignore_alpha = 0.4})
 -- The sidebars' surfaces stay mapped and the panels slide in QML (EdgeSlide,
 -- on tiers pinned to the layersIn/layersOut this used to draw), so there is
 -- no map to animate. The slide rules these replaced fired only on map, which

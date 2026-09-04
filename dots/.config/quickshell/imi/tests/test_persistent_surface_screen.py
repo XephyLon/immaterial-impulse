@@ -60,6 +60,7 @@ SURFACES = {
     ROOT / "modules/imi/overview/Overview.qml": ("quickshell:overview", "isTarget", "onOverviewOpenChanged"),
     ROOT / "modules/imi/sidebarRight/SidebarRight.qml": ("quickshell:sidebarRight", "isTarget", "onSidebarRightOpenChanged"),
     ROOT / "modules/imi/sidebarLeft/SidebarLeft.qml": ("quickshell:sidebarLeft", "isTarget", "onSidebarLeftOpenChanged"),
+    ROOT / "modules/imi/sessionScreen/SessionScreen.qml": ("quickshell:session", "isTarget", "onSessionOpenChanged"),
 }
 
 # Surfaces that are NOT per-screen families, with the reason each one is
