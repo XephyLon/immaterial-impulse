@@ -64,6 +64,14 @@ WallpaperEngineSurface {
         if ("properties" in root) {
             root.properties = Qt.binding(() => WallpaperEngineOverrides.active.properties);
         }
+        // The "fill" crop position, live: the renderer reads it every frame,
+        // so a drag on the picker pans the wallpaper with no reload.
+        if ("focusX" in root) {
+            root.focusX = Qt.binding(() => WallpaperEngineOverrides.active.focus.x);
+        }
+        if ("focusY" in root) {
+            root.focusY = Qt.binding(() => WallpaperEngineOverrides.active.focus.y);
+        }
         // `occluded` idles the RENDER THREAD while this output is covered, which
         // is the half QML cannot otherwise reach: suppressing the contents stops
         // Qt drawing the surface, but the WE thread keeps producing frames

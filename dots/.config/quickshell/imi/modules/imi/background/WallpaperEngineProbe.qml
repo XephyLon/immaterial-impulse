@@ -20,6 +20,9 @@ Item {
     // Per-wallpaper project.json property overrides (--set-property).
     readonly property bool projectProperties: "properties" in probeSurface
 
+    // The live "fill" crop position - the section picker's renderer support.
+    readonly property bool cropFocus: ("focusX" in probeSurface) && ("focusY" in probeSurface)
+
     WallpaperEngineSurface {
         id: probeSurface
         visible: false

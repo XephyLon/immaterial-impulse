@@ -31,6 +31,11 @@ def _checks(layer, background, store, sidebar, content):
         "the surface's fps does not go through the override resolution"
     assert "WallpaperEngineOverrides.active.scaling" in layer, \
         "the surface's scaleMode does not go through the override resolution"
+    # The live crop focus binds the same way, in-guarded for an older binary.
+    assert 'WallpaperEngineOverrides.active.focus.x' in layer, \
+        "the surface's focusX does not go through the override resolution"
+    assert '"focusX" in root' in layer, \
+        "focusX is bound unconditionally - an older renderer binary breaks on it"
     assert not re.search(r"fps\s*:\s*Config\.options", layer), \
         "the surface reads fps straight off the config again"
     assert not re.search(r"scaleMode\s*:\s*Config\.options", layer), \

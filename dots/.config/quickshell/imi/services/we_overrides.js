@@ -33,7 +33,9 @@ var KEYS = [
 // the global; plus its property map, which has no global side. An empty
 // project id is the absence of a key, not a key.
 function resolve(overrides, projectId, globals) {
-    var result = { properties: {} };
+    // focus is the "fill" crop position (0.5,0.5 = centre); per-wallpaper
+    // like properties, with no global side.
+    var result = { properties: {}, focus: { x: 0.5, y: 0.5 } };
     for (var i = 0; i < KEYS.length; i++)
         result[KEYS[i]] = globals[KEYS[i]];
     if (!projectId || !overrides || typeof overrides !== "object")
@@ -52,7 +54,16 @@ function resolve(overrides, projectId, globals) {
         for (var name in record.properties)
             result.properties[name] = record.properties[name];
     }
+    if (record.focus && typeof record.focus === "object"
+        && typeof record.focus.x === "number" && typeof record.focus.y === "number") {
+        result.focus = { x: record.focus.x, y: record.focus.y };
+    }
     return result;
+}
+
+function _clamp01(value) {
+    if (typeof value !== "number" || isNaN(value)) return 0.5;
+    return value < 0 ? 0 : (value > 1 ? 1 : value);
 }
 
 // Whether the project carries ENGINE flag overrides - the Custom settings
@@ -86,6 +97,8 @@ function _cloneRecord(record) {
             clone.properties = {};
             for (var name in record.properties)
                 clone.properties[name] = record.properties[name];
+        } else if (k === "focus" && record.focus && typeof record.focus === "object") {
+            clone.focus = { x: record.focus.x, y: record.focus.y };
         } else {
             clone[k] = record[k];
         }
@@ -97,9 +110,15 @@ function _store(overrides, projectId, record) {
     var result = {};
     for (var id in overrides)
         result[id] = overrides[id];
-    var empty = Object.keys(record).length === 0
-        || (Object.keys(record).length === 1 && "properties" in record
-            && Object.keys(record.properties).length === 0);
+    // A record is empty when it carries no engine flags, no non-empty
+    // property map and no focus - the two sub-objects each count as nothing
+    // when they hold nothing.
+    var meaningfulKeys = Object.keys(record).filter(function (key) {
+        if (key === "properties")
+            return record.properties && Object.keys(record.properties).length > 0;
+        return true; // focus is only ever present when off-centre; flags are values
+    });
+    var empty = meaningfulKeys.length === 0;
     if (empty)
         delete result[projectId];
     else
@@ -134,8 +153,25 @@ function setProjectProperty(overrides, projectId, name, value) {
     return _store(overrides, projectId, record);
 }
 
+// A new map with the "fill" crop position set. Dead centre (0.5, 0.5) is the
+// default, so it is stored as ABSENCE - a stored 0.5/0.5 is churn, and an
+// otherwise-empty record goes with it (the _store empties check already
+// covers a record whose only key is a centred focus, since it drops focus
+// below and then the record is bare).
+function setFocus(overrides, projectId, x, y) {
+    var record = _cloneRecord(overrides[projectId]);
+    var cx = _clamp01(x);
+    var cy = _clamp01(y);
+    if (cx === 0.5 && cy === 0.5)
+        delete record.focus;
+    else
+        record.focus = { x: cx, y: cy };
+    return _store(overrides, projectId, record);
+}
+
 // A new map with the project's ENGINE flags cleared and its property edits
-// kept - what the Custom settings switch turning off means.
+// AND crop focus kept - cropping is per-wallpaper, not an engine flag, so the
+// Custom settings switch turning off leaves it alone.
 function clearEngineOverrides(overrides, projectId) {
     var record = _cloneRecord(overrides[projectId]);
     for (var i = 0; i < KEYS.length; i++)
@@ -172,6 +208,13 @@ function sanitize(loaded) {
             }
             if (Object.keys(properties).length > 0)
                 clean.properties = properties;
+        }
+        if (record.focus && typeof record.focus === "object") {
+            var fx = _clamp01(record.focus.x);
+            var fy = _clamp01(record.focus.y);
+            // A dead-centre focus is the default; do not store it.
+            if (fx !== 0.5 || fy !== 0.5)
+                clean.focus = { x: fx, y: fy };
         }
         if (Object.keys(clean).length > 0)
             result[id] = clean;

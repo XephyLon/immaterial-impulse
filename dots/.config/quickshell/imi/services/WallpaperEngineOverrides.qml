@@ -92,6 +92,16 @@ Singleton {
         return WeOverrides.hasProperties(root.overrides, projectId);
     }
 
+    // The "fill" crop position (0.5,0.5 = centre). Live on the renderer, so a
+    // drag pans in place; committed per move rather than on release because
+    // there is no reload to coalesce.
+    function setFocus(projectId, x, y) {
+        if (!projectId)
+            return;
+        root.overrides = WeOverrides.setFocus(root.overrides, projectId, x, y);
+        writeTimer.restart();
+    }
+
     // Set (string value) or clear (null) one of the wallpaper's own
     // project.json properties.
     function setProjectProperty(projectId, name, value) {

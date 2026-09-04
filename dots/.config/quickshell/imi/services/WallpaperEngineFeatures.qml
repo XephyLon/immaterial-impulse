@@ -20,6 +20,7 @@ Singleton {
 
     readonly property bool engineFlags: probeLoader.item?.engineFlags ?? false
     readonly property bool projectProperties: probeLoader.item?.projectProperties ?? false
+    readonly property bool cropFocus: probeLoader.item?.cropFocus ?? false
 
     Loader {
         id: probeLoader

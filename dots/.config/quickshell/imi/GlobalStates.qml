@@ -66,6 +66,12 @@ Singleton {
     // draws its cutout into this box and measures its clicks against the same
     // rectangle, so the pixels it judges are the pixels the depth layer masks.
     property var clockDepthViewports: ({})
+    // The active Wallpaper Engine scene's content aspect (w/h), published by
+    // Background from the live surface's real content size - which the crop
+    // picker needs because the scene's authored aspect is not the preview
+    // image's. 0 while no scene is live or before its first frame (a video
+    // has no content aspect to pan, so it stays 0).
+    property real weContentAspect: 0
     // True while a copy snip's crop/clipboard pipeline runs; cancel paths
     // must not dismiss (and thereby kill) the in-flight process.
     property bool snipCopyInFlight: false
