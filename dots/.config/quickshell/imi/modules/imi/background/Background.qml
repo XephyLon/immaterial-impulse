@@ -251,16 +251,23 @@ Variants {
         //   re-decodes the wallpaper on every lock and unlock;
         // - it is part of the pixmap cache key, so every sharer of this
         //   request (the widget frost, the depth cutout) must carry the SAME
-        //   value - tests/tst_wallpaper_blur_sharing.qml holds the frost half.
+        //   value - tests/tst_wallpaper_blur_sharing.qml holds the frost half;
+        // - it scales by the output's devicePixelRatio: modelData.width/height
+        //   are LOGICAL pixels but sourceSize is DECODED pixels, so on a
+        //   fractional- or 2x-scale output an unscaled bound decodes at a
+        //   fraction of the panel's pixels and the scene graph upscales it -
+        //   the wallpaper, the frost and the depth cutout all visibly softer.
+        //   The sharers inherit the ratio through this same property.
         // Qt keeps the picture's aspect under PreserveAspectCrop (measured:
         // 7680x2160 bounded to 2112x1188 decodes 4224x1188), so everything
         // reading the item's implicit size for the picture's aspect - the
         // depth registration's coverRect - is unchanged by it.
+        readonly property real _decodeScale:
+            Math.max(1, Config.options.background.parallax.workspaceZoom ?? 1)
+            * (bgRoot.modelData.devicePixelRatio ?? 1)
         readonly property size wallpaperDecodeSize: Qt.size(
-            Math.round(bgRoot.modelData.width
-                * Math.max(1, Config.options.background.parallax.workspaceZoom ?? 1)),
-            Math.round(bgRoot.modelData.height
-                * Math.max(1, Config.options.background.parallax.workspaceZoom ?? 1)))
+            Math.round(bgRoot.modelData.width * bgRoot._decodeScale),
+            Math.round(bgRoot.modelData.height * bgRoot._decodeScale))
 
         // Portrait wallpapers have vertical room to spare and no horizontal
         // story to tell, so they pan down the picture instead of across it.
@@ -450,6 +457,25 @@ Variants {
         // where `activeStill` used to be declared in Config.qml for why storing
         // it is the bug (#103) rather than the convenience it looks like.
         readonly property bool ownsGreeterStill: bgRoot.modelData === Quickshell.screens[0]
+
+        // The project a scene grab was requested for, captured at request time
+        // so onSceneGrabReady labels the PNG with the scene it depicts, not
+        // whatever is active when the (async) grab lands.
+        property string weGrabProject: ""
+
+        // Whether the crop picker can actually use a scene grab: only a Fill
+        // wallpaper that overflows this screen, on a renderer that pans (the
+        // focus surface). Anything else shows no section picker, so grabbing
+        // the scene - a full glReadPixels + PNG on the render thread, which
+        // otherwise re-runs on every reload (a volume commit, a Quality change,
+        // a property edit) - is wasted work.
+        readonly property real _screenAspect:
+            (bgRoot.modelData.height > 0) ? bgRoot.modelData.width / bgRoot.modelData.height : 0
+        readonly property bool weCanCrop:
+            WallpaperEngineOverrides.active.scaling === "fill"
+            && WallpaperEngineFeatures.cropFocus
+            && GlobalStates.weContentAspect > 0
+            && Math.abs(GlobalStates.weContentAspect - bgRoot._screenAspect) > 0.01
 
         function captureGreeterStill() {
             if (!bgRoot.ownsGreeterStill || !(weLoader.item?.rendered ?? false)) return
@@ -911,10 +937,24 @@ Variants {
                 Connections {
                     target: weLoader.item
                     enabled: weLoader.item !== null && bgRoot.ownsGreeterStill
+                    // contentSizeChanged is a qs-wallpaperengine 0.3+ signal;
+                    // Qt matches handlers to signals at CONNECT time regardless
+                    // of `enabled`, so without this an older binary logs "no
+                    // signal of the target matches" once per screen.
+                    ignoreUnknownSignals: true
                     function onContentSizeChanged() {
                         const w = weLoader.item?.contentWidth ?? 0;
                         const h = weLoader.item?.contentHeight ?? 0;
                         GlobalStates.weContentAspect = (w > 0 && h > 0) ? w / h : 0;
+                        // weCanCrop depends on this aspect, so if it only now
+                        // became true (content size published after the first
+                        // rendered frame), kick the grab here too. The 400 ms
+                        // Timer coalesces a restart from onRenderedChanged, so
+                        // whichever signal lands last, the scene is grabbed once.
+                        if (bgRoot.ownsGreeterStill && weLoader.item?.rendered
+                                && bgRoot.weCanCrop
+                                && ("requestSceneGrab" in weLoader.item))
+                            weSceneGrabDelay.restart();
                     }
                 }
                 // A project switch (or clear) leaves a stale aspect until the
@@ -955,7 +995,11 @@ Variants {
                         // once the scene is really rendering. Screen 0 only -
                         // one grab, one file. The `?rev` is Qt's pixmap-cache
                         // buster (a rewrite at the same path is not reloaded).
+                        // Only when the picker could use it (weCanCrop), so a
+                        // reload that is not a croppable Fill scene does not pay
+                        // for a grab nobody shows.
                         if (bgRoot.ownsGreeterStill && weLoader.item?.rendered
+                                && bgRoot.weCanCrop
                                 && ("requestSceneGrab" in weLoader.item)) {
                             weSceneGrabDelay.restart();
                         }
@@ -966,20 +1010,33 @@ Variants {
                     id: weSceneGrabDelay
                     interval: 400 // let the scene settle past its warmup frame
                     onTriggered: {
-                        if (weLoader.item && ("requestSceneGrab" in weLoader.item))
+                        if (weLoader.item && ("requestSceneGrab" in weLoader.item)) {
+                            // Stamp the scene being grabbed now, so a later
+                            // project switch cannot mislabel this grab.
+                            bgRoot.weGrabProject =
+                                Config.options.wallpaperSelector.wallpaperEngine.activeProject;
                             // A plain path (trimmed of file://) - the module's
                             // QImage::save wants a filesystem path. The stills
                             // dir is already created (Directories mkdir).
                             weLoader.item.requestSceneGrab(
                                 `${Directories.wallpaperEngineStills}/scene-crop-grab.png`);
+                        }
                     }
                 }
                 Connections {
                     target: weLoader.item
                     enabled: weLoader.item !== null && bgRoot.ownsGreeterStill
                         && ("sceneGrabReady" in (weLoader.item ?? ({})))
+                    // Same 0.3+ signal caveat as contentSizeChanged: the `in`
+                    // guard gates `enabled`, but Qt still matches at connect
+                    // time, so this silences the per-screen warning.
+                    ignoreUnknownSignals: true
                     function onSceneGrabReady(path) {
-                        GlobalStates.weSceneGrabProject = Config.options.wallpaperSelector.wallpaperEngine.activeProject;
+                        // Label the grab with the project it was REQUESTED for,
+                        // not the one active now: a switch during the 400 ms +
+                        // render window would otherwise stamp the previous
+                        // scene's grab with the new project's id.
+                        GlobalStates.weSceneGrabProject = bgRoot.weGrabProject;
                         GlobalStates.weSceneGrabPath = "file://" + path + "?" + Date.now();
                     }
                 }
