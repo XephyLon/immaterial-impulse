@@ -71,6 +71,22 @@ Singleton {
     // sysfs), or "" while detection is pending or no supported GPU was found.
     readonly property string gpuVendor: probes.gpuVendor
 
+    // nvidia-smi backoff. The runtime-status gate keeps a SUSPENDED card
+    // asleep, but on its own it never lets an ACTIVE-but-idle card suspend:
+    // every tick's poll re-wakes the card, so once runtime_status reads
+    // "active" (a game, the CUDA probe, boot) the 3 s poll holds it awake for
+    // the rest of the session. So after it reads idle _nvidiaZeroThreshold
+    // times running, drop to polling once every _nvidiaBackoffTicks - the gaps
+    // are long enough to clear a typical autosuspend window, so the card can
+    // reach D3 untouched; a non-zero reading snaps back to full cadence. (This
+    // is the review's "every k-th tick after N zero readings" option; it does
+    // not read power/autosuspend_delay_ms, it bounds the gap generously.)
+    property int nvidiaZeroStreak: 0
+    property int nvidiaBackoffCounter: 0
+    readonly property int _nvidiaZeroThreshold: 3
+    readonly property int _nvidiaBackoffTicks: Math.max(2, Math.ceil(
+        12000 / (Config?.options.resources.updateInterval ?? 3000)))
+
     // Resolves every pollable file path in one startup spawn: the CPU
     // temperature's hwmon input, and the GPU backend with its sysfs paths.
     // Detection order (nvidia first) is unchanged from the old per-vendor
@@ -98,16 +114,26 @@ Singleton {
             done
             echo "cputemp $cpu"
 
+            # nvidia only if an actual 0x10de display device is on the bus -
+            # nvidia-smi alone is a userland presence (a CUDA box with an AMD
+            # display GPU has it), and choosing "nvidia" there polls a failing
+            # nvidia-smi forever. No 0x10de display device: fall through to the
+            # drm scan.
+            gpu_emitted=
             if command -v nvidia-smi >/dev/null 2>&1; then
-                pm=-
                 for d in /sys/bus/pci/devices/*; do
                     [ "$(cat "$d/vendor" 2>/dev/null)" = 0x10de ] || continue
                     case "$(cat "$d/class" 2>/dev/null)" in
-                        0x0300*|0x0302*) pm="$d/power/runtime_status"; break;;
+                        0x0300*|0x0302*)
+                            pm=-
+                            [ -e "$d/power/runtime_status" ] && pm="$d/power/runtime_status"
+                            echo "gpu nvidia pm=$pm"
+                            gpu_emitted=1
+                            break;;
                     esac
                 done
-                echo "gpu nvidia pm=$pm"
-            else
+            fi
+            if [ -z "$gpu_emitted" ]; then
                 found=
                 for d in /sys/class/drm/card*/device; do
                     [ -d "$d" ] || continue
@@ -172,6 +198,11 @@ Singleton {
                     root.gpuUsage  = parsed.gpuUsage
                     root.vramUsed  = parsed.vramUsed
                     root.vramTotal = parsed.vramTotal
+                    // Feed the backoff: a run of idle readings lets the tick
+                    // stop re-waking the card so it can autosuspend; any load
+                    // snaps back to full cadence.
+                    if (parsed.gpuUsage === 0) root.nvidiaZeroStreak++
+                    else { root.nvidiaZeroStreak = 0; root.nvidiaBackoffCounter = 0 }
                 }
             }
         }
@@ -210,10 +241,19 @@ Singleton {
                 // awake; asleep means 0% busy by definition.
                 fileNvidiaPm.reload()
                 if (root.nvidiaShouldPoll(fileNvidiaPm.text())) {
-                    gpuProc.running = false
-                    gpuProc.running = true
+                    if (root.nvidiaDueForPoll()) { // throttled once idle
+                        gpuProc.running = false
+                        gpuProc.running = true
+                    }
                 } else {
+                    // Suspended: the card is off. Zero the live readings, not
+                    // just usage - a held-over temperature or VRAM figure reads
+                    // as a warm card that is actually powered down. vramTotal is
+                    // the capacity, not a reading, so it stays.
                     root.gpuUsage = 0
+                    root.gpuTemp = 0
+                    root.vramUsed = 0
+                    root.nvidiaBackoffCounter = 0
                 }
             } else if (root.gpuVendor === "amd" || root.gpuVendor === "intel") {
                 fileGpuBusy.reload()
@@ -372,6 +412,20 @@ Singleton {
     function nvidiaShouldPoll(runtimeStatusText) {
         const status = String(runtimeStatusText).trim()
         return status !== "suspended" && status !== "suspending";
+    }
+
+    // Whether this awake tick should actually spawn nvidia-smi, or skip to let
+    // an idle card autosuspend (see the backoff note). Advances the counter as
+    // a side effect. Only meaningful once nvidiaShouldPoll() said the card is
+    // awake; a suspended card is handled by the gate, not here.
+    function nvidiaDueForPoll() {
+        if (nvidiaZeroStreak < _nvidiaZeroThreshold) return true;
+        if (nvidiaBackoffCounter >= _nvidiaBackoffTicks - 1) {
+            nvidiaBackoffCounter = 0;
+            return true;
+        }
+        nvidiaBackoffCounter++;
+        return false;
     }
 
     function updateMemoryUsageHistory() {

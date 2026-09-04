@@ -160,6 +160,35 @@ TestCase {
         verify(ru.nvidiaShouldPoll(""))
     }
 
+    function test_nvidiaDueForPoll_backs_off_when_idle() {
+        var ru = ResourceUsage
+        // Not idle yet: poll every tick, so a busy card is sampled promptly.
+        ru.nvidiaZeroStreak = 0
+        ru.nvidiaBackoffCounter = 0
+        verify(ru.nvidiaDueForPoll())
+
+        // Idle past the threshold: the gate says the card is awake, but polling
+        // it every tick is what keeps it from autosuspending. So across one
+        // backoff window it polls exactly ONCE, letting the gaps free the card.
+        ru.nvidiaZeroStreak = ru._nvidiaZeroThreshold
+        ru.nvidiaBackoffCounter = 0
+        var polls = 0
+        for (var i = 0; i < ru._nvidiaBackoffTicks; i++)
+            if (ru.nvidiaDueForPoll()) polls++
+        compare(polls, 1)
+        // The poll lands on the last tick of the window and resets the counter.
+        compare(ru.nvidiaBackoffCounter, 0)
+
+        // A load reading (streak back to 0) restores full cadence at once.
+        ru.nvidiaZeroStreak = 0
+        ru.nvidiaBackoffCounter = 5
+        verify(ru.nvidiaDueForPoll())
+
+        // Leave the singleton as found.
+        ru.nvidiaZeroStreak = 0
+        ru.nvidiaBackoffCounter = 0
+    }
+
     function test_parseAmdSysfs() {
         var ru = ResourceUsage
 
