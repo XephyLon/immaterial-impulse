@@ -367,7 +367,7 @@ at startup). None of the documented env vars stops the probe
 (`QT_FFMPEG_DECODING_HW_DEVICE_TYPES` filters codec selection, not this enumeration). Before
 adding a QtMultimedia object anywhere, know that its first construction costs a near-second stall
 and permanently attaches the process to the dGPU.
-7ef4e762 ("perf(resources): poll through files, and stop waking a sleeping dGPU").
+417e9819 ("docs(agent): the first QtMultimedia object probes every hw context, cuda included").
 
 **A sound event is one `pw-play` on a path the shell resolved, and neither half of that sentence
 was true before.** `Audio.playSystemSound()` built
@@ -904,7 +904,7 @@ services/                  Singletons wrapping external state/processes - one pe
                               Wallpaper Engine, gated on WallpaperEngineFeatures so an older
                               renderer binary shows only what it answers - a control for a flag
                               the renderer does not read would be a fake action
-                              ("feat(wallpaperSelector): a sidebar - places over files, engine config over WE")
+                              c0c05d3f ("feat(wallpaperSelector): a sidebar - places over files, engine config over WE")
   WallpaperEngineFeatures.qml  Which properties THIS binary's embedded renderer has, probed once
                               by building a bare WallpaperEngineSurface (no project, so no thread
                               or GL) and asking `"x" in surface`. The extended controls (the
@@ -922,10 +922,14 @@ services/                  Singletons wrapping external state/processes - one pe
                               picker draws the actual scene, grabbed by the renderer
                               (requestSceneGrab -> GlobalStates.weSceneGrabPath, a PNG at the
                               real 32:9 aspect), NOT the preview image - the preview does not
-                              depict an ultrawide scene. Note: WE renders a scene at its authored
-                              resolution regardless of window, so a render-scale lever does
-                              nothing for scenes (measured) and was not shipped; fps is the
-                              scene's only in-shell cost lever
+                              depict an ultrawide scene. The render-scale Quality dial
+                              (WallpaperSelectorSidebar, surface renderScale 0.25..1) IS shipped
+                              and gated the same way, but honest about its reach: WE renders a
+                              scene into its own authored-resolution FBO regardless of window, so
+                              the dial only trims a scene's final composite (fps is the lever for
+                              a heavy scene); it is the video path, composited at window size,
+                              where a lower quality cuts real work
+                              bc571a8d ("feat(wallpaperSelector): a render-scale Quality dial, gated and honest")
   WallpaperEngineCompat.qml    Per-wallpaper compatibility verdicts, the reference app's bulk
                               scanner: the scan runs in a SPAWNED `qs -p` scanner process
                               (scripts/wallpapers/we_compat_scan.qml) loading each project into a
@@ -941,7 +945,7 @@ services/                  Singletons wrapping external state/processes - one pe
                               Decisions in services/we_compat.js; the grid badges broken tiles
                               and the sidebar's Hide broken filters them, both through
                               statusFor - tests/test_we_compat_wiring.py pins the one reader
-                              ("feat(wallpaperSelector): a compatibility scan that marks the wallpapers the renderer cannot start")
+                              dd97c0a1 ("feat(wallpaperSelector): the engine's full settings, per-wallpaper properties, and a compatibility scan")
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper
@@ -3288,7 +3292,7 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   which is what keeps the depth registration's `coverRect` — an aspect-only computation — correct.
   33139b688 ("fix(widgets): give every desktop widget's frost one shared wallpaper decode"),
   e15b9f166 ("test(widgets): pin the desktop frost to one shared wallpaper request"),
-  ("perf(background): bound the wallpaper decode to what a screen can draw").
+  61aec909 ("perf(background): bound the wallpaper decode to what a screen can draw").
 - Desktop plugin delegates are retained for every available manifest and gated through an animated
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
@@ -6638,7 +6642,7 @@ surface's fully transparent idle pixels would ask the compositor to blur the ent
 the threshold moved to 0.4 (the scrim sits at ~0.88+, so it frosts exactly as before). Its layer
 follows the overview's #339 rule — Overlay only while open over a true fullscreen window, Top
 otherwise — because a permanently-mapped Overlay surface holds the fullscreen fast path shut.
-("perf(sessionScreen): the session menu's surface outlives the gesture").
+c27bebd0 ("perf(sessionScreen): the session menu's surface outlives the gesture").
 
 A fourth cost, found by the first multi-monitor user to update (#297): **a persistent surface has
 to say which screen it lives on.** A `PanelWindow` with no `screen:` asks the compositor to choose
