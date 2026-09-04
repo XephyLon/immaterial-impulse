@@ -36,6 +36,12 @@ def _checks(layer, background, store, sidebar, content):
         "the surface's focusX does not go through the override resolution"
     assert '"focusX" in root' in layer, \
         "focusX is bound unconditionally - an older renderer binary breaks on it"
+    # renderScale (the Quality dial) binds through the resolution too, and
+    # in-guarded like the rest - it is absent on a pre-0.3.x renderer binary.
+    assert "WallpaperEngineOverrides.active.renderScale" in layer, \
+        "the surface's renderScale does not go through the override resolution"
+    assert '"renderScale" in root' in layer, \
+        "renderScale is bound unconditionally - an older renderer binary breaks on it"
     assert not re.search(r"fps\s*:\s*Config\.options", layer), \
         "the surface reads fps straight off the config again"
     assert not re.search(r"scaleMode\s*:\s*Config\.options", layer), \
@@ -62,6 +68,8 @@ def _checks(layer, background, store, sidebar, content):
         "the fps control does not write through the router"
     assert re.search(r'onActivated:.*writeSetting\("scaling"', sidebar), \
         "the scaling control does not write through the router"
+    assert re.search(r'onActivated:.*writeSetting\("renderScale"', sidebar), \
+        "the Quality control does not write through the router"
 
     # The content hosts the sidebar for exactly the two sources that have one.
     assert "WallpaperSelectorSidebar" in content
@@ -94,6 +102,15 @@ def test_the_checks_can_fail():
         pass
     else:
         raise AssertionError("a raw-config fps read passed the contract")
+
+    # Planted: renderScale bound unconditionally (breaks an older binary).
+    planted = layer.replace('"renderScale" in root', '"renderScaleXX" in root')
+    try:
+        _checks(planted, good["background"], good["store"], good["sidebar"], good["content"])
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("an unguarded renderScale binding passed the contract")
 
     # Planted: the store on a JsonAdapter.
     planted = good["store"].replace("FileView", "JsonAdapter")

@@ -26,8 +26,18 @@
 var KEYS = [
     "fps", "scaling", "silent",
     "volume", "audioProcessing",
-    "disableMouse", "disableParallax", "disableParticles"
+    "disableMouse", "disableParallax", "disableParticles",
+    "renderScale"
 ];
+
+// renderScale's domain: WallpaperEngineSurface renders into a window this
+// fraction of its pixel size and upscales, 0.25..1 (1 = native). A stored
+// value outside the range is clamped, not dropped, so a hand edit degrades to
+// the nearest legal quality rather than silently falling back to native.
+function _clampScale(value) {
+    if (typeof value !== "number" || isNaN(value)) return null;
+    return value < 0.25 ? 0.25 : (value > 1 ? 1 : value);
+}
 
 // The settings the active project runs at: its own override per key, else
 // the global; plus its property map, which has no global side. An empty
@@ -197,6 +207,13 @@ function sanitize(loaded) {
             var key = KEYS[i];
             if (record[key] !== undefined && record[key] !== null)
                 clean[key] = record[key];
+        }
+        // renderScale is the one numeric flag with a bounded domain: clamp a
+        // legal-but-out-of-range value to the edge, drop a non-number.
+        if ("renderScale" in clean) {
+            var scale = _clampScale(clean.renderScale);
+            if (scale === null) delete clean.renderScale;
+            else clean.renderScale = scale;
         }
         if (record.properties && typeof record.properties === "object") {
             var properties = {};

@@ -40,7 +40,8 @@ Singleton {
             audioProcessing: Config.options.wallpaperSelector.wallpaperEngine.audioProcessing ?? true,
             disableMouse: Config.options.wallpaperSelector.wallpaperEngine.disableMouse ?? false,
             disableParallax: Config.options.wallpaperSelector.wallpaperEngine.disableParallax ?? false,
-            disableParticles: Config.options.wallpaperSelector.wallpaperEngine.disableParticles ?? false
+            disableParticles: Config.options.wallpaperSelector.wallpaperEngine.disableParticles ?? false,
+            renderScale: Config.options.wallpaperSelector.wallpaperEngine.renderScale ?? 1.0
         }))
 
     // The same resolution with the globals as an argument, for tests.
@@ -84,6 +85,7 @@ Singleton {
         next = WeOverrides.setOverride(next, projectId, "disableMouse", effective.disableMouse);
         next = WeOverrides.setOverride(next, projectId, "disableParallax", effective.disableParallax);
         next = WeOverrides.setOverride(next, projectId, "disableParticles", effective.disableParticles);
+        next = WeOverrides.setOverride(next, projectId, "renderScale", effective.renderScale);
         root.overrides = next;
         writeTimer.restart();
     }

@@ -117,6 +117,50 @@ TestCase {
         compare(r.volume, 0)
     }
 
+    readonly property var scaleGlobals: ({
+        fps: 30, scaling: "fill", silent: true,
+        volume: 100, audioProcessing: true,
+        disableMouse: false, disableParallax: false, disableParticles: false,
+        renderScale: 1.0
+    })
+
+    function test_render_scale_falls_back_and_overrides() {
+        // renderScale is an ENGINE flag like fps: a per-project value wins,
+        // else the global. 1 = native; the surface renders into a window this
+        // fraction of its size and upscales.
+        var r = WeOverrides.resolve({}, "12345", scaleGlobals)
+        compare(r.renderScale, 1.0)
+
+        r = WeOverrides.resolve({ "12345": { renderScale: 0.5 } }, "12345", scaleGlobals)
+        compare(r.renderScale, 0.5)
+        // Untouched flags still follow the globals.
+        compare(r.fps, 30)
+    }
+
+    function test_render_scale_counts_as_engine_override() {
+        // It rides with the other engine flags, so the Custom settings switch
+        // owns it - clearEngineOverrides drops it.
+        var m = WeOverrides.setOverride({}, "12345", "renderScale", 0.5)
+        verify(WeOverrides.hasOverride(m, "12345"))
+        m = WeOverrides.clearEngineOverrides(m, "12345")
+        verify(!("12345" in m))
+    }
+
+    function test_sanitize_clamps_render_scale_and_drops_garbage() {
+        var m = WeOverrides.sanitize({
+            "1": { renderScale: 0.5 },
+            "2": { renderScale: 4 },
+            "3": { renderScale: 0.01 },
+            "4": { renderScale: "big" }
+        })
+        compare(m["1"].renderScale, 0.5)
+        // Out of the 0.25..1 domain clamps to the edge...
+        compare(m["2"].renderScale, 1.0)
+        compare(m["3"].renderScale, 0.25)
+        // ...and a non-number is not a value - the record empties and drops.
+        verify(!("4" in m))
+    }
+
     function test_project_properties_resolve_per_wallpaper() {
         // Custom properties (project.json general.properties) are inherently
         // per-wallpaper - there is no global to fall back to, so an absent

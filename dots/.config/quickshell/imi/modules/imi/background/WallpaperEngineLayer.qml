@@ -64,6 +64,12 @@ WallpaperEngineSurface {
         if ("properties" in root) {
             root.properties = Qt.binding(() => WallpaperEngineOverrides.active.properties);
         }
+        // renderScale is a load-time input inside the surface (the render
+        // window is fixed when WE starts), so a change reloads - same dynamic
+        // binding as the flags above.
+        if ("renderScale" in root) {
+            root.renderScale = Qt.binding(() => WallpaperEngineOverrides.active.renderScale);
+        }
         // The "fill" crop position, live: the renderer reads it every frame,
         // so a drag on the picker pans the wallpaper with no reload.
         if ("focusX" in root) {

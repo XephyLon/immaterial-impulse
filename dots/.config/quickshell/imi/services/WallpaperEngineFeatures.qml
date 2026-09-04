@@ -22,6 +22,7 @@ Singleton {
     readonly property bool projectProperties: probeLoader.item?.projectProperties ?? false
     readonly property bool cropFocus: probeLoader.item?.cropFocus ?? false
     readonly property bool sceneGrab: probeLoader.item?.sceneGrab ?? false
+    readonly property bool renderScale: probeLoader.item?.renderScale ?? false
 
     Loader {
         id: probeLoader
