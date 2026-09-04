@@ -20,6 +20,18 @@ own repo; the installer pins which revision it builds.
   picker with the real-scene thumbnail, and the Quality dial all appear once
   it is installed (Settings > Update Dots). On the previous renderer those
   controls stay hidden.
+- **Lyrics load faster and stop re-fetching.** Fetched lyrics are cached on
+  disk, so replaying a song or reopening the media sidebar no longer re-hits
+  the network; a track change now fetches once instead of two or three times,
+  and a hung fetch gives up after 20s instead of spinning forever.
+
+### Fixed
+- **Lyrics no longer flicker "no lyrics" on every track change**, and seeking
+  within a song no longer disrupts them.
+- **Media cover-art tint no longer freezes grey** on the dock after a track
+  with no artwork, and progress bars no longer misbehave on live streams or
+  when no player is present. Cover art for local files and on slow IPv6
+  networks loads reliably in the sidebar.
 
 ## [1.0.0-rc-13] — 2026-09-04
 
