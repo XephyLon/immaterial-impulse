@@ -212,12 +212,37 @@ Singleton {
         }
     }
 
+    // The fetch can hang if several providers stall (5 x 12s + Glassy's poll);
+    // this bounds the spinner and kills the proc so a later fetch is not
+    // blocked behind a corpse.
+    readonly property int fetchTimeoutMs: 20000
+    Timer {
+        id: fetchWatchdog
+        interval: root.fetchTimeoutMs
+        onTriggered: {
+            if (lyricsProc.running) {
+                root._ignoreNextExit = true
+                lyricsProc.running = false
+            }
+            if (root.status === "loading")
+                root.status = "not_found"
+        }
+    }
+
+    // A deliberate kill (restart or watchdog) fires the OLD run's onExited
+    // asynchronously, AFTER the new fetch has set status back to "loading" -
+    // so an unguarded handler flips the fresh load to not_found. This absorbs
+    // exactly one such kill.
+    property bool _ignoreNextExit: false
+
     Process {
         id: lyricsProc
         running: false
         // A fetch that dies without printing - a network failure, a python
         // stack trace - used to strand the view on "loading" forever.
         onExited: (exitCode, exitStatus) => {
+            fetchWatchdog.stop()
+            if (root._ignoreNextExit) { root._ignoreNextExit = false; return }
             if (root.status === "loading")
                 root.status = "not_found"
         }
@@ -227,6 +252,7 @@ Singleton {
         stdout: SplitParser {
             onRead: data => {
                 const trimmed = data.trim()
+                fetchWatchdog.stop()
                 if (trimmed === "not_found") { root.status = "not_found"; return }
                 if (trimmed === "no_info")   { root.status = "no_info";   return }
 
@@ -258,9 +284,51 @@ Singleton {
         }
     }
 
-    function restartLyrics() {
+    // The last (title, artist, duration) a fetch was launched for. A repeat of
+    // the same key - metadata churn, a player re-selection, a sidebar reopen
+    // on the same song - reuses what is loaded instead of re-fetching.
+    property string lastKey: ""
+
+    // Metadata lands field by field (title before artist) and a track change
+    // fires several signals at once; each would otherwise launch, kill, and
+    // relaunch the fetcher. Debounce collapses the burst into one fetch.
+    Timer {
+        id: restartDebounce
+        interval: 200
+        onTriggered: root.doRestart()
+    }
+    function restartLyrics() { restartDebounce.restart() }
+
+    function doRestart() {
+        const title    = root.activePlayer?.trackTitle  ?? ""
+        const artist   = root.activePlayer?.trackArtist ?? ""
+        const duration = root.activePlayer?.length       ?? 0
+        const key = title + "" + artist + "" + Math.floor(duration)
+
+        if (!root.lyricsWanted) {
+            // Not shown: stop the fetch and forget the key, so reopening
+            // re-fetches - which the python-side disk cache serves instantly
+            // for a song already fetched.
+            if (lyricsProc.running) { root._ignoreNextExit = true; lyricsProc.running = false }
+            fetchWatchdog.stop()
+            root.lastKey = ""
+            root.source = ""
+            root.lyricsLines = []
+            root.activeIndex = -1
+            root.slots = []
+            root.status = "idle"
+            return
+        }
+
+        // Same track already loaded or in flight: keep it, do not relaunch.
+        if (key === root.lastKey
+                && (root.status === "loading"
+                    || (root.status === "ok" && root.lyricsLines.length > 0)))
+            return
+
+        root.lastKey = key
         root.source = ""
-        lyricsProc.running = false
+        if (lyricsProc.running) { root._ignoreNextExit = true; lyricsProc.running = false }
         root.lyricsLines = []
         root.activeIndex = -1
         root.slots = []
@@ -275,17 +343,6 @@ Singleton {
         root.lastPositionWall = 0
         root.lastKnownPosition = root.activePlayer?.position ?? 0
 
-        if (!root.lyricsWanted) {
-            root.status = "idle"
-            return
-        }
-
-        root.status = "loading"
-
-        const title    = root.activePlayer?.trackTitle  ?? ""
-        const artist   = root.activePlayer?.trackArtist ?? ""
-        const duration = root.activePlayer?.length       ?? 0
-
         // Title only: a browser/YouTube player often reports an empty
         // artist with everything packed in the title ("Sleep Token -
         // Provider - YouTube"), and scripts/lyrics/lyrics.py's normalizer
@@ -293,12 +350,14 @@ Singleton {
         // first. An unresolvable title still comes back not_found.
         if (!title) { root.status = "no_info"; return }
 
+        root.status = "loading"
         lyricsProc.command = [
             "python3",
             `${Directories.scriptPath}/lyrics/lyrics.py`,
             title, artist, String(Math.floor(duration))
         ]
         lyricsProc.running = true
+        fetchWatchdog.restart()
     }
 
     Connections {
@@ -307,13 +366,5 @@ Singleton {
         function onTrackArtistChanged() { root.restartLyrics() }
     }
 
-    onLyricsWantedChanged: {
-        if (root.lyricsWanted) root.restartLyrics()
-        else {
-            lyricsProc.running = false
-            root.lyricsLines = []
-            root.slots = []
-            root.status = "idle"
-        }
-    }
+    onLyricsWantedChanged: root.restartLyrics()
 }

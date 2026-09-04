@@ -13,11 +13,15 @@ Item {
     // The player this view is showing - forwarded to the service so the
     // fetch follows the dropdown, not the global active player.
     property var player: null
+    // Only a VISIBLE view claims the service's single overridePlayer, so a
+    // hidden view (a closed sidebar, a faded-out widget) does not fight a shown
+    // one for it. Two views visible at once with DIFFERENT players is the
+    // residual case the single-owner service cannot fully express.
     Binding {
         target: LyricsService
         property: "overridePlayer"
         value: root.player
-        when: root.player !== null && root.player !== undefined
+        when: root.visible && root.player !== null && root.player !== undefined
     }
 
     // The sweep clock the active line's words follow.
@@ -58,7 +62,14 @@ Item {
     // to lyrics and destroyed when it flips back, so its lifetime is the
     // refcount's.
     Component.onCompleted: LyricsService.sidebarLyricsRefs++
-    Component.onDestruction: LyricsService.sidebarLyricsRefs--
+    Component.onDestruction: {
+        LyricsService.sidebarLyricsRefs--
+        // Release the player claim if this view held it: a Binding does not
+        // restore the property when its view is destroyed, so without this the
+        // service would keep following a now-gone view's player.
+        if (LyricsService.overridePlayer === root.player)
+            LyricsService.overridePlayer = null
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -250,17 +261,10 @@ Item {
                         Behavior on opacity {
                             NumberAnimation { duration: root.growDuration; easing.type: Easing.OutCubic }
                         }
-                        readonly property real sweepProgress: {
-                            const span = LyricsService.activeLineSpan
-                            if (!span) return 0
-                            return Math.max(0, Math.min(1,
-                                (root.sweepPosition - span.start) / (span.end - span.start)))
-                        }
                         // A line with no per-word timing gets a single sweep
                         // at a FIXED speed, not one paced to the line's
                         // duration - restarted each time this becomes the
-                        // active swept line. (sweepProgress stays defined for
-                        // reference but no longer drives the paint.)
+                        // active swept line.
                         property real shownProgress: 0
                         onVisibleChanged: if (visible) fixedSweep.restart()
                         NumberAnimation on shownProgress {

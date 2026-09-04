@@ -176,10 +176,14 @@ Item {
                                 highlightColor: root.blendedColors.colPrimary
                                 trackColor: root.blendedColors.colSecondaryContainer
                                 handleColor: root.blendedColors.colPrimary
-                                value: root.player?.position / root.player?.length
+                                value: (root.player?.length ?? 0) > 0 ? root.player.position / root.player.length : 0
                                 onMoved: {
                                     root.player.position = value * root.player.length
-                                    lyricsComp.restartLyrics()
+                                    // No lyrics refetch on seek: the sync clock
+                                    // re-anchors from the new position via
+                                    // LyricsService's onPositionChanged. (The
+                                    // old lyricsComp.restartLyrics() call also
+                                    // threw - Lyrics has no such function.)
                                 }
                             }
                         }
@@ -196,7 +200,7 @@ Item {
                                 wavy: root.player?.isPlaying
                                 highlightColor: root.blendedColors.colPrimary
                                 trackColor: root.blendedColors.colSecondaryContainer
-                                value: root.player?.position / root.player?.length
+                                value: (root.player?.length ?? 0) > 0 ? root.player.position / root.player.length : 0
                             }
                         }
                     }
