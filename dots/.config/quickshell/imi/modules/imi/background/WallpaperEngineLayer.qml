@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.WallpaperEngine
 import qs.modules.common
+import qs.services
 
 // Thin wrapper around the embedded Wallpaper Engine surface. Kept in its own
 // file and loaded via a source-URL Loader so that on a Quickshell binary
@@ -10,10 +11,13 @@ import qs.modules.common
 WallpaperEngineSurface {
     id: root
     live: true
-    fps: Config.options.wallpaperSelector.wallpaperEngine.fps
+    // Through the per-project override resolution, not the raw config: a
+    // project with settings of its own (WallpaperEngineOverrides) runs at
+    // those, every other project at the globals exactly as before.
+    fps: WallpaperEngineOverrides.active.fps
     // "fill" | "fit" | "stretch" | "default" - how the wallpaper is scaled to
     // the screen (user-selectable, mirrors the static-wallpaper scaling).
-    scaleMode: Config.options.wallpaperSelector.wallpaperEngine.scaling
+    scaleMode: WallpaperEngineOverrides.active.scaling
 
     // Set by Background.qml when a fullscreen window covers THIS output, and
     // forwarded to the surface's `occluded` below. Kept as a plain local

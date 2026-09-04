@@ -108,7 +108,9 @@ Variants {
         // instead of silencing it.
         readonly property bool weAudioOutput: {
             const we = Config.options.wallpaperSelector.wallpaperEngine;
-            if (we.silent ?? true)
+            // Through the per-project resolution: a project may override the
+            // global audio switch either way (WallpaperEngineOverrides).
+            if (WallpaperEngineOverrides.active.silent)
                 return false;
             const name = bgRoot.monitor?.name ?? "";
             if (name === "")
