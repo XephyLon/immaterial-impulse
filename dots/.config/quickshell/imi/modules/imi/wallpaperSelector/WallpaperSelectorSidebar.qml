@@ -8,7 +8,9 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Hyprland
 import "./selector_places.js" as SelectorPlaces
+import "./crop_picker.js" as CropPicker
 
 // The selector's left sidebar. Two faces, decided by which grid is showing:
 //
@@ -49,6 +51,26 @@ ColumnLayout {
     readonly property var activeProject: WallpaperEngine.projects.find(
         p => p.id === root.activeProjectId) ?? null
     readonly property var activeProperties: root.activeProject?.properties ?? []
+
+    // The focused monitor's aspect - what a Fill crop is judged against.
+    readonly property var focusedScreen: Quickshell.screens.find(
+        s => s.name === (Hyprland.focusedMonitor?.name ?? "")) ?? Quickshell.screens[0]
+    readonly property real screenAspect: (focusedScreen?.width > 0 && focusedScreen?.height > 0)
+        ? focusedScreen.width / focusedScreen.height : 16 / 9
+    // The content aspect the crop picker judges overflow by. The live scene's
+    // REAL authored aspect when the renderer has published it
+    // (GlobalStates.weContentAspect) - because the preview image's aspect is
+    // NOT the scene's: a 32:9 ultrawide wallpaper commonly ships a portrait
+    // preview, which would pick the wrong overflow axis. The preview aspect is
+    // the fallback for a shell whose renderer does not report content size.
+    property real previewAspect: 0
+    readonly property real contentAspect: GlobalStates.weContentAspect > 0
+        ? GlobalStates.weContentAspect : root.previewAspect
+    readonly property bool canCrop: root.activeProjectId !== ""
+        && root.effective.scaling === "fill"
+        && WallpaperEngineFeatures.cropFocus
+        && root.contentAspect > 0
+        && Math.abs(root.contentAspect - root.screenAspect) > 0.01
 
     function writeSetting(key, value) {
         if (root.editingOverride) {
@@ -178,23 +200,128 @@ ColumnLayout {
                         }
                         spacing: Appearance.spacing.space100
 
-                        StyledImage {
+                        // The preview card. Normally a cropped thumbnail; when
+                        // this wallpaper can be cropped (Fill, overflow, and a
+                        // renderer that pans), it becomes a section picker - a
+                        // box at the CONTENT's real aspect with the screen's
+                        // viewport drawn over it and draggable.
+                        Rectangle {
+                            id: previewBox
                             Layout.fillWidth: true
                             Layout.preferredHeight: width * 9 / 16
-                            fillMode: Image.PreserveAspectCrop
-                            source: root.weConfig.activePreview
-                            // A thumbnail-sized decode of a preview drawn
-                            // ~200px wide; the card is width-stable so the
-                            // constant avoids the bound-to-geometry reload
-                            // trap.
-                            sourceSize.width: 400
-                            sourceSize.height: 225
-                            layer.enabled: true
-                            layer.effect: OpacityMask {
-                                maskSource: Rectangle {
-                                    width: activeCard.width
-                                    height: activeCard.width * 9 / 16
-                                    radius: Appearance.rounding.small
+                            radius: Appearance.rounding.small
+                            color: Appearance.colors.colLayer1
+                            clip: true
+
+                            // The ordinary thumbnail, shown when there is
+                            // nothing to crop. Also the source of the preview
+                            // aspect fallback (weContentAspect is the real one).
+                            StyledImage {
+                                id: previewImage
+                                anchors.fill: parent
+                                visible: !root.canCrop
+                                fillMode: Image.PreserveAspectCrop
+                                source: root.weConfig.activePreview
+                                // A thumbnail-sized decode of a preview drawn
+                                // ~200px wide; the card is width-stable so the
+                                // constant avoids the bound-to-geometry reload
+                                // trap.
+                                sourceSize.width: 400
+                                sourceSize.height: 225
+                                onStatusChanged: {
+                                    if (status === Image.Ready && implicitHeight > 0)
+                                        root.previewAspect = implicitWidth / implicitHeight;
+                                }
+                                layer.enabled: true
+                                layer.effect: OpacityMask {
+                                    maskSource: Rectangle {
+                                        width: previewBox.width
+                                        height: previewBox.height
+                                        radius: Appearance.rounding.small
+                                    }
+                                }
+                            }
+
+                            // The picker: a box at the content's own aspect,
+                            // fitted inside the card, holding the preview
+                            // cropped to that aspect with the viewport
+                            // rectangle over it. Everything - the viewport
+                            // maths and the drag - works in THIS box's frame.
+                            Item {
+                                id: fittedBox
+                                readonly property real boxAspect: root.contentAspect > 0 ? root.contentAspect : 16 / 9
+                                readonly property real cardAspect: previewBox.width / previewBox.height
+                                width: boxAspect >= cardAspect ? previewBox.width : previewBox.height * boxAspect
+                                height: boxAspect >= cardAspect ? previewBox.width / boxAspect : previewBox.height
+                                anchors.centerIn: parent
+                                visible: root.canCrop
+
+                                StyledImage {
+                                    anchors.fill: parent
+                                    fillMode: Image.PreserveAspectCrop
+                                    source: root.weConfig.activePreview
+                                    sourceSize.width: 400
+                                    sourceSize.height: 225
+                                }
+
+                                // The viewport rectangle: the axis that
+                                // overflows uses its focus, the other stays
+                                // full-extent.
+                                readonly property var vp: {
+                                    const h = CropPicker.viewport(root.contentAspect,
+                                        root.screenAspect, width, height, root.effective.focus.x);
+                                    const v = CropPicker.viewport(root.contentAspect,
+                                        root.screenAspect, width, height, root.effective.focus.y);
+                                    return {
+                                        x: h.overflowsX ? h.x : 0,
+                                        y: v.overflowsY ? v.y : 0,
+                                        width: h.overflowsX ? h.width : width,
+                                        height: v.overflowsY ? v.height : height
+                                    };
+                                }
+
+                                // Four dim panels around the viewport, so the
+                                // shown slice reads bright and the cropped-out
+                                // margins read dark.
+                                readonly property color dim: ColorUtils.transparentize(Appearance.m3colors.m3scrim, 0.4)
+                                Rectangle { // left
+                                    x: 0; y: 0; width: fittedBox.vp.x; height: fittedBox.height
+                                    color: fittedBox.dim
+                                }
+                                Rectangle { // right
+                                    x: fittedBox.vp.x + fittedBox.vp.width; y: 0
+                                    width: fittedBox.width - (fittedBox.vp.x + fittedBox.vp.width)
+                                    height: fittedBox.height; color: fittedBox.dim
+                                }
+                                Rectangle { // top
+                                    x: fittedBox.vp.x; y: 0; width: fittedBox.vp.width; height: fittedBox.vp.y
+                                    color: fittedBox.dim
+                                }
+                                Rectangle { // bottom
+                                    x: fittedBox.vp.x; y: fittedBox.vp.y + fittedBox.vp.height
+                                    width: fittedBox.vp.width
+                                    height: fittedBox.height - (fittedBox.vp.y + fittedBox.vp.height)
+                                    color: fittedBox.dim
+                                }
+                                Rectangle { // the viewport outline
+                                    x: fittedBox.vp.x; y: fittedBox.vp.y
+                                    width: fittedBox.vp.width; height: fittedBox.vp.height
+                                    color: "transparent"
+                                    border.width: Appearance.borderWidth.emphasis
+                                    border.color: Appearance.colors.colPrimary
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.SizeAllCursor
+                                    function apply(mx, my) {
+                                        const f = CropPicker.focusFromPointer(
+                                            root.contentAspect, root.screenAspect,
+                                            fittedBox.width, fittedBox.height, mx, my);
+                                        WallpaperEngineOverrides.setFocus(root.activeProjectId, f.x, f.y);
+                                    }
+                                    onPressed: mouse => apply(mouse.x, mouse.y)
+                                    onPositionChanged: mouse => { if (pressed) apply(mouse.x, mouse.y); }
                                 }
                             }
                         }

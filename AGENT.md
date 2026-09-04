@@ -908,9 +908,17 @@ services/                  Singletons wrapping external state/processes - one pe
   WallpaperEngineFeatures.qml  Which properties THIS binary's embedded renderer has, probed once
                               by building a bare WallpaperEngineSurface (no project, so no thread
                               or GL) and asking `"x" in surface`. The extended controls (the
-                              qs-wallpaperengine 0.3 flag set, per-project properties) gate on
-                              it; WallpaperEngineLayer binds the same properties dynamically for
-                              the same reason. See "WE_REF pins the renderer" below
+                              qs-wallpaperengine 0.3 flag set, per-project properties, the live
+                              crop focus) gate on it; WallpaperEngineLayer binds the same
+                              properties dynamically for the same reason. See "WE_REF pins the
+                              renderer" below. The Fill crop picker
+                              (modules/imi/wallpaperSelector/crop_picker.js +
+                              WallpaperSelectorSidebar's active card) reads
+                              GlobalStates.weContentAspect - the LIVE scene's real authored
+                              aspect, published by Background from the surface's contentWidth/
+                              Height, because a 32:9 wallpaper's portrait preview would pick the
+                              wrong overflow axis - and drives focusX/focusY, which pan the
+                              wallpaper live (scene only; a video is centre-cropped by WE)
   WallpaperEngineCompat.qml    Per-wallpaper compatibility verdicts, the reference app's bulk
                               scanner: the scan runs in a SPAWNED `qs -p` scanner process
                               (scripts/wallpapers/we_compat_scan.qml) loading each project into a

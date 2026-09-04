@@ -903,6 +903,31 @@ Variants {
                     when: weLoader.item !== null
                     restoreMode: Binding.RestoreNone
                 }
+                // Publish the scene's content aspect for the crop picker. The
+                // authored size is the same on every output, so one screen
+                // writes it (the greeter-still owner, screen 0) - N writers
+                // would fight over one global. 0 (a video, or no scene) reads
+                // as "no crop to pick", which the picker gate wants.
+                Connections {
+                    target: weLoader.item
+                    enabled: weLoader.item !== null && bgRoot.ownsGreeterStill
+                    function onContentSizeChanged() {
+                        const w = weLoader.item?.contentWidth ?? 0;
+                        const h = weLoader.item?.contentHeight ?? 0;
+                        GlobalStates.weContentAspect = (w > 0 && h > 0) ? w / h : 0;
+                    }
+                }
+                // A project switch (or clear) leaves a stale aspect until the
+                // new scene's first frame; drop it at the switch so the picker
+                // does not size itself by the previous wallpaper.
+                Connections {
+                    target: weLoader
+                    enabled: bgRoot.ownsGreeterStill
+                    function onActiveChanged() {
+                        if (!weLoader.active) GlobalStates.weContentAspect = 0;
+                    }
+                }
+
                 // First rendered frame of a newly-loaded project: kick off the
                 // shader transition against the captured old frame.
                 Connections {

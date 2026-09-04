@@ -163,6 +163,73 @@ TestCase {
         compare(m["12345"].properties.rain, "1")
     }
 
+    function test_focus_is_per_wallpaper_and_defaults_to_centre() {
+        // Like properties: no global side. Absent, it resolves to centre
+        // (0.5, 0.5) - never undefined, which would NaN the crop.
+        var r = WeOverrides.resolve({}, "12345", fullGlobals)
+        compare(r.focus.x, 0.5)
+        compare(r.focus.y, 0.5)
+
+        var overrides = { "12345": { focus: { x: 0.2, y: 0.8 } } }
+        r = WeOverrides.resolve(overrides, "12345", fullGlobals)
+        compare(r.focus.x, 0.2)
+        compare(r.focus.y, 0.8)
+    }
+
+    function test_focus_zero_survives_falsy_check() {
+        var r = WeOverrides.resolve({ "12345": { focus: { x: 0, y: 0 } } }, "12345", fullGlobals)
+        compare(r.focus.x, 0)
+        compare(r.focus.y, 0)
+    }
+
+    function test_set_focus_stores_and_clamps() {
+        var m = WeOverrides.setFocus({}, "12345", 0.3, 0.7)
+        compare(m["12345"].focus.x, 0.3)
+        compare(m["12345"].focus.y, 0.7)
+        // Out of range is clamped, not stored raw.
+        m = WeOverrides.setFocus(m, "12345", -1, 5)
+        compare(m["12345"].focus.x, 0)
+        compare(m["12345"].focus.y, 1)
+        // Back to dead centre removes the focus record entirely (and an
+        // otherwise-empty project with it) - centre is the default, so a
+        // stored 0.5/0.5 is churn.
+        m = WeOverrides.setFocus(m, "12345", 0.5, 0.5)
+        verify(!("12345" in m))
+    }
+
+    function test_focus_does_not_count_as_engine_override() {
+        // Cropping is per-wallpaper like properties, not an engine flag - the
+        // Custom settings switch must not eat it.
+        var m = WeOverrides.setFocus({}, "12345", 0.2, 0.5)
+        verify(!WeOverrides.hasOverride(m, "12345"))
+    }
+
+    function test_clear_engine_overrides_keeps_focus() {
+        var m = WeOverrides.setOverride({}, "12345", "fps", 60)
+        m = WeOverrides.setFocus(m, "12345", 0.2, 0.5)
+        m = WeOverrides.clearEngineOverrides(m, "12345")
+        verify(!WeOverrides.hasOverride(m, "12345"))
+        compare(m["12345"].focus.x, 0.2)
+    }
+
+    function test_sanitize_keeps_focus_within_range() {
+        var m = WeOverrides.sanitize({
+            "1": { focus: { x: 0.3, y: 0.9 } },
+            "2": { focus: { x: 5, y: -2 } },
+            "3": { focus: { x: "garbage", y: 0.9 } },
+            "4": { focus: "not an object" }
+        })
+        compare(m["1"].focus.x, 0.3)
+        compare(m["1"].focus.y, 0.9)
+        // Out of range clamps; a non-number axis falls to centre.
+        compare(m["2"].focus.x, 1)
+        compare(m["2"].focus.y, 0)
+        compare(m["3"].focus.x, 0.5)
+        compare(m["3"].focus.y, 0.9)
+        // A dead-centre focus is not a stored record.
+        verify(!("4" in m))
+    }
+
     function test_sanitize_keeps_string_properties_only() {
         var m = WeOverrides.sanitize({
             "12345": {
