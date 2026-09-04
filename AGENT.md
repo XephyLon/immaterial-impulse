@@ -6559,8 +6559,15 @@ map-time keyboard grant. A third obligation lives in `services/GlobalFocusGrab.q
 the grab's whitelist must end with the dismissables — Hyprland hands the grab's keyboard focus to
 a surface picked from the END of the list, and with the bar/OSK after the panel, an opening panel
 never activates and every keypress is silently dropped (the persistent-sidebar contract pins the
-order; fix(sidebars): route the focus grab's keyboard to the opening panel). `SessionScreen` still
-maps per open and pays this same 61ms.
+order; fix(sidebars): route the focus grab's keyboard to the opening panel). `SessionScreen` is
+that family too now — per-screen windows, the latch, Exclusive keyboard and the whole-surface
+mask both gated on `isTarget`, an exit that owns `reallyOpen` — with one addition of its own:
+`rules.lua`'s `quickshell:session` rule was `ignore_alpha = 0`, under which a permanently-mapped
+surface's fully transparent idle pixels would ask the compositor to blur the entire screen, so
+the threshold moved to 0.4 (the scrim sits at ~0.88+, so it frosts exactly as before). Its layer
+follows the overview's #339 rule — Overlay only while open over a true fullscreen window, Top
+otherwise — because a permanently-mapped Overlay surface holds the fullscreen fast path shut.
+("perf(sessionScreen): the session menu's surface outlives the gesture").
 
 A fourth cost, found by the first multi-monitor user to update (#297): **a persistent surface has
 to say which screen it lives on.** A `PanelWindow` with no `screen:` asks the compositor to choose

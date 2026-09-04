@@ -170,8 +170,14 @@ class WiringTests(unittest.TestCase):
     def test_session_screen_button_gated_on_real_choice(self):
         self.assertIn("visible: EfiBoot.entries.length > 1", self.screen)
         self.assertIn('buttonText: Translation.tr("Reboot into...")', self.screen)
-        # Picker resets and entries refresh on every open.
-        self.assertIn("if (visible) EfiBoot.refresh()", self.screen)
+        # Picker resets and entries refresh on every open. The window is
+        # persistent now, so "every open" is the window's open() - the old
+        # spelling hung the refresh on onVisibleChanged, which a mapped-once
+        # window never fires again.
+        self.assertRegex(self.screen,
+                         r"function open\(\)[^}]*EfiBoot\.refresh\(\)")
+        self.assertRegex(self.screen,
+                         r"function open\(\)[^}]*rebootPickerOpen = false")
         # Session screen closes before pkexec so the polkit dialog gets focus.
         self.assertRegex(self.screen,
                          r"sessionRoot\.hide\(\);\s*\n\s*EfiBoot\.rebootInto")
