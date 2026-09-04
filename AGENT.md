@@ -918,7 +918,14 @@ services/                  Singletons wrapping external state/processes - one pe
                               aspect, published by Background from the surface's contentWidth/
                               Height, because a 32:9 wallpaper's portrait preview would pick the
                               wrong overflow axis - and drives focusX/focusY, which pan the
-                              wallpaper live (scene only; a video is centre-cropped by WE)
+                              wallpaper live (scene only; a video is centre-cropped by WE). The
+                              picker draws the actual scene, grabbed by the renderer
+                              (requestSceneGrab -> GlobalStates.weSceneGrabPath, a PNG at the
+                              real 32:9 aspect), NOT the preview image - the preview does not
+                              depict an ultrawide scene. Note: WE renders a scene at its authored
+                              resolution regardless of window, so a render-scale lever does
+                              nothing for scenes (measured) and was not shipped; fps is the
+                              scene's only in-shell cost lever
   WallpaperEngineCompat.qml    Per-wallpaper compatibility verdicts, the reference app's bulk
                               scanner: the scan runs in a SPAWNED `qs -p` scanner process
                               (scripts/wallpapers/we_compat_scan.qml) loading each project into a

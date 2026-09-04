@@ -23,6 +23,9 @@ Item {
     // The live "fill" crop position - the section picker's renderer support.
     readonly property bool cropFocus: ("focusX" in probeSurface) && ("focusY" in probeSurface)
 
+    // The full-scene grab the crop picker's accurate thumbnail needs.
+    readonly property bool sceneGrab: "requestSceneGrab" in probeSurface
+
     WallpaperEngineSurface {
         id: probeSurface
         visible: false

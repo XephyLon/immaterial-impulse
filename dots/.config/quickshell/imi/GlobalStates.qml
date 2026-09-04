@@ -72,6 +72,13 @@ Singleton {
     // image's. 0 while no scene is live or before its first frame (a video
     // has no content aspect to pan, so it stays 0).
     property real weContentAspect: 0
+    // A grabbed PNG of the active scene's FULL uncropped frame (its real
+    // aspect), and which project it is for - the crop picker shows the actual
+    // scene rather than the preview image, which does not depict it. Written
+    // by Background when the renderer answers a scene grab; the picker checks
+    // the project id so a stale grab is never shown.
+    property string weSceneGrabPath: ""
+    property string weSceneGrabProject: ""
     // True while a copy snip's crop/clipboard pipeline runs; cancel paths
     // must not dismiss (and thereby kill) the in-flight process.
     property bool snipCopyInFlight: false
