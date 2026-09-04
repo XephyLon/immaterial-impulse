@@ -342,6 +342,20 @@ its own 30s clock: a tick used to spawn ~9 processes and now spawns none on this
 `tests/test_resource_usage_polling.py` pins the gate, the df cadence and the sysfs reads.
 7ef4e762 ("perf(resources): poll through files, and stop waking a sleeping dGPU").
 
+The other holder is Qt itself, and it is not reachable from this repo: **constructing the first
+QtMultimedia object of any kind — a `MediaPlayer`, even a `SoundEffect` — makes the ffmpeg media
+backend probe every hardware context on the machine** (`qt.multimedia.ffmpeg.hwaccel: Check device
+types`: vdpau, cuda, vaapi, qsv, vulkan), measured at **856ms** on this machine, on the thread that
+constructs it. The cuda probe loads `libnvcuvid`/`libcuda` and leaves eight `/dev/nvidia*` file
+descriptors and a CUDA context in the process for its remaining life — this is why the running
+shell maps `libcuda` once the typing test has been opened (TypingSounds' MediaPlayer pool is the
+shell's only QtMultimedia user, and it is gated on the feature precisely so none of this happens
+at startup). None of the documented env vars stops the probe
+(`QT_FFMPEG_DECODING_HW_DEVICE_TYPES` filters codec selection, not this enumeration). Before
+adding a QtMultimedia object anywhere, know that its first construction costs a near-second stall
+and permanently attaches the process to the dGPU.
+7ef4e762 ("perf(resources): poll through files, and stop waking a sleeping dGPU").
+
 **A sound event is one `pw-play` on a path the shell resolved, and neither half of that sentence
 was true before.** `Audio.playSystemSound()` built
 `/usr/share/sounds/<theme>/stereo/<event>.oga` and the same with `.ogg`, spawned an `ffplay` at
