@@ -41,7 +41,7 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-v0.2.6}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
+WE_REF="${WE_REF:-v0.3.0}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
                                                  # arch / Qt-too-old / smoke-test failure falls back to a source build, as
                                                  # does a tag whose release has not published yet. Whatever this points at
                                                  # MUST be >= 40427cf, the commit that added
