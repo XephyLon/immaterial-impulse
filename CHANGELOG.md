@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0-rc-14] — 2026-09-05
+
 ### Changed
 - **Wallpaper Engine renderer pinned to qs-wallpaperengine v0.3.0.** The
   installer now fetches the 0.3.0 prebuilt, which is the renderer the new
