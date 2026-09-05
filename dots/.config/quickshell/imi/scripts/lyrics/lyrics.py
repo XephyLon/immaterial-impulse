@@ -116,11 +116,22 @@ UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0 Safari/537.36")
 
 
+# How many network providers ANSWERED this run - a parsed response, even an
+# error-shape one. The negative cache rides on it: a miss with zero answers is
+# an offline moment / DNS hiccup, not a real "no lyrics exist", and caching it
+# as not_found would hide the song's lyrics for NEGATIVE_TTL after the network
+# comes back. Only a miss where something answered is a cacheable miss.
+net_answers = 0
+
+
 def http_json(url):
+    global net_answers
     try:
         request = urllib.request.Request(url, headers={"User-Agent": UA})
         with urllib.request.urlopen(request, timeout=12) as response:
-            return json.loads(response.read().decode("utf-8", "replace"))
+            data = json.loads(response.read().decode("utf-8", "replace"))
+        net_answers += 1
+        return data
     except Exception:
         return None
 
@@ -317,11 +328,13 @@ def from_cubey(title, artist, duration):
     request = urllib.request.Request(CUBEY_URL, data=data, headers={
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/x-www-form-urlencoded"})
+    global net_answers
     try:
         with urllib.request.urlopen(request, timeout=12) as response:
             payload = json.loads(response.read().decode("utf-8", "replace"))
     except Exception:
         return None
+    net_answers += 1
     return parse_cubey(payload)
 
 
@@ -514,7 +527,11 @@ def main():
                 cache_put(key, payload)
             print(json.dumps(payload))
             return 0
-    if use_cache:
+    # Negative-cache only a REAL miss - at least one provider answered and had
+    # nothing. Zero answers means the network was unreachable (offline, DNS,
+    # a blanket 403): caching that as not_found would keep showing "no lyrics"
+    # for hours after connectivity returns.
+    if use_cache and net_answers > 0:
         cache_put(key, "not_found")
     print("not_found")
     return 0
