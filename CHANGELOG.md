@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **Wallpaper Engine renderer pinned to qs-wallpaperengine v0.3.0.** The
+  installer now fetches the 0.3.0 prebuilt, which is the renderer the new
+  selector sidebar talks to: volume, the audio-reactive recorder,
+  mouse/parallax/particles, per-wallpaper properties, the live Fill crop
+  picker with the real-scene thumbnail, and the Quality dial all appear once
+  it is installed (Settings > Update Dots). On the previous renderer those
+  controls stay hidden.
+
 ## [1.0.0-rc-13] — 2026-09-04
 
 ### Added
