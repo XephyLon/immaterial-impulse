@@ -1925,6 +1925,17 @@ ce41c4f9c ("feat(cava): give CavaService the producer it always implied"),
 bcf5f9ca1 ("refactor(cava): move every band consumer onto the one service"),
 004a17745 ("test(cava): pin the producer, the gate and the band contract").
 
+The same rule holds for cover art: **the download+quantize pipeline lives once, in
+`modules/imi/mediaControls/MediaArtSource.qml`** - feed it `artUrl` (via `media_art.js`'s
+resolve), read `displayedArtFilePath` and `colors`; each surface keeps only its own
+dominant-colour mix. It was copy-pasted across the bar, dock, left sidebar and popup players, and
+the copies had drifted exactly as CavaService's consumers did: the sidebar's lacked the `curl -4`
+IPv4 pin (its downloads could hang on an IPv6 stall) and the `file://` fast-path (it re-curled
+local art every track). A fifth media surface must use this component, not paste a fifth copy.
+It cannot live in `modules/common/widgets` - it spawns curl, and `lint_dumb_widgets.py` fails the
+suite on a Process there.
+1550313c ("refactor(media): one shared MediaArtSource; fix tint, progress, and waste").
+
 **A signal nothing connects to is that same hole from the other side, and only a surface can
 find it.** `PhoneScrcpy.feedback(message, ok)`, `PhoneCamera.errorOccurred(message)` and
 `PhoneMic.errorOccurred(message)` have been raised on every failure since those services landed,
