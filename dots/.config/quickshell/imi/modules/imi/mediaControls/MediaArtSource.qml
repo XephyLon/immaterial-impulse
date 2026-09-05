@@ -51,9 +51,11 @@ Item {
         // Positional args ($1/$2), never spliced into the script body: artUrl
         // is untrusted MPRIS metadata (any bus peer, including a browser tab's
         // Media Session artwork), so interpolating it was a command-injection
-        // hole. -4 pins IPv4 - an IPv6 stall hung the download on some networks.
-        command: ["bash", "-c", '[ -f "$1" ] || curl -4 -sSL "$2" -o "$1"', "bash", filePath, targetFile]
-        onExited: (exitCode, exitStatus) => root.downloaded = true
+        // hole. -4 pins IPv4 (an IPv6 stall hung the download on some
+        // networks); -f fails on an HTTP error instead of saving the 404 body
+        // as "art", and downloaded follows the exit code for the same reason.
+        command: ["bash", "-c", '[ -f "$1" ] || curl -4 -fsSL "$2" -o "$1"', "bash", filePath, targetFile]
+        onExited: (exitCode, exitStatus) => root.downloaded = exitCode === 0
     }
 
     ColorQuantizer {
