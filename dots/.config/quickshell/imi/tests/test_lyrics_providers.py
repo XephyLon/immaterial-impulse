@@ -509,6 +509,61 @@ class CacheTests(unittest.TestCase):
                        "result": "not_found"}, f)
         self.assertIsNone(lyrics.cache_get(key))
 
+    def test_network_failure_is_not_cached_as_not_found(self):
+        # An offline moment walks every provider to None exactly like a real
+        # miss - but caching THAT as not_found hides lyrics for six hours
+        # after the Wi-Fi comes back. Only a miss where at least one provider
+        # actually answered may be negative-cached.
+        import io, contextlib, sys as _sys, os
+        orig_http, orig_glassy = lyrics.http_json, lyrics.from_glassy
+        lyrics.from_glassy = lambda *a, **k: None
+        argv = _sys.argv
+        try:
+            # Nothing reachable: http_json fails everywhere (never records an
+            # answer). not_found is printed but NOT cached.
+            lyrics.net_answers = 0
+            lyrics.http_json = lambda url: None
+            _sys.argv = ["lyrics.py", "Offline", "Song", "100"]
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                lyrics.main()
+            self.assertEqual(out.getvalue().strip(), "not_found")
+            self.assertIsNone(
+                lyrics.cache_get(lyrics.cache_key("Offline", "Song", 100)),
+                "an unreachable network must not poison the negative cache")
+
+            # A provider ANSWERED and had nothing: that is a real miss, cached.
+            def answering(url):
+                lyrics.net_answers += 1
+                return {"success": False, "error": "Lyrics not found"} if "unison" in url else None
+            lyrics.net_answers = 0
+            lyrics.http_json = answering
+            _sys.argv = ["lyrics.py", "Offline", "Song", "100"]
+            with contextlib.redirect_stdout(io.StringIO()):
+                lyrics.main()
+            self.assertEqual(
+                lyrics.cache_get(lyrics.cache_key("Offline", "Song", 100)),
+                "not_found")
+        finally:
+            lyrics.http_json, lyrics.from_glassy = orig_http, orig_glassy
+            _sys.argv = argv
+
+    def test_real_http_json_records_an_answer(self):
+        # The seam the negative-cache guard rides on: a parsed response bumps
+        # net_answers, an unreachable host does not.
+        import unittest.mock as mock
+        lyrics.net_answers = 0
+        fake_response = mock.MagicMock()
+        fake_response.read.return_value = b'{"ok": 1}'
+        fake_response.__enter__ = lambda s: fake_response
+        fake_response.__exit__ = lambda s, *a: False
+        with mock.patch.object(lyrics.urllib.request, "urlopen", return_value=fake_response):
+            self.assertEqual(lyrics.http_json("http://x"), {"ok": 1})
+        self.assertEqual(lyrics.net_answers, 1)
+        with mock.patch.object(lyrics.urllib.request, "urlopen", side_effect=OSError("no route")):
+            self.assertIsNone(lyrics.http_json("http://x"))
+        self.assertEqual(lyrics.net_answers, 1)
+
     def test_main_serves_the_second_call_from_cache(self):
         import io, contextlib, sys as _sys
         calls = {"n": 0}
