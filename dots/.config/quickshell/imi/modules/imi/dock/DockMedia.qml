@@ -86,11 +86,15 @@ Item {
             id: blurredArt
             anchors.fill: parent
             source: root.displayedArtFilePath
-            // Bound the decode to the card, not the file: a 1200x1200 cover
-            // decoded full-res only to be blurred behind a small card wasted
-            // memory and decode time.
-            sourceSize.width: Math.max(1, Math.round(card.width))
-            sourceSize.height: Math.max(1, Math.round(card.height))
+            // Bound the decode to the card's RESTING size, not the file: a
+            // 1200x1200 cover decoded full-res only to be blurred behind a
+            // small card wasted memory and decode time. Constants, not
+            // card.width/height - the card rides root's animated implicitWidth
+            // (Behavior on show/hide), and a geometry-bound sourceSize is a
+            // full re-decode per animation frame (the bound-to-geometry reload
+            // trap the wallpaper decode entry in AGENT.md records).
+            sourceSize.width: root.cardWidth
+            sourceSize.height: 46
             fillMode: Image.PreserveAspectCrop
             cache: false
             antialiasing: true
