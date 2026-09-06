@@ -223,6 +223,18 @@ a print can sit unflushed for several seconds before showing up, sometimes inter
 events in a way that looks like a stale/wrong value at first glance. If a debug print looks wrong,
 wait and re-check before concluding the code is broken.
 
+**The QML engine does not give the JavaScript heap back on its own; shell.qml collects it every
+five minutes.** The shell grew 2-3 MiB/min idle and ~9 MiB/min in use (2.6 GB in ten hours) with
+the driver, the WE module, the WE layer, GL itself (same growth on `QT_QUICK_BACKEND=software`)
+and jemalloc (in-use flat while RSS rose) all cleared by controls; the growth was QV4 chunks, and
+a shell calling `gc()` every 30 s stayed flat. Resource polling was the largest per-tick allocator
+(off: 0.3 MiB/min) but every timer-driven service contributes, so the collection is engine-wide
+and gated only by a live screen recording (one full collection is ~50 ms on the harness heap, more
+on a big one). Do not "tidy" that Timer away, and do not reach for per-service caps first when RSS
+climbs: reproduce in the nested harness (headless weston 5120x1440, fresh XDG dirs, a copy of
+config.json, `DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent`, RSS from `/proc/<pid>/status`
+every 30 s), and a `gc()` timer in a copied tree is the first discriminator. 31655e7c4 ("perf(shell): collect the JavaScript heap every five minutes").
+
 ## External binaries the shell drives
 
 **WE_REF pins the renderer, so a `WallpaperEngineSurface` property the shell reads may not exist in
