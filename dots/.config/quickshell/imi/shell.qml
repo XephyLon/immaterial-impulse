@@ -19,6 +19,29 @@ ShellRoot {
 
     ReloadPopup {}
 
+    // A full JavaScript garbage collection on a fixed cadence. The engine's
+    // own incremental collector does run (14 cycles in 4 min under the nested
+    // harness), yet the shell's RSS still climbed 2-3 MiB/min idle and ~9
+    // MiB/min in use - 2.6 GB after ten hours - and all of it was QV4 heap
+    // that a forced gc() hands straight back: the same nested shell with
+    // gc() every 30 s stayed flat (-2.5 MB over 5 min). The GL driver was not
+    // involved (identical growth on the Qt Quick software backend), nor was
+    // jemalloc (in-use flat while RSS rose), nor Wallpaper Engine (off: same
+    // rate); resource polling was the biggest per-tick allocator (off: 0.3
+    // MiB/min) but every timer-driven service contributes. Five minutes bounds
+    // the growth to tens of MB; one full collection measured ~50 ms on the harness's heap (a
+    // bigger live heap pauses longer), which is why it stands down while a
+    // screen recording is running.
+    Timer {
+        interval: 5 * 60 * 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            if (Persistent.states?.record?.enable) return;
+            gc();
+        }
+    }
+
     // Always-on host for plugin `panel` entry points; also keeps the
     // ScreenshotEvents IPC handler alive.
     PluginPanelHost {}

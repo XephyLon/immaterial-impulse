@@ -1038,6 +1038,15 @@ if ! python3 "$SCRIPT_DIR/test_settings_row_grammar.py"; then
     exit 1
 fi
 
+# The shell's JavaScript heap is collected on a fixed cadence (shell.qml).
+# Without it the shell grew 2-3 MiB/min idle, 2.6 GB in ten hours; the pin
+# keeps the timer from being tidied away.
+echo "Running heap janitor test..."
+if ! python3 "$SCRIPT_DIR/test_heap_janitor.py"; then
+    echo "Heap janitor test failed."
+    exit 1
+fi
+
 # Stage 8 of Edit Mode: the bar and the dock edited in place. What it pins is
 # silent on screen - a suspension that touches `visible` destroys a layer
 # surface, and an affordance wired into one bar orientation and not the other
