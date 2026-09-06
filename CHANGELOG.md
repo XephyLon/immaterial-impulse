@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Shell memory no longer grows without bound.** The shell gained two to
+  three megabytes a minute while idle and around nine while in use - 2.6 GB
+  after a ten-hour session - because the QML engine's own garbage collector
+  never gave the JavaScript heap back. The shell now runs a full collection
+  every five minutes, which holds memory flat.
+
 ## [1.0.0-rc-14] — 2026-09-05
 
 ### Changed
