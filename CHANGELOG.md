@@ -13,14 +13,6 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
-- **Picking a Wallpaper Engine wallpaper themes from it again.** A
-  previously chosen accent colour stayed in force across Wallpaper Engine
-  picks (a static wallpaper pick already cleared it), so every WE wallpaper
-  produced the same palette and the preview was ignored. A WE pick now resets
-  the accent like any other wallpaper choice; the accent picker, presets and
-  the light/dark toggles keep their behaviour.
-
-### Fixed
 - **Checking Wallpaper Engine compatibility no longer spawns a second
   scanner or pops crash notifications.** When a wallpaper crashed the
   renderer inside the scanner, Quickshell's own crash handler relaunched the
@@ -31,6 +23,17 @@ own repo; the installer pins which revision it builds.
   Wallpaper Engine selected the header drew a tall shadowed "Steam Workshop"
   pill beside the source dropdown, and with Local an empty stub; the chip
   rail now appears only for the online sources that have chips.
+- **Picking a Wallpaper Engine wallpaper themes from it again.** A
+  previously chosen accent colour stayed in force across Wallpaper Engine
+  picks (a static wallpaper pick already cleared it), so every WE wallpaper
+  produced the same palette and the preview was ignored. A WE pick now resets
+  the accent like any other wallpaper choice; the accent picker, presets and
+  the light/dark toggles keep their behaviour.
+- **New colours arrive on time and fade in.** After a wallpaper or accent
+  change the shell sometimes kept the previous palette until something else
+  nudged it, and when it did change it snapped. The theme loader now applies
+  each palette when the file has actually finished loading, and transitions
+  every change after startup.
 
 ## [1.0.0-rc-15] — 2026-09-07
 
