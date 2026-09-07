@@ -380,6 +380,11 @@ if up_to_date; then
   install_wrapper "$_stamp_bin" "$_stamp_lib"
   write_stamp "$WE_REF" "$_stamp_bin" "$_stamp_lib"
   prune_prebuilt "$WE_REF"
+  # A re-run with an unchanged pin is the common case (every Update Dots), and
+  # it is where the first prune left the 5 GB checkout standing: only the
+  # fresh-prebuilt path dropped it. If the wrapper points into a prebuilt, the
+  # checkout is dead here too.
+  case "$_stamp_bin" in "$PREBUILT_ROOT"/*) prune_build_dir ;; esac
   exit 0
 fi
 if try_prebuilt; then exit 0; fi

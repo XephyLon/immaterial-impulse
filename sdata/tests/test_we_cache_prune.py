@@ -115,6 +115,15 @@ class EveryStampWriterPrunes(unittest.TestCase):
         body = src[src.index("try_prebuilt(){"):src.index("source_build(){")]
         self.assertIn("prune_build_dir", body)
 
+    def test_already_installed_prebuilt_also_drops_the_source_tree(self):
+        """Every Update Dots with an unchanged pin takes this path; the first
+        prune left the checkout standing there."""
+        src = SCRIPT.read_text(encoding="utf-8")
+        tail = src[src.index("if up_to_date; then"):]
+        tail = tail[:tail.index("exit 0")]
+        self.assertRegex(tail, r'case "\$_stamp_bin" in "\$PREBUILT_ROOT"/\*\) prune_build_dir',
+                         "the already-installed path must drop the checkout when the live binary is a prebuilt")
+
 
 if __name__ == "__main__":
     unittest.main()
