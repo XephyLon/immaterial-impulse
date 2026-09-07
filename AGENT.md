@@ -1768,6 +1768,15 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   with a one-shot migration guarded by its own `migrated*` flag, as `migrateDeadParallaxSwitches`
   and `migrateSplitCheatsheetButtons` do. Motivated by 65bd7696a ("feat(cheatsheet): draw a chord as
   one keycap per key").
+- **A helper the shell spawns as its own `qs -p` process runs with `QS_DISABLE_CRASH_HANDLER=1`.**
+  Quickshell's crash handler does not just dump: it relaunches the crashed process with the same
+  environment and the same stdio. For the compatibility scanner that meant a wallpaper crashing the
+  renderer produced a second scanner reading the original queue and writing verdicts into the
+  service's pipe while the service's own respawn ladder started its replacement; one of the two then
+  aborted in its log setup, wallpapers after the crash were recorded broken, and every death popped
+  a crash notification on the desk (2026-09-05). The parent owns retries for a helper it supervises;
+  the handler's relaunch is for the shell itself. `test_we_compat_wiring.py` pins it for the scanner.
+  249349043 ("fix(wallpaper): run the compatibility scanner without Quickshell's crash relaunch").
 - **Never spawn `qs` to call the shell's own IPC.** `Quickshell.execDetached(["qs", ..., "ipc",
   "call", ...])` from inside the shell starts a second Quickshell - 77 ms of Qt start-up on a fast
   machine and a fork of the shell's whole address space - to deliver one call back into the process
