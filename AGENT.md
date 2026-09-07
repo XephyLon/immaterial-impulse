@@ -458,6 +458,14 @@ pick, all outputs carried one palette, `path.txt` read "Null" (matugen ran in `c
 `--noswitch` is the only flag that keeps the accent (picker, mode toggles, presets pass it). When
 theming looks stuck across wallpapers, check `palette.accentColor` in config.json before the
 generators. a33f2a8d3 ("fix(theme): a Wallpaper Engine pick resets the accent like a static switch").
+**`FileView.loaded` is a property that stays true across reloads; react to the `loaded()` signal,
+never to `onLoadedChanged`, when a watched file is rewritten.** `MaterialThemeLoader` applied its
+startup palette from `onLoadedChanged` and every later one from a fixed timer that read `text()`
+before the asynchronous reload had landed - the previous palette went in and the new one waited for
+the next trigger - and it did so with `animated=false`, so no wallpaper change ever transitioned.
+`onLoaded` fires per completed load; guard for the empty or partial file that an in-place rewrite
+(matugen: truncate, then write) exposes on its first change event. `ThemeReloadRuntimeTest.qml`
+measures it: first change 20 ms, an intermediate value seen, settled 200 ms. afde22316 ("fix(theme): apply a rewritten palette on the load that finished, animated").
 
 **A pipeline of per-app steps run by a caller that does not stop on failure
 starves every step after the first broken one, silently.**
