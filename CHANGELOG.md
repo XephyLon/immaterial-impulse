@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Checking Wallpaper Engine compatibility no longer spawns a second
+  scanner or pops crash notifications.** When a wallpaper crashed the
+  renderer inside the scanner, Quickshell's own crash handler relaunched the
+  scanner from the start of the queue while the shell was already starting
+  its replacement; the two reported over each other and wallpapers after the
+  crash were marked broken. The scanner now runs without that handler.
+
 ## [1.0.0-rc-15] — 2026-09-07
 
 ### Changed
