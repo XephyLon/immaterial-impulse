@@ -17,9 +17,11 @@ own repo; the installer pins which revision it builds.
   Engine pin used to leave the previous ~1.4 GB prebuilt behind (7 of them,
   9.6 GB, on a machine that followed the pin since v0.2.0), plus a ~5 GB
   source checkout once any run had fallen back to building. Settings > Update
-  Dots now keeps only the renderer the shell runs, drops the dead checkout,
-  prunes QML-cache entries and crash dumps untouched for 30 days, and keeps
-  five install logs instead of all of them.
+  Dots now keeps only the renderer the shell runs, drops the dead checkout
+  (also on the re-run with an unchanged pin, which is every update), clears
+  the QML compile cache (the next start recompiles what it loads, a few
+  seconds once), prunes crash dumps untouched for 30 days, and keeps five
+  install logs instead of all of them.
 
 ### Fixed
 - **Shell memory no longer grows without bound.** The shell gained two to
