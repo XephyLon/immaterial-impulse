@@ -13,6 +13,14 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **Picking a Wallpaper Engine wallpaper themes from it again.** A
+  previously chosen accent colour stayed in force across Wallpaper Engine
+  picks (a static wallpaper pick already cleared it), so every WE wallpaper
+  produced the same palette and the preview was ignored. A WE pick now resets
+  the accent like any other wallpaper choice; the accent picker, presets and
+  the light/dark toggles keep their behaviour.
+
+### Fixed
 - **Checking Wallpaper Engine compatibility no longer spawns a second
   scanner or pops crash notifications.** When a wallpaper crashed the
   renderer inside the scanner, Quickshell's own crash handler relaunched the
