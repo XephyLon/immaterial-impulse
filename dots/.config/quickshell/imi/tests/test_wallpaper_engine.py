@@ -287,6 +287,19 @@ class WallpaperScriptTests(unittest.TestCase):
         self.assertIn('[[ -z "$coloronly" ]] && kill_existing_mpvpaper', switcher)
         self.assertIn('[[ -z "$coloronly" ]] && check_and_prompt_upscale "$imgpath" &', switcher)
 
+    def test_a_wallpaper_engine_pick_resets_the_accent_like_a_static_switch(self):
+        """--coloronly --image is a wallpaper choice; only --noswitch keeps
+        the accent. With coloronly exempt, a configured accent won over the
+        preview on every WE pick and each wallpaper produced the same palette."""
+        switcher = (ROOT / "scripts/colors/switchwall.sh").read_text()
+        self.assertIn('if [[ -n "$imgpath" && -z "$noswitch_flag" ]]; then\n        set_accent_color ""',
+                      switcher.replace("\r", ""))
+        self.assertNotIn('-z "$noswitch_flag" && -z "$coloronly_flag" ]]; then\n        set_accent_color', switcher)
+        engine = (ROOT / "services/WallpaperEngine.qml").read_text()
+        theme = engine[engine.index("function enqueueTheme"):engine.index("function stop()")]
+        self.assertIn('"--coloronly", "--image", project.preview', theme)
+        self.assertNotIn("--noswitch", theme, "the WE theme run must not keep the accent")
+
     def test_presets_theme_from_engine_preview_without_a_runtime(self):
         presets = (ROOT / "scripts/presets.sh").read_text()
         self.assertIn(".wallpaperSelector.wallpaperEngine.activePath // empty", presets)
