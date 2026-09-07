@@ -19,6 +19,10 @@ own repo; the installer pins which revision it builds.
   scanner from the start of the queue while the shell was already starting
   its replacement; the two reported over each other and wallpapers after the
   crash were marked broken. The scanner now runs without that handler.
+- **The wallpaper selector's header no longer shows a stray pill.** With
+  Wallpaper Engine selected the header drew a tall shadowed "Steam Workshop"
+  pill beside the source dropdown, and with Local an empty stub; the chip
+  rail now appears only for the online sources that have chips.
 
 ## [1.0.0-rc-15] — 2026-09-07
 
