@@ -74,7 +74,19 @@ Singleton {
 
     function spawnScanner() {
         root.progressThisRun = false;
-        scanProcess.environment = ({ WE_COMPAT_QUEUE: JSON.stringify(root.pendingQueue) });
+        // QS_DISABLE_CRASH_HANDLER: Quickshell's own crash handler would
+        // RELAUNCH a scanner the renderer just took down - with the original
+        // queue in its environment and this Process's stderr still attached -
+        // while the ladder below spawns its replacement: two scanners at
+        // once, verdicts for the wrong wallpaper landing in this pipe, and the
+        // relaunch aborting in its own log setup (2026-09-05, five wallpapers
+        // marked broken, a crash notification per death). Without the
+        // handler a renderer crash is the plain CrashExit onExited already
+        // expects, and the ladder does the one respawn it was written for.
+        scanProcess.environment = ({
+            WE_COMPAT_QUEUE: JSON.stringify(root.pendingQueue),
+            QS_DISABLE_CRASH_HANDLER: "1"
+        });
         silenceWatchdog.restart();
         scanProcess.running = true;
     }

@@ -54,6 +54,15 @@ def _checks(service, scanner, grid, sidebar):
     # not loop forever.
     assert "respawnsLeft" in service
 
+    # Quickshell's own crash handler must be off in the scanner: it relaunches
+    # a crashed scanner with the original queue and this pipe still attached,
+    # beside the ladder's own respawn - two scanners, verdicts for the wrong
+    # wallpaper, and a crash notification per death (2026-09-05).
+    env = service[service.index("scanProcess.environment"):]
+    env = env[:env.index("})") + 2]
+    assert re.search(r'QS_DISABLE_CRASH_HANDLER:\s*"1"', env), \
+        "the scanner runs with Quickshell's crash handler, which relaunches it behind the ladder's back"
+
 
 def test_we_compat_wiring():
     _checks(_strip_comments(SERVICE.read_text()),
@@ -76,6 +85,15 @@ def test_the_checks_can_fail():
         pass
     else:
         raise AssertionError("an in-shell scan surface passed the contract")
+
+    # Planted: the scanner spawned with the crash handler active.
+    planted = service.replace('QS_DISABLE_CRASH_HANDLER: "1"', 'QS_DISABLE_CRASH_HANDLER: "0"', 1)
+    try:
+        _checks(planted, scanner, grid, sidebar)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("a relaunching scanner passed the contract")
 
     # Planted: the grid reading the raw map.
     planted = grid.replace("WallpaperEngineCompat.statusFor(project)",
