@@ -448,6 +448,17 @@ from a successful parse, so a scan that fails outright still clears the queue.
 cbd8e707e ("feat(sounds): scan the sound-theme roots into one catalogue"),
 a3a8f65cf ("fix(sounds): play one resolved file instead of two guessed ones").
 
+**A configured accent wins over the image on every `switchwall.sh` run, so every path that means
+"the user picked a wallpaper" must clear it first.** `palette.accentColor` is written by the accent
+picker (`--color`), and a static switch (`--image`) resets it before theming. The Wallpaper Engine
+pick themes with `--coloronly --image <preview>` - color-only because the live wallpaper must not be
+torn down - and that flag was exempted from the reset by a comment about "transient" runs that
+described the lock screen, which uses `--lock-colors-only`. Result: a stale accent won on every WE
+pick, all outputs carried one palette, `path.txt` read "Null" (matugen ran in `color hex` mode).
+`--noswitch` is the only flag that keeps the accent (picker, mode toggles, presets pass it). When
+theming looks stuck across wallpapers, check `palette.accentColor` in config.json before the
+generators. a33f2a8d3 ("fix(theme): a Wallpaper Engine pick resets the accent like a static switch").
+
 **A pipeline of per-app steps run by a caller that does not stop on failure
 starves every step after the first broken one, silently.**
 `scripts/colors/apply_matugen_app_themes.py` themes cava, btop, tmux and kitty
