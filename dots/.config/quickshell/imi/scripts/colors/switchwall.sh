@@ -450,10 +450,15 @@ main() {
         imgpath="$(kdialog --getopenfilename . --title 'Choose wallpaper')"
     fi
 
-    # A color-only run is transient (e.g. the lock screen recoloring); it must
-    # not wipe the user's configured accent color. When an accent is set it
-    # still wins over the image, same as a normal switch.
-    if [[ -n "$imgpath" && -z "$noswitch_flag" && -z "$coloronly_flag" ]]; then
+    # An explicit wallpaper pick resets the configured accent, on every path:
+    # a static switch (--image) and a Wallpaper Engine pick (--coloronly
+    # --image, which themes from the preview without tearing the live
+    # wallpaper down). --noswitch is the one flag that keeps the accent - the
+    # accent picker, the mode toggles and preset application all pass it.
+    # --coloronly used to be exempt as well, so a WE pick never cleared a
+    # stale accent and every WE wallpaper regenerated the same palette from
+    # it while the preview was ignored (2026-09-07).
+    if [[ -n "$imgpath" && -z "$noswitch_flag" ]]; then
         set_accent_color ""
         color_flag=""
         color=""
