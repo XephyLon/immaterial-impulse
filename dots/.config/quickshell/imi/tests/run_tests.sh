@@ -1739,6 +1739,16 @@ if ! python3 "$SCRIPT_DIR/test_kboptions_migration_runtime.py"; then
     exit 1
 fi
 
+# A rewritten colors.json must reach Appearance promptly and animated. The
+# loader applied every post-startup palette from a 20 ms timer that read the
+# FileView before its async reload landed (stale palette, "takes a while")
+# and with animated=false (no transition). Brings its own headless weston.
+echo "Running theme reload runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_theme_reload_runtime.py"; then
+    echo "Theme reload runtime tests failed."
+    exit 1
+fi
+
 # The block is a set of paths into the theme's directory and at the apply
 # script sudo will accept; the directory was renamed and the script moved. A
 # wrong path here means the login screen silently stops following the

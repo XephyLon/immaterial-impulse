@@ -212,15 +212,6 @@ Singleton {
         }
     }
 
-    Timer {
-        id: delayedFileRead
-        interval: Config.options?.hacks?.arbitraryRaceConditionDelay ?? 100
-        repeat: false
-        running: false
-        onTriggered: {
-            if (!root.lockThemeActive) root.applyColors(themeFileView.text())
-        }
-    }
 
     Process {
         id: lockThemeProc
@@ -304,13 +295,26 @@ Singleton {
         id: themeFileView
         path: Qt.resolvedUrl(root.filePath)
         watchChanges: true
-        onFileChanged: {
-            this.reload()
-            delayedFileRead.start()
-        }
-        onLoadedChanged: {
-            const fileContent = themeFileView.text()
-            if (!root.lockThemeActive) root.applyColors(fileContent)
+        onFileChanged: this.reload()
+        // One apply path, on the load that actually finished. `loaded` (the
+        // property) stays true across reloads, so onLoadedChanged fired once
+        // at startup and every later palette came through a fixed 20 ms
+        // timer that read text() before the async reload had landed - the
+        // old colours applied, and the new ones waited for the next trigger
+        // ("sometimes takes a while") - and it applied with animated=false,
+        // so a wallpaper switch never transitioned. The loaded() SIGNAL fires
+        // per completed load. matugen rewrites the file in place (truncate,
+        // then write), so the first of its two change events can load an
+        // empty or partial file: skip anything that is not a JSON object.
+        // The first apply is instant (startup); every later one animates.
+        property bool appliedOnce: false
+        onLoaded: {
+            if (root.lockThemeActive) return;
+            const fileContent = themeFileView.text();
+            if (!fileContent || fileContent.trim() === "") return;
+            try { JSON.parse(fileContent); } catch (e) { return; }
+            root.applyColors(fileContent, themeFileView.appliedOnce);
+            themeFileView.appliedOnce = true;
         }
         onLoadFailed: root.resetFilePathNextTime();
     }
