@@ -30,7 +30,7 @@ class ShellCacheHousekeeping(unittest.TestCase):
                        env={"PATH": os.environ["PATH"], "HOME": str(cache_home)},
                        capture_output=True, text=True, check=True)
 
-    def test_old_entries_go_and_recent_ones_stay(self):
+    def test_qmlcache_is_wiped_and_only_old_crash_dumps_go(self):
         import time
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -40,12 +40,16 @@ class ShellCacheHousekeeping(unittest.TestCase):
             for f in (qml / "old.qmlc", crashes / "old.dump"):
                 f.write_text("x"); os.utime(f, (old, old))
             (qml / "fresh.qmlc").write_text("x")
+            (crashes / "fresh.dump").write_text("x")
             (home / "quickshell/other.txt").write_text("x")
             os.utime(home / "quickshell/other.txt", (old, old))
             self._prune(home)
             self.assertFalse((qml / "old.qmlc").exists())
+            self.assertFalse((qml / "fresh.qmlc").exists(),
+                             "stale qmlcache entries are mostly young; the cache is wiped")
+            self.assertTrue(qml.is_dir(), "the directory itself stays")
             self.assertFalse((crashes / "old.dump").exists())
-            self.assertTrue((qml / "fresh.qmlc").exists())
+            self.assertTrue((crashes / "fresh.dump").exists())
             self.assertTrue((home / "quickshell/other.txt").exists(),
                             "only qmlcache/ and crashes/ are ours to prune")
 
