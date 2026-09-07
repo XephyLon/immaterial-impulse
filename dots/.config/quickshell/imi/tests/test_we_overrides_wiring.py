@@ -80,6 +80,14 @@ def _checks(layer, background, store, sidebar, content):
     assert "preventStealing: true" in crop, \
         "the crop picker's MouseArea does not keep its drag from the Flickable"
 
+    # The header toolbar is a chip rail and shows only with its chips: with
+    # nothing inside it was an empty stub (Local), and around one bare label
+    # it was a tall shadowed "Steam Workshop" pill beside the source dropdown.
+    assert "visible: resolutionChips.active" in content, \
+        "the header Toolbar is shown without its chips"
+    assert 'Translation.tr("Steam Workshop")' not in content, \
+        "the toolbar carries a bare label again"
+
     # The content hosts the sidebar for exactly the two sources that have one.
     assert "WallpaperSelectorSidebar" in content
     assert not re.search(r"property var quickDirs", content), \
@@ -120,6 +128,15 @@ def test_the_checks_can_fail():
         pass
     else:
         raise AssertionError("a stealable crop drag passed the contract")
+
+    # Planted: the toolbar shown regardless of its chips.
+    planted_content = good["content"].replace("visible: resolutionChips.active", "visible: true", 1)
+    try:
+        _checks(good["layer"], good["background"], good["store"], good["sidebar"], planted_content)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("an always-visible chip rail passed the contract")
 
     # Planted: renderScale bound unconditionally (breaks an older binary).
     planted = layer.replace('"renderScale" in root', '"renderScaleXX" in root')

@@ -342,12 +342,21 @@ MouseArea {
 
                     Toolbar {
                         anchors.centerIn: parent
+                        // An M3 toolbar is a chip rail: fixed toolbarHeight,
+                        // shadow, container fill. With nothing inside it is a
+                        // stub (Local), and around one bare label it was a tall
+                        // shadowed pill reading "Steam Workshop" beside the
+                        // 40 px source dropdown. It shows only with its chips;
+                        // the source is already named by the dropdown and the
+                        // sidebar's title.
+                        visible: resolutionChips.active
 
                         // The places chips and the Wallpaper Engine config
                         // row both moved into the left sidebar
                         // (WallpaperSelectorSidebar.qml) - the toolbar keeps
                         // only what has no home there.
                         Loader {
+                            id: resolutionChips
                             active: root.source !== "local" && root.source !== "wallpaperEngine"
                             visible: active
                             sourceComponent: RowLayout {
@@ -372,15 +381,6 @@ MouseArea {
                                         }
                                     }
                                 }
-                            }
-                        }
-
-                        Loader {
-                            active: root.source === "wallpaperEngine"
-                            visible: active
-                            sourceComponent: StyledText {
-                                text: Translation.tr("Steam Workshop")
-                                color: Appearance.colors.colOnLayer2
                             }
                         }
                     }
