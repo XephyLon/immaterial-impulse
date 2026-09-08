@@ -2,8 +2,7 @@
 
 All notable changes to Immaterial Impulse are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
-[Semantic Versioning](https://semver.org/) (currently pre-1.0: `0.x` may make
-breaking changes on a minor bump).
+[Semantic Versioning](https://semver.org/).
 
 The version is stored in `VERSION` (a symlink to the shell's
 `dots/.config/quickshell/imi/VERSION`, so it deploys with the config and the
@@ -12,13 +11,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-09-08
+
+The first stable release. Fifteen release candidates since 2026-09-01 closed
+out the 1.0 list; this one carries the fixes below on top of rc-15.
+
 ### Fixed
 - **Lyrics from Glassy no longer show every line twice.** The lyrics page
   now draws each line as a visible run plus a hidden copy for the sweep
   animation, and the shell read both; it reads the visible run only, folds
   any exact doubling, and re-fetches songs cached while the bug was live.
-
-### Fixed
 - **Checking Wallpaper Engine compatibility no longer spawns a second
   scanner or pops crash notifications.** When a wallpaper crashed the
   renderer inside the scanner, Quickshell's own crash handler relaunched the
