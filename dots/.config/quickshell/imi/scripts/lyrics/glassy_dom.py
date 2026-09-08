@@ -142,16 +142,20 @@ def lines_from_dom(payload, title, artist):
         # the last word (the shimmer "jumped to the end"). When no word carries a
         # real duration, this is line-level: drop the words so the line sweep
         # walks the whole line (the same read LyricsPlus gives as one word).
-        if not any_real_duration:
-            words = []
         text = str(entry.get("text") or "")
         # A renderer that draws a line twice (a visible run plus a hidden
         # highlight copy, as BetterLyrics v1 does) hands the extractor the
         # same words twice in a row. The JS reads the visible run only; this
-        # is the belt for the next markup change - an exact doubling of the
-        # (time, word) sequence, or of the plain text, folds to one copy.
-        words = fold_doubled_words(words)
-        text = fold_doubled_text(text)
+        # is the belt for the next markup change. Decided on the word
+        # timings BEFORE the line-level drop below discards them - a
+        # genuine "go go" has two different stamps and is left alone - and
+        # only then applied to the text as well.
+        folded = fold_doubled_words(words)
+        if len(folded) != len(words):
+            words = folded
+            text = fold_doubled_text(text)
+        if not any_real_duration:
+            words = []
         if text:
             out.append((t, text, words or None,
                         str(entry.get("romanized") or ""),
@@ -173,8 +177,8 @@ def fold_doubled_words(words):
 
 
 def fold_doubled_text(text):
-    """"X X" where X is the whole first half, split on a single space, is the
-    same doubling for a line-level (no words) entry."""
+    """"X X" where X is the whole first half, split on a single space - only
+    called once the words proved the line was rendered twice."""
     parts = text.split(" ")
     n = len(parts)
     if n < 2 or n % 2:
