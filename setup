@@ -30,6 +30,8 @@ Subcommands:
   install-files  Run the install step \"3. Copying config files\"
   resetfirstrun  Reset firstrun state.
   uninstall      Uninstall Immaterial Impulse.
+  backup         Archive your config (shell config, hypr/custom, shellOverrides, hyprlock/hypridle).
+  restore        Restore an archive made by \"backup\" (existing files are moved aside).
 
   exp-update     (Experimental) Update Immaterial Impulse without fully reinstall.
   exp-merge      (Experimental) Merge upstream changes with local configs using git rebase.
@@ -52,7 +54,7 @@ case $1 in
   # Global help
   help|--help|-h)showhelp_global;exit;;
   # Correct subcommand
-  install|uninstall|exp-update|exp-merge|resetfirstrun|checkdeps|virtmon)
+  install|uninstall|exp-update|exp-merge|resetfirstrun|checkdeps|virtmon|backup|restore)
     SUBCMD_NAME=$1
     SUBCMD_DIR=./sdata/subcmd-$1
     shift;;

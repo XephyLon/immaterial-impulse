@@ -166,6 +166,10 @@ your own files alone: `~/.config/hypr/custom/` (your Hyprland overrides),
 `hyprland/shellOverrides/`. `hyprlock.conf` and `hypridle.conf` are kept, with
 the new version placed beside them as `.new`.
 
+**Moving machines:** `./setup backup` archives exactly those files of yours
+into `~/imi-backup-<date>.tar.gz`; `./setup restore <archive>` puts them back
+on a fresh install, moving anything already there aside as `.pre-restore-*`.
+
 **Keybinds** follow Windows/GNOME muscle memory:
 
 | Keybind | Action |
