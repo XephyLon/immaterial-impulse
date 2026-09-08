@@ -1467,6 +1467,10 @@ Singleton {
 
             property JsonObject notifications: JsonObject {
                 property int timeout: 7000
+                // A notification may ask for its own display time (expire_timeout).
+                // On, that wins over `timeout` above; off, every popup uses `timeout`
+                // - some apps send absurd values, or 0 for "never".
+                property bool respectAppTimeout: true
                 property string position: "top_right"
             }
 

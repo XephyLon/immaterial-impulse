@@ -89,6 +89,13 @@ ContentPage {
                     checked: Config.options.bar.indicators.notifications.showUnreadCount
                     onToggleRequested: Config.options.bar.indicators.notifications.showUnreadCount = !Config.options.bar.indicators.notifications.showUnreadCount
                 }
+                ConfigSwitch {
+                    buttonIcon: "timer_off"
+                    text: Translation.tr("Let notifications set their own timeout")
+                    checked: Config.options.notifications.respectAppTimeout
+                    onToggleRequested: Config.options.notifications.respectAppTimeout = !Config.options.notifications.respectAppTimeout
+                    StyledToolTip { text: Translation.tr("Off: every popup uses the duration below, whatever the app asked for") }
+                }
                 ConfigSpinBox {
                     icon: "av_timer"
                     text: Translation.tr("Timeout duration (if not defined by notification) (ms)")

@@ -350,6 +350,14 @@ if ! python3 "$SCRIPT_DIR/test_media_capture_contract.py"; then
     exit 1
 fi
 
+# Notification timeouts: `respectAppTimeout` off makes the shell's own
+# duration win over the app's expire_timeout (0 = never, absurd values).
+echo "Running notification timeout policy tests..."
+if ! python3 "$SCRIPT_DIR/test_notification_timeout_policy.py"; then
+    echo "Notification timeout policy tests failed."
+    exit 1
+fi
+
 # Source contract: ResourceUsage polls through FileViews, keeps df off the
 # fast tick, and never starts nvidia-smi outside the runtime-status gate -
 # the ungated spawn is what holds a hybrid laptop's dGPU out of suspend.

@@ -197,10 +197,15 @@ Singleton {
             // Popup
             if (!root.popupInhibited) {
                 newNotifObject.popup = true;
-                if (notification.expireTimeout != 0) {
+                // The app's expire_timeout wins only while respectAppTimeout
+                // is on: 0 is its "never dismiss", a negative value its
+                // "you decide". Off, every popup takes the shell's timeout.
+                const respectApp = Config?.options.notifications.respectAppTimeout ?? true;
+                const shellTimeout = Config?.options.notifications.timeout ?? 7000;
+                if (!respectApp || notification.expireTimeout != 0) {
                     newNotifObject.timer = notifTimerComponent.createObject(root, {
                         "notificationId": newNotifObject.notificationId,
-                        "interval": notification.expireTimeout < 0 ? (Config?.options.notifications.timeout ?? 7000) : notification.expireTimeout,
+                        "interval": (!respectApp || notification.expireTimeout < 0) ? shellTimeout : notification.expireTimeout,
                     });
                 }
                 root.unread++;
