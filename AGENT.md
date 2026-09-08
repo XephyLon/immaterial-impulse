@@ -235,6 +235,41 @@ climbs: reproduce in the nested harness (headless weston 5120x1440, fresh XDG di
 config.json, `DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent`, RSS from `/proc/<pid>/status`
 every 30 s), and a `gc()` timer in a copied tree is the first discriminator. 31655e7c4 ("perf(shell): collect the JavaScript heap every five minutes").
 
+**Every Quickshell process here loaded Mesa's llvmpipe stack next to the NVIDIA driver; the `qs`
+wrapper pins the EGL vendor when NVIDIA is the only GPU.** glvnd loads every vendor it finds and Qt
+initialises both, so `libgallium` + `libLLVM` sat in the shell and in every `qs -p` helper it spawns
+(136 MB on a trivial window, ~110 MB on the full shell, measured in a nested Hyprland that ran the
+pinned shell 90 s with no EGL or protocol errors). The gate reads `/sys/class/drm/card*/device/vendor`
+and exports `__EGL_VENDOR_LIBRARY_FILENAMES` only when every card is `0x10de` and the NVIDIA json
+exists; a mixed box keeps the default because Mesa drives its other GPU. Nested **weston** cannot
+host a pinned shell (Wayland protocol error) - test wrapper changes in a nested Hyprland.
+`IMI_DRM_SYSFS` points the gate at a fake tree and `IMI_WRAPPER_DRY_RUN` prints the decision, which
+is how `sdata/tests/test_we_wrapper_env.py` exercises it. cb29df6d8 ("perf(wrapper): pin glvnd to NVIDIA when it is the only GPU").
+
+**A service that watches a state which changes a few times a day subscribes to it; a poll is the
+safety net, never the fast path.** The steady-state shell was spawning 4-5 processes per second:
+the tray watchdog ran three `busctl` calls plus a `pgrep` every 3 s and the privacy indicator
+`pactl` + `fuser` every 2 s. Both now block on an event stream (`busctl --user monitor --json=short
+--match ...`; `pactl subscribe` and `inotifywait -m -e open -e close /dev/video*`) with a settle
+timer and a slow poll (60 s / 10 s) for anything the stream misses. When adding a poller, ask what
+emits the change first; `tests/test_sni_watchdog.py` and `tests/test_media_capture_contract.py`
+pin the subscriptions. 82627cb23 ("perf(tray): the SNI watchdog listens on the bus instead of polling it"), 8c9ac38b8 ("perf(privacy): detect capture by subscription, poll only as a safety net").
+
+**Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
+`--only apps` is asked for, and names are validated before they touch the filesystem.** A shared
+preset could plant a launch command that ran on the next terminal/browser keybind; the strip now
+happens on every apply path (not only the `--only` one) and names must match `^[A-Za-z0-9._-]+$`
+so `../` cannot leave the presets directory. Keep both when touching `scripts/presets.sh` or
+`services/Presets.qml`; `tests/test_presets_apply_only.py` fails if either goes. 03ad7ece5 ("fix(presets): commands are opt-in on every apply path, and names cannot leave the directory").
+
+**Glassy's romanization/translation arrive seconds after the lyrics; `LyricsService` re-asks for
+them and merges IN PLACE.** A one-shot fetch that ran before `.blyrics--translated` existed cached a
+payload without it and the toggles never showed. `lyrics.py ... --extras` asks Glassy for just those
+fields and folds them into the cached payload by timestamp; the service polls it every 10 s (twelve
+times at most) while an incomplete Glassy result is on screen, mutates the loaded line objects and
+emits `lyricsLinesChanged()`. Reassigning `lyricsLines` there would reset the sweep - do not
+"simplify" the merge into a reload. b7f98e237 ("fix(lyrics): re-ask Glassy for late translations and merge them in").
+
 ## External binaries the shell drives
 
 **WE_REF pins the renderer, so a `WallpaperEngineSurface` property the shell reads may not exist in

@@ -11,6 +11,47 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Backup and restore your configuration.** `./setup backup` archives the
+  files an update never touches and the repo cannot reproduce (the shell's
+  config, plugins and presets, `hypr/custom`, `hyprland/shellOverrides`,
+  `hyprlock.conf`, `hypridle.conf`) into `~/imi-backup-<date>.tar.gz`;
+  `./setup restore <archive>` puts them back on a fresh install, moving
+  anything already there aside as `.pre-restore-*`. Restore refuses to run
+  under a live shell unless forced.
+- **Choose which colour the wallpaper seeds the palette with.** Settings >
+  Colours > "Source colour": dominant (as before), most or least saturated,
+  lightest, darkest, or strongest. The terminal colours follow the same pick.
+- **Notifications can be made to ignore the app's own timeout.** Settings >
+  Notifications > "Let notifications set their own timeout"; off, every popup
+  uses the configured duration, including ones an app marked "never dismiss".
+
+### Changed
+- **The shell no longer loads Mesa's software renderer beside the NVIDIA
+  driver.** On a machine where NVIDIA is the only GPU the `qs` wrapper pins
+  the EGL vendor, dropping about 110 MB of resident memory from the shell and
+  every helper it spawns; mixed and non-NVIDIA machines are unchanged.
+- **Two background pollers became subscriptions.** The tray watchdog listens
+  on the session bus instead of running three `busctl` calls every three
+  seconds, and the privacy indicator subscribes to PulseAudio and watches the
+  camera nodes with inotify instead of spawning `pactl` and `fuser` every two
+  seconds; both keep a slow poll as a safety net. Between them, about four
+  process spawns per second are gone.
+
+### Fixed
+- **Lyrics translations and romanizations from Glassy no longer go missing.**
+  The lyrics page renders them a few seconds after the lyrics, so a fetch
+  that ran first cached a result without them and the toggles never appeared
+  for that song. The shell now re-asks for just those fields while the panel
+  is open and folds them in without reloading.
+- **Presets from other people cannot run commands on your machine.** Applying
+  a preset skipped the `apps.*` entries only in one code path; they are now
+  dropped on every apply unless you pick "apps" explicitly, and preset names
+  can no longer point outside the presets directory.
+- **The experimental file deployer no longer overwrites `shellOverrides`.**
+  The yaml manifest used by `setup install --exp-files` now excludes
+  `hyprland/shellOverrides`, matching the default installer.
+
 ## [1.0.0] — 2026-09-08
 
 The first stable release. Fifteen release candidates since 2026-09-01 closed
