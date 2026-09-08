@@ -9,12 +9,12 @@
 <div align="center">
   <table>
     <tr>
-      <td width="50%"><img src="assets/showcase-mech.png" alt="Immaterial Impulse — 单色主题" width="100%"></td>
-      <td width="50%"><img src="assets/showcase-dark-cosmic-jhin.png" alt="Immaterial Impulse — 紫色主题" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-mech.webp" alt="Immaterial Impulse — 单色主题" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-phone.webp" alt="Immaterial Impulse — 紫色主题" width="100%"></td>
     </tr>
     <tr>
-      <td width="50%"><img src="assets/showcase-saber.png" alt="Immaterial Impulse — 暖色主题" width="100%"></td>
-      <td width="50%"><img src="assets/showcase-stella.png" alt="Immaterial Impulse — 蓝色主题" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-saber.webp" alt="Immaterial Impulse — 暖色主题" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-lyrics.webp" alt="Immaterial Impulse — 蓝色主题" width="100%"></td>
     </tr>
   </table>
   <p><em>同一套 Shell，四张壁纸 —— Material You 会根据每张壁纸为整个桌面重新配色。</em></p>
@@ -151,9 +151,9 @@ cd immaterial-impulse
 同一个 shell，三套调色板——Material You 从壁纸出发为一切重新上色。
 
 <table>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="assets/wallpaper-engine.webp" alt="Green"><br><em>Green</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="assets/edit-mode-lockscreen.webp" alt="Study"><br><em>Study</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="assets/intelligence.webp" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
 ### 一键切换栏样式

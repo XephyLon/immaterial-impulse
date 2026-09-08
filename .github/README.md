@@ -9,12 +9,12 @@
 <div align="center">
   <table>
     <tr>
-      <td width="50%"><img src="assets/showcase-mech.png" alt="Immaterial Impulse — monochrome theme" width="100%"></td>
-      <td width="50%"><img src="assets/showcase-dark-cosmic-jhin.png" alt="Immaterial Impulse — purple theme" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-mech.webp" alt="Immaterial Impulse — monochrome palette" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-phone.webp" alt="Immaterial Impulse — green palette, Phone tab and quick settings open" width="100%"></td>
     </tr>
     <tr>
-      <td width="50%"><img src="assets/showcase-saber.png" alt="Immaterial Impulse — warm theme" width="100%"></td>
-      <td width="50%"><img src="assets/showcase-stella.png" alt="Immaterial Impulse — blue theme" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-saber.webp" alt="Immaterial Impulse — warm palette" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-lyrics.webp" alt="Immaterial Impulse — blue palette, synced lyrics in the media sidebar" width="100%"></td>
     </tr>
   </table>
   <p><em>Same shell, four wallpapers — Material You retints the whole desktop to each.</em></p>
@@ -58,33 +58,53 @@ widgets, launcher providers, whole panels, and settings UIs**, behind a
 declared **permissions** model (`process`, `network`, `filesystem`, `settings`).
 There's a plugin **catalog** with author attribution, **remote install**, and a
 design-system library (`ExpressiveTokens`, a component registry) for authors.
-Bundled examples: **Docker** controls, **Discord voice**, system monitor,
-weather, currency, and clock widgets.
+Fifteen bundled: clock, calendar, weather, media, visualizer, currency, system
+and GPU monitors, notes, world clock, custom image, user card, **Docker**
+controls, **Discord voice**, image converter.
+
+### 🖥️ A desktop you lay out yourself
+**Edit Mode** places, resizes and snaps widgets on the desktop, with undo and
+redo, a drawer to park them in, and arrow-key nudging. The **lock screen has
+its own layout** — pick which widgets it shows and where. Bar **styles** to
+switch live (Float Islands among them), quick toggles in **pages**, a weather
+popup with an hourly forecast, and popups that mark on the bar where they came
+from.
 
 ### 🌊 Live wallpapers, not just images
 A browser for **local** and **online** wallpapers — plus first-class
-**Wallpaper Engine** support: animated WE scenes render live inside the shell,
-with **shader transitions** when you switch. The **frost** control decides how
-widgets sit over the wallpaper: a true in-shell **blur** of the region behind,
-or a cheap palette **tint**.
+**Wallpaper Engine**: Steam Workshop scenes and videos render live inside the
+shell through [qs-wallpaperengine](https://github.com/XephyLon/qs-wallpaperengine),
+with **shader transitions** when you switch, a **per-wallpaper sidebar**
+(frame rate, scaling, quality, audio, mouse, particles, the wallpaper's own
+properties), a **Fill crop picker** on the real scene, **clock depth** on a live
+scene, and a **compatibility scan** that finds the wallpapers your renderer
+cannot run. The **frost** control decides how widgets sit over the wallpaper:
+a true in-shell **blur** of the region behind, or a cheap palette **tint**.
 
 ### 🎨 Material You, everywhere at once
-Pick a wallpaper; the whole system re-colors. matugen propagates one palette to
-GTK, Hyprland, your terminal, **cava**, **tmux**, and the shell itself.
+Pick a wallpaper; the whole system re-colors, and the shell **fades** to the
+new palette. matugen propagates it to GTK, Qt, Hyprland, your terminal,
+**cava**, **tmux**, and the shell itself. Light and dark, scheme variants, an
+accent override when you want one.
 
-### 🖥️ A whole desktop, not a bar
-Material 3 Expressive throughout: horizontal or vertical **bar**, **dock**,
-left/right **sidebars**, an **overview** with live window previews,
-**notifications**, **OSD** and **on-screen keyboard**, **media controls with
-synced lyrics**, **session/lock** screens, a **polkit** agent, and an in-shell
-**Settings app** that configures all of it — one-click Hyprland animation
-presets included.
+### 🎵 Media with synced lyrics
+**Word-level** karaoke where a source has it, line sync elsewhere; a media
+widget whose two faces morph into each other; cover art from the player.
 
-### 🤖 AI + quality-of-life
-Chat with any OpenAI-compatible endpoint, Gemini, or local Ollama from the
-sidebar. On-screen **translation**, a **region selector** for screenshots and
-Google Lens, anti-flashbang, and — yes — a keyboard-shortcut **cheatsheet**
-with a periodic table on `Super`+`/`, because why not.
+### 🤖 Intelligence, and a phone
+Chat with any **OpenAI-compatible** endpoint, **Anthropic**, **Gemini**,
+**Mistral**, OpenRouter's catalogue, or local **Ollama** from the sidebar —
+drafts that survive, chats that save themselves, personas, tools. Pair an
+**Android phone** over Wi-Fi: mirrored **notifications**, **contacts**, and its
+**screen, camera and microphone** on the desktop.
+
+### 🧰 Quality-of-life
+An **overview** with live window previews, **notifications** and a to-do list,
+**OSD** and a full-size **on-screen keyboard**, a **region selector** with a
+toolbar for screenshots, recording, OCR and Google Lens, on-screen
+**translation**, an **OLED screensaver**, **presets** you can apply
+selectively, anti-flashbang, and — yes — a keyboard-shortcut **cheatsheet**
+with a periodic table and a **typing test** on `Super`+`/`, because why not.
 
 ---
 
@@ -138,6 +158,14 @@ cd immaterial-impulse
 Every command prints before it runs. For scripting, `./setup install` runs the
 same pipeline non-interactively.
 
+**Updating:** Settings > About > **Update Dots**, or run the installer again; it
+is idempotent, and the About page shows what changed. An update replaces the
+shell and the shipped Hyprland config (`~/.config/hypr/hyprland/`) and leaves
+your own files alone: `~/.config/hypr/custom/` (your Hyprland overrides),
+`~/.config/immaterial-impulse/` (settings), and the shell-generated
+`hyprland/shellOverrides/`. `hyprlock.conf` and `hypridle.conf` are kept, with
+the new version placed beside them as `.new`.
+
 **Keybinds** follow Windows/GNOME muscle memory:
 
 | Keybind | Action |
@@ -160,15 +188,21 @@ same pipeline non-interactively.
 
 ## Screenshots
 
-### One base, any mood
+### Edit Mode, on the lock screen
 
-Same shell, three palettes — Material You recolors everything from the wallpaper.
+The lock screen has its own widget layout, edited in place.
 
-<table>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
-</table>
+<img src="assets/edit-mode-lockscreen.webp" alt="Edit Mode on the lock screen with its own widget layout" width="100%">
+
+### Wallpaper Engine
+
+The selector over a live scene, and the palette that follows it.
+
+<img src="assets/wallpaper-engine.webp" alt="Wallpaper Engine selector open over a scene, palette taken from it" width="100%">
+
+### Intelligence
+
+<img src="assets/intelligence.webp" alt="Intelligence sidebar open next to the media widget" width="100%">
 
 ### Switch bar styles on the fly
 

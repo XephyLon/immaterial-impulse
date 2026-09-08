@@ -9,12 +9,12 @@
 <div align="center">
   <table>
     <tr>
-      <td width="50%"><img src="assets/showcase-mech.png" alt="Immaterial Impulse — モノクロテーマ" width="100%"></td>
-      <td width="50%"><img src="assets/showcase-dark-cosmic-jhin.png" alt="Immaterial Impulse — パープルテーマ" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-mech.webp" alt="Immaterial Impulse — モノクロテーマ" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-phone.webp" alt="Immaterial Impulse — パープルテーマ" width="100%"></td>
     </tr>
     <tr>
-      <td width="50%"><img src="assets/showcase-saber.png" alt="Immaterial Impulse — ウォームテーマ" width="100%"></td>
-      <td width="50%"><img src="assets/showcase-stella.png" alt="Immaterial Impulse — ブルーテーマ" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-saber.webp" alt="Immaterial Impulse — ウォームテーマ" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-lyrics.webp" alt="Immaterial Impulse — ブルーテーマ" width="100%"></td>
     </tr>
   </table>
   <p><em>同じシェル、4枚の壁紙 ―― Material You がデスクトップ全体をそれぞれに合わせて再配色。</em></p>
@@ -170,9 +170,9 @@ cd immaterial-impulse
 同じシェル、三つのパレット ―― Material You が壁紙からすべてを塗り替えます。
 
 <table>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="assets/wallpaper-engine.webp" alt="Green"><br><em>Green</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="assets/edit-mode-lockscreen.webp" alt="Study"><br><em>Study</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="assets/intelligence.webp" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
 ### バースタイルを瞬時に切り替え
