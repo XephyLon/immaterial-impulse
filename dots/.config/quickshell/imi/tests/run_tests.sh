@@ -333,6 +333,15 @@ if ! python3 "$SCRIPT_DIR/test_sni_watchdog.py"; then
     exit 1
 fi
 
+# The privacy indicator detects capture by subscription (pactl subscribe,
+# inotify on /dev/video*), with the poll as a slow safety net; it used to be
+# a spawn per second.
+echo "Running media capture contract tests..."
+if ! python3 "$SCRIPT_DIR/test_media_capture_contract.py"; then
+    echo "Media capture contract tests failed."
+    exit 1
+fi
+
 # Source contract: ResourceUsage polls through FileViews, keeps df off the
 # fast tick, and never starts nvidia-smi outside the runtime-status gate -
 # the ungated spawn is what holds a hybrid laptop's dGPU out of suspend.

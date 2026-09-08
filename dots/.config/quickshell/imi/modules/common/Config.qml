@@ -1235,7 +1235,10 @@ Singleton {
                 }
                 property JsonObject privacyIndicator: JsonObject {
                     property bool enable: true
-                    property int pollInterval: 2000 // ms
+                    // The safety-net poll behind the event sources
+                    // (pactl subscribe, inotify on /dev/video*); the
+                    // events carry the fast path.
+                    property int pollInterval: 10000 // ms
                     property bool showMic: true
                     property bool showCamera: true
                     property bool showScreencast: true

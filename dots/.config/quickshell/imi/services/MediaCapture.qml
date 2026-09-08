@@ -269,6 +269,10 @@ Singleton {
         onTriggered: root.screencastActive = true
     }
 
+    // The steady state is event-driven; this poll is the safety net behind
+    // it (a device that appeared after the inotify watch was set, a
+    // pipewire restart), at a cadence that no longer costs a spawn per
+    // second: it was `pactl` plus `fuser` every two seconds, all day.
     Timer {
         interval: root.pollInterval
         running: root.enableService
@@ -279,6 +283,41 @@ Singleton {
             root.refreshCamera();
             root.refreshScreencast();
         }
+    }
+    // Mic and playback-side capture: PipeWire-Pulse announces every
+    // source-output as it appears, changes and goes. One resident
+    // subscriber replaces the poll for the common case.
+    Process {
+        id: micEvents
+        running: root.enableService && root.showMic
+        command: ["pactl", "subscribe"]
+        stdout: SplitParser {
+            onRead: data => {
+                if (data.indexOf("source-output") !== -1) micSettle.restart();
+            }
+        }
+    }
+    Timer {
+        id: micSettle
+        interval: 150
+        onTriggered: root.refreshMic()
+    }
+    // Camera: an open() or close() on a V4L2 node is an inotify event on
+    // the device file. Watches the nodes present when it starts; a webcam
+    // plugged in later is caught by the poll above. Exits quietly where
+    // inotifywait is not installed - the poll alone then does the work.
+    Process {
+        id: cameraEvents
+        running: root.enableService && root.showCamera
+        command: ["sh", "-c", "command -v inotifywait >/dev/null 2>&1 || exit 0; set -- /dev/video*; [ -e \"$1\" ] || exit 0; exec inotifywait -m -q -e open -e close \"$@\" 2>/dev/null"]
+        stdout: SplitParser {
+            onRead: data => cameraSettle.restart()
+        }
+    }
+    Timer {
+        id: cameraSettle
+        interval: 150
+        onTriggered: root.refreshCamera()
     }
 
     Process {
