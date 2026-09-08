@@ -26,14 +26,23 @@ All bus work goes through busctl; the decision logic is pure
 (plan_actions) and unit-tested without a bus.
 """
 import fcntl
+import json
 import os
+import select
 import subprocess
 import sys
 import time
 
 WATCHER = "org.kde.StatusNotifierWatcher"
-POLL_S = 3
+# The loop is event-driven (busctl monitor on the watcher's name and its
+# item signals); POLL_S is the heartbeat behind it. It was a 3 s poll of
+# three busctl calls plus a pgrep - four processes every three seconds, all
+# day, forked from a shell that weighs gigabytes - for a watcher that
+# changes owner a few times a week.
+POLL_S = 60
 ABSENT_GRACE_S = 6
+# Debounce: a watcher rebirth is a burst of signals; one tick answers them.
+EVENT_SETTLE_S = 0.5
 
 
 # ---------------------------------------------------------------- pure ----
@@ -52,6 +61,29 @@ def resurrectable(item):
     if "/" not in item:
         return True
     return item.split("/", 1)[1] == "StatusNotifierItem"
+
+
+def relevant_event(line, watcher=WATCHER):
+    """One `busctl monitor --json=short` line: is it about the watcher?
+    NameOwnerChanged for the watcher's name (born, died, replaced), or one
+    of the watcher's own item signals. Anything else - other names, noise,
+    a non-JSON line - is not a reason to poll."""
+    try:
+        msg = json.loads(line)
+    except (TypeError, ValueError):
+        return False
+    if not isinstance(msg, dict) or msg.get("type") != "signal":
+        return False
+    member = msg.get("member", "")
+    iface = msg.get("interface", "")
+    if iface == "org.freedesktop.DBus" and member == "NameOwnerChanged":
+        data = (msg.get("payload") or {}).get("data") or []
+        return bool(data) and data[0] == watcher
+    if iface == watcher and member in ("StatusNotifierItemRegistered",
+                                       "StatusNotifierItemUnregistered",
+                                       "StatusNotifierHostRegistered"):
+        return True
+    return False
 
 
 def plan_actions(state, owner, items, live_services, now):
@@ -154,6 +186,35 @@ def run_action(action):
                "RegisterStatusNotifierItem", "s", action[1])
 
 
+def tick(state):
+    owner = get_owner()
+    items = get_items() if owner else []
+    live = get_live_services() if owner or state["remembered"] else set()
+    state, actions = plan_actions(state, owner, items, live, time.time())
+    for action in actions:
+        print(f"[sni-watchdog] {action}", flush=True)
+        run_action(action)
+    return state
+
+
+def start_monitor():
+    """A resident `busctl monitor` filtered to the watcher: its name's owner
+    changes and its item signals. Returns the Popen, or None."""
+    matches = [
+        "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',"
+        f"member='NameOwnerChanged',arg0='{WATCHER}'",
+        f"type='signal',interface='{WATCHER}'",
+    ]
+    args = ["busctl", "--user", "monitor", "--json=short"]
+    for m in matches:
+        args += ["--match", m]
+    try:
+        return subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                text=True, bufsize=1)
+    except OSError:
+        return None
+
+
 def main():
     runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
     lock = open(os.path.join(runtime, "imi-sni-watchdog.lock"), "w")
@@ -161,21 +222,38 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         return 0  # a watchdog is already on duty
-
     state = {"owner": None, "absent_since": None, "remembered": {}}
     ensure_xapp()  # a queue-holder from the start
+    monitor = None
+    next_heartbeat = 0.0
+    pending_since = None
     while True:
         try:
-            owner = get_owner()
-            items = get_items() if owner else []
-            live = get_live_services() if owner or state["remembered"] else set()
-            state, actions = plan_actions(state, owner, items, live, time.time())
-            for action in actions:
-                print(f"[sni-watchdog] {action}", flush=True)
-                run_action(action)
-        except Exception as e:  # a poll may fail; the loop must not
+            if monitor is None or monitor.poll() is not None:
+                monitor = start_monitor()
+                if monitor is None:
+                    time.sleep(POLL_S)  # no busctl monitor: heartbeat only
+                    state = tick(state)
+                    continue
+            now = time.time()
+            if pending_since is not None and now - pending_since >= EVENT_SETTLE_S:
+                pending_since = None
+                state = tick(state)
+                next_heartbeat = now + POLL_S
+            elif now >= next_heartbeat:
+                state = tick(state)
+                next_heartbeat = now + POLL_S
+            wait = EVENT_SETTLE_S if pending_since is not None else max(0.0, next_heartbeat - now)
+            ready, _, _ = select.select([monitor.stdout], [], [], wait)
+            if ready:
+                line = monitor.stdout.readline()
+                if line == "":
+                    continue  # monitor died; the loop restarts it
+                if relevant_event(line) and pending_since is None:
+                    pending_since = time.time()
+        except Exception as e:  # a tick may fail; the loop must not
             print(f"[sni-watchdog] tick failed: {e}", flush=True)
-        time.sleep(POLL_S)
+            time.sleep(1)
 
 
 if __name__ == "__main__":

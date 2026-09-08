@@ -56,6 +56,28 @@ def test_absence_activates_after_grace_not_before():
     assert state["remembered"] == {}
 
 
+
+@check
+def test_only_watcher_events_wake_the_loop():
+    nc = '{"type":"signal","sender":"org.freedesktop.DBus","interface":"org.freedesktop.DBus","member":"NameOwnerChanged","payload":{"type":"sss","data":["%s","",":1.9"]}}'
+    assert wd.relevant_event(nc % wd.WATCHER)
+    assert not wd.relevant_event(nc % "org.kde.SomethingElse")
+    assert wd.relevant_event('{"type":"signal","interface":"%s","member":"StatusNotifierItemRegistered","payload":{"data":[":1.5/StatusNotifierItem"]}}' % wd.WATCHER)
+    assert not wd.relevant_event('{"type":"method_call","interface":"%s","member":"RegisterStatusNotifierItem"}' % wd.WATCHER)
+    assert not wd.relevant_event("not json")
+    assert not wd.relevant_event("")
+
+
+@check
+def test_the_loop_is_event_driven_with_a_slow_heartbeat():
+    """A 3 s poll of four processes was the tray's steady-state cost; the
+    heartbeat behind the bus monitor stays at a minute or more."""
+    src = Path(wd.__file__).read_text()
+    assert wd.POLL_S >= 30, wd.POLL_S
+    assert '"monitor", "--json=short"' in src
+    assert "relevant_event(line)" in src
+
+
 passed = 0
 for fn in CHECKS:
     fn(); passed += 1
