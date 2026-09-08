@@ -39,6 +39,14 @@ if [ -z "$name" ]; then
     echo "Error: missing preset name" >&2
     exit 1
 fi
+# The name becomes a path component under PRESETS_DIR. Presets.qml already
+# spaces-to-underscores it, but every action here also takes names from the
+# command line and from files other people wrote; a slash or ".." would read,
+# write or remove outside the presets directory.
+if ! printf '%s' "$name" | grep -Eq '^[A-Za-z0-9._-]+$' || [ "$name" = "." ] || [ "$name" = ".." ]; then
+    echo "Error: bad preset name: $name (letters, digits, . _ - only)" >&2
+    exit 1
+fi
 
 case "$action" in
     --save)
@@ -127,6 +135,17 @@ case "$action" in
                     'if ($orig | length) > 0 then ._pluginState = $orig[0] else . end' \
                     "$preset_file" > "${preset_file}.tmp" && mv "${preset_file}.tmp" "$preset_file"
             fi
+        else
+            # No --only: everything except `apps`. Those values are run as
+            # shell commands (Session, the Bluetooth/Wi-Fi/mixer dialogs, the
+            # launcher's terminal), so a shared preset could plant a command
+            # that fires the next time the recipient opens Bluetooth settings.
+            # The dialog already leaves its Commands row off by default; the
+            # command line gets the same default, and `--only apps` remains
+            # the one way to take them deliberately.
+            preset_file="$(mktemp "${PRESETS_DIR}/.apply-XXXXXX.json")"
+            jq 'del(.apps)' "$PRESETS_DIR/${name}.json" > "$preset_file"
+            trap 'rm -f "$preset_file"' EXIT
         fi
         preset_plugin_state="$(jq -c '._pluginState // empty' "$preset_file")"
         # Plugins flagged presetPersist keep their CURRENT options, desktop

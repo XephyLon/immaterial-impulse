@@ -52,8 +52,11 @@ Singleton {
             description = raw.substring(commaIndex + 1).trim()
         }
 
-        name = name.replace(/\s/g, "_")
-        if (name.length === 0) return
+        // Spaces to underscores, then only what presets.sh accepts as a
+        // path component: letters, digits, . _ - (it refuses anything else,
+        // so a name that survives here is one it will take).
+        name = name.replace(/\s/g, "_").replace(/[^A-Za-z0-9._-]/g, "")
+        if (name.length === 0 || name === "." || name === "..") return
 
         // PluginState writes are debounced. Pass the authoritative in-memory
         // snapshot so a preset saved immediately after changing an option does

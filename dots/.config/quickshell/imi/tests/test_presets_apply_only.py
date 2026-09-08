@@ -96,15 +96,34 @@ class ApplyOnlyTests(unittest.TestCase):
             config = json.loads((config_dir / "config.json").read_text())
             self.assertEqual(config["apps"]["terminal"], "evil --rm -rf")
 
-    def test_no_only_is_todays_full_apply(self):
+    def test_no_only_applies_everything_but_the_commands(self):
+        """A plain --apply is the dialog's default made literal: every
+        section, except the one whose values are run as shell commands. A
+        shared preset cannot plant a terminal or Bluetooth command that fires
+        later; `--only apps` is the deliberate way to take them."""
         with tempfile.TemporaryDirectory() as directory:
             home, config_dir, script = harness(directory)
-            run(script, home, "--apply", "mix")
+            result = run(script, home, "--apply", "mix")
+            self.assertEqual(result.returncode, 0, result.stderr)
             config = json.loads((config_dir / "config.json").read_text())
-            self.assertEqual(config["apps"]["terminal"], "evil --rm -rf")
+            self.assertEqual(config["apps"]["terminal"], "live-terminal")
             self.assertEqual(config["bar"]["cornerStyle"], 3)
             state = json.loads((config_dir / "plugin-state.json").read_text())
             self.assertEqual(state["pluginOptions"]["notes"]["blurEnabled"], True)
+
+    def test_a_traversal_name_is_refused_on_every_action(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home, config_dir, script = harness(directory)
+            before = (config_dir / "config.json").read_text()
+            outside = home / "outside.json"
+            outside.write_text(json.dumps({"bar": {"cornerStyle": 9}}))
+            for name in ("../outside", "../../etc/passwd", "a/b", "..", "mix;rm"):
+                for args in (("--apply", name), ("--save", name, ""), ("--remove", name)):
+                    result = run(script, home, *args)
+                    self.assertNotEqual(result.returncode, 0, f"{args} was accepted")
+                    self.assertIn("bad preset name", result.stderr)
+            self.assertEqual((config_dir / "config.json").read_text(), before)
+            self.assertTrue(outside.exists(), "--remove reached outside the presets dir")
 
     def test_unknown_spec_refuses_without_writing(self):
         with tempfile.TemporaryDirectory() as directory:
