@@ -168,6 +168,30 @@ class GlassyDomTests(unittest.TestCase):
                        [16.0, "here"]]},
         ]}
 
+    def test_a_line_rendered_twice_folds_to_one(self):
+        """BetterLyrics v1 draws a visible run and a hidden highlight run per
+        line, each with the full word set; the extractor reads the visible
+        run, and this fold catches the same doubling from any future markup."""
+        payload = self.payload()
+        doubled = [[0.4, "I", 0.4], [0.8, "wanna", 0.8], [1.6, "be", 0.4],
+                   [0.4, "I", 0.4], [0.8, "wanna", 0.8], [1.6, "be", 0.4]]
+        payload["lines"] = [{"t": 0.4, "text": "I wanna be I wanna be", "words": doubled}]
+        (t, text, words, _r, _tr) = self.mod.lines_from_dom(payload, "Lost Control", "Alan Walker & Sorana")[0]
+        self.assertEqual(text, "I wanna be")
+        self.assertEqual([w[1] for w in words], ["I", "wanna", "be"])
+        # A genuine repeat with different timings is not a doubling.
+        payload["lines"] = [{"t": 0.4, "text": "go go", "words": [[0.4, "go", 0.3], [1.0, "go", 0.3]]}]
+        (t, text, words, _r, _tr) = self.mod.lines_from_dom(payload, "Lost Control", "Alan Walker & Sorana")[0]
+        self.assertEqual(text, "go go")
+        self.assertEqual(len(words), 2)
+
+    def test_the_extractor_reads_only_visible_runs(self):
+        js = self.mod.EXTRACT_JS
+        self.assertIn('.blyrics-bidi-run:not([aria-hidden="true"])', js)
+        self.assertNotIn("line.querySelectorAll('.blyrics-word-group')", js,
+                         "word groups read line-wide include the hidden highlight run's copy")
+        self.assertNotIn("line.querySelectorAll('.blyrics--word')", js)
+
     def test_words_come_through(self):
         lines = self.mod.lines_from_dom(self.payload(), "Lost Control", "Alan Walker & Sorana")
         self.assertEqual(len(lines), 2)

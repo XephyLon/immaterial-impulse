@@ -32,7 +32,16 @@ EXTRACT_JS = r"""(() => {
         // start time on the first syllable). Read groups first - flattening
         // syllables spaced "pro vi der" across the panel - and keep the
         // flat spans only as a fallback for lines without groups.
-        const groups = [...line.querySelectorAll('.blyrics-word-group')];
+        // BetterLyrics (data-agent v1) renders a line as two
+        // .blyrics-bidi-run siblings: the visible text and an aria-hidden
+        // .blyrics-highlight-run for the sweep, each carrying the full set
+        // of word groups. Read the visible run(s) only - a line can hold
+        // several for mixed direction - or every line came back doubled
+        // ("I wanna be a provider I wanna be a provider"). Older markup
+        // has no runs: fall back to the whole line.
+        const runs = [...line.querySelectorAll('.blyrics-bidi-run:not([aria-hidden="true"])')];
+        const scopes = runs.length > 0 ? runs : [line];
+        const groups = scopes.flatMap(s => [...s.querySelectorAll('.blyrics-word-group')]);
         let words;
         // Prefer word-groups (whole word in data-content). Where a track
         // is not wrapped in them, reassemble the flat syllable spans by the
@@ -56,7 +65,7 @@ EXTRACT_JS = r"""(() => {
                         syls.length > 1 ? syls.map(([st, sw]) => [st, sw]) : null];
             });
         } else {
-            const flat = [...line.querySelectorAll('.blyrics--word')]
+            const flat = scopes.flatMap(s => [...s.querySelectorAll('.blyrics--word')])
                 .map(s => ({ t: parseFloat(s.dataset.time),
                              text: (s.textContent || ''),
                              dur: parseFloat(s.dataset.duration) }))
@@ -136,12 +145,44 @@ def lines_from_dom(payload, title, artist):
         if not any_real_duration:
             words = []
         text = str(entry.get("text") or "")
+        # A renderer that draws a line twice (a visible run plus a hidden
+        # highlight copy, as BetterLyrics v1 does) hands the extractor the
+        # same words twice in a row. The JS reads the visible run only; this
+        # is the belt for the next markup change - an exact doubling of the
+        # (time, word) sequence, or of the plain text, folds to one copy.
+        words = fold_doubled_words(words)
+        text = fold_doubled_text(text)
         if text:
             out.append((t, text, words or None,
                         str(entry.get("romanized") or ""),
                         str(entry.get("translated") or "")))
     out.sort(key=lambda e: e[0])
     return out or None
+
+
+def fold_doubled_words(words):
+    """[(t, w, ...)] whose second half repeats the first, timestamp for
+    timestamp, is one line rendered twice: keep the first half."""
+    n = len(words)
+    if n < 2 or n % 2:
+        return words
+    half = n // 2
+    if all(words[i][:2] == words[i + half][:2] for i in range(half)):
+        return words[:half]
+    return words
+
+
+def fold_doubled_text(text):
+    """"X X" where X is the whole first half, split on a single space, is the
+    same doubling for a line-level (no words) entry."""
+    parts = text.split(" ")
+    n = len(parts)
+    if n < 2 or n % 2:
+        return text
+    half = n // 2
+    if parts[:half] == parts[half:]:
+        return " ".join(parts[:half])
+    return text
 
 
 def times_are_ready(lines):

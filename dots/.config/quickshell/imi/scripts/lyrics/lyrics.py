@@ -62,8 +62,14 @@ def cache_dir():
     return os.path.join(base, "immaterial-impulse", "lyrics")
 
 
+# Bumped when a provider's output shape or a fix makes cached entries wrong:
+# 2 = Glassy lines were cached doubled (a visible run plus a hidden highlight
+# copy of every word) while the extractor read them line-wide.
+CACHE_SCHEMA = 2
+
+
 def cache_key(title, artist, duration):
-    raw = "\x1f".join([(title or "").casefold(), (artist or "").casefold(),
+    raw = "\x1f".join([str(CACHE_SCHEMA), (title or "").casefold(), (artist or "").casefold(),
                        str(int(duration or 0))])
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
