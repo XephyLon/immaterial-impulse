@@ -275,6 +275,32 @@ $ld_line
 # QSGRenderThread, keeping animations responsive (teardown hitch drops to
 # <1s). Verified: WE still renders correctly under threaded on NVIDIA here.
 export QSG_RENDER_LOOP=threaded
+# --- egl vendor gate ---
+# glvnd loads every EGL vendor it finds and Qt initialises both, so on an
+# NVIDIA machine Mesa's llvmpipe stack (libgallium + libLLVM) sat in every
+# Quickshell process: 136 MB of RSS on a trivial window, 109 MB on the full
+# shell measured inside a nested Hyprland, which ran 90 s pinned with no EGL
+# or protocol errors and no Mesa mapped. Pin the vendor only when NVIDIA is
+# the only render device; a box with any other GPU keeps the default, since
+# Mesa drives that one. IMI_DRM_SYSFS points the check at a fake tree in
+# tests; IMI_WRAPPER_DRY_RUN prints the decision instead of starting the
+# shell.
+drm_sysfs="\${IMI_DRM_SYSFS:-/sys/class/drm}"
+nvidia_only=1; gpus_seen=0
+for vendor_file in "\$drm_sysfs"/card[0-9]/device/vendor "\$drm_sysfs"/card[0-9][0-9]/device/vendor; do
+  [ -r "\$vendor_file" ] || continue
+  gpus_seen=1
+  [ "\$(cat "\$vendor_file")" = "0x10de" ] || { nvidia_only=0; break; }
+done
+nvidia_json=/usr/share/glvnd/egl_vendor.d/10_nvidia.json
+if [ "\$gpus_seen" = 1 ] && [ "\$nvidia_only" = 1 ] && [ -r "\$nvidia_json" ]; then
+  export __EGL_VENDOR_LIBRARY_FILENAMES="\$nvidia_json"
+fi
+# --- end egl vendor gate ---
+if [ -n "\${IMI_WRAPPER_DRY_RUN:-}" ]; then
+  echo "__EGL_VENDOR_LIBRARY_FILENAMES=\${__EGL_VENDOR_LIBRARY_FILENAMES:-}"
+  exit 0
+fi
 exec "$qs_bin" "\$@"
 WRAPPER
   maybe_sudo install -Dm755 "$tmp" "$PREFIX/bin/quickshell"

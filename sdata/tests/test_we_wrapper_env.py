@@ -79,6 +79,49 @@ class WallpaperEngineWrapperEnv(unittest.TestCase):
         self.assertIn("libEGL", self.src)
         self.assertRegex(self.src, r"inherited by every")
 
+class WallpaperEngineWrapperEglVendor(unittest.TestCase):
+    """The wrapper pins glvnd to the NVIDIA vendor only when NVIDIA is the
+    only render device; otherwise Mesa's llvmpipe stack loads into every
+    Quickshell process (136 MB on a trivial window) or, on a mixed box, is
+    needed for the other GPU."""
+
+    def setUp(self):
+        src = SCRIPT.read_text(encoding="utf-8")
+        heredoc = src[src.index("<<WRAPPER") + len("<<WRAPPER\n"):src.index("\nWRAPPER\n")]
+        gate = heredoc[heredoc.index("# --- egl vendor gate ---"):heredoc.index("# --- end egl vendor gate ---")]
+        # The heredoc escapes its own expansions; the wrapper on disk has them unescaped.
+        self.gate = gate.replace("\\$", "$")
+
+    def _decide(self, vendors):
+        import subprocess, tempfile, os
+        from pathlib import Path as P
+        with tempfile.TemporaryDirectory() as tmp:
+            for i, v in enumerate(vendors):
+                d = P(tmp) / f"card{i}" / "device"; d.mkdir(parents=True)
+                (d / "vendor").write_text(v + "\n")
+            # a connector dir must not count as a GPU
+            (P(tmp) / "card0-DP-1").mkdir(exist_ok=True)
+            script = self.gate + '\necho "${__EGL_VENDOR_LIBRARY_FILENAMES:-unset}"\n'
+            out = subprocess.run(["bash", "-c", script], env={"PATH": os.environ["PATH"], "IMI_DRM_SYSFS": tmp},
+                                 capture_output=True, text=True, check=True).stdout.strip()
+            return out
+
+    def test_nvidia_only_pins_the_nvidia_vendor(self):
+        if not Path("/usr/share/glvnd/egl_vendor.d/10_nvidia.json").is_file():
+            self.skipTest("no NVIDIA vendor file on this machine")
+        self.assertEqual(self._decide(["0x10de"]), "/usr/share/glvnd/egl_vendor.d/10_nvidia.json")
+        self.assertEqual(self._decide(["0x10de", "0x10de"]), "/usr/share/glvnd/egl_vendor.d/10_nvidia.json")
+
+    def test_a_mixed_or_non_nvidia_box_keeps_the_default(self):
+        self.assertEqual(self._decide(["0x10de", "0x1002"]), "unset")
+        self.assertEqual(self._decide(["0x8086"]), "unset")
+        self.assertEqual(self._decide([]), "unset")
+
+    def test_the_export_is_gated_not_unconditional(self):
+        self.assertNotRegex(self.gate, r"(?m)^export __EGL_VENDOR_LIBRARY_FILENAMES")
+        self.assertIn('[ "$gpus_seen" = 1 ] && [ "$nvidia_only" = 1 ]', self.gate)
+
+
 
 if __name__ == "__main__":
     unittest.main()
