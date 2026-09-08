@@ -63,6 +63,18 @@ class ShellCacheHousekeeping(unittest.TestCase):
         self.assertIn("prune_shell_caches", src[files_step:files_step + 400],
                       "setup must prune the QML cache right after the files step")
 
+    def test_yaml_manifest_never_syncs_over_shell_overrides(self):
+        """The legacy files step keeps hyprland/shellOverrides with
+        --ignore-existing; the yaml manifest (--exp-files) syncs hypr with
+        --delete and must exclude it too, or every update resets the
+        shell-written kb options, animations and keybind overrides."""
+        import yaml
+        manifest = yaml.safe_load((ROOT / "subcmd-install/3.files-exp.yaml").read_text())
+        entries = manifest["patterns"]
+        hypr = [e for e in entries if e.get("from") == "dots/.config/hypr"]
+        self.assertEqual(len(hypr), 1)
+        self.assertIn("hyprland/shellOverrides", hypr[0].get("excludes", []))
+
     def test_install_logs_are_rotated(self):
         src = self.TUI.read_text(encoding="utf-8")
         body = src[src.index("run_quiet_install(){"):]

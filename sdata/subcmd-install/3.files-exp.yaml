@@ -53,7 +53,11 @@ patterns:
   - from: "dots/.config/hypr"
     to: "$XDG_CONFIG_HOME/hypr"
     mode: "sync"
-    excludes: ["custom", "hyprlock.conf", "hypridle.conf"]
+    # shellOverrides/ is written by the shell (kb options, animations,
+    # keybind overrides, popup blur); the legacy files step keeps it with
+    # rsync --ignore-existing, and a sync with --delete here would reset
+    # it to the shipped templates on every update.
+    excludes: ["custom", "hyprlock.conf", "hypridle.conf", "hyprland/shellOverrides"]
   # Hyprland special files
   - from: "dots/.config/hypr/hypridle.conf"
     to: "$XDG_CONFIG_HOME/hypr/hypridle.conf"
