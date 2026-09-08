@@ -4,7 +4,7 @@ A Material 3 Expressive desktop for **Hyprland**, built on [Quickshell](https://
 the shell, the compositor config, a plugin platform and the installer, in one tree.
 The whole desktop takes its colours from the wallpaper and moves like one thing.
 
-![Wallpaper Engine scene with the wallpaper selector open, palette taken from the scene](docs/assets/readme/wallpaper-engine.webp)
+![The desktop with both sidebars open: Phone tab on the left, quick settings on the right, widgets over a live wallpaper](docs/assets/readme/phone.webp)
 
 ## What you get
 
@@ -35,12 +35,10 @@ The whole desktop takes its colours from the wallpaper and moves like one thing.
 
 | | |
 |---|---|
-| ![Red palette from a red wallpaper](docs/assets/readme/palette-red.webp) | ![Warm palette with the calendar and media widgets on the desktop](docs/assets/readme/desktop-widgets.webp) |
-| The palette follows the wallpaper. | Desktop widgets, placed in Edit Mode. |
-| ![Edit Mode on the lock screen with its own widget layout](docs/assets/readme/edit-mode-lockscreen.webp) | ![Media sidebar with synced lyrics beside the quick-settings sidebar](docs/assets/readme/synced-lyrics.webp) |
-| The lock screen has its own layout. | Synced lyrics in the media sidebar. |
-| ![Intelligence sidebar open next to the media widget](docs/assets/readme/intelligence.webp) | ![Phone tab with a paired Android phone](docs/assets/readme/phone.webp) |
-| The Intelligence sidebar. | The Phone tab. |
+| ![Wallpaper Engine selector open over a scene, palette taken from it](docs/assets/readme/wallpaper-engine.webp) | ![Edit Mode on the lock screen with its own widget layout](docs/assets/readme/edit-mode-lockscreen.webp) |
+| Wallpaper Engine, and the palette that follows it. | The lock screen has its own layout. |
+| ![Media sidebar with synced lyrics](docs/assets/readme/synced-lyrics.webp) | ![Intelligence sidebar open next to the media widget](docs/assets/readme/intelligence.webp) |
+| Synced lyrics in the media sidebar. | The Intelligence sidebar. |
 
 ## Install
 
