@@ -288,6 +288,29 @@ ContentPage {
                 }
             }
 
+            // Which colour matugen lifts from the wallpaper. The scheme chips
+            // above pick the tone mapping; this picks the seed. "Dominant" is
+            // the scorer's first candidate; the rest are matugen's --prefer
+            // criteria over the same candidates, so a wallpaper whose loudest
+            // colour is a dull wall can be themed from its saturated accent.
+            ConfigSelectionArray {
+                text: Translation.tr("Source colour")
+                icon: "colorize"
+                currentValue: Config.options.appearance.palette.sourceMode
+                onSelected: value => {
+                    Config.options.appearance.palette.sourceMode = value
+                    page.refreshTheme()
+                }
+                options: [
+                    { displayName: Translation.tr("Dominant"), value: "dominant", icon: "star" },
+                    { displayName: Translation.tr("Saturated"), value: "saturation", icon: "water_drop" },
+                    { displayName: Translation.tr("Muted"), value: "less-saturation", icon: "blur_on" },
+                    { displayName: Translation.tr("Light"), value: "lightness", icon: "light_mode" },
+                    { displayName: Translation.tr("Dark"), value: "darkness", icon: "dark_mode" },
+                    { displayName: Translation.tr("Vivid"), value: "value", icon: "brightness_7" }
+                ]
+            }
+
             ConfigRow {
                 ConfigSwitch {
                     buttonIcon: "motion_mode"

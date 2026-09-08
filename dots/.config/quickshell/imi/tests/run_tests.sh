@@ -332,6 +332,14 @@ if ! python3 "$SCRIPT_DIR/test_sni_watchdog.py"; then
     echo "SNI watchdog planner tests failed."
     exit 1
 fi
+# The wallpaper's source colour is selectable (matugen --prefer), and the
+# terminal generator is handed matugen's pick so the two agree.
+echo "Running palette source mode tests..."
+if ! python3 "$SCRIPT_DIR/test_palette_source_mode.py"; then
+    echo "Palette source mode tests failed."
+    exit 1
+fi
+
 
 # The privacy indicator detects capture by subscription (pactl subscribe,
 # inotify on /dev/video*), with the poll as a slow safety net; it used to be
