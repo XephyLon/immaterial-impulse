@@ -284,6 +284,64 @@ Singleton {
         }
     }
 
+    // Glassy renders the romanization/translation DOM a few seconds after the
+    // lyrics, so a fetch that ran first came back without them - and the
+    // toggles never appeared for that song. While the panel is open on a
+    // Glassy result missing one of the two, ask again for just those fields
+    // every 10 s, a dozen times at most, and fold what arrives into the
+    // loaded lines IN PLACE: reassigning lyricsLines would reset the sweep.
+    readonly property int extrasIntervalMs: 10000
+    readonly property int extrasMaxAttempts: 12
+    property int extrasAttempts: 0
+    property var lastFetchArgs: []
+    Timer {
+        id: extrasTimer
+        interval: root.extrasIntervalMs
+        repeat: true
+        running: root.lyricsWanted
+            && root.status === "ok"
+            && root.source === "Glassy"
+            && !(root.hasRomanization && root.hasTranslation)
+            && root.extrasAttempts < root.extrasMaxAttempts
+        onTriggered: {
+            if (extrasProc.running || root.lastFetchArgs.length === 0) return
+            root.extrasAttempts++
+            extrasProc.command = root.lastFetchArgs.concat(["--extras"])
+            extrasProc.running = true
+        }
+    }
+    Process {
+        id: extrasProc
+        running: false
+        stderr: SplitParser {
+            onRead: line => console.warn("[Lyrics extras]", line)
+        }
+        stdout: SplitParser {
+            onRead: data => root.mergeExtras(data.trim())
+        }
+    }
+    function mergeExtras(payloadText) {
+        if (!payloadText.startsWith("{")) return
+        let parsed = null
+        try { parsed = JSON.parse(payloadText) } catch (error) { return }
+        if (!parsed || parsed.extras !== true) return
+        const extras = parsed.lines ?? []
+        let changed = false
+        for (let e = 0; e < extras.length; e++) {
+            const t = Number(extras[e]?.t)
+            if (isNaN(t)) continue
+            for (let i = 0; i < root.lyricsLines.length; i++) {
+                const line = root.lyricsLines[i]
+                if (Math.abs(line.time - t) > 0.05) continue
+                if (!line.romanized && extras[e].romanized) { line.romanized = extras[e].romanized; changed = true }
+                if (!line.translated && extras[e].translated) { line.translated = extras[e].translated; changed = true }
+            }
+        }
+        // Same array, same objects: only the dependents (hasTranslation, the
+        // per-row lineTranslated(index) reads) re-evaluate.
+        if (changed) root.lyricsLinesChanged()
+    }
+
     // The last (title, artist, duration) a fetch was launched for. A repeat of
     // the same key - metadata churn, a player re-selection, a sidebar reopen
     // on the same song - reuses what is loaded instead of re-fetching.
@@ -312,6 +370,7 @@ Singleton {
             if (lyricsProc.running) { root._ignoreNextExit = true; lyricsProc.running = false }
             fetchWatchdog.stop()
             root.lastKey = ""
+            root.lastFetchArgs = []
             root.source = ""
             root.lyricsLines = []
             root.activeIndex = -1
@@ -351,11 +410,14 @@ Singleton {
         if (!title) { root.status = "no_info"; return }
 
         root.status = "loading"
-        lyricsProc.command = [
+        const fetchArgs = [
             "python3",
             `${Directories.scriptPath}/lyrics/lyrics.py`,
             title, artist, String(Math.floor(duration))
         ]
+        lyricsProc.command = fetchArgs
+        root.lastFetchArgs = fetchArgs
+        root.extrasAttempts = 0
         lyricsProc.running = true
         fetchWatchdog.restart()
     }

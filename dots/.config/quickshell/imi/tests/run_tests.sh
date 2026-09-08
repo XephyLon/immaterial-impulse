@@ -2097,6 +2097,15 @@ if ! python3 "$SCRIPT_DIR/test_media_art_trim.py"; then
     exit 1
 fi
 
+# Glassy's translation/romanization land late; `lyrics.py --extras` re-asks
+# for just those fields and folds them into the cache, and the service polls
+# it while an incomplete Glassy result is on screen, merging in place.
+echo "Running lyrics extras refetch tests..."
+if ! python3 "$SCRIPT_DIR/test_lyrics_extras_refetch.py"; then
+    echo "Lyrics extras refetch tests failed."
+    exit 1
+fi
+
 echo "Running lyrics provider tests..."
 if ! python3 "$SCRIPT_DIR/test_lyrics_providers.py"; then
     echo "Lyrics provider tests failed."

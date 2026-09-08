@@ -485,7 +485,57 @@ def normalize_track(title, artist):
     return title, artist
 
 
+# --extras: Glassy renders the romanization/translation a few seconds after
+# the lyrics, so a fetch that ran before they landed cached a payload without
+# them. This asks Glassy again for just those fields, folds them into the
+# cached payload (matched by timestamp) so the next open has them at once,
+# and prints only the lines that carry something: the shell merges them into
+# what it already shows instead of reloading.
+def merge_extras(payload, extras, tolerance=0.05):
+    """Copy romanized/translated from `extras` onto `payload["lines"]` by time.
+    Returns the number of lines that gained a field."""
+    gained = 0
+    lines = payload.get("lines") or []
+    for extra in extras:
+        for line in lines:
+            if abs(float(line.get("t", -1)) - float(extra.get("t", -2))) > tolerance:
+                continue
+            for field in ("romanized", "translated"):
+                if extra.get(field) and not line.get(field):
+                    line[field] = extra[field]
+                    gained += 1
+    return gained
+
+
+def extras_refresh(title, artist, duration, use_cache):
+    lines = from_glassy(title, artist, duration)
+    extras = []
+    for line in lines or []:
+        romanized = line[3] if len(line) > 3 else ""
+        translated = line[4] if len(line) > 4 else ""
+        if romanized or translated:
+            entry = {"t": line[0]}
+            if romanized:
+                entry["romanized"] = romanized
+            if translated:
+                entry["translated"] = translated
+            extras.append(entry)
+    if not extras:
+        print("no_extras")
+        return 0
+    if use_cache:
+        key = cache_key(title, artist, duration)
+        cached = cache_get(key)
+        if isinstance(cached, dict) and merge_extras(cached, extras) > 0:
+            cache_put(key, cached)
+    print(json.dumps({"ok": True, "extras": True, "lines": extras}))
+    return 0
+
+
 def main():
+    extras_only = "--extras" in sys.argv[1:]
+    if extras_only:
+        sys.argv = [arg for arg in sys.argv if arg != "--extras"]
     if len(sys.argv) < 3:
         print("no_info")
         return 0
@@ -498,6 +548,8 @@ def main():
     except ValueError:
         duration = 0.0
     use_cache = not os.environ.get("IMI_LYRICS_NO_CACHE")
+    if extras_only:
+        return extras_refresh(title, artist, duration, use_cache)
     key = cache_key(title, artist, duration)
     if use_cache:
         cached = cache_get(key)
