@@ -48,6 +48,7 @@ Item {
     readonly property var acceptedExtensions: ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
 
     property var fileQueue: []
+    property var outputQueue: [] // one planned output per queued input
     property int queueTotal: 0
     property int queueDone: 0
     property var batchPaths: []
@@ -75,6 +76,7 @@ Item {
                 root.dropStatus = "error"
                 root.statusMessage = Queue.failMessage(inputPath)
                 root.fileQueue = []
+                root.outputQueue = []
                 root.queueTotal = 0
                 root.queueDone = 0
                 resetTimer.start()
@@ -120,7 +122,8 @@ Item {
         var next = root.fileQueue[0]
         root.fileQueue = root.fileQueue.slice(1)
         converter.inputPath  = next
-        converter.outputPath = Queue.outputFor(next, root.selectedFormat)
+        converter.outputPath = root.outputQueue[0]
+        root.outputQueue = root.outputQueue.slice(1)
         converter.running = true
     }
 
@@ -141,6 +144,7 @@ Item {
             return
         }
         root.fileQueue  = plan.inputs.slice(1)
+        root.outputQueue = plan.outputs.slice(1)
         root.queueTotal = plan.inputs.length
         root.queueDone  = 0
         converter.inputPath  = plan.inputs[0]
