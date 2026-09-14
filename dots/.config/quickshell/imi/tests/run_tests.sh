@@ -1059,6 +1059,12 @@ fi
 # The assistant in the overview: an Ask row under `@` (and, opt-in, as the
 # last row for a long unmatched query), only while the selected model is
 # usable, and nothing sent before Enter. docs/proposals/ai-in-overview.md.
+echo "Running config split contract..."
+if ! python3 "$SCRIPT_DIR/test_config_split_contract.py"; then
+    echo "Config split contract failed."
+    exit 1
+fi
+
 echo "Running launcher Ask row contract..."
 if ! python3 "$SCRIPT_DIR/test_launcher_ai_ask.py"; then
     echo "Launcher Ask row contract failed."
@@ -1796,6 +1802,12 @@ fi
 # Launches a real Quickshell and forces the startup race the migration used to
 # lose. Brings its own headless weston, so it needs no display of its own - but
 # it does need weston, and skips without it.
+echo "Running config split runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_config_split_runtime.py"; then
+    echo "Config split runtime tests failed."
+    exit 1
+fi
+
 echo "Running config directory migration runtime tests..."
 if ! python3 "$SCRIPT_DIR/test_config_dir_migration_runtime.py"; then
     echo "Config directory migration runtime tests failed."
