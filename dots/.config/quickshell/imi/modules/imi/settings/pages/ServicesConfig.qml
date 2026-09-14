@@ -496,6 +496,31 @@ ContentPage {
                     onToggleRequested: Config.options.search.ai.fallthrough = !Config.options.search.ai.fallthrough
                     StyledToolTip { text: Translation.tr("Four or more words, no app, setting or action matched, and a usable model selected. Nothing is sent before Enter.") }
                 }
+                ConfigSwitch {
+                    buttonIcon: "bolt"
+                    text: Translation.tr("Answer short questions inline, under the Ask row")
+                    checked: Config.options.search.ai.inline
+                    onToggleRequested: Config.options.search.ai.inline = !Config.options.search.ai.inline
+                    StyledToolTip { text: Translation.tr("Under the assistant prefix, after a pause in typing, a one-sentence answer appears under the Ask row. This sends what you type to the selected model: only a local model answers unless the next switch is on. Enter carries the answer into the chat.") }
+                }
+                ConfigSwitch {
+                    property bool rowVisible: Config.options.search.ai.inline
+                    buttonIcon: "cloud"
+                    text: Translation.tr("Inline answers may use my cloud key")
+                    checked: Config.options.search.ai.inlineWithCloud
+                    onToggleRequested: Config.options.search.ai.inlineWithCloud = !Config.options.search.ai.inlineWithCloud
+                    StyledToolTip { text: Translation.tr("Off: only a model on this machine (a loopback endpoint) answers inline. On: the selected cloud model does, one request per pause in typing, at your key's cost.") }
+                }
+                ConfigSpinBox {
+                    property bool rowVisible: Config.options.search.ai.inline
+                    icon: "timer"
+                    text: Translation.tr("Pause before asking (ms)")
+                    value: Config.options.search.ai.inlineDelayMs
+                    from: 300
+                    to: 3000
+                    stepSize: 100
+                    onValueModified: Config.options.search.ai.inlineDelayMs = newValue
+                }
             }
 
             ContentSubsection {
