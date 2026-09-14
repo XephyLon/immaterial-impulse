@@ -101,6 +101,8 @@ class InstallLifecycle(unittest.TestCase):
             self.assertEqual(self.custom_existing.read_text(), "-- edited by the user\n", "custom/ is never overwritten")
         self.assertEqual((hypr / "hyprlock.conf").read_text(), "# my lock\n", "hyprlock.conf is kept")
         self.assertTrue((hypr / "hyprlock.conf.new").is_file(), "the shipped hyprlock lands beside it as .new")
+        self.assertFalse((hypr / "hypridle.conf.new").exists(),
+                         "an untouched hypridle.conf matches the shipped file: no .new noise")
         self.assertEqual((hypr / "hyprland/shellOverrides/mine.lua").read_text(), "-- written by the shell for me\n")
         if self.override_existing:
             self.assertEqual(self.override_existing.read_text(), "-- my override edits\n",

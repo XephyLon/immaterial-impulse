@@ -11,6 +11,12 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Update Dots no longer leaves a `hyprlock.conf.new` / `hypridle.conf.new`
+  identical to your file.** The legacy files step wrote the backup copy
+  whenever the file existed; it now compares first, and removes a stale
+  identical `.new` from an earlier update.
+
 ## [1.1.0] — 2026-09-14
 
 The first feature release after 1.0. The assistant learns to look (files,

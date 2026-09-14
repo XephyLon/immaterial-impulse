@@ -166,7 +166,16 @@ function install_file__auto_backup(){
       v cp_file $s $t
     else
       echo -e "${STY_BLUE}[$0]: It seems not a firstrun.${STY_RST}"
-      v cp_file $s $t.new
+      # A `.new` only when the shipped file actually differs: an identical
+      # copy is noise the user has to compare and delete (the yaml step
+      # already checks; this path did not). A stale `.new` left behind by an
+      # earlier update goes with it once the two agree.
+      if cmp -s "$s" "$t"; then
+        echo -e "${STY_BLUE}[$0]: \"$t\" already matches the shipped file; no .new written.${STY_RST}"
+        [ -f "$t.new" ] && cmp -s "$s" "$t.new" && v rm -f "$t.new"
+      else
+        v cp_file $s $t.new
+      fi
     fi
   else
     echo -e "${STY_GREEN}[$0]: \"$t\" does not exist yet.${STY_RST}"
