@@ -491,6 +491,13 @@ ContentPage {
                     checked: Config.options.search.sloppy
                     onToggleRequested: Config.options.search.sloppy = !Config.options.search.sloppy
                 }
+                ConfigSwitch {
+                    buttonIcon: "star_shine"
+                    text: Translation.tr("Offer \"Ask the assistant\" for long queries nothing else matches")
+                    checked: Config.options.search.ai.fallthrough
+                    onToggleRequested: Config.options.search.ai.fallthrough = !Config.options.search.ai.fallthrough
+                    StyledToolTip { text: Translation.tr("Four or more words, no app, setting or action matched, and a usable model selected. Nothing is sent before Enter.") }
+                }
             }
 
             ContentSubsection {
@@ -573,27 +580,6 @@ ContentPage {
                         uniform: true
                         ConfigTextArea {
                             Layout.fillWidth: true
-                            fieldWidth: 100
-                            buttonIcon: "star_shine"
-                            text: Translation.tr("Ask the assistant")
-                            value: Config.options.search.prefix.ai
-                            onValueChanged: {
-                                Config.options.search.prefix.ai = value;
-                            }
-                        }
-                        ConfigSwitch {
-                            buttonIcon: "low_priority"
-                            text: Translation.tr("Offer \"Ask\" for long queries nothing else matches")
-                            checked: Config.options.search.ai.fallthrough
-                            onToggleRequested: Config.options.search.ai.fallthrough = !Config.options.search.ai.fallthrough
-                            StyledToolTip { text: Translation.tr("Four or more words, no app, setting or action matched, and a usable model selected. Nothing is sent before Enter.") }
-                        }
-                    }
-
-                    ConfigRow {
-                        uniform: true
-                        ConfigTextArea {
-                            Layout.fillWidth: true
                             buttonIcon: "apps"
                             fieldWidth: 100
                             text: Translation.tr("Apps")
@@ -643,6 +629,22 @@ ContentPage {
                     // one. PrismLauncher.available comes from that service's
                     // own startup detection, so this row appears on machines
                     // that can use it and nowhere else.
+                    ConfigRow {
+                        uniform: true
+                        ConfigTextArea {
+                            Layout.fillWidth: true
+                            fieldWidth: 100
+                            buttonIcon: "star_shine"
+                            text: Translation.tr("Ask the assistant")
+                            value: Config.options.search.prefix.ai
+                            onValueChanged: {
+                                Config.options.search.prefix.ai = value;
+                            }
+                        }
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                    }
                     ConfigRow {
                         uniform: true
                         property bool rowVisible: PrismLauncher.available
