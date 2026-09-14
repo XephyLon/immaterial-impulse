@@ -172,7 +172,7 @@ function install_file__auto_backup(){
       # earlier update goes with it once the two agree.
       if cmp -s "$s" "$t"; then
         echo -e "${STY_BLUE}[$0]: \"$t\" already matches the shipped file; no .new written.${STY_RST}"
-        [ -f "$t.new" ] && cmp -s "$s" "$t.new" && v rm -f "$t.new"
+        if [ -f "$t.new" ] && cmp -s "$s" "$t.new"; then v rm -f "$t.new"; fi
       else
         v cp_file $s $t.new
       fi
