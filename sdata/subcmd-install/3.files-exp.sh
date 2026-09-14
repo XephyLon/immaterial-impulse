@@ -4,7 +4,6 @@
 # See https://github.com/end-4/dots-hyprland/issues/2137
 #
 # Stage 1 todos:
-# TODO: Properly handle hyprland config, ~/.config/hypr/hyprland.conf should be overwritten only when firstrun
 # TODO: add --exp-files-path <path>   Use <path> instead of the default yaml config
 # TODO: add --exp-files-regen         Force copy the default config to ${EXP_FILE_PATH} (auto do this when not existed)
 # TODO: Implement versioning, i.e. when user-defined yaml config file has version number mismatch with the default one, produce error. If only minor version number is not the same, the error can be ommitted via --exp-file-no-strict .
@@ -159,6 +158,16 @@ case "$ask" in
 esac
 
 # Read patterns from YAML file
+# The pre-lua entry file, exactly as the legacy step handles it: left in
+# place it shadows hyprland.lua, so it is moved aside once - and BEFORE the
+# patterns run, because the hypr pattern syncs with --delete and would remove
+# it before there was anything to rename. Found by
+# sdata/tests/test_install_lifecycle.py.
+if [ -f "${XDG_CONFIG_HOME}/hypr/hyprland.conf" ]; then
+  v mv "${XDG_CONFIG_HOME}/hypr/hyprland.conf" "${XDG_CONFIG_HOME}/hypr/hyprland.conf.old"
+  echo 'hyprland.conf has been renamed to hyprland.conf.old. This is to allow the new lua config to load.'
+fi
+
 readarray patterns < <(yq -o=j -I=0 '.patterns[]' "$CONFIG_FILE")
 
 # Process each pattern
@@ -208,10 +217,12 @@ for pattern in "${patterns[@]}"; do
     continue
   fi
 
-  # Ensure destination directory exists for files
-  if [[ -f "$from" ]]; then
-    v mkdir -p "$(dirname "$to")"
-  fi
+  # Ensure the destination's parent exists - for directories too: rsync does
+  # not create missing parents, so on a fresh home the very first pattern
+  # (quickshell/imi under a quickshell/ that does not exist yet) failed with
+  # "mkdir ... No such file or directory" and the step aborted. Found by
+  # sdata/tests/test_install_lifecycle.py.
+  v mkdir -p "$(dirname "$to")"
 
   # Execute based on mode
   case "$mode" in
