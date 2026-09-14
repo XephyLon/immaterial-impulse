@@ -27,6 +27,26 @@ Singleton {
         else
             FileSearch.reset();
         root.refreshMathResult();
+        root.refreshInlineAnswer();
+    }
+
+    // The inline answer (AiInline) is driven from here, like the qalc spawn:
+    // decided from the query alone, never from the results build. AiInline
+    // applies its own gates (opt-in, usable model, local-or-cloud-switch,
+    // word count, debounce); a query without the prefix cancels whatever
+    // was in flight. Closing the overview cancels it too.
+    function refreshInlineAnswer() {
+        const aiPrefix = Config.options.search.prefix.ai ?? "";
+        if (aiPrefix.length > 0 && root.query.startsWith(aiPrefix))
+            AiInline.ask(StringUtils.cleanPrefix(root.query, aiPrefix));
+        else
+            AiInline.cancel();
+    }
+    Connections {
+        target: GlobalStates
+        function onOverviewOpenChanged() {
+            if (!GlobalStates.overviewOpen) AiInline.cancel();
+        }
     }
 
     // Called, never bound. A `readonly property bool queryIsMath` read from
@@ -686,6 +706,7 @@ Singleton {
         const aiUsable = !!aiModel && Ai.currentModelHasApiKey;
         const aiQuestion = (startsWithAiPrefix ? StringUtils.cleanPrefix(root.query, aiPrefix) : root.query).trim();
         const aiResultObject = (aiUsable && aiQuestion.length > 0) ? resultComp.createObject(null, {
+            id: "ask-assistant", // SearchItem hangs the inline answer off this
             name: aiQuestion,
             verb: Translation.tr("Ask"),
             type: Translation.tr("Ask %1").arg(aiModel.name ?? "AI"),
@@ -769,12 +790,23 @@ Singleton {
     // Intelligence tab (the deep link is consumed by SidebarLeftContent) and
     // send the question. Ai is a singleton, so the send does not wait for the
     // panel to be built.
+    // An inline answer already on the row (complete or partial) travels
+    // into the chat as the assistant's turn instead of being asked again,
+    // so the conversation continues from it; without one, the question is
+    // sent normally.
     function askAssistant(question) {
         const text = String(question ?? "").trim();
         if (text.length === 0) return;
+        const inlineAnswer = AiInline.take(text);
         GlobalStates.overviewOpen = false;
         GlobalStates.sidebarLeftTab = "intelligence";
         GlobalStates.sidebarLeftOpen = true;
+        if (inlineAnswer.length > 0) {
+            AiSessions.mint(text);
+            Ai.addMessage(text, "user");
+            Ai.addMessage(inlineAnswer, "assistant");
+            return;
+        }
         Ai.sendUserMessage(text);
     }
 

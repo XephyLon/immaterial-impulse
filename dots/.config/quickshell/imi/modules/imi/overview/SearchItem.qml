@@ -260,6 +260,19 @@ RippleButton {
                     text: root.selected ? root.itemName : root.displayContent
                 }
             }
+            StyledText { // The assistant's inline answer (the Ask row only)
+                // Bound straight to AiInline, so a streaming answer never
+                // rebuilds the results list: the row reads it, the builder
+                // never names it.
+                readonly property bool isAskRow: root.entry?.id === "ask-assistant"
+                    && AiInline.question === root.itemName
+                visible: isAskRow && (AiInline.answer !== "" || AiInline.busy)
+                Layout.fillWidth: true
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                color: root.selected ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
+                wrapMode: Text.WordWrap
+                text: AiInline.answer !== "" ? AiInline.answer : Translation.tr("Thinking…")
+            }
             StyledText { // Symbol tags / description
                 visible: root.itemTags !== "" && root.itemType === Translation.tr("Symbol")
                 Layout.fillWidth: true

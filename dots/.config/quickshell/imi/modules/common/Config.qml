@@ -1613,6 +1613,15 @@ Singleton {
                 property JsonObject ai: JsonObject {
                     property bool fallthrough: false
                     property int fallthroughMinWords: 4
+                    // Inline answers: under the assistant prefix, after a
+                    // pause in typing, a one-sentence answer streams under
+                    // the Ask row (AiInline). Off by default because it
+                    // sends what you type; even on, only a local model
+                    // answers unless inlineWithCloud is on too.
+                    property bool inline: false
+                    property bool inlineWithCloud: false
+                    property int inlineDelayMs: 700
+                    property int inlineMinWords: 3
                 }
                 property JsonObject fileSearch: JsonObject {
                     property bool enable: true
