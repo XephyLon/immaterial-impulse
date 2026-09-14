@@ -108,8 +108,15 @@ Button {
         (root.hovered ? colBackgroundHover : 
             colBackground), root.enabled ? 0 : 1)
     property color rippleColor: root.toggled ? colRippleToggled : colRipple
+    // The colour a ripple in flight keeps. A press that TOGGLES the button
+    // flips `rippleColor` mid-ripple (layer tone -> primary-active tone on a
+    // now-primary background), and a live binding repainted the spreading
+    // ripple in the new tone: it blended into the fill and read as vanishing
+    // at once. Latched at press, a ripple finishes in the tone it started in.
+    property color activeRippleColor: root.rippleColor
 
     function startRipple(x, y) {
+        root.activeRippleColor = root.rippleColor;
         const stateY = buttonBackground.y;
         rippleAnim.x = x;
         rippleAnim.y = y - stateY;
@@ -301,9 +308,9 @@ Button {
             RadialGradient {
                 anchors.fill: parent
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: root.rippleColor }
-                    GradientStop { position: 0.3; color: root.rippleColor }
-                    GradientStop { position: 0.5; color: Qt.rgba(root.rippleColor.r, root.rippleColor.g, root.rippleColor.b, 0) }
+                    GradientStop { position: 0.0; color: root.activeRippleColor }
+                    GradientStop { position: 0.3; color: root.activeRippleColor }
+                    GradientStop { position: 0.5; color: Qt.rgba(root.activeRippleColor.r, root.activeRippleColor.g, root.activeRippleColor.b, 0) }
                 }
             }
 
