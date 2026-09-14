@@ -678,6 +678,12 @@ And a final paragraph after the math, so the stream does not end on a block boun
         function testStream(): void {
             root.simulateStream(root.testStreamText);
         }
+        // Push-to-talk from a keybind: `qs ipc call ai dictate toggle`
+        // (or start / stop). Hyprland has no key-release dispatch, so toggle
+        // is the primitive; a bind/bindr pair gives a held key.
+        function dictate(action: string): void {
+            AiDictation.dictate(action);
+        }
     }
 
     // /test's streamer: feeds a canned response through the same

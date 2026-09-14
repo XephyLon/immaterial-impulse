@@ -659,6 +659,17 @@ Singleton {
                     property int topK: 6
                     property bool alwaysAttach: false
                 }
+                // Dictation (docs/proposals/ai-voice-input.md). `engine`: "local"
+                // (faster-whisper in the shell's venv, or whisper.cpp's whisper-cli)
+                // or "provider" (an OpenAI-compatible transcription endpoint, keyed by
+                // providerKeyId). A model is downloaded only from the Settings button.
+                property JsonObject dictation: JsonObject {
+                    property string engine: "local"
+                    property string model: "base"
+                    property string providerKeyId: "openai"
+                    property bool autoSend: false
+                    property int maxSeconds: 60
+                }
             }
 
             property JsonObject appearance: JsonObject {
