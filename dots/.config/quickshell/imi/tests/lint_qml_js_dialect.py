@@ -66,6 +66,13 @@ BANNED = (
 )
 
 
+# Third-party files kept verbatim so they can be updated by copy; their
+# dialect is their author's. Each is a file CI never compiles on its own.
+VENDORED = {
+    "modules/common/functions/fuzzysort.js",  # `var char`; loaded by LauncherSearch only
+}
+
+
 def strip_literals(source: str) -> str:
     """Blank out comments and string bodies, keeping line structure intact.
 
@@ -116,6 +123,8 @@ def main() -> int:
             continue
         for path in sorted(base.rglob("*")):
             if path.suffix not in SUFFIXES or not path.is_file() or path.is_symlink():
+                continue
+            if path.relative_to(ROOT).as_posix() in VENDORED:
                 continue
             source = strip_literals(path.read_text(encoding="utf-8", errors="replace"))
             for line_no, line in enumerate(source.splitlines(), start=1):

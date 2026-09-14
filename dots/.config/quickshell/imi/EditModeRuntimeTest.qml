@@ -678,9 +678,9 @@ ShellRoot {
             transientLoader.active = true;
         },
         () => {
-            const transient = transientLoader.item;
-            driver.mouseClick(canvas, transient.x + transient.width / 2,
-                              transient.y + transient.height / 2, Qt.RightButton);
+            const transientItem = transientLoader.item;
+            driver.mouseClick(canvas, transientItem.x + transientItem.width / 2,
+                              transientItem.y + transientItem.height / 2, Qt.RightButton);
             harness.check("the menu opens for the transient widget",
                           GlobalStates.editWidgetMenuOpen
                           && GlobalStates.editWidgetMenuPluginId === "edit-vanish-probe");
