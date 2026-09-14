@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""The assistant's file tools: `read_file` and `list_directory`, fenced.
+"""The assistant's file tools: `read_file`, `list_directory`, and the reviewed
+`write_file` / `append_file`, fenced.
 
 The model names a path; this decides whether the shell may look at it. The
 rules live here rather than in QML so they are testable without a shell:
@@ -121,10 +122,45 @@ def do_list(args, roots):
     return {"ok": True, "path": real, "entries": entries, "truncated": truncated}
 
 
+MAX_WRITE_BYTES = 256 * 1024
+
+
+def do_write(args, roots, append):
+    """Write (or append) the text on stdin to a file inside the allowlist. The
+    first write of a session to an existing file keeps a `.bak` beside it;
+    a later write in the same session does not overwrite that `.bak`."""
+    raw = args.path
+    real = os.path.realpath(os.path.expanduser(raw))
+    # The file may not exist yet: fence its parent, then the file's own
+    # would-be real path (a symlink already sitting there must not lead out).
+    parent, root = resolve(os.path.dirname(real) or real, roots)
+    if hidden_component(real, root):
+        raise ValueError("Hidden files and folders are not writable.")
+    if os.path.islink(real):
+        resolve(real, roots)
+    if os.path.isdir(real):
+        raise ValueError("That is a folder, not a file.")
+    data = sys.stdin.read()
+    if len(data.encode("utf-8")) > MAX_WRITE_BYTES:
+        raise ValueError(f"Refusing to write more than {MAX_WRITE_BYTES // 1024} KiB in one call.")
+    existed = os.path.isfile(real)
+    backup = None
+    if existed and not append:
+        backup = real + ".bak"
+        if not os.path.exists(backup):
+            with open(real, "rb") as src, open(backup, "wb") as dst:
+                dst.write(src.read())
+    os.makedirs(os.path.dirname(real), exist_ok=True)
+    with open(real, "a" if append else "w", encoding="utf-8") as f:
+        f.write(data)
+    return {"ok": True, "path": real, "bytes": len(data.encode("utf-8")), "existed": existed,
+            "appended": append, "backup": backup}
+
+
 def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("action", choices=["read", "list"])
+    parser.add_argument("action", choices=["read", "list", "write", "append"])
     parser.add_argument("path")
     parser.add_argument("--allow", action="append", default=[], help="an allowed folder (repeatable)")
     parser.add_argument("--depth", type=int, default=1)
@@ -132,7 +168,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     roots = allowed_roots(args)
     try:
-        result = do_read(args, roots) if args.action == "read" else do_list(args, roots)
+        if args.action == "read":
+            result = do_read(args, roots)
+        elif args.action == "list":
+            result = do_list(args, roots)
+        else:
+            result = do_write(args, roots, append=(args.action == "append"))
     except ValueError as e:
         result = {"ok": False, "error": str(e)}
     except OSError as e:
