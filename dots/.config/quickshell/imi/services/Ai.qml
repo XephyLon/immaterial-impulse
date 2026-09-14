@@ -389,8 +389,13 @@ Singleton {
     }
 
     function addModel(modelName, data) {
+        // `root`, never `this`: called through the singleton from another
+        // QML context (a runtime harness, a plugin) `this` is not the
+        // scope object, and createObject - an overloaded C++ method -
+        // segfaults resolving the overload on it (Qt 6.11,
+        // QObjectMethod::resolveOverloaded -> QMetaObject::inherits).
         root.models = Object.assign({}, root.models, {
-            [modelName]: aiModelComponent.createObject(this, data)
+            [modelName]: aiModelComponent.createObject(root, data)
         });
     }
 
