@@ -50,8 +50,8 @@ TestCase {
         verify(Policy.summaryFor("set_wallpaper", { path: "random" }).indexOf("random") !== -1);
         verify(Policy.summaryFor("set_accent", { color: "auto" }).indexOf("wallpaper") !== -1);
         verify(Policy.summaryFor("set_color_scheme", { scheme: "dark" }).indexOf("dark") !== -1);
-        const long = Policy.summaryFor("set_clipboard", { text: "a".repeat(300) });
-        verify(long.length < 200, "a long clipboard text is elided on the card");
+        const longSummary = Policy.summaryFor("set_clipboard", { text: "a".repeat(300) });
+        verify(longSummary.length < 200, "a long clipboard text is elided on the card");
         verify(Policy.summaryFor("unknown_tool", { a: 1 }).indexOf("unknown_tool") === 0, "an unknown tool still shows something");
     }
 
