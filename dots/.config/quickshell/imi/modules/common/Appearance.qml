@@ -882,6 +882,15 @@ Singleton {
         // of that is a copy that drifts. Checked against the live compositor at
         // cornerStyle 3 with auto-hide off: `hyprctl layers` reports
         // `quickshell:bar` at y=5 h=63, which is these two.
+        // What the bar's BarExclusiveZoneReserver asks for while the bar is
+        // shown (its `zone`), and what it settles to (zone + edgeMargin) -
+        // i.e. where the compositor starts placing windows on the bar's
+        // edge. Bar.qml and FrameGeometry both read these; a second copy of
+        // either expression is a copy that drifts.
+        property real barReservedHeight: root.sizes.baseBarHeight
+            + ((Config?.options.bar.cornerStyle === 1 || Config?.options.bar.cornerStyle === 4) ? root.sizes.hyprlandGapsOut : 0)
+        property real barExclusiveZone: root.sizes.barReservedHeight
+            + ((Config?.options.bar.bottom ?? false) ? root.sizes.barBottomMargin : root.sizes.barDetachMargin)
         property real barSurfaceHeight: root.sizes.barHeight
             + root.rounding.screenRounding + root.sizes.barDetachInset
         property real barSurfaceMargin: Config?.options.bar.bottom

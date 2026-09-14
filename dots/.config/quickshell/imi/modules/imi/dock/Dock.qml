@@ -16,6 +16,8 @@ import "dock_geometry.js" as DockGeometry
 Scope {
     id: root
     property bool pinned: Config.options?.dock.pinnedOnStartup ?? false
+    onPinnedChanged: GlobalStates.dockPinned = root.pinned
+    Component.onCompleted: GlobalStates.dockPinned = root.pinned
 
     // Which edge the dock lives on. Everything positional derives from this
     // one value; nothing below names a side directly.

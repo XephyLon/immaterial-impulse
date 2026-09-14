@@ -33,7 +33,7 @@ Scope {
         // arithmetic; nothing here computes an inset.
         readonly property var frameMargins: FrameGeometry.enabled
             ? FrameGeometry.cornerMargins(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight")
-            : ({ left: 0, top: 0, right: 0, bottom: 0, draw: true })
+            : ({ left: 0, top: 0, right: 0, bottom: 0 })
 
         exclusionMode: ExclusionMode.Ignore
         mask: Region {
@@ -64,7 +64,6 @@ Scope {
             id: cornerWidget
             anchors.fill: parent
             corner: cornerPanelWindow.corner
-            visible: !FrameGeometry.enabled || cornerPanelWindow.frameMargins.draw !== false
             // The frame's colour joins the fillet to the bar and the bands;
             // the fake screen rounding stays black.
             color: FrameGeometry.enabled ? FrameGeometry.color : "#000000"

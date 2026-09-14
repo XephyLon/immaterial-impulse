@@ -10,6 +10,10 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 Singleton {
+    // Whether a dock is pinned (reserving its edge). Written by Dock.qml;
+    // read by FrameGeometry, which frames the dock's edge only when the dock
+    // actually reserves it.
+    property bool dockPinned: false
     id: root
     property bool barOpen: true
     // Ask the region selector for an action ("screenshot", "search", "ocr",

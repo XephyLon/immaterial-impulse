@@ -89,7 +89,7 @@ Scope {
                     edgeMargin: Config.options.bar.bottom
                         ? Appearance.sizes.barBottomMargin : Appearance.sizes.barDetachMargin
                     zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows))
-                        ? 0 : Appearance.sizes.baseBarHeight + ((Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 4) ? Appearance.sizes.hyprlandGapsOut : 0)
+                        ? 0 : Appearance.sizes.barReservedHeight
                 }
                 WlrLayershell.namespace: "quickshell:bar"
                 // Overlay layer only while special workspace sits on top of a fullscreen window on this monitor,
