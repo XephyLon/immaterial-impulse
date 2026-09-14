@@ -1819,6 +1819,16 @@ if ! python3 "$SCRIPT_DIR/test_ai_tools_runtime.py"; then
     exit 1
 fi
 
+# The reviewed tier in a real shell: a call raises the card and changes
+# nothing, reject answers, approve applies (to-do, file + .bak, palette
+# source), invalid calls are refused, an approved write outside the
+# allowlist is still refused by the fence. Brings its own headless weston.
+echo "Running AI reviewed-tier runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_mutation_runtime.py"; then
+    echo "AI reviewed-tier runtime tests failed."
+    exit 1
+fi
+
 # OllamaCatalog against a fake daemon in a real shell: lists arrive, a pull
 # streams progress to 1 and lands installed, a removal drops it, and the
 # chat's model list follows both. Brings its own headless weston.
@@ -2460,6 +2470,15 @@ fi
 echo "Running media layout contract tests..."
 if ! python3 "$SCRIPT_DIR/test_media_layouts_contract.py"; then
     echo "Media layout contract tests failed."
+    exit 1
+fi
+
+# The reviewed tier: write/append stay inside the fence (.bak once, size
+# cap, symlinks out refused); every reviewed tool is declared, classified
+# in ai_tool_policy.js and reaches the approval card, never a direct branch.
+echo "Running AI reviewed-tier tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_mutation_tier.py"; then
+    echo "AI reviewed-tier tests failed."
     exit 1
 fi
 

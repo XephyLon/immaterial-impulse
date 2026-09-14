@@ -121,7 +121,10 @@ def test_the_tool_registry_and_the_dispatcher_agree():
     registry = (ROOT / "services/AiToolRegistry.qml").read_text(encoding="utf-8")
     declared = set(_re.findall(r'"name":\s*"([a-z_]+)"', registry))
     ai = (ROOT / "services/Ai.qml").read_text(encoding="utf-8")
-    handled = set(_re.findall(r'name === "([a-z_]+)"', ai))
+    # A read-tier tool is a `name === "x"` branch of the dispatch chain; a
+    # reviewed-tier tool is a `case "x"` of applyMutation, reached through
+    # the approval card (services/ai/ai_tool_policy.js). Both count as handled.
+    handled = set(_re.findall(r'name === "([a-z_]+)"', ai)) | set(_re.findall(r'case "([a-z_]+)":', ai))
     assert declared, "the registry declares nothing?"
     assert declared == handled, (
         f"registry vs dispatcher drift: only-declared={sorted(declared - handled)}"
