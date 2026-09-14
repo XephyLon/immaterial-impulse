@@ -141,6 +141,7 @@ ContentPage {
                                 implicitHeight: 32
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
+                                colRipple: Appearance.colors.colErrorActive
                                 onClicked: {
                                     const next = (Config.options.ai.tools.folders ?? []).slice();
                                     next.splice(folderRow.index, 1);
