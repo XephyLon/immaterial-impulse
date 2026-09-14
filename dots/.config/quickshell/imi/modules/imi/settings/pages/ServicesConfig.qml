@@ -509,24 +509,20 @@ ContentPage {
                         onToggleRequested: Config.options.search.ai.inline = !Config.options.search.ai.inline
                         StyledToolTip { text: Translation.tr("Under the assistant prefix, after a pause in typing, a one-sentence answer appears under the Ask row. This sends what you type to the selected model: only a local model answers unless the next switch is on. Enter carries the answer into the chat.") }
                     }
-                    ConfigRow {
-                        // Why nothing happens: the majority case is a cloud
-                        // model selected and the cloud switch off.
-                        property bool rowVisible: Config.options.search.ai.inline && Ai.currentModelHasApiKey && !AiInline.modelIsLocal && !Config.options.search.ai.inlineWithCloud
-                        StyledText {
-                            Layout.fillWidth: true
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
-                            wrapMode: Text.WordWrap
-                            text: Ai.models[Ai.currentModelId]
-                                ? Translation.tr("The selected model (%1) runs in the cloud, so nothing answers inline until the next switch is on.").arg(Ai.models[Ai.currentModelId].name ?? Ai.currentModelId)
-                                : Translation.tr("No model is selected, so nothing answers inline yet.")
-                        }
-                    }
                     ConfigSwitch {
                         property bool rowVisible: Config.options.search.ai.inline
+                        // Why nothing happens: a usable cloud model selected
+                        // with this off is the case where the main switch
+                        // does nothing, so this row says so, in its own
+                        // description slot.
+                        readonly property var selectedModel: Ai.models[Ai.currentModelId] ?? null
+                        readonly property bool cloudModelWaiting: !!selectedModel && Ai.currentModelHasApiKey
+                            && !StringUtils.isLoopbackUrl(selectedModel.endpoint ?? "") && !Config.options.search.ai.inlineWithCloud
                         buttonIcon: "cloud"
                         text: Translation.tr("Inline answers may use my cloud key")
+                        description: cloudModelWaiting
+                            ? Translation.tr("The selected model (%1) runs in the cloud, so nothing answers inline until this is on.").arg(selectedModel.name ?? Ai.currentModelId)
+                            : ""
                         checked: Config.options.search.ai.inlineWithCloud
                         onToggleRequested: Config.options.search.ai.inlineWithCloud = !Config.options.search.ai.inlineWithCloud
                         StyledToolTip { text: Translation.tr("Off: only a model on this machine (a loopback endpoint) answers inline. On: the selected cloud model does, one request per pause in typing, at your key's cost.") }

@@ -57,12 +57,15 @@ Singleton {
     property string answerModel: ""
 
     readonly property var model: Ai.models[Ai.currentModelId] ?? null
-    // Loopback only. A keyless remote endpoint is still someone else's
-    // server receiving keystrokes.
-    readonly property bool modelIsLocal: /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:|\/|$)/i.test(String(root.model?.endpoint ?? ""))
+    // Loopback only (StringUtils.isLoopbackUrl). A keyless remote endpoint
+    // is still someone else's server receiving keystrokes.
+    readonly property bool modelIsLocal: StringUtils.isLoopbackUrl(root.model?.endpoint ?? "")
     readonly property bool allowed: (Config.options.search.ai.inline ?? false)
         && !!root.model && Ai.currentModelHasApiKey
         && (root.modelIsLocal || (Config.options.search.ai.inlineWithCloud ?? false))
+    // Switching the feature (or the model) off while an answer is on the row
+    // clears it; nothing else would, since the launcher stops calling in.
+    onAllowedChanged: if (!root.allowed) root.cancel()
 
     // Each request has a generation; a process exit from a cancelled
     // generation touches nothing.
@@ -90,12 +93,16 @@ Singleton {
         }
         if (q === root.question && (root.busy || root.done || debounce.running)) return;
         const previous = root.answer;
+        const previousQuestion = root.question;
         root.cancel();
         if (q !== root.lastQuestion) { root.lastQuestion = ""; root.lastAnswer = ""; root.lastModel = ""; }
         // The previous answer stays on the row, dimmed, until the new one
         // has a first token: a row that collapses to nothing for the whole
-        // debounce walks the rows below it up and down while typing.
-        if (previous.length > 0) { root.answer = previous; root.stale = true; }
+        // debounce walks the rows below it up and down while typing. Only
+        // while the question is being extended or trimmed, though - an
+        // unrelated question gets no stale answer under its title.
+        const related = previousQuestion.length > 0 && (q.startsWith(previousQuestion) || previousQuestion.startsWith(q));
+        if (previous.length > 0 && related) { root.answer = previous; root.stale = true; }
         root.question = q;
         debounce.interval = Math.max(100, Config.options.search.ai.inlineDelayMs ?? 700);
         debounce.restart();
@@ -244,7 +251,10 @@ Singleton {
                     console.log(`[AiInline] ${text.slice(0, 200)}`);
                     root.answer = "";
                     root.stale = false;
-                    root.errorNote = Translation.tr("No answer: the model returned an error. Check its key and endpoint.");
+                    // The server's own first clause rides along: it is what
+                    // tells a bad key from a wrong endpoint.
+                    const detail = text.replace(/^\*\*[^*]*\*\*:?\s*/, "").split(/[.\n]/)[0].trim().slice(0, 80);
+                    root.errorNote = Translation.tr("No answer: %1").arg(detail.length > 0 ? detail : Translation.tr("the model returned an error"));
                     root.finish(false);
                     return;
                 }
@@ -261,9 +271,10 @@ Singleton {
             if (root.stale) { root.answer = ""; root.stale = false; }
             if (root.answer.length === 0 && root.errorNote.length === 0) {
                 console.log(`[AiInline] request exited ${exitCode}: ${String(procStderr.text ?? "").trim().slice(0, 200)}`);
+                const stderrLine = String(procStderr.text ?? "").trim().split("\n").pop().replace(/^curl:\s*\(\d+\)\s*/, "").slice(0, 80);
                 root.errorNote = exitCode === 0
                     ? Translation.tr("No answer: the model sent nothing back.")
-                    : Translation.tr("No answer: the model could not be reached.");
+                    : Translation.tr("No answer: %1").arg(stderrLine.length > 0 ? stderrLine : Translation.tr("the model could not be reached"));
             }
             root.busy = false;
             root.done = root.answer.length > 0;

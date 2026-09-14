@@ -63,11 +63,14 @@ class InlineAnswerContract(unittest.TestCase):
         self.assertIn("Config.options.search.ai.inline", gate)
         self.assertIn("Ai.currentModelHasApiKey", gate)
         self.assertIn("root.modelIsLocal || (Config.options.search.ai.inlineWithCloud", gate)
-        local = self.inline[self.inline.index("readonly property bool modelIsLocal:"):]
-        local = local[:local.index("\n")]
+        self.assertIn("readonly property bool modelIsLocal: StringUtils.isLoopbackUrl(root.model?.endpoint ?? \"\")", self.inline)
+        utils = _strip((ROOT / "modules/common/functions/StringUtils.qml").read_text())
+        local = utils[utils.index("function isLoopbackUrl(url) {"):]
+        local = local[:local.index("}")]
         for host in ("localhost", r"127\.0\.0\.1", r"\[::1\]"):
             self.assertIn(host, local)
         self.assertNotIn("requires_key", local, "keyless is not local: a remote keyless server still receives keystrokes")
+        self.assertIn("onAllowedChanged: if (!root.allowed) root.cancel()", self.inline)
 
     def test_driven_from_the_query_handler_never_from_the_builder(self):
         on_query = _block(self.search, "onQueryChanged: {")
@@ -138,11 +141,18 @@ class InlineAnswerContract(unittest.TestCase):
     def test_settings_rows_come_and_go_with_rowvisible(self):
         page = _strip(PAGE.read_text())
         self.assertIn("Config.options.search.ai.inline = !Config.options.search.ai.inline", page)
-        self.assertIn("property bool rowVisible: Config.options.search.ai.inline && Ai.currentModelHasApiKey && !AiInline.modelIsLocal && !Config.options.search.ai.inlineWithCloud", page,
-                      "the hint row: a cloud model with the cloud switch off is the case where the feature does nothing")
-        self.assertIn("Config.options.search.ai.inlineWithCloud = !Config.options.search.ai.inlineWithCloud", page)
-        self.assertIn("Config.options.search.ai.inlineDelayMs = newValue", page)
-        self.assertIn("Config.options.search.ai.inlineMinWords = newValue", page, "every persisted option has its row")
+        # The three come-and-go rows each declare rowVisible on the switch.
+        section = page[page.index('title: Translation.tr("Inline answers")'):page.index('title: Translation.tr("Prefixes")')]
+        self.assertEqual(section.count("property bool rowVisible: Config.options.search.ai.inline\n"), 3)
+        self.assertIn("Config.options.search.ai.inlineWithCloud = !Config.options.search.ai.inlineWithCloud", section)
+        self.assertIn("Config.options.search.ai.inlineDelayMs = newValue", section)
+        self.assertIn("Config.options.search.ai.inlineMinWords = newValue", section, "every persisted option has its row")
+        # The cloud switch explains itself when a usable cloud model is
+        # selected and it is off - in its description slot, not a bare text
+        # row - and the page never builds AiInline for that.
+        self.assertIn("!StringUtils.isLoopbackUrl(selectedModel.endpoint ?? \"\") && !Config.options.search.ai.inlineWithCloud", section)
+        self.assertIn("description: cloudModelWaiting", section)
+        self.assertNotIn("AiInline", page)
 
 
 if __name__ == "__main__":

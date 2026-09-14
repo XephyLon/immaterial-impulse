@@ -39,6 +39,14 @@ Singleton {
      * @param { string } str
      * @returns { string }
      */
+    // A URL whose host is this machine's loopback: the test AiInline uses for
+    // "a local model" and the settings page uses to explain the cloud switch.
+    // Keyless is not local - a remote keyless server still receives what you
+    // type - so this is the host, nothing else.
+    function isLoopbackUrl(url) {
+        return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:|\/|$)/i.test(String(url ?? ""));
+    }
+
     function shellSingleQuoteEscape(str) {
         return String(str)
         // .replace(/\\/g, '\\\\')

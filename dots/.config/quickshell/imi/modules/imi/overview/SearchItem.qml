@@ -276,7 +276,7 @@ RippleButton {
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: root.selected ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
                 opacity: root.inlineAnswerStale ? 0.55 : 1
-                Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
+                Behavior on opacity { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
                 wrapMode: Text.WordWrap
                 text: root.inlineAnswer !== "" ? root.inlineAnswer : Translation.tr("Thinking…")
             }
