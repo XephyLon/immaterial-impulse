@@ -1,6 +1,10 @@
 # Proposal: frame mode
 
-> Draft / tracking proposal. Not scheduled.
+> Tracking proposal. **Stage 1 landed 2026-09-15**: the geometry authority
+> (`services/FrameGeometry.qml` + `frame_geometry.js`), the three bands
+> (`modules/imi/frame/Frame.qml`), the inner fillets (ScreenCorners) and the
+> square bar plate, behind `appearance.frame.enable` (off). Modals docking into
+> the frame, the vertical bar and per-screen frames are the next slices.
 
 ## Goal
 

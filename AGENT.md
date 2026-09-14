@@ -308,6 +308,17 @@ reads it from `root` unqualified. Enter with an answer on the row mints a sessio
 question + answer through `Ai.addMessage` instead of sending again. `test_ai_inline_contract.py`
 pins the shape; `test_ai_inline_runtime.py` counts requests against a fake streaming server.
 7703badd5 ("feat(launcher): one-sentence answers under the Ask row").
+**Frame mode has one geometry authority, `services/FrameGeometry.qml`; edge surfaces read it and
+compute nothing of their own.** `frame_geometry.js` (pure; `tst_frame_geometry.qml`) answers the
+band's thickness (`appearance.frame.thickness`, or the compositor's outer gap when 0, so the band
+fills exactly what windows leave), each edge's inset (the bar's edge is the bar, the rest the band)
+and each inner fillet's margins. `modules/imi/frame/Frame.qml` draws the two side bands and the one
+opposite the bar (Top layer, `ExclusionMode.Ignore`, an empty mask: nothing reserved, no input),
+`ScreenCorners` moves its four fillets to the inner corners and paints them the frame's colour, and
+`BarContent` squares the plate - all three gated on `FrameGeometry.enabled`, which is the option AND
+not the vertical bar. `test_frame_mode_contract.py` pins that nothing but the authority computes an
+inset. A further slice (a modal docking into the frame, the vertical bar) adds its geometry to the
+authority first. 220780dfb ("feat(frame): frame mode, stage 1").
 **`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
 through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
 `/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)

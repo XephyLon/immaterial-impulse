@@ -27,6 +27,12 @@ own repo; the installer pins which revision it builds.
   on, only a model on this machine answers unless "Inline answers may use
   my cloud key" is on as well, because keystroke-driven cloud calls cost
   money and send what you type.
+- Frame mode (Settings > Appearance > Frame, off by default): the bar, a band along the
+  other three screen edges and rounded inner corners are drawn as one connected surface
+  in the bar's colour, so the shell reads as a frame around your windows instead of
+  floating islands. The band is as thick as the compositor's outer gap (or a set number
+  of pixels), takes no input and reserves nothing. Best with the Hug bar style; the
+  vertical bar is not framed yet.
 
 ### Changed
 - Appearance settings now live in their own file, `~/.config/immaterial-impulse/config.d/appearance.json`,
