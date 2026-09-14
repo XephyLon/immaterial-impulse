@@ -48,7 +48,9 @@ Item {
     readonly property var acceptedExtensions: ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
 
     property var fileQueue: []
-    property var outputQueue: [] // one planned output per queued input
+    // One planned output per queued input. Planned once, so the batch keeps
+    // the format it was dropped with even if the combo changes mid-run.
+    property var outputQueue: []
     property int queueTotal: 0
     property int queueDone: 0
     property var batchPaths: []
