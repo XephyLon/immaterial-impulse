@@ -20,7 +20,10 @@ ColumnLayout {
     property var segmentLang: "txt"
     property var messageData: {}
     property bool isCommandRequest: segmentLang === "command"
-    property var displayLang: (isCommandRequest ? "bash" : segmentLang)
+    // A reviewed-tier change request (services/ai/ai_tool_policy.js): the
+    // same approve/reject card as a command, around a one-line summary.
+    property bool isMutationRequest: segmentLang === "mutation"
+    property var displayLang: (isCommandRequest ? "bash" : isMutationRequest ? "plaintext" : segmentLang)
 
     property real codeBlockBackgroundRounding: Appearance.rounding.small
     property real codeBlockHeaderPadding: Appearance.spacing.space50
@@ -256,7 +259,7 @@ ColumnLayout {
                     }
                 }
                 Loader {
-                    active: root.isCommandRequest && root.messageData.functionPending
+                    active: (root.isCommandRequest || root.isMutationRequest) && root.messageData.functionPending
                     visible: active
                     Layout.fillWidth: true
                     Layout.margins: Appearance.spacing.space100

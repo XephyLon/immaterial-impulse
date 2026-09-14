@@ -12,6 +12,7 @@ import qs.services.ai
 import "./ai/model_curation.js" as Curation
 import "./ai/ai_personas.js" as PersonasFold
 import "./ai/ai_sessions.js" as SessionsFold
+import "./ai/ai_tool_policy.js" as ToolPolicy
 import "AiModelsParser.js" as AiModelsParser
 
 /**
@@ -1491,15 +1492,19 @@ And a final paragraph after the math, so the stream does not end on a block boun
         root.messageByID[id] = aiMessage;
     }
 
-    function rejectCommand(message: AiMessageData) {
+    function rejectCommand(message) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
         addFunctionOutputMessage(message.functionName, Translation.tr("Command rejected by user"))
     }
 
-    function approveCommand(message: AiMessageData) {
+    function approveCommand(message) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
+        if (message.functionCall?.name && message.functionCall.name !== "run_shell_command") {
+            root.applyMutation(message);
+            return;
+        }
 
         const responseMessage = createFunctionOutputMessage(message.functionName, "", false);
         const id = idForMessage(responseMessage);
@@ -1510,6 +1515,103 @@ And a final paragraph after the math, so the stream does not end on a block boun
         commandExecutionProc.baseMessageContent = responseMessage.content;
         commandExecutionProc.shellCommand = message.functionCall.args.command;
         commandExecutionProc.running = true; // Start the command execution
+    }
+
+    /** The approved change of a reviewed-tier tool. Every branch answers the
+        model (success or failure) and continues the request; nothing here
+        runs before approveCommand(). */
+    function applyMutation(message) {
+        const name = message.functionCall.name;
+        const args = message.functionCall.args ?? {};
+        const done = text => {
+            addFunctionOutputMessage(name, ToolPolicy.bound(text, ToolPolicy.DEFAULT_MAX_RESULT_CHARS));
+            root.continueAfterTool();
+        };
+        switch (name) {
+        case "set_shell_config":
+            Config.setNestedValue(String(args.key), args.value);
+            done(`Set ${args.key}.`);
+            break;
+        case "write_file":
+        case "append_file":
+            root.runFsWrite(name, args, done);
+            break;
+        case "set_clipboard":
+            Quickshell.execDetached(["wl-copy", "--", String(args.text ?? "")]);
+            done(Translation.tr("Copied to the clipboard."));
+            break;
+        case "set_wallpaper":
+            if (String(args.path) === "random") {
+                Wallpapers.randomFromCurrentFolder();
+                done(Translation.tr("Picked a random wallpaper from the current folder."));
+            } else {
+                Wallpapers.select(CF.FileUtils.trimFileProtocol(String(args.path)));
+                done(Translation.tr("Wallpaper set to %1.").arg(args.path));
+            }
+            break;
+        case "set_accent": {
+            const color = String(args.color ?? "auto");
+            if (color !== "auto" && !ToolPolicy.HEX_COLOR.test(color)) { done(Translation.tr("Not a colour: %1 (use #rrggbb or auto).").arg(color)); break; }
+            Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--noswitch", "--coloronly", "--color", color === "auto" ? "clear" : color]);
+            done(color === "auto" ? Translation.tr("The wallpaper picks the accent again.") : Translation.tr("Accent set to %1.").arg(color));
+            break;
+        }
+        case "set_palette_source": {
+            const mode = String(args.mode ?? "");
+            if (ToolPolicy.PALETTE_SOURCES.indexOf(mode) === -1) { done(Translation.tr("Unknown palette source: %1").arg(mode)); break; }
+            Config.options.appearance.palette.sourceMode = mode;
+            Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--noswitch", "--coloronly"]);
+            done(Translation.tr("Palette now seeded from the wallpaper's %1 colour.").arg(mode));
+            break;
+        }
+        case "set_color_scheme": {
+            const scheme = String(args.scheme ?? "");
+            if (scheme !== "dark" && scheme !== "light") { done(Translation.tr("Unknown scheme: %1").arg(scheme)); break; }
+            Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", scheme, "--noswitch"]);
+            done(Translation.tr("Switched to %1 mode.").arg(scheme));
+            break;
+        }
+        case "add_todo":
+            Todo.addTask(String(args.text ?? "").trim());
+            done(Translation.tr("Added to the to-do list."));
+            break;
+        default:
+            done(Translation.tr("Unknown change: %1").arg(name));
+        }
+    }
+
+    // write_file / append_file go through the same fenced script as the
+    // reads; the content travels on stdin, never in argv.
+    Process {
+        id: fsWriteProc
+        property string toolName: ""
+        property var onDone: null
+        stdinEnabled: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let out = String(text ?? "").trim();
+                try {
+                    const parsed = JSON.parse(out);
+                    out = parsed.ok === false ? `Refused: ${parsed.error}`
+                        : `${parsed.appended ? "Appended to" : "Wrote"} ${parsed.path} (${parsed.bytes} bytes${parsed.backup ? `, previous contents kept as ${parsed.backup}` : ""})`;
+                } catch (e) { if (out.length === 0) out = "The file tool produced no output."; }
+                const cb = fsWriteProc.onDone; fsWriteProc.onDone = null;
+                if (cb) cb(out);
+            }
+        }
+    }
+    function runFsWrite(name, args, done) {
+        if (fsWriteProc.running) { done(Translation.tr("Another file write is still running; try again.")); return; }
+        const folders = Config.options.ai.tools.folders ?? [];
+        let cmd = ["python3", `${Directories.scriptPath}/ai/ai_fs_tool.py`.replace(/file:\/\//, ""),
+            name === "append_file" ? "append" : "write", String(args.path ?? "")];
+        for (const f of folders) cmd.push("--allow", String(f));
+        fsWriteProc.toolName = name;
+        fsWriteProc.onDone = done;
+        fsWriteProc.command = cmd;
+        fsWriteProc.running = true;
+        fsWriteProc.write(String(args.content ?? ""));
+        fsWriteProc.stdinEnabled = false;
     }
 
     Process {
@@ -1532,7 +1634,32 @@ And a final paragraph after the math, so the stream does not end on a block boun
         }
     }
 
-    function handleFunctionCall(name, args: var, message: AiMessageData) {
+    // `message` is untyped on purpose: a QML function parameter typed
+    // `AiMessageData` makes the engine resolve that metaobject for every
+    // call, and a call from another QML context (the runtime harnesses) hit
+    // QMetaObject::inherits on a null metaobject and segfaulted Qt 6.11.
+    function handleFunctionCall(name, args, message) {
+        // The reviewed tier (services/ai/ai_tool_policy.js): validate the
+        // call against the registry's schema, then raise the approval card
+        // with a one-line summary of the change instead of running it.
+        // approveCommand() applies it, rejectCommand() answers the model.
+        // run_shell_command keeps its own card below (destructive tier).
+        if (ToolPolicy.tierOf(name) === "reviewed" && message) {
+            const def = AiToolRegistry.defs.find(d => d.name === name);
+            const checked = ToolPolicy.validateArgs(def, args);
+            if (!checked.ok) {
+                addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Missing: %1").arg(checked.missing.join(", ")));
+                root.pendingContinuation = true;
+                return;
+            }
+            message.functionCall = { "name": name, "args": checked.args };
+            message.functionName = name;
+            const request = `\n\n**${Translation.tr("Change request")}**\n\n\`\`\`mutation\n${ToolPolicy.summaryFor(name, checked.args)}\n\`\`\``;
+            message.rawContent += request;
+            message.content += request;
+            message.functionPending = true;
+            return;
+        }
         if (name === "switch_to_search_mode") {
             const modelId = root.currentModelId;
             root.currentTool = "search"

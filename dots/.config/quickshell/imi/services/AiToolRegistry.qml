@@ -190,6 +190,107 @@ Singleton {
                 },
                 "required": ["query"]
             }
+        },
+        // ---- Reviewed tier: each of these raises the approval card with a
+        // one-line summary of the change; nothing runs until the user
+        // approves. Tiering lives in services/ai/ai_tool_policy.js.
+        {
+            "name": "write_file",
+            "description": "Replace the contents of a text file inside one of the folders the user allowed. The user reviews and approves the change first; the previous contents are kept beside the file as .bak.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Absolute path, or ~/relative, inside an allowed folder" },
+                    "content": { "type": "string", "description": "The complete new contents" }
+                },
+                "required": ["path", "content"]
+            }
+        },
+        {
+            "name": "append_file",
+            "description": "Append text to a file inside one of the folders the user allowed (creating it if needed). The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Absolute path, or ~/relative, inside an allowed folder" },
+                    "content": { "type": "string", "description": "The text to append" }
+                },
+                "required": ["path", "content"]
+            }
+        },
+        {
+            "name": "set_clipboard",
+            "description": "Put text on the user's clipboard. The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": { "type": "string", "description": "The text to copy" }
+                },
+                "required": ["text"]
+            }
+        },
+        {
+            "name": "set_wallpaper",
+            "description": "Change the desktop wallpaper to an image file, or to a random one from the current wallpaper folder. The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "An image path, or the word random" }
+                },
+                "required": ["path"]
+            }
+        },
+        {
+            "name": "set_accent",
+            "description": "Set the shell's accent colour to a hex colour like #7a5cff, or auto to let the wallpaper choose it again. The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "color": { "type": "string", "description": "#rrggbb, or auto" }
+                },
+                "required": ["color"]
+            }
+        },
+        {
+            "name": "set_palette_source",
+            "description": "Choose which colour of the wallpaper seeds the palette. The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "mode": { "type": "string", "enum": ["dominant", "saturation", "less-saturation", "lightness", "darkness", "value"], "description": "Which colour to prefer" }
+                },
+                "required": ["mode"]
+            }
+        },
+        {
+            "name": "set_color_scheme",
+            "description": "Switch the desktop between dark and light mode. The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "scheme": { "type": "string", "enum": ["dark", "light"], "description": "dark or light" }
+                },
+                "required": ["scheme"]
+            }
+        },
+        {
+            "name": "add_todo",
+            "description": "Add an item to the user's to-do list. The user approves first.",
+            "dialects": ["gemini", "openai", "mistral", "anthropic"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": { "type": "string", "description": "The to-do item" }
+                },
+                "required": ["text"]
+            }
         }
     ]
 
