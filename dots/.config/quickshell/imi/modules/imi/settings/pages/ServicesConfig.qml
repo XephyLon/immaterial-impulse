@@ -118,34 +118,37 @@ ContentPage {
                 title: Translation.tr("Folders the assistant may read")
                 tooltip: Translation.tr("read_file and list_directory work only inside these; hidden files are never readable")
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-
-                    Repeater {
-                        model: Config.options.ai.tools.folders
-                        delegate: RowLayout {
+                // The folders, one plate each, from the config list.
+                GroupedList {
+                    visible: (Config.options.ai.tools.folders ?? []).length > 0
+                    model: Config.options.ai.tools.folders
+                    rowDelegate: Component {
+                        RowLayout {
                             id: folderRow
-                            required property string modelData
-                            required property int index
-                            Layout.fillWidth: true
+                            property var modelData: null
                             spacing: Appearance.spacing.space200
+                            MaterialSymbol {
+                                Layout.leftMargin: Appearance.spacing.space100
+                                text: "folder"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnLayer1
+                            }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: folderRow.modelData
+                                text: String(folderRow.modelData ?? "")
                                 elide: Text.ElideMiddle
                                 color: Appearance.colors.colOnLayer1
                             }
                             RippleButton {
+                                Layout.rightMargin: Appearance.spacing.space100
                                 implicitWidth: 32
                                 implicitHeight: 32
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
                                 colRipple: Appearance.colors.colErrorActive
                                 onClicked: {
-                                    const next = (Config.options.ai.tools.folders ?? []).slice();
-                                    next.splice(folderRow.index, 1);
-                                    Config.options.ai.tools.folders = next;
+                                    const gone = String(folderRow.modelData ?? "");
+                                    Config.options.ai.tools.folders = (Config.options.ai.tools.folders ?? []).filter(f => f !== gone);
                                 }
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
@@ -159,10 +162,11 @@ ContentPage {
                             }
                         }
                     }
+                }
 
+                GroupedList {
                     ConfigTextArea {
                         id: newFolderField
-                        Layout.fillWidth: true
                         buttonIcon: "create_new_folder"
                         singleLine: true
                         placeholderText: Translation.tr("Add a folder, e.g. ~/Documents")
@@ -177,7 +181,6 @@ ContentPage {
                             value = "";
                         }
                     }
-
                     ConfigSwitch {
                         buttonIcon: "content_paste"
                         text: Translation.tr("Let the assistant read the clipboard")
@@ -191,35 +194,37 @@ ContentPage {
                 title: Translation.tr("Documents")
                 tooltip: Translation.tr("Folders the assistant may search. Hidden files, key and config directories, and .noindex subtrees are never indexed.")
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-
-                    Repeater {
-                        model: Config.options.ai.documents.folders
-                        delegate: RowLayout {
+                // The indexed folders, one plate each; removing one forgets it.
+                GroupedList {
+                    visible: (Config.options.ai.documents.folders ?? []).length > 0
+                    model: Config.options.ai.documents.folders
+                    rowDelegate: Component {
+                        RowLayout {
                             id: docFolderRow
-                            required property string modelData
-                            required property int index
-                            Layout.fillWidth: true
+                            property var modelData: null
                             spacing: Appearance.spacing.space200
+                            MaterialSymbol {
+                                Layout.leftMargin: Appearance.spacing.space100
+                                text: "folder"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnLayer1
+                            }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: docFolderRow.modelData
+                                text: String(docFolderRow.modelData ?? "")
                                 elide: Text.ElideMiddle
                                 color: Appearance.colors.colOnLayer1
                             }
                             RippleButton {
+                                Layout.rightMargin: Appearance.spacing.space100
                                 implicitWidth: 32
                                 implicitHeight: 32
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
                                 colRipple: Appearance.colors.colErrorActive
                                 onClicked: {
-                                    const gone = docFolderRow.modelData;
-                                    const next = (Config.options.ai.documents.folders ?? []).slice();
-                                    next.splice(docFolderRow.index, 1);
-                                    Config.options.ai.documents.folders = next;
+                                    const gone = String(docFolderRow.modelData ?? "");
+                                    Config.options.ai.documents.folders = (Config.options.ai.documents.folders ?? []).filter(f => f !== gone);
                                     AiRag.forget(gone);
                                 }
                                 contentItem: MaterialSymbol {
@@ -234,10 +239,11 @@ ContentPage {
                             }
                         }
                     }
+                }
 
+                GroupedList {
                     ConfigTextArea {
                         id: newDocFolderField
-                        Layout.fillWidth: true
                         buttonIcon: "create_new_folder"
                         singleLine: true
                         placeholderText: Translation.tr("Add a folder, e.g. ~/Documents")
@@ -252,7 +258,6 @@ ContentPage {
                             value = "";
                         }
                     }
-
                     ConfigSelectionArray {
                         text: Translation.tr("Embeddings")
                         currentValue: Config.options.ai.documents.embedder
@@ -263,7 +268,6 @@ ContentPage {
                             { "displayName": "mxbai-embed-large (Ollama)", "value": "ollama:mxbai-embed-large" },
                         ]
                     }
-
                     ConfigSwitch {
                         buttonIcon: "attach_file"
                         text: Translation.tr("Attach matching passages to every message")
@@ -271,11 +275,25 @@ ContentPage {
                         onToggleRequested: Config.options.ai.documents.alwaysAttach = !Config.options.ai.documents.alwaysAttach
                         StyledToolTip { text: Translation.tr("Off: the model calls search_documents when it decides to look") }
                     }
-
                     RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Appearance.spacing.space100
+                        spacing: Appearance.spacing.space200
+                        MaterialSymbol {
+                            Layout.leftMargin: Appearance.spacing.space100
+                            text: "manage_search"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colOnLayer1
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            text: AiRag.error.length > 0 ? AiRag.error
+                                : AiRag.files === 0 ? Translation.tr("Nothing indexed yet")
+                                : Translation.tr("%1 files, %2 passages, %3").arg(AiRag.files).arg(AiRag.chunks)
+                                      .arg(AiRag.indexedWith.length > 0 ? AiRag.indexedWith : "")
+                            color: AiRag.error.length > 0 ? Appearance.m3colors.m3error : Appearance.colors.colOnLayer1
+                        }
                         RippleButton {
+                            Layout.rightMargin: Appearance.spacing.space100
                             enabled: AiRag.configured && !AiRag.indexing
                             implicitHeight: 32
                             padding: Appearance.spacing.space150
@@ -291,16 +309,6 @@ ContentPage {
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                             }
                         }
-                        StyledText {
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                            text: AiRag.error.length > 0 ? AiRag.error
-                                : AiRag.files === 0 ? Translation.tr("Nothing indexed yet")
-                                : Translation.tr("%1 files, %2 passages, %3").arg(AiRag.files).arg(AiRag.chunks)
-                                      .arg(AiRag.indexedWith.length > 0 ? AiRag.indexedWith : "")
-                            color: AiRag.error.length > 0 ? Appearance.m3colors.m3error : Appearance.colors.colSubtext
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                        }
                     }
                 }
             }
@@ -309,10 +317,7 @@ ContentPage {
                 title: Translation.tr("Dictation")
                 tooltip: Translation.tr("Press the mic in the composer, or bind `qs ipc call ai dictate toggle` to a key")
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-
+                GroupedList {
                     ConfigSelectionArray {
                         text: Translation.tr("Transcriber")
                         currentValue: Config.options.ai.dictation.engine
@@ -323,7 +328,8 @@ ContentPage {
                         ]
                     }
                     ConfigSelectionArray {
-                        visible: Config.options.ai.dictation.engine === "local"
+                        property bool rowVisible: Config.options.ai.dictation.engine === "local"
+                        visible: rowVisible
                         text: Translation.tr("Model")
                         currentValue: Config.options.ai.dictation.model
                         onSelected: value => { Config.options.ai.dictation.model = value; }
@@ -336,10 +342,28 @@ ContentPage {
                         ]
                     }
                     RowLayout {
-                        visible: Config.options.ai.dictation.engine === "local"
-                        Layout.fillWidth: true
-                        spacing: Appearance.spacing.space100
+                        property bool rowVisible: Config.options.ai.dictation.engine === "local"
+                        visible: rowVisible
+                        spacing: Appearance.spacing.space200
+                        MaterialSymbol {
+                            Layout.leftMargin: Appearance.spacing.space100
+                            text: "download"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colOnLayer1
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: !AiDictation.probed ? Translation.tr("Checking…")
+                                : AiDictation.hint.length > 0 ? AiDictation.hint
+                                : AiDictation.downloadState === "done" ? Translation.tr("Model ready")
+                                : AiDictation.downloadState === "error" ? AiDictation.lastError
+                                : AiDictation.fasterWhisper ? Translation.tr("faster-whisper found; the first use of a model downloads it unless you fetch it here")
+                                : Translation.tr("whisper.cpp found")
+                            color: AiDictation.hint.length > 0 || AiDictation.downloadState === "error" ? Appearance.m3colors.m3error : Appearance.colors.colOnLayer1
+                        }
                         RippleButton {
+                            Layout.rightMargin: Appearance.spacing.space100
                             enabled: AiDictation.fasterWhisper && AiDictation.downloadState !== "downloading"
                             implicitHeight: 32
                             padding: Appearance.spacing.space150
@@ -353,18 +377,6 @@ ContentPage {
                                 color: Appearance.colors.colOnSecondaryContainer
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                             }
-                        }
-                        StyledText {
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            text: !AiDictation.probed ? Translation.tr("Checking…")
-                                : AiDictation.hint.length > 0 ? AiDictation.hint
-                                : AiDictation.downloadState === "done" ? Translation.tr("Model ready")
-                                : AiDictation.downloadState === "error" ? AiDictation.lastError
-                                : AiDictation.fasterWhisper ? Translation.tr("faster-whisper found; the first use of a model downloads it unless you fetch it here")
-                                : Translation.tr("whisper.cpp found")
-                            color: AiDictation.hint.length > 0 || AiDictation.downloadState === "error" ? Appearance.m3colors.m3error : Appearance.colors.colSubtext
-                            font.pixelSize: Appearance.font.pixelSize.smaller
                         }
                     }
                     ConfigSwitch {
