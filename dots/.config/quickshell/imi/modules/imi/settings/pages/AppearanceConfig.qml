@@ -109,6 +109,31 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "crop_square"
+            title: Translation.tr("Frame")
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "border_outer"
+                    text: Translation.tr("Frame mode: bar, edges and corners as one surface")
+                    checked: Config.options.appearance.frame.enable
+                    onToggleRequested: Config.options.appearance.frame.enable = !Config.options.appearance.frame.enable
+                    StyledToolTip { text: Translation.tr("Draws a band along the three screen edges the bar is not on, in the bar's colour, with rounded inner corners, so the shell reads as a frame around your windows instead of floating islands. Looks best with the Hug bar style. Not yet for the vertical bar.") }
+                }
+                ConfigSpinBox {
+                    property bool rowVisible: Config.options.appearance.frame.enable
+                    icon: "line_weight"
+                    text: Translation.tr("Band thickness (px, 0 = the outer gap)")
+                    value: Config.options.appearance.frame.thickness
+                    from: 0
+                    to: 64
+                    stepSize: 1
+                    onValueModified: Config.options.appearance.frame.thickness = newValue
+                }
+            }
+        }
+
+        ContentSection {
             icon: "animation"
             title: Translation.tr("Motion")
 
