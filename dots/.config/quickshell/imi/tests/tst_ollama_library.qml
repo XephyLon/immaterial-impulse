@@ -56,9 +56,9 @@ TestCase {
     }
 
     function test_size_label() {
-        compare(Library.sizeLabel(4_700_000_000), "4.7 GB");
-        compare(Library.sizeLabel(43_000_000_000), "43 GB");
-        compare(Library.sizeLabel(270_000_000), "270 MB");
+        compare(Library.sizeLabel(4700000000), "4.7 GB");
+        compare(Library.sizeLabel(43000000000), "43 GB");
+        compare(Library.sizeLabel(270000000), "270 MB");
         compare(Library.sizeLabel(0), "0 B");
     }
 
