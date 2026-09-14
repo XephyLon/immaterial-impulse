@@ -642,6 +642,13 @@ Singleton {
                 // No shipped example model (maintainer's call): models
                 // arrive via providers or the OpenRouter browse.
                 property list<var> extraModels: []
+                // What the assistant's read-tier tools may touch. `folders` is the
+                // allowlist for read_file/list_directory (empty = nothing readable);
+                // scripts/ai/ai_fs_tool.py enforces it on the real path.
+                property JsonObject tools: JsonObject {
+                    property list<string> folders: []
+                    property bool allowClipboard: true
+                }
             }
 
             property JsonObject appearance: JsonObject {
