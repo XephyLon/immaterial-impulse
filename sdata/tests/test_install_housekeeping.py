@@ -74,6 +74,11 @@ class ShellCacheHousekeeping(unittest.TestCase):
         hypr = [e for e in entries if e.get("from") == "dots/.config/hypr"]
         self.assertEqual(len(hypr), 1)
         self.assertIn("hyprland/shellOverrides", hypr[0].get("excludes", []))
+        # Excluded from the sync, it still has to arrive on a fresh install -
+        # and never be reset after: seeded, skip-if-exists.
+        seed = [e for e in entries if e.get("from") == "dots/.config/hypr/hyprland/shellOverrides"]
+        self.assertEqual(len(seed), 1, "no pattern seeds shellOverrides for a fresh --exp-files install")
+        self.assertEqual(seed[0].get("mode"), "skip-if-exists")
 
     def test_install_logs_are_rotated(self):
         src = self.TUI.read_text(encoding="utf-8")

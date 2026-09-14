@@ -57,7 +57,10 @@ patterns:
     # keybind overrides, popup blur); the legacy files step keeps it with
     # rsync --ignore-existing, and a sync with --delete here would reset
     # it to the shipped templates on every update.
-    excludes: ["custom", "hyprlock.conf", "hypridle.conf", "hyprland/shellOverrides"]
+    # *.old / *.new / *.bak are what this installer itself leaves beside a
+    # user's file; a --delete sync that removed them on the next run would
+    # destroy the backup it just made.
+    excludes: ["custom", "hyprlock.conf", "hypridle.conf", "hyprland/shellOverrides", "*.old", "*.new", "*.bak"]
   # Hyprland special files
   - from: "dots/.config/hypr/hypridle.conf"
     to: "$XDG_CONFIG_HOME/hypr/hypridle.conf"
@@ -67,6 +70,17 @@ patterns:
     mode: "soft-backup"
   - from: "dots/.config/hypr/custom"
     to: "$XDG_CONFIG_HOME/hypr/custom"
+    mode: "skip-if-exists"
+  # Excluded from the hypr sync above, so a fresh install has to seed it
+  # somewhere: the shell writes into this directory at runtime and reads the
+  # shipped templates until it does. Skip-if-exists, not sync - an update
+  # must never reset what the shell wrote. (The legacy step seeds new
+  # shipped files into an existing directory with --ignore-existing; this
+  # path does not, until the manifest grows that mode.) Found by
+  # sdata/tests/test_install_lifecycle.py: --exp-files on a fresh home left
+  # no shellOverrides directory at all.
+  - from: "dots/.config/hypr/hyprland/shellOverrides"
+    to: "$XDG_CONFIG_HOME/hypr/hyprland/shellOverrides"
     mode: "skip-if-exists"
   - from: "dots/.local/share/icons"
     to: "$XDG_DATA_HOME/icons"
