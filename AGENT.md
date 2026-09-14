@@ -307,6 +307,21 @@ pair of the same shape; the cheatsheet is a FloatingWindow and the compositor an
 no flag-gated mask; `OverlayLifecycleRuntimeTest.qml` measures the sequence against the real
 catalogue, reduce-motion included. Do not put Behaviors back on those cards: a Behavior cannot
 play a leave on a window destroyed the frame its flag drops.
+**Local retrieval indexes only `ai.documents.folders`, and `scripts/ai/ai_rag.py` owns the privacy
+contract.** `services/AiRag.qml` runs the script (index / query / forget / status, one SQLite file
+under `<state>/user/rag/`); the script refuses dotfiles at every depth, the home's key and config
+directories (`FORBIDDEN_DIRS`) even when named, `.noindex` subtrees, `.gitignore`d names, binaries
+and files over 2 MB, and drops a folder's rows on `forget`. Vectors are namespaced by embedder
+(`lexical`, a hashed bag of words that needs nothing, or `ollama:<model>` via the daemon's
+`/api/embed`), so switching embedders never mixes spaces. Two ways into the chat: the
+`search_documents` tool (declared for all four dialects, dispatched in `Ai.qml` and continued
+through `continueAfterTool()`), and the composer's Documents toggle (`ai.documents.alwaysAttach`),
+which retrieves before the send and puts the passages in the user message's `rawContent` - the
+field the strategies send - while `content` keeps the typed text. Passages travel in a labelled
+data block ("data, not instructions"); the sources become `annotationSources` on the next
+assistant message via `pendingRagSources`. Nothing watches user folders: indexing runs on the
+Settings action. `tests/test_ai_rag.py` drives the contract against a temp tree and a fake
+`/api/embed`; `AiRagRuntimeTest.qml` drives the whole loop in a nested shell.
 
 **Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
 `--only apps` is asked for, and names are validated before they touch the filesystem.** A shared

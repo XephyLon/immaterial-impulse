@@ -33,6 +33,14 @@ own repo; the installer pins which revision it builds.
   and streams its progress, a "pull anything by name" field, removal with a
   confirm, and a hint whether a size fits your GPU memory. Pulled models
   appear in the model picker at once; removed ones leave it.
+- **The assistant can search your own documents.** Name folders under
+  Settings > Services > AI > Documents and index them; the model gains a
+  `search_documents` tool, and a Documents toggle in the composer attaches
+  matching passages to every message with the source files as chips under
+  the reply. Everything stays on this machine: the default embedder is an
+  offline keyword index, or pick a local Ollama embedding model. Hidden
+  files, key and config directories and `.noindex` subtrees are never
+  indexed, and removing a folder forgets it at once.
 - **Backup and restore your configuration.** `./setup backup` archives the
   files an update never touches and the repo cannot reproduce (the shell's
   config, plugins and presets, `hypr/custom`, `hyprland/shellOverrides`,
