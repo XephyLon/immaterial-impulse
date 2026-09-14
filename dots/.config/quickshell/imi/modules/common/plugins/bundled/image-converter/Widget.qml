@@ -8,6 +8,7 @@ import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
 import "../../designsystem/widgets" as Expressive
+import "converter_queue.js" as Queue
 
 Item {
     id: root
@@ -61,6 +62,8 @@ Item {
     implicitHeight: Appearance.sizes.widgetGridSpanY(2)
     anchors.fill: parent
 
+    // The batch is planned by converter_queue.js (tests/tst_converter_queue.qml);
+    // these two only run what it decided and report how it went.
     Process {
         id: converter
         property string inputPath: ""
@@ -70,7 +73,7 @@ Item {
             root.queueDone++
             if (exitCode !== 0) {
                 root.dropStatus = "error"
-                root.statusMessage = "Failed: " + inputPath.replace(/.*\//, "")
+                root.statusMessage = Queue.failMessage(inputPath)
                 root.fileQueue = []
                 root.queueTotal = 0
                 root.queueDone = 0
@@ -78,13 +81,11 @@ Item {
                 return
             }
             if (root.fileQueue.length > 0) {
-                root.statusMessage = "Converting " + root.queueDone + " / " + root.queueTotal + "..."
+                root.statusMessage = Queue.progressMessage(root.queueDone, root.queueTotal)
                 root.processNext()
             } else {
                 root.dropStatus = "done"
-                root.statusMessage = root.queueTotal === 1
-                    ? "Saved: " + outputPath.replace(/.*\//, "")
-                    : root.queueTotal + " files converted"
+                root.statusMessage = Queue.doneMessage(root.queueTotal, outputPath)
                 root.queueTotal = 0
                 root.queueDone = 0
                 resetTimer.start()
@@ -98,12 +99,10 @@ Item {
         onExited: (exitCode) => {
             if (exitCode === 0) {
                 root.dropStatus = "done"
-                root.statusMessage = root.batchPaths.length === 1
-                    ? "Saved: " + outputPath.replace(/.*\//, "")
-                    : root.batchPaths.length + " pages → " + outputPath.replace(/.*\//, "")
+                root.statusMessage = Queue.pdfDoneMessage(root.batchPaths.length, outputPath)
             } else {
                 root.dropStatus = "error"
-                root.statusMessage = "PDF failed.\nIs ImageMagick installed?"
+                root.statusMessage = Queue.PDF_FAIL_MESSAGE
             }
             root.batchPaths = []
             resetTimer.start()
@@ -121,45 +120,31 @@ Item {
         var next = root.fileQueue[0]
         root.fileQueue = root.fileQueue.slice(1)
         converter.inputPath  = next
-        converter.outputPath = next.replace(/\.[^/.]+$/, "") + "_converted." + root.selectedFormat
+        converter.outputPath = Queue.outputFor(next, root.selectedFormat)
         converter.running = true
     }
 
     function enqueueFiles(urls) {
-        var valid = []
-        for (var i = 0; i < urls.length; i++) {
-            var cleanPath = urls[i].toString().replace(/^file:\/\//, "")
-            var ext = cleanPath.split(".").pop().toLowerCase()
-            if (root.acceptedExtensions.indexOf(ext) !== -1)
-                valid.push(cleanPath)
-        }
-        if (valid.length === 0) {
+        const plan = Queue.plan(urls, root.selectedFormat, root.acceptedExtensions)
+        root.statusMessage = plan.message
+        if (plan.kind === "none") {
             root.dropStatus = "error"
-            root.statusMessage = "No supported files dropped."
             resetTimer.start()
             return
         }
-
         root.dropStatus = "converting"
-
-        if (root.selectedFormat === "pdf") {
-            root.batchPaths = valid
-            root.statusMessage = valid.length === 1
-                ? "Converting to PDF..."
-                : "Merging " + valid.length + " images into PDF..."
-            var outPdf = valid[0].replace(/\.[^/.]+$/, "") + (valid.length > 1 ? "_merged" : "_converted") + ".pdf"
-            pdfMaker.outputPath = outPdf
-            pdfMaker.command = ["convert"].concat(valid).concat([outPdf])
+        if (plan.kind === "pdf") {
+            root.batchPaths = plan.inputs
+            pdfMaker.outputPath = plan.output
+            pdfMaker.command = ["convert"].concat(plan.inputs).concat([plan.output])
             pdfMaker.running = true
             return
         }
-
-        root.fileQueue  = valid.slice(1)
-        root.queueTotal = valid.length
+        root.fileQueue  = plan.inputs.slice(1)
+        root.queueTotal = plan.inputs.length
         root.queueDone  = 0
-        root.statusMessage = valid.length > 1 ? "Converting 0 / " + valid.length + "..." : "Converting..."
-        converter.inputPath  = valid[0]
-        converter.outputPath = valid[0].replace(/\.[^/.]+$/, "") + "_converted." + root.selectedFormat
+        converter.inputPath  = plan.inputs[0]
+        converter.outputPath = plan.outputs[0]
         converter.running = true
     }
 
