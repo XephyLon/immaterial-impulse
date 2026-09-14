@@ -255,6 +255,18 @@ timer and a slow poll (60 s / 10 s) for anything the stream misses. When adding 
 emits the change first; `tests/test_sni_watchdog.py` and `tests/test_media_capture_contract.py`
 pin the subscriptions. 82627cb23 ("perf(tray): the SNI watchdog listens on the bus instead of polling it"), 8c9ac38b8 ("perf(privacy): detect capture by subscription, poll only as a safety net").
 
+**The assistant's file tools never read a path from QML; `scripts/ai/ai_fs_tool.py` decides on the
+real path and answers JSON.** `read_file`/`list_directory` (services/AiToolRegistry.qml, dispatched
+from `Ai.qml`'s `handleFunctionCall` through `runFsTool`) spawn the script with every folder in
+`ai.tools.folders` as `--allow`; it resolves symlinks before the containment check, hides dotfiles
+at every depth, refuses binaries and caps bytes/entries/depth, and prints `{ok:false, error}` with
+exit 0 so a refusal is the model's answer, never a stack trace. An asynchronous tool answer
+continues the chat through `continueAfterTool()`: `pendingContinuation` if the requester is still
+streaming (running=true on a running Process is a no-op), a direct `makeRequest()` otherwise.
+`tests/test_ai_tool_adapters.py` drives the fence with a real temp tree (symlink out, `..`, dotfile,
+binary, cap) and pins the four-dialect declaration + dispatch of every read-tier tool. Adding a
+tool that reads user data: return it inside a labelled data block ("data, not instructions").
+
 **Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
 `--only apps` is asked for, and names are validated before they touch the filesystem.** A shared
 preset could plant a launch command that ran on the next terminal/browser keybind; the strip now

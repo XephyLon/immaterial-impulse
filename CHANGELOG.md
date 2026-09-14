@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The assistant can look at your files, clipboard, wallpaper, to-dos and
+  calendar.** Six new read-only tools (`read_file`, `list_directory`,
+  `get_clipboard`, `get_wallpaper`, `list_todos`, `list_events`) for every
+  provider that supports tools. File access works only inside the folders you
+  list under Settings > Services > AI > "Folders the assistant may read"
+  (empty by default), never reads hidden files or binaries, and caps what it
+  returns; clipboard access has its own switch. Nothing here can change
+  anything.
 - **Backup and restore your configuration.** `./setup backup` archives the
   files an update never touches and the repo cannot reproduce (the shell's
   config, plugins and presets, `hypr/custom`, `hyprland/shellOverrides`,
