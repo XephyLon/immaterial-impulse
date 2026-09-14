@@ -50,7 +50,10 @@ function restore_icon_theme(){
   # gsettings only at selection time). Re-apply the stored selection after
   # every sync so an update never resets the icon theme. Best-effort: a theme
   # that is no longer installed just leaves the shipped default in place.
-  local config="${XDG_CONFIG_HOME}/immaterial-impulse/config.json"
+  # appearance.* lives in config.d/appearance.json since the config split
+  # (stage 1); config.json is read only while that file does not exist yet.
+  local config="${XDG_CONFIG_HOME}/immaterial-impulse/config.d/appearance.json"
+  [[ -f "$config" ]] || config="${XDG_CONFIG_HOME}/immaterial-impulse/config.json"
   local script="${XDG_CONFIG_HOME}/quickshell/imi/scripts/icons/apply-icon-theme.sh"
   if [[ ! -f "$config" || ! -f "$script" ]]; then return 0; fi
   local theme

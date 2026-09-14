@@ -18,7 +18,7 @@ MATUGEN_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
 
 handle_kde_material_you_colors() {
-    if [ -f "$SHELL_CONFIG_FILE" ]; then
+    if [ -f "$APPEARANCE_CONFIG_FILE" ]; then
         enable_qt_apps=$(jq -r '.appearance.wallpaperTheming.enableQtApps' "$APPEARANCE_CONFIG_FILE")
         if [ "$enable_qt_apps" == "false" ]; then
             return
@@ -332,7 +332,7 @@ switch() {
 
     pre_process "$mode_flag"
 
-    if [ -f "$SHELL_CONFIG_FILE" ]; then
+    if [ -f "$APPEARANCE_CONFIG_FILE" ]; then
         enable_apps_shell=$(jq -r '.appearance.wallpaperTheming.enableAppsAndShell' "$APPEARANCE_CONFIG_FILE")
         if [ "$enable_apps_shell" == "false" ]; then
             echo "App and shell theming disabled, skipping matugen and color generation"
@@ -340,7 +340,7 @@ switch() {
         fi
     fi
 
-    if [ -f "$SHELL_CONFIG_FILE" ]; then
+    if [ -f "$APPEARANCE_CONFIG_FILE" ]; then
         harmony=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmony' "$APPEARANCE_CONFIG_FILE")
         harmonize_threshold=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold' "$APPEARANCE_CONFIG_FILE")
         term_fg_boost=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.termFgBoost' "$APPEARANCE_CONFIG_FILE")

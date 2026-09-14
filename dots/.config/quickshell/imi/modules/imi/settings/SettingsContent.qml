@@ -525,16 +525,19 @@ Item {
                         Layout.fillWidth: true
                         implicitHeight: 42
                         property bool justCopied: false
-                        buttonText: justCopied ? Translation.tr("Path copied") : Translation.tr("Config file")
+                        buttonText: justCopied ? Translation.tr("Path copied") : Translation.tr("Config folder")
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                         colRipple: Appearance.colors.colSecondaryContainerActive
+                        // The folder, not config.json: appearance lives in
+                        // config.d/appearance.json since the config split, so
+                        // a hand edit has two files to choose from.
                         downAction: () => {
-                            Qt.openUrlExternally(`${Directories.config}/immaterial-impulse/config.json`);
+                            Qt.openUrlExternally(`${Directories.config}/immaterial-impulse`);
                         }
                         altAction: () => {
-                            Quickshell.clipboardText = CF.FileUtils.trimFileProtocol(`${Directories.config}/immaterial-impulse/config.json`);
+                            Quickshell.clipboardText = CF.FileUtils.trimFileProtocol(`${Directories.config}/immaterial-impulse`);
                             fab.justCopied = true;
                             revertTextTimer.restart()
                         }
