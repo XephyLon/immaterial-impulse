@@ -11,6 +11,10 @@ Item {
     signal adapterUpdated()
     signal loaded()
     signal loadFailed(var error)
+    // A write emits saved (or saveFailed), never loaded - Config.qml's two
+    // FileViews handle both.
+    signal saved()
+    signal saveFailed(var error)
     
     function reload() {}
     function writeAdapter() {}
