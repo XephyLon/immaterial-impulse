@@ -1097,6 +1097,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 "model": currentModelId,
                 "content": "",
                 "rawContent": "",
+                "annotationSources": root.pendingRagSources,
                 "thinking": !looksLikeImageAsk,
                 "done": false,
                 "generatingImage": looksLikeImageAsk,
@@ -1361,6 +1362,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
         // The first user message of an unsaved chat mints its session -
         // lazily, so an empty chat never touches disk (spec 2026-08-31).
         AiSessions.mint(message);
+        root.pendingRagSources = [];
         root.addMessage(message, "user");
         // The attachment belongs to the message that SENDS it - it used to
         // be stamped on the assistant's reply, which also lost it on every
@@ -1370,6 +1372,21 @@ And a final paragraph after the math, so the stream does not end on a block boun
             const uid = root.messageIDs[root.messageIDs.length - 1];
             root.messageByID[uid].localFilePaths = [...root.pendingFilePaths];
             root.messageByID[uid].localFilePath = root.pendingFilePaths[0];
+        }
+        // The Documents toggle: retrieve first, then send with the passages
+        // riding in the wire content (rawContent) while the bubble keeps the
+        // typed text. For models without tools, and for people who want it
+        // every turn.
+        if (AiRag.alwaysAttach && AiRag.configured) {
+            const uid = root.messageIDs[root.messageIDs.length - 1];
+            const started = AiRag.search(message, AiRag.topK, results => {
+                if (results && results.length > 0) {
+                    root.messageByID[uid].rawContent = message + "\n\n" + AiRag.formatPassages(results);
+                    root.pendingRagSources = AiRag.sourcesFor(results);
+                }
+                requester.makeRequest();
+            });
+            if (started) return;
         }
         requester.makeRequest();
     }
@@ -1676,9 +1693,35 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 ? Translation.tr("No calendar events in the next %1 days.").arg(days)
                 : events.slice(0, 50).map(e => `${e.allDay ? Qt.formatDate(e.start, "yyyy-MM-dd") + " (all day)" : Qt.formatDateTime(e.start, "yyyy-MM-dd hh:mm")}: ${e.summary}`).join("\n"));
             root.pendingContinuation = true;
+        else if (name === "search_documents") {
+            const query = String(args?.query ?? "").trim();
+            if (query.length === 0) {
+                addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `query`."));
+                root.pendingContinuation = true;
+            } else if (!AiRag.configured) {
+                addFunctionOutputMessage(name, Translation.tr("No document folders are configured. Add them under Settings > Services > AI > Documents."));
+                root.pendingContinuation = true;
+            } else {
+                const k = Math.max(1, Math.min(12, parseInt(args?.k ?? AiRag.topK) || AiRag.topK));
+                const started = AiRag.search(query, k, results => {
+                    addFunctionOutputMessage(name, results === null
+                        ? Translation.tr("The document search failed: %1").arg(AiRag.error)
+                        : AiRag.formatPassages(results));
+                    if (results && results.length > 0) root.pendingRagSources = AiRag.sourcesFor(results);
+                    root.continueAfterTool();
+                });
+                if (!started) {
+                    addFunctionOutputMessage(name, Translation.tr("A document search is already running; try again."));
+                    root.pendingContinuation = true;
+                }
+            }
         }
         else root.addMessage(Translation.tr("Unknown function call: %1").arg(name), "assistant");
     }
+
+    /** Sources from the last retrieval, stamped onto the next assistant
+        message as its citation chips and then cleared. */
+    property var pendingRagSources: []
 
     function chatToJson(ids = root.messageIDs) {
         return ids.map(id => {

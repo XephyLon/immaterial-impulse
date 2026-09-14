@@ -649,6 +649,16 @@ Singleton {
                     property list<string> folders: []
                     property bool allowClipboard: true
                 }
+                // Local retrieval over the user's own documents. `folders` is the only
+                // thing ever indexed (empty = nothing); scripts/ai/ai_rag.py enforces the
+                // rest of the contract (no dotfiles, no key/config dirs, .noindex).
+                // `embedder`: "lexical" (offline, keyword) or "ollama:<model>".
+                property JsonObject documents: JsonObject {
+                    property list<string> folders: []
+                    property string embedder: "lexical"
+                    property int topK: 6
+                    property bool alwaysAttach: false
+                }
             }
 
             property JsonObject appearance: JsonObject {
