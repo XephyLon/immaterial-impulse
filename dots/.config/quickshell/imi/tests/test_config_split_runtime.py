@@ -60,6 +60,8 @@ class ConfigSplitRuntimeTest(unittest.TestCase):
         self.assertEqual(split["appearance"]["fakeScreenRounding"], 1, "an appearance write landed in the file")
         self.assertFalse(split["appearance"]["extraBackgroundTint"])
         main = json.loads((self.cfg_dir / "config.json").read_text())
+        print(f"[measure] bytes on disk after the writes: config.json {(self.cfg_dir / 'config.json').stat().st_size}, "
+              f"appearance.json {(self.cfg_dir / 'config.d' / 'appearance.json').stat().st_size}")
         self.assertEqual(main["osd"]["timeout"], 1900, "the other domain's write landed in config.json")
         self.assertNotIn("appearance", main, "the adapter writes the schema it has: appearance leaves config.json")
         self.assertTrue(main["migratedUpstreamSchema"])

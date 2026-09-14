@@ -591,6 +591,10 @@ Singleton {
             root.writeRequestedBeforeReady = false;
             fileWriteTimer.restart();
         }
+        if (root.appearanceWriteRequestedBeforeReady) {
+            root.appearanceWriteRequestedBeforeReady = false;
+            appearanceWriteTimer.restart();
+        }
         root.clearStaleKbOptions();
         root.migratePreferredPlayerToBusId();
         root.migrateDeadParallaxSwitches();
@@ -607,6 +611,10 @@ Singleton {
         blockWrites: root.blockWrites
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
+        // Like the appearance file: a write emits saved, never loaded, so the
+        // first-run bootstrap (FileNotFound -> writeAdapter) reaches loaded
+        // through its own reload and not only through the directory watch.
+        onSaved: if (!root.mainLoaded) fileReloadTimer.restart()
         onLoaded: {
             // Before `ready`, and before every other migration: the rest read
             // `root.options`, while this one works off the raw file text
@@ -1952,6 +1960,8 @@ Singleton {
         repeat: false
         onTriggered: appearanceFileView.reload()
     }
+    // The same "no domain file is written before ready" rule as fileWriteTimer.
+    property bool appearanceWriteRequestedBeforeReady: false
     Timer {
         id: appearanceWriteTimer
         interval: root.readWriteDelay
@@ -1959,6 +1969,10 @@ Singleton {
         onTriggered: {
             if (root.configDirTimedOut)
                 return;
+            if (!root.ready) {
+                root.appearanceWriteRequestedBeforeReady = true;
+                return;
+            }
             appearanceFileView.writeAdapter()
         }
     }

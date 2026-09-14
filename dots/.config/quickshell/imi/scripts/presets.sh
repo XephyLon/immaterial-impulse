@@ -97,15 +97,25 @@ case "$action" in
         # never in this document.)
         if [ -f "$APPEARANCE_FILE" ]; then
             # config.json * {appearance}: the split file is the live copy.
-            config_doc="$(jq -s '.[0] * (.[1] | {appearance: (.appearance // {})})' "$CONFIG_FILE" "$APPEARANCE_FILE")"
+            if ! config_doc="$(jq -s '.[0] * (.[1] | {appearance: (.appearance // {})})' "$CONFIG_FILE" "$APPEARANCE_FILE")"; then
+                echo "Error: could not read $CONFIG_FILE and $APPEARANCE_FILE; the preset was not saved" >&2
+                exit 1
+            fi
         else
             config_doc="$(cat "$CONFIG_FILE")"
         fi
-        printf '%s' "$config_doc" | jq --argjson pluginState "$plugin_state" \
+        # Through a temp file and replace_if_changed, so a failed jq never
+        # leaves a 0-byte preset behind.
+        if ! printf '%s' "$config_doc" | jq --argjson pluginState "$plugin_state" \
             'del(._presetMeta, ._pluginState)
              | ._pluginState = $pluginState
              | if .bar.weather.apiKey? then .bar.weather.apiKey = "" else . end' \
-            > "$PRESETS_DIR/${name}.json"
+            > "$PRESETS_DIR/${name}.json.tmp"; then
+            echo "Error: could not build the preset; nothing was saved" >&2
+            rm -f "$PRESETS_DIR/${name}.json.tmp"
+            exit 1
+        fi
+        replace_if_changed "$PRESETS_DIR/${name}.json.tmp" "$PRESETS_DIR/${name}.json" || [ $? -eq 1 ] || exit 1
         if [ -n "$description" ]; then
             jq --arg desc "$description" '._presetMeta = {"description": $desc}' \
                 "$PRESETS_DIR/${name}.json" > "$PRESETS_DIR/${name}.json.tmp" \
@@ -260,11 +270,19 @@ case "$action" in
                 exit 1
             fi
             rm -f "${CONFIG_FILE}.merged"
-            replace_if_changed "${APPEARANCE_FILE}.tmp" "$APPEARANCE_FILE" || true
-            replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
+            # A refusal (return 2) aborts before either file moves: both
+            # candidates are checked first, so the apply is all or nothing.
+            if ! jq -e 'type == "object"' "${APPEARANCE_FILE}.tmp" >/dev/null 2>&1 \
+                || ! jq -e 'type == "object"' "${CONFIG_FILE}.tmp" >/dev/null 2>&1; then
+                echo "Error: the split preset did not produce two JSON objects; nothing was changed" >&2
+                rm -f "${APPEARANCE_FILE}.tmp" "${CONFIG_FILE}.tmp"
+                exit 1
+            fi
+            replace_if_changed "${APPEARANCE_FILE}.tmp" "$APPEARANCE_FILE" || [ $? -eq 1 ] || exit 1
+            replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || [ $? -eq 1 ] || exit 1
         else
             mv "${CONFIG_FILE}.merged" "${CONFIG_FILE}.tmp"
-            replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
+            replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || [ $? -eq 1 ] || exit 1
         fi
         engine_path="$(jq -r '.wallpaperSelector.wallpaperEngine.activePath // empty' "$CONFIG_FILE")"
         engine_preview="$(jq -r '.wallpaperSelector.wallpaperEngine.activePreview // empty' "$CONFIG_FILE")"
