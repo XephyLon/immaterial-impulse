@@ -174,6 +174,17 @@ Item {
             messageInputField.text = AiDrafts.take(AiSessions.currentId);
     }
 
+    // A transcript lands in the draft first (AiDictation), so the composer
+    // re-reads the draft rather than receiving text twice.
+    Connections {
+        target: AiDictation
+        function onTranscribed(text) {
+            if (root.editingMessageIndex >= 0) return;
+            messageInputField.text = AiDrafts.take(AiSessions.currentId);
+            messageInputField.cursorPosition = messageInputField.text.length;
+        }
+    }
+
     Connections {
         target: AiSessions
         function onSessionOpened(id) {

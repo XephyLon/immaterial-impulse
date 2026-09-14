@@ -297,6 +297,87 @@ ContentPage {
             }
 
             ContentSubsection {
+                title: Translation.tr("Dictation")
+                tooltip: Translation.tr("Press the mic in the composer, or bind `qs ipc call ai dictate toggle` to a key")
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space100
+
+                    ConfigSelectionArray {
+                        text: Translation.tr("Transcriber")
+                        currentValue: Config.options.ai.dictation.engine
+                        onSelected: value => { Config.options.ai.dictation.engine = value; }
+                        options: [
+                            { "displayName": Translation.tr("On this machine"), "value": "local" },
+                            { "displayName": Translation.tr("Provider (audio leaves this machine)"), "value": "provider" },
+                        ]
+                    }
+                    ConfigSelectionArray {
+                        visible: Config.options.ai.dictation.engine === "local"
+                        text: Translation.tr("Model")
+                        currentValue: Config.options.ai.dictation.model
+                        onSelected: value => { Config.options.ai.dictation.model = value; }
+                        options: [
+                            { "displayName": "tiny", "value": "tiny" },
+                            { "displayName": "base", "value": "base" },
+                            { "displayName": "small", "value": "small" },
+                            { "displayName": "medium", "value": "medium" },
+                            { "displayName": "large-v3", "value": "large-v3" },
+                        ]
+                    }
+                    RowLayout {
+                        visible: Config.options.ai.dictation.engine === "local"
+                        Layout.fillWidth: true
+                        spacing: Appearance.spacing.space100
+                        RippleButton {
+                            enabled: AiDictation.fasterWhisper && AiDictation.downloadState !== "downloading"
+                            implicitHeight: 32
+                            padding: Appearance.spacing.space150
+                            buttonRadius: Appearance.rounding.full
+                            colBackground: Appearance.colors.colSecondaryContainer
+                            colRipple: Appearance.colors.colSecondaryContainerActive
+                            onClicked: AiDictation.download()
+                            contentItem: StyledText {
+                                text: AiDictation.downloadState === "downloading" ? Translation.tr("Downloading…")
+                                    : Translation.tr("Download model")
+                                color: Appearance.colors.colOnSecondaryContainer
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                            }
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: !AiDictation.probed ? Translation.tr("Checking…")
+                                : AiDictation.hint.length > 0 ? AiDictation.hint
+                                : AiDictation.downloadState === "done" ? Translation.tr("Model ready")
+                                : AiDictation.downloadState === "error" ? AiDictation.lastError
+                                : AiDictation.fasterWhisper ? Translation.tr("faster-whisper found; the first use of a model downloads it unless you fetch it here")
+                                : Translation.tr("whisper.cpp found")
+                            color: AiDictation.hint.length > 0 || AiDictation.downloadState === "error" ? Appearance.m3colors.m3error : Appearance.colors.colSubtext
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                        }
+                    }
+                    ConfigSwitch {
+                        buttonIcon: "send"
+                        text: Translation.tr("Send the transcript at once")
+                        checked: Config.options.ai.dictation.autoSend
+                        onToggleRequested: Config.options.ai.dictation.autoSend = !Config.options.ai.dictation.autoSend
+                        StyledToolTip { text: Translation.tr("Off: the transcript lands in the composer for editing") }
+                    }
+                    ConfigSpinBox {
+                        icon: "timer"
+                        text: Translation.tr("Stop listening after (seconds)")
+                        value: Config.options.ai.dictation.maxSeconds
+                        from: 5
+                        to: 300
+                        stepSize: 5
+                        onValueModified: Config.options.ai.dictation.maxSeconds = newValue
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Custom OpenAI-compatible Providers")
 
                 AiProvidersEditor {

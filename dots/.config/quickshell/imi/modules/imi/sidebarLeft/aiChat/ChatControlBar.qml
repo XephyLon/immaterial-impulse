@@ -170,6 +170,19 @@ Item {
                 : Translation.tr("Documents: the model searches on demand\nClick to attach matching passages to every message")
             onClicked: Config.options.ai.documents.alwaysAttach = !Config.options.ai.documents.alwaysAttach
         }
+        ControlChip { // Dictation: press to listen, press to stop; the text lands in the composer.
+            chipIcon: AiDictation.state === "listening" ? "graphic_eq"
+                : AiDictation.state === "transcribing" ? "more_horiz"
+                : AiDictation.available ? "mic" : "mic_off"
+            chipInk: AiDictation.state === "listening" ? Appearance.m3colors.m3error
+                : AiDictation.available ? Appearance.colors.colOnLayer1 : Appearance.colors.colSubtext
+            label: AiDictation.state === "listening" ? `${AiDictation.seconds}s` : ""
+            hint: AiDictation.state === "listening" ? Translation.tr("Listening… click to stop")
+                : AiDictation.state === "transcribing" ? Translation.tr("Transcribing…")
+                : AiDictation.available ? Translation.tr("Dictate")
+                : (AiDictation.hint.length > 0 ? AiDictation.hint : Translation.tr("Dictation unavailable"))
+            onClicked: { if (AiDictation.available || AiDictation.busy) AiDictation.toggle(); }
+        }
         ControlChip {
             chipIcon: "edit_square"
             hint: Translation.tr("New chat")
