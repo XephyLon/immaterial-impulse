@@ -118,7 +118,7 @@ ContentPage {
                     text: Translation.tr("Frame mode: bar, edges and corners as one surface")
                     checked: Config.options.appearance.frame.enable
                     onToggleRequested: Config.options.appearance.frame.enable = !Config.options.appearance.frame.enable
-                    StyledToolTip { text: Translation.tr("Draws a band along the screen edges, in the bar's colour, with rounded inner corners, so the shell reads as a frame around your windows instead of floating islands. Looks best with the Hug bar style. Not yet for the vertical bar, the edge the dock is on, or a bar that auto-hides.") }
+                    StyledToolTip { text: Translation.tr("Draws a band along the screen edges, in the bar's colour, with rounded inner corners, so the shell reads as a frame around your windows instead of floating islands. Looks best with the Hug bar style. Not yet for the vertical bar or a bar that auto-hides.") }
                 }
                 ConfigSpinBox {
                     property bool rowVisible: Config.options.appearance.frame.enable

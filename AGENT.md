@@ -311,20 +311,23 @@ pins the shape; `test_ai_inline_runtime.py` counts requests against a fake strea
 **Frame mode has one geometry authority, `services/FrameGeometry.qml`; edge surfaces read it and
 compute nothing of their own.** `frame_geometry.js` (pure; `tst_frame_geometry.qml`) answers the
 band's thickness (`appearance.frame.thickness`, or the compositor's outer gap when 0), each edge's
-inset - the bar's edge is the bar's RESERVED zone plus the band, because the compositor applies its
-outer gap after the zone (measured: modelling it as the painted height left a gap-wide wallpaper
-stripe under the bar); the other edges are the band; an edge the dock is on is 0 (no band, no
-fillet: the dock's pin is per-screen runtime state the model does not know) - the fillet's radius
-(the compositor's window rounding plus the band, so it is concentric with the corner it wraps) and
-each fillet's margins. `modules/imi/frame/Frame.qml` draws four bands per screen (the bar's edge
-under the bar plate), Top layer, `ExclusionMode.Ignore`, an empty mask; they stay mapped and paint
-transparent for a fullscreen window (`visible` on a layer surface destroys it; `rules.lua` gives
-`quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen corners (the sidebar
-corner-open hit rect lives there) and moves the fillet shape inward through `RoundCorner`'s visual
-margins; `BarContent` squares the centre-only pill. All gated on `FrameGeometry.enabled` (the option
-AND not the vertical bar), the family included. Known stage-1 limits, stated in the proposal: one
-frame for every screen; the bar's screen list and auto-hide are not modelled. A further slice adds
-its geometry to the authority first. 220780dfb ("feat(frame): frame mode, stage 1").
+inset - an occupant's reserved zone(s) plus the band, because the compositor applies its outer gap
+after the zone (measured: modelling the bar's edge as the painted height left a gap-wide wallpaper
+stripe under the bar); a free edge is the band - the fillet's radius (the compositor's window
+rounding, no more: the fillet's box already sits at the inset, so the arcs are concentric only when
+the radii are equal) and each fillet's margins. The occupants are the bar, whose zone is
+`Appearance.sizes.barExclusiveZone` (the settled zone `Bar.qml`'s reserver asks for; `Bar.qml` reads
+`barReservedHeight` from the same place, so there is no second copy to drift), and a PINNED dock
+(`GlobalStates.dockPinned`, written by `Dock.qml`; its zone through `dock_geometry.js`) - an unpinned
+dock reserves nothing and is no occupant. `modules/imi/frame/Frame.qml` draws four bands per screen,
+each starting under its edge's occupants, Top layer, `ExclusionMode.Ignore`, an empty mask; they stay
+mapped and paint transparent for a fullscreen window (`visible` on a layer surface destroys it;
+`rules.lua` gives `quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen
+corners (the sidebar corner-open hit rect lives there) and moves the fillet shape inward through
+`RoundCorner`'s visual margins; `BarContent` squares the centre-only pill. All gated on
+`FrameGeometry.enabled` (the option AND not the vertical bar), the family included. Known stage-1
+limits, stated in the proposal: one frame for every screen; the bar's screen list and auto-hide are
+not modelled. A further slice adds its geometry to the authority first. 220780dfb ("feat(frame): frame mode, stage 1").
 **`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
 through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
 `/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)

@@ -31,9 +31,9 @@ own repo; the installer pins which revision it builds.
   screen edge and rounded inner corners are drawn as one connected surface in the bar's
   colour, so the shell reads as a frame around your windows instead of floating islands.
   The band is as thick as the compositor's outer gap (or a set number of pixels), takes
-  no input and reserves nothing. Best with the Hug bar style. Not yet framed in this
-  first slice: the vertical bar, the edge the dock is on (the dock stays its own island),
-  a bar hidden by auto-hide or absent from a screen's list.
+  no input and reserves nothing; a pinned dock's edge is framed under the dock like the
+  bar's edge is under the bar. Best with the Hug bar style. Not yet framed in this first
+  slice: the vertical bar, a bar hidden by auto-hide or absent from a screen's list.
 
 ### Changed
 - Appearance settings now live in their own file, `~/.config/immaterial-impulse/config.d/appearance.json`,

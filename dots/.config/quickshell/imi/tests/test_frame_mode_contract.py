@@ -38,11 +38,23 @@ class FrameModeContract(unittest.TestCase):
         geo = _strip(GEOMETRY.read_text())
         self.assertIn("Geo.bandThickness(Config.options.appearance.frame.thickness, Config.options.hyprland.general.gapsOut)", geo)
         self.assertIn("&& !Config.options.bar.vertical", geo, "the vertical bar is not framed in stage 1")
-        # The bar's edge is what the compositor reserves, not what the bar paints.
-        self.assertIn("readonly property real barThickness: Appearance.sizes.baseBarHeight", geo)
-        self.assertNotIn("Appearance.sizes.barHeight", geo)
-        self.assertIn("Geo.innerRadius(Config.options.hyprland.decoration.rounding, root.thickness)", geo)
-        self.assertIn("Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge)", geo)
+        # The bar's edge is what the compositor reserves - ONE token, read by
+        # the bar's reserver and by the authority, never a second copy.
+        self.assertIn("readonly property real barThickness: Appearance.sizes.barExclusiveZone", geo)
+        self.assertNotRegex(geo, r"baseBarHeight|Appearance\.sizes\.barHeight", "no hand copy of the reserver's expression")
+        appearance = _strip((ROOT / "modules/common/Appearance.qml").read_text())
+        self.assertIn("property real barExclusiveZone: root.sizes.barReservedHeight", appearance)
+        self.assertIn("zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows))\n                        ? 0 : Appearance.sizes.barReservedHeight",
+                      _strip((ROOT / "modules/imi/bar/Bar.qml").read_text()))
+        # The fillet radius is the window rounding, full stop.
+        self.assertIn("Geo.innerRadius(Config.options.hyprland.decoration.rounding)", geo)
+        # The dock is an occupant only while it reserves (pinned), through
+        # the dock's own zone arithmetic.
+        self.assertIn("readonly property bool dockReserves: (Config.options.dock.enable ?? false) && GlobalStates.dockPinned", geo)
+        self.assertIn("DockGeo.exclusiveZone(Config.options.dock.height ?? 60, Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)", geo)
+        self.assertIn("Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge, root.dockThickness)", geo)
+        dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
+        self.assertIn("onPinnedChanged: GlobalStates.dockPinned = root.pinned", dock)
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
@@ -63,7 +75,7 @@ class FrameModeContract(unittest.TestCase):
         self.assertNotIn("visible: FrameGeometry.enabled && !fullscreen", frame)
         self.assertIn("exclusionMode: ExclusionMode.Ignore", frame, "the band lives in the gap; it reserves nothing")
         self.assertIn("mask: Region {}", frame, "the band takes no input")
-        self.assertEqual(frame.count("Band { screen: screenScope.modelData; edge:"), 4, "four bands, one per edge")
+        self.assertEqual(frame.count("            Band {\n                screen: screenScope.modelData"), 4, "four bands, one per edge, each naming its screen")
         self.assertIn('FrameGeometry.bandOffset("top")', frame, "the bar-edge band starts under the bar's zone")
         self.assertIn("HyprlandData.specialWorkspaceByMonitorName[", frame)
         rules = (ROOT.parents[1] / "hypr/hyprland/rules.lua").read_text()
