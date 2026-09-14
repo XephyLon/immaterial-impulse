@@ -1268,6 +1268,14 @@ if ! python3 "$SCRIPT_DIR/lint_overlay_lifecycle.py"; then
     exit 1
 fi
 
+# A settings page asks for text through ConfigTextArea, never a raw
+# MaterialTextField/TextField/TextArea of its own (retired 2026-09-14).
+echo "Running settings raw-field lint..."
+if ! python3 "$SCRIPT_DIR/lint_settings_raw_fields.py"; then
+    echo "Settings raw-field lint failed."
+    exit 1
+fi
+
 echo "Running settings search index tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_search_index.py"; then
     echo "Settings search index tests failed."

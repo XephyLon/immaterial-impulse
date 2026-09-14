@@ -160,17 +160,21 @@ ContentPage {
                         }
                     }
 
-                    MaterialTextField {
+                    ConfigTextArea {
                         id: newFolderField
                         Layout.fillWidth: true
-                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents, then press Enter")
-                        onAccepted: {
-                            const value = text.trim();
-                            if (value.length === 0) return;
+                        buttonIcon: "create_new_folder"
+                        singleLine: true
+                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents")
+                        confirmButtonVisible: value.trim().length > 0
+                        confirmButtonIcon: "add"
+                        onConfirmClicked: {
+                            const folder = value.trim();
+                            if (folder.length === 0) return;
                             const next = (Config.options.ai.tools.folders ?? []).slice();
-                            if (next.indexOf(value) === -1) next.push(value);
+                            if (next.indexOf(folder) === -1) next.push(folder);
                             Config.options.ai.tools.folders = next;
-                            text = "";
+                            value = "";
                         }
                     }
 
@@ -231,16 +235,21 @@ ContentPage {
                         }
                     }
 
-                    MaterialTextField {
+                    ConfigTextArea {
+                        id: newDocFolderField
                         Layout.fillWidth: true
-                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents, then press Enter")
-                        onAccepted: {
-                            const value = text.trim();
-                            if (value.length === 0) return;
+                        buttonIcon: "create_new_folder"
+                        singleLine: true
+                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents")
+                        confirmButtonVisible: value.trim().length > 0
+                        confirmButtonIcon: "add"
+                        onConfirmClicked: {
+                            const folder = value.trim();
+                            if (folder.length === 0) return;
                             const next = (Config.options.ai.documents.folders ?? []).slice();
-                            if (next.indexOf(value) === -1) next.push(value);
+                            if (next.indexOf(folder) === -1) next.push(folder);
                             Config.options.ai.documents.folders = next;
-                            text = "";
+                            value = "";
                         }
                     }
 
