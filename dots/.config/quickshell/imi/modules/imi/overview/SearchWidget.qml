@@ -347,6 +347,13 @@ Item { // Wrapper
                     anchors.left: parent?.left
                     anchors.right: parent?.right
                     entry: modelData
+                    // The Ask row's inline answer, bound straight to
+                    // AiInline here so a streaming answer never rebuilds
+                    // the list (the builder never names AiInline).
+                    readonly property bool isAskRow: modelData?.id === "ask-assistant"
+                        && AiInline.question === (modelData?.name ?? "")
+                    inlineAnswer: isAskRow ? AiInline.answer : ""
+                    inlineAnswerPending: isAskRow && AiInline.busy
                     imageEntry: searchItem.cliphistRawString !== "" && Cliphist.entryIsImage(searchItem.cliphistRawString)
                     faviconPaths: {
                         const paths = {};

@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INLINE = ROOT / "services/AiInline.qml"
 SEARCH = ROOT / "services/LauncherSearch.qml"
 ITEM = ROOT / "modules/imi/overview/SearchItem.qml"
+WIDGET = ROOT / "modules/imi/overview/SearchWidget.qml"
 CONFIG = ROOT / "modules/common/Config.qml"
 PAGE = ROOT / "modules/imi/settings/pages/ServicesConfig.qml"
 
@@ -78,11 +79,18 @@ class InlineAnswerContract(unittest.TestCase):
         self.assertIn("AiInline.cancel()", refresh)
         self.assertIn("function onOverviewOpenChanged() {\n            if (!GlobalStates.overviewOpen) AiInline.cancel();", self.search)
 
-    def test_the_row_binds_to_the_singleton_and_the_builder_tags_the_row(self):
+    def test_the_host_binds_the_row_to_the_singleton_and_the_builder_tags_the_row(self):
+        # SearchItem is a gallery component (lint_dumb_widgets): it takes the
+        # answer as properties; the delegate in SearchWidget binds them.
+        widget = _strip(WIDGET.read_text())
         self.assertIn('id: "ask-assistant"', self.search)
-        self.assertIn('root.entry?.id === "ask-assistant"', self.item)
-        self.assertIn("AiInline.question === root.itemName", self.item)
-        self.assertIn("text: AiInline.answer !== \"\" ? AiInline.answer :", self.item)
+        self.assertIn('modelData?.id === "ask-assistant"', widget)
+        self.assertIn("AiInline.question === (modelData?.name ?? \"\")", widget)
+        self.assertIn("inlineAnswer: isAskRow ? AiInline.answer : \"\"", widget)
+        self.assertIn("inlineAnswerPending: isAskRow && AiInline.busy", widget)
+        self.assertNotIn("AiInline", self.item, "the row stays presentational")
+        self.assertIn('property string inlineAnswer: ""', self.item)
+        self.assertIn("text: root.inlineAnswer !== \"\" ? root.inlineAnswer :", self.item)
 
     def test_enter_carries_an_existing_answer_into_the_chat(self):
         ask = _block(self.search, "function askAssistant(question) {")
