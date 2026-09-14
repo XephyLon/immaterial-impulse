@@ -522,7 +522,9 @@ ContentPage {
                         text: Translation.tr("Inline answers may use my cloud key")
                         description: cloudModelWaiting
                             ? Translation.tr("The selected model (%1) runs in the cloud, so nothing answers inline until this is on.").arg(selectedModel.name ?? Ai.currentModelId)
-                            : ""
+                            : (!selectedModel && Config.options.search.ai.inline
+                                ? Translation.tr("No model is selected, so nothing answers inline yet.")
+                                : "")
                         checked: Config.options.search.ai.inlineWithCloud
                         onToggleRequested: Config.options.search.ai.inlineWithCloud = !Config.options.search.ai.inlineWithCloud
                         StyledToolTip { text: Translation.tr("Off: only a model on this machine (a loopback endpoint) answers inline. On: the selected cloud model does, one request per pause in typing, at your key's cost.") }

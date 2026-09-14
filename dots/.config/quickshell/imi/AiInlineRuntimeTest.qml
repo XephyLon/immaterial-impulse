@@ -118,6 +118,17 @@ ShellRoot {
                 if (r === null) return;
                 harness.check("a long answer is cut at maxChars with an ellipsis",
                     r === true && AiInline.answer.length <= AiInline.maxChars + 1 && AiInline.answer.endsWith("…"));
+                // The failure path: the fake answers 401 to this question.
+                harness.type("what happens with a badkey here");
+                harness.step = 41;
+                break;
+            }
+            case 41: {
+                const r = harness.waitFor(() => AiInline.errorNote !== "" || AiInline.done, 8000);
+                if (r === null) return;
+                harness.check("a failing request leaves a note on the row, not a blank",
+                    AiInline.errorNote.startsWith("No answer:") && AiInline.errorNote.indexOf("Incorrect API key") !== -1);
+                harness.check("and no answer", AiInline.answer === "" && !AiInline.busy && !AiInline.done);
                 // A remote model: the cloud switch gates it.
                 harness.useModel("http://example.invalid:1/v1/chat/completions");
                 harness.sawBusy = false;

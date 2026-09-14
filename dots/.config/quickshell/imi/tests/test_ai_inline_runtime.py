@@ -22,7 +22,7 @@ import nested_display
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS = ROOT / "AiInlineRuntimeTest.qml"
 SHIPPED_DEFAULT = ROOT / "defaults/config.json"
-EXPECTED_CHECKS = 16
+EXPECTED_CHECKS = 18
 SHORT = "A Wayland compositor is the display server that draws every window itself."
 LONG = "This answer is long on purpose. " * 12
 
@@ -40,6 +40,15 @@ class FakeChat(BaseHTTPRequestHandler):
         with self.lock:
             self.requests.append(req)
         question = " ".join(m.get("content", "") for m in req.get("messages", []) if m.get("role") == "user")
+        if "badkey" in question:
+            # The failure path: what a provider says to a bad key.
+            body = json.dumps({"error": {"message": "Incorrect API key provided. You can find your key at the dashboard.", "type": "invalid_request_error"}}).encode()
+            self.send_response(401)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         text = LONG if "longwinded" in question else SHORT
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
@@ -99,7 +108,7 @@ class AiInlineRuntimeTest(unittest.TestCase):
         # inline-off typing and the remote-model typing sent nothing here.
         questions = [" ".join(m["content"] for m in r["messages"] if m["role"] == "user") for r in FakeChat.requests]
         self.assertEqual(questions, ["what is a wayland compositor", "tell me something longwinded please",
-                                     "what is a wayland compositor"], questions)
+                                     "what happens with a badkey here", "what is a wayland compositor"], questions)
         for req in FakeChat.requests:
             system = [m for m in req["messages"] if m["role"] == "system"]
             self.assertEqual(len(system), 1)

@@ -26,4 +26,20 @@ TestCase {
         compare(StringUtils.cleanMusicTitle(null), "")
         compare(StringUtils.cleanMusicTitle("Plain Title"), "Plain Title")
     }
+
+    // The predicate AiInline's privacy gate and the Settings hint rest on:
+    // the host must BE loopback, not merely start with it.
+    function test_isLoopbackUrl_accepts_loopback_and_rejects_lookalikes() {
+        verify(StringUtils.isLoopbackUrl("http://localhost:11434/v1/chat/completions"));
+        verify(StringUtils.isLoopbackUrl("http://127.0.0.1/"));
+        verify(StringUtils.isLoopbackUrl("https://[::1]:8080/x"));
+        verify(StringUtils.isLoopbackUrl("HTTP://LOCALHOST"));
+        verify(!StringUtils.isLoopbackUrl("http://localhost.evil.com/v1"));
+        verify(!StringUtils.isLoopbackUrl("http://127.0.0.1.attacker.net/"));
+        verify(!StringUtils.isLoopbackUrl("http://localhost@evil.com/"));
+        verify(!StringUtils.isLoopbackUrl("localhost:11434"), "scheme-less is not a URL the shell would send to");
+        verify(!StringUtils.isLoopbackUrl("http://127.1:11434/"));
+        verify(!StringUtils.isLoopbackUrl(""));
+        verify(!StringUtils.isLoopbackUrl(null));
+    }
 }

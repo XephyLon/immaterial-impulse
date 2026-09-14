@@ -220,6 +220,17 @@ Singleton {
         proc.running = true;
     }
 
+    // The first clause of a server or curl message, cut on a word boundary
+    // so the row never ends mid-word; "" when there is nothing short enough
+    // to show (the caller keeps its generic sentence then).
+    function clause(text) {
+        const first = String(text ?? "").split(/[.\n]/)[0].trim();
+        if (first.length === 0) return "";
+        if (first.length <= 80) return first;
+        const cut = first.slice(0, 80).replace(/\s\S*$/, "");
+        return cut.length >= 20 ? cut + "…" : "";
+    }
+
     function finish(cut) {
         root.busy = false;
         root.done = root.answer.length > 0;
@@ -253,7 +264,7 @@ Singleton {
                     root.stale = false;
                     // The server's own first clause rides along: it is what
                     // tells a bad key from a wrong endpoint.
-                    const detail = text.replace(/^\*\*[^*]*\*\*:?\s*/, "").split(/[.\n]/)[0].trim().slice(0, 80);
+                    const detail = root.clause(text.replace(/^\*\*[^*]*\*\*:?\s*/, ""));
                     root.errorNote = Translation.tr("No answer: %1").arg(detail.length > 0 ? detail : Translation.tr("the model returned an error"));
                     root.finish(false);
                     return;
@@ -271,7 +282,7 @@ Singleton {
             if (root.stale) { root.answer = ""; root.stale = false; }
             if (root.answer.length === 0 && root.errorNote.length === 0) {
                 console.log(`[AiInline] request exited ${exitCode}: ${String(procStderr.text ?? "").trim().slice(0, 200)}`);
-                const stderrLine = String(procStderr.text ?? "").trim().split("\n").pop().replace(/^curl:\s*\(\d+\)\s*/, "").slice(0, 80);
+                const stderrLine = root.clause(String(procStderr.text ?? "").trim().split("\n").pop().replace(/^curl:\s*\(\d+\)\s*/, ""));
                 root.errorNote = exitCode === 0
                     ? Translation.tr("No answer: the model sent nothing back.")
                     : Translation.tr("No answer: %1").arg(stderrLine.length > 0 ? stderrLine : Translation.tr("the model could not be reached"));
