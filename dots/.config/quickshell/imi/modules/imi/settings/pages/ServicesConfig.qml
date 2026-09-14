@@ -115,6 +115,74 @@ ContentPage {
             }
 
             ContentSubsection {
+                title: Translation.tr("Folders the assistant may read")
+                tooltip: Translation.tr("read_file and list_directory work only inside these; hidden files are never readable")
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space100
+
+                    Repeater {
+                        model: Config.options.ai.tools.folders
+                        delegate: RowLayout {
+                            id: folderRow
+                            required property string modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            spacing: Appearance.spacing.space200
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: folderRow.modelData
+                                elide: Text.ElideMiddle
+                                color: Appearance.colors.colOnLayer1
+                            }
+                            RippleButton {
+                                implicitWidth: 32
+                                implicitHeight: 32
+                                buttonRadius: Appearance.rounding.full
+                                colBackground: "transparent"
+                                onClicked: {
+                                    const next = (Config.options.ai.tools.folders ?? []).slice();
+                                    next.splice(folderRow.index, 1);
+                                    Config.options.ai.tools.folders = next;
+                                }
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: "delete"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colError
+                                }
+                                StyledToolTip { text: Translation.tr("Remove folder") }
+                            }
+                        }
+                    }
+
+                    MaterialTextField {
+                        id: newFolderField
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents, then press Enter")
+                        onAccepted: {
+                            const value = text.trim();
+                            if (value.length === 0) return;
+                            const next = (Config.options.ai.tools.folders ?? []).slice();
+                            if (next.indexOf(value) === -1) next.push(value);
+                            Config.options.ai.tools.folders = next;
+                            text = "";
+                        }
+                    }
+
+                    ConfigSwitch {
+                        buttonIcon: "content_paste"
+                        text: Translation.tr("Let the assistant read the clipboard")
+                        checked: Config.options.ai.tools.allowClipboard
+                        onToggleRequested: Config.options.ai.tools.allowClipboard = !Config.options.ai.tools.allowClipboard
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Custom OpenAI-compatible Providers")
 
                 AiProvidersEditor {
