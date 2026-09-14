@@ -2383,6 +2383,16 @@ if ! python3 "$SCRIPT_DIR/test_media_layouts_contract.py"; then
     exit 1
 fi
 
+# The assistant's read-tier tools: read_file/list_directory go through
+# scripts/ai/ai_fs_tool.py (allowlist on the real path, no dotfiles, no
+# binaries, byte cap); every tool is declared for all four dialects and
+# dispatched. See docs/proposals/ai-tool-adapters.md.
+echo "Running AI tool adapter tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_tool_adapters.py"; then
+    echo "AI tool adapter tests failed."
+    exit 1
+fi
+
 # The AI provider/model catalog (services/ai_catalog.js) and Ai.qml's built-in
 # model literals are two copies of one truth until the proposal's stage 2 wires
 # Ai.qml to the catalog; this pins them equal field by field so neither can
