@@ -1802,6 +1802,15 @@ if ! python3 "$SCRIPT_DIR/test_ai_tools_runtime.py"; then
     exit 1
 fi
 
+# OllamaCatalog against a fake daemon in a real shell: lists arrive, a pull
+# streams progress to 1 and lands installed, a removal drops it, and the
+# chat's model list follows both. Brings its own headless weston.
+echo "Running Ollama catalog runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_ollama_catalog_runtime.py"; then
+    echo "Ollama catalog runtime tests failed."
+    exit 1
+fi
+
 # The block is a set of paths into the theme's directory and at the apply
 # script sudo will accept; the directory was renamed and the script moved. A
 # wrong path here means the login screen silently stops following the
@@ -2418,6 +2427,15 @@ fi
 echo "Running AI tool adapter tests..."
 if ! python3 "$SCRIPT_DIR/test_ai_tool_adapters.py"; then
     echo "AI tool adapter tests failed."
+    exit 1
+fi
+
+# The Ollama catalog talks to the daemon's HTTP API through curl, never the
+# CLI; refreshes only while a view watches; starts nothing but the explicit
+# Start; a pull asks first and checks disk. docs/proposals/ollama-catalog.md.
+echo "Running Ollama catalog contract tests..."
+if ! python3 "$SCRIPT_DIR/test_ollama_catalog_contract.py"; then
+    echo "Ollama catalog contract tests failed."
     exit 1
 fi
 
