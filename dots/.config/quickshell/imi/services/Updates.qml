@@ -26,6 +26,45 @@ Singleton {
         checkUpdatesProc.running = true;
     }
 
+    // The bar widget's two gestures, moved here so the widget is a view:
+    // a manual check with a notification, and the upgrade run in a terminal
+    // followed by the outcome notification 5 s after it exits (the count
+    // needs that long to be re-read).
+    function checkNow() {
+        root.refresh();
+        Quickshell.execDetached(["notify-send", Translation.tr("Updates"), Translation.tr("Checking for updates..."), "-a", "Shell"]);
+    }
+    property alias upgrading: upgradeProc.running
+    function runUpgrade() {
+        if (upgradeProc.running) return;
+        upgradeProc.running = true;
+    }
+    // The outcome, as a notification body and urgency, for the count read
+    // after an upgrade run. Pure, so tests/test_updates_contract.py can pin it.
+    function outcomeFor(countAfter) {
+        return countAfter === 0
+            ? { "body": Translation.tr("System up to date"), "urgency": "low" }
+            : { "body": Translation.tr("Update cancelled — %1 updates still pending").arg(countAfter), "urgency": "normal" };
+    }
+
+    Process {
+        id: upgradeProc
+        command: ["kitty", "--hold", "fish", "-i", "-l", "-c", "yay -Syu --combinedupgrade=false"]
+        onExited: (exitCode, exitStatus) => {
+            root.refresh();
+            outcomeTimer.restart();
+        }
+    }
+    Timer {
+        id: outcomeTimer
+        interval: 5000
+        repeat: false
+        onTriggered: {
+            const outcome = root.outcomeFor(root.count);
+            Quickshell.execDetached(["notify-send", Translation.tr("Updates"), outcome.body, "-a", "Shell", "-u", outcome.urgency]);
+        }
+    }
+
     Timer {
         interval: Config.options.updates.checkInterval * 60 * 1000
         repeat: true

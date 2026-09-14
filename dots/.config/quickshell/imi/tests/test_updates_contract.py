@@ -121,6 +121,21 @@ def test_periodic_check_is_config_gated():
     ), "periodic Timer / availability probe must stay behind the enableCheck option"
 
 
+def test_the_bar_widget_is_a_view_of_the_service():
+    """The upgrade run and its outcome notification live in the service
+    (headless-widgets phase 1); the widget holds no Process and no Timer."""
+    widget = (ROOT / "modules" / "imi" / "bar" / "UpdatesCount.qml").read_text()
+    assert "Process {" not in widget and "Timer {" not in widget
+    assert "Updates.runUpgrade()" in widget and "Updates.checkNow()" in widget
+    source = UPDATES.read_text()
+    assert "function runUpgrade()" in source and "function checkNow()" in source
+    assert re.search(r"function outcomeFor\(countAfter\)\s*\{\s*return countAfter === 0", source), \
+        "the outcome is decided by the count read after the run: 0 = up to date, else cancelled"
+    assert "outcomeTimer.restart()" in source and "interval: 5000" in source
+    # The upgrade never runs twice at once.
+    assert re.search(r"function runUpgrade\(\)\s*\{\s*if \(upgradeProc\.running\) return;", source)
+
+
 if __name__ == "__main__":
     import sys
     from contract_runner import run
