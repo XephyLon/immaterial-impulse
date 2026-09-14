@@ -53,7 +53,7 @@ class FrameModeContract(unittest.TestCase):
         # The dock is an occupant only while it reserves (pinned), through
         # the dock's own zone arithmetic.
         self.assertIn("readonly property bool dockReserves: (Config.options.dock.enable ?? false) && GlobalStates.dockPinned", geo)
-        self.assertRegex(GEOMETRY.read_text(), r"^import qs\s*$", "GlobalStates resolves only through the root module - the dock occupant was inert without it")
+        self.assertIn("\nimport qs\n", GEOMETRY.read_text(), "GlobalStates resolves only through the root module - the dock occupant was inert without it")
         # The dock's zone is one token too, read by Dock.qml and the authority.
         self.assertIn("readonly property real dockThickness: root.dockReserves ? Appearance.sizes.dockExclusiveZone : 0", geo)
         self.assertNotIn("DockGeo.", geo, "no second copy of the dock's zone arithmetic here")
@@ -91,7 +91,7 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("exclusionMode: ExclusionMode.Ignore", frame, "the band lives in the gap; it reserves nothing")
         self.assertIn("mask: Region {}", frame, "the band takes no input")
         self.assertEqual(frame.count("            Band {\n                screen: screenScope.modelData"), 4, "four bands, one per edge, each naming its screen")
-        self.assertIn('FrameGeometry.bandOffset("top")', frame, "the bar-edge band starts under the bar's zone")
+        self.assertIn('FrameGeometry.bandOffsetFor("top", band.fullscreen)', frame, "the bar-edge band starts under the bar's zone, per screen")
         self.assertIn("HyprlandData.specialWorkspaceByMonitorName[", frame)
         rules = (ROOT.parents[1] / "hypr/hyprland/rules.lua").read_text()
         self.assertIn('namespace = "quickshell:frame" }, no_anim = true', rules)
