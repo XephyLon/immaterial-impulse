@@ -103,6 +103,8 @@ hl.layer_rule({ match = { namespace = ".*" }, xray = false})
 hl.layer_rule({ match = { namespace = "walker" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "selection" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "overview" }, no_anim = true})
+-- The frame bands stay mapped and only change colour; no map animation.
+hl.layer_rule({ match = { namespace = "quickshell:frame" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "anyrun" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "indicator.*" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "osk" }, no_anim = true})

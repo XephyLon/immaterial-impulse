@@ -33,7 +33,7 @@ Scope {
         // arithmetic; nothing here computes an inset.
         readonly property var frameMargins: FrameGeometry.enabled
             ? FrameGeometry.cornerMargins(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight")
-            : ({ left: 0, top: 0, right: 0, bottom: 0 })
+            : ({ left: 0, top: 0, right: 0, bottom: 0, draw: true })
 
         exclusionMode: ExclusionMode.Ignore
         mask: Region {
@@ -50,26 +50,32 @@ Scope {
             right: cornerWidget.isTopRight || cornerWidget.isBottomRight
         }
         margins {
-            left: cornerPanelWindow.frameMargins.left
-            top: cornerPanelWindow.frameMargins.top
-            right: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * -1 + cornerPanelWindow.frameMargins.right
-            bottom: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * -1 + cornerPanelWindow.frameMargins.bottom
+            right: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * -1
+            bottom: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * -1
         }
 
-        implicitWidth: cornerWidget.implicitWidth
-        implicitHeight: cornerWidget.implicitHeight
+        // The window stays at the screen corner (the sidebar corner-open hit
+        // rect lives at the true corner); in frame mode the fillet SHAPE
+        // moves inward by the frame's margins, and the window grows to hold it.
+        implicitWidth: cornerWidget.implicitWidth + cornerPanelWindow.frameMargins.left + cornerPanelWindow.frameMargins.right
+        implicitHeight: cornerWidget.implicitHeight + cornerPanelWindow.frameMargins.top + cornerPanelWindow.frameMargins.bottom
 
         RoundCorner {
             id: cornerWidget
             anchors.fill: parent
             corner: cornerPanelWindow.corner
+            visible: !FrameGeometry.enabled || cornerPanelWindow.frameMargins.draw !== false
             // The frame's colour joins the fillet to the bar and the bands;
             // the fake screen rounding stays black.
             color: FrameGeometry.enabled ? FrameGeometry.color : "#000000"
-            rightVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * 1
-            bottomVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * 1
+            leftVisualMargin: cornerPanelWindow.frameMargins.left
+            topVisualMargin: cornerPanelWindow.frameMargins.top
+            rightVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * 1 + cornerPanelWindow.frameMargins.right
+            bottomVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * 1 + cornerPanelWindow.frameMargins.bottom
 
-            implicitSize: Appearance.rounding.screenRounding
+            // In frame mode the fillet is concentric with the window corner it
+            // wraps (the authority's radius); otherwise the screen rounding.
+            implicitSize: FrameGeometry.enabled ? Math.round(FrameGeometry.innerRadius) : Appearance.rounding.screenRounding
             implicitHeight: Math.max(implicitSize, sidebarCornerOpenInteractionLoader.implicitHeight)
             implicitWidth: Math.max(implicitSize, sidebarCornerOpenInteractionLoader.implicitWidth)
 

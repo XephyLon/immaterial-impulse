@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 
 import qs.modules.common
+import qs.services
 import qs.modules.imi.background
 import qs.modules.imi.cheatsheet
 import qs.modules.imi.bar
@@ -53,7 +54,7 @@ Scope {
     PanelLoader { component: Polkit {} }
     PanelLoader { component: RegionSelector {} }
     PanelLoader { component: ScreenCorners {} }
-    PanelLoader { extraCondition: Config.options.appearance.frame.enable; component: Frame {} }
+    PanelLoader { extraCondition: FrameGeometry.enabled; component: Frame {} }
     PanelLoader { component: Screensaver {} }
     PanelLoader { component: ImageViewer {} }
     PanelLoader { component: ScreenTranslator {} }

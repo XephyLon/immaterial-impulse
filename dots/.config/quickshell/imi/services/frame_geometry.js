@@ -14,22 +14,46 @@ function bandThickness(configured, gapsOut) {
     return g > 0 ? g : 0;
 }
 
-// How far each screen edge's occupied strip reaches in: the bar's edge is
-// the bar's thickness, the other three are the band.
-function edgeInsets(barEdge, barThickness, band) {
+// How far each screen edge's occupied strip reaches in, i.e. where the
+// windows start: the compositor reserves the bar's zone and THEN applies its
+// outer gap, so the bar's edge is the zone plus the band (measured: modelling
+// it as the bar's painted height left a gap-wide wallpaper stripe under the
+// bar); the other three edges are the band alone. An edge the dock is
+// pinned to reserves the dock's own zone, which this model does not know
+// (the dock's pin is per-screen runtime state), so that edge is reported
+// with a 0 inset: no band, no fillet - the dock stays its own island in
+// stage 1 and the changelog says so.
+function edgeInsets(barEdge, barThickness, band, dockEdge) {
     var insets = { top: band, left: band, right: band, bottom: band };
-    if (barEdge in insets) insets[barEdge] = barThickness;
+    if (barEdge in insets) insets[barEdge] = barThickness + band;
+    if (dockEdge && dockEdge in insets && dockEdge !== barEdge) insets[dockEdge] = 0;
     return insets;
 }
 
-// A fillet window's margins: it sits at the inner corner, where the two
-// occupied strips meet.
+// The inner fillet's radius: concentric with the window corner it wraps,
+// so the compositor's window rounding plus the band between them.
+function innerRadius(windowRounding, band) {
+    return Math.max(0, (Number(windowRounding) || 0)) + band;
+}
+
+// The band drawn on the bar's own edge sits under the bar plate: it starts
+// where the bar's zone ends.
+function bandOffset(edge, barEdge, barThickness) {
+    return edge === barEdge ? barThickness : 0;
+}
+
+// A fillet's offset from its screen corner: it sits at the inner corner,
+// where the two occupied strips meet. A corner touching an edge with a 0
+// inset (a dock edge) has no frame to fillet and gets `draw: false`.
 function cornerMargins(corner, insets) {
+    var m;
     switch (corner) {
-    case "topLeft": return { left: insets.left, top: insets.top, right: 0, bottom: 0 };
-    case "topRight": return { left: 0, top: insets.top, right: insets.right, bottom: 0 };
-    case "bottomLeft": return { left: insets.left, top: 0, right: 0, bottom: insets.bottom };
-    case "bottomRight": return { left: 0, top: 0, right: insets.right, bottom: insets.bottom };
-    default: return { left: 0, top: 0, right: 0, bottom: 0 };
+    case "topLeft": m = { left: insets.left, top: insets.top, right: 0, bottom: 0 }; break;
+    case "topRight": m = { left: 0, top: insets.top, right: insets.right, bottom: 0 }; break;
+    case "bottomLeft": m = { left: insets.left, top: 0, right: 0, bottom: insets.bottom }; break;
+    case "bottomRight": m = { left: 0, top: 0, right: insets.right, bottom: insets.bottom }; break;
+    default: return { left: 0, top: 0, right: 0, bottom: 0, draw: false };
     }
+    m.draw = (m.left + m.right) > 0 && (m.top + m.bottom) > 0;
+    return m;
 }
