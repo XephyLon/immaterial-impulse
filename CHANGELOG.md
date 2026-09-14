@@ -20,6 +20,12 @@ own repo; the installer pins which revision it builds.
   (empty by default), never reads hidden files or binaries, and caps what it
   returns; clipboard access has its own switch. Nothing here can change
   anything.
+- **Ask the assistant from the launcher.** Type `@` and a question in the
+  overview to get an "Ask <model>" row; Enter opens the Intelligence tab with
+  the answer streaming. Optionally (Settings > Services > Search) a query of
+  four or more words that matches no app, setting or action offers the same
+  row last. The row appears only while the selected model is usable, and
+  nothing is sent before Enter. The prefix is configurable.
 - **Backup and restore your configuration.** `./setup backup` archives the
   files an update never touches and the repo cannot reproduce (the shell's
   config, plugins and presets, `hypr/custom`, `hyprland/shellOverrides`,

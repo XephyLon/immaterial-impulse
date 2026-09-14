@@ -266,6 +266,18 @@ streaming (running=true on a running Process is a no-op), a direct `makeRequest(
 `tests/test_ai_tool_adapters.py` drives the fence with a real temp tree (symlink out, `..`, dotfile,
 binary, cap) and pins the four-dialect declaration + dispatch of every read-tier tool. Adding a
 tool that reads user data: return it inside a labelled data block ("data, not instructions").
+**The launcher's Ask row is built from `Ai` state but never calls into it while typing.**
+`services/LauncherSearch.qml`'s `buildResults()` reads `Ai.models[Ai.currentModelId]` and
+`Ai.currentModelHasApiKey` (both named in `resultInputs`, which `test_launcher_result_inputs.py`
+enforces) to decide whether the row exists at all - no usable model, no row, so the launcher never
+offers a dead end - and the only send is `askAssistant()` from the row's `execute` closure, which
+closes the overview, sets `GlobalStates.sidebarLeftTab = "intelligence"` (consumed by
+`SidebarLeftContent`), opens the sidebar and calls `Ai.sendUserMessage`. The prefix is
+`search.prefix.ai` (`@`; `?` was already web search); the opt-in fallthrough
+(`search.ai.fallthrough`, default off) is gated on word count AND on every launchable list being
+empty, because it changes what Enter does on a miss. `LauncherAskRuntimeTest.qml` drives it with a
+keyless probe model injected the way ollama discovery injects one; a fresh install persists
+`ai.model = ""`, so the harness selects the probe explicitly.
 
 **Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
 `--only apps` is asked for, and names are validated before they touch the filesystem.** A shared
