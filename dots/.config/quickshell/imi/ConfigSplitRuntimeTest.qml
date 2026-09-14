@@ -41,15 +41,21 @@ ShellRoot {
             if (!Config.ready) return;
             switch (harness.step) {
             case 0:
+                console.log(`[ConfigSplit] readyAfterMs: ${harness.elapsed}`);
                 if (harness.mode === "existing") {
                     harness.check("an existing appearance.json wins over config.json's stale copy",
                         Config.options.appearance.iconTheme === "from-the-split-file");
+                } else if (harness.mode === "unmarked") {
+                    // An arriving upstream config: migrateUpstreamKeys writes
+                    // before ready, and the split must still copy first.
+                    harness.check("the seeded appearance value is read", Config.options.appearance.iconTheme === "probe-theme");
+                    harness.check("the upstream marker was set by the migration", Config.options.migratedUpstreamSchema === true);
                 } else {
                     harness.check("the seeded appearance value is read", Config.options.appearance.iconTheme === "probe-theme");
                 }
                 harness.check("the other domains still read", Config.options.osd.timeout === 1700 && Config.options.panelFamily === "imi");
-                harness.check("options enumerates every domain", Config.domains.indexOf("appearance") !== -1 && Config.domains.indexOf("bar") !== -1
-                    && Object.keys(Config.options).indexOf("appearance") !== -1);
+                harness.check("options enumerates every domain",
+                    Object.keys(Config.options).indexOf("appearance") !== -1 && Object.keys(Config.options).indexOf("bar") !== -1);
                 // A write into appearance, and one into another domain.
                 Config.options.appearance.fakeScreenRounding = 1;
                 Config.setNestedValue("appearance.extraBackgroundTint", "false");

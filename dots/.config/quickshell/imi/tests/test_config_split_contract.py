@@ -23,6 +23,7 @@ SCRIPTS = {
     "switchwall": ROOT / "scripts/colors/switchwall.sh",
     "applycolor": ROOT / "scripts/colors/applycolor.sh",
     "presets": ROOT / "scripts/presets.sh",
+    "installer": ROOT.parents[3] / "sdata/subcmd-install/3.files.sh",
 }
 
 
@@ -66,24 +67,30 @@ class ConfigSplitContract(unittest.TestCase):
             self.assertEqual(aliases.get(name), f"configOptionsJsonAdapter.{name}", name)
         self.assertEqual(aliases.get("appearance"), "appearanceAdapter.appearance")
         self.assertEqual(set(aliases), set(main_props) | {"appearance"}, "no alias without a declaration")
-        domains = re.search(r"readonly property list<string> domains: \[([^\]]*)\]", self.src).group(1)
-        listed = set(re.findall(r'"(\w+)"', domains))
-        self.assertEqual(listed, set(aliases), "Config.domains enumerates exactly the aliased domains")
         self.assertIn("property alias options: aggregate", self.src)
 
     def test_ready_waits_for_both_files_and_the_split_backs_up_first(self):
         self.assertIn("if (root.ready || !root.mainLoaded || !root.appearanceLoaded) return;", self.src)
         self.assertNotIn("root.ready = true;\n            root.clearStaleKbOptions();", self.src,
                          "the migrations run from finishLoad, after both files")
-        self.assertIn("path: root.mainLoaded ? root.appearanceFilePath : \"\"", self.src)
+        # The two reads run in parallel; only the seed waits for the main text.
+        self.assertIn("path: root.configDirReady ? root.appearanceFilePath : \"\"", self.src)
+        self.assertIn("if (!root.appearanceMissing || !root.mainLoaded || root.appearanceLoaded) return;", self.src)
+        # No config.json write before ready (the split's copy must see the
+        # unstripped file), and a write asked for early is flushed at ready.
+        self.assertIn("if (!root.ready) {\n                root.writeRequestedBeforeReady = true;\n                return;\n            }", self.src)
+        self.assertIn("if (root.writeRequestedBeforeReady) {\n            root.writeRequestedBeforeReady = false;\n            fileWriteTimer.restart();", self.src)
+        # Neither file can hang the ready gate: a failed save marks its side
+        # loaded, and the seeded appearance file reloads on its own save.
+        self.assertEqual(self.src.count("onSaveFailed: error => {"), 2)
+        self.assertIn("onSaved: if (!root.appearanceLoaded) appearanceReloadTimer.restart()", self.src)
         self.assertIn('command: ["cp", "-n", root.filePath, `${root.filePath}.pre-split-${Qt.formatDate(new Date(), "yyyy-MM-dd")}`]', self.src)
         # The split writes the file only after the copy has exited.
         backup = _block(self.src, "Process {\n        id: preSplitBackup")
         self.assertIn('appearanceFileView.setText(JSON.stringify({ "appearance": root.legacyAppearance }, null, 2))', backup)
-        self.assertNotIn("appearanceFileView.setText", _block(self.src, "FileView {\n        id: appearanceFileView"),
-                         "the FileView itself never writes the split before the copy")
+        self.assertEqual(self.src.count("appearanceFileView.setText("), 1, "only the copy's exit writes the split")
         # A timed-out directory migration never creates the file.
-        self.assertIn("if (root.configDirTimedOut) {\n                    root.appearanceLoaded = true;", self.src)
+        self.assertIn("if (root.configDirTimedOut) {\n            root.appearanceLoaded = true;", self.src)
         self.assertIn('Quickshell.execDetached(["mkdir", "-p", `${root.shellConfig}/config.d`])', DIRECTORIES.read_text())
 
     def test_scripts_read_the_split_file_first(self):
@@ -100,6 +107,16 @@ class ConfigSplitContract(unittest.TestCase):
         pr = SCRIPTS["presets"].read_text()
         self.assertIn("jq 'del(.appearance)' \"${CONFIG_FILE}.merged\"", pr)
         self.assertIn("{appearance: (.appearance // {})}", pr)
+        # A failed jq never lands: every stage is guarded and every candidate
+        # is checked to be a JSON object before it replaces a file.
+        self.assertNotIn('> "${CONFIG_FILE}.merged" || true', pr)
+        self.assertIn('if ! jq -e \'type == "object"\' "$candidate" >/dev/null 2>&1; then', pr)
+        # switchwall guards its appearance blocks on the file it reads.
+        self.assertIn('if [ -f "$APPEARANCE_CONFIG_FILE" ]', sw)
+        self.assertNotRegex(sw, r'-f "\$SHELL_CONFIG_FILE"[^\n]*\n[^\n]*APPEARANCE_CONFIG_FILE', "no appearance block guarded on config.json")
+        inst = SCRIPTS["installer"].read_text()
+        self.assertIn('local config="${XDG_CONFIG_HOME}/immaterial-impulse/config.d/appearance.json"', inst)
+        self.assertIn('[[ -f "$config" ]] || config="${XDG_CONFIG_HOME}/immaterial-impulse/config.json"', inst)
 
 
 if __name__ == "__main__":

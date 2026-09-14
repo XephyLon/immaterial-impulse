@@ -50,6 +50,8 @@ class ConfigSplitRuntimeTest(unittest.TestCase):
         failed = [line for line in output.splitlines() if "[ConfigSplit]" in line and "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output[-4000:]}")
         self.assertIn(f"[ConfigSplit] checks: {expected_checks} failures: 0", output, output[-4000:])
+        ready = [line for line in output.splitlines() if "readyAfterMs:" in line]
+        print(f"[measure] {mode}: Config.ready after {ready[0].split('readyAfterMs:')[1].strip() if ready else '?'} ms of harness time")
 
     def test_a_fresh_start_splits_appearance_out_once(self):
         self.run_shell("split", 4)
@@ -66,6 +68,22 @@ class ConfigSplitRuntimeTest(unittest.TestCase):
         old = json.loads(backups[0].read_text())
         self.assertEqual(old["appearance"]["iconTheme"], "probe-theme")
         self.assertEqual(old["osd"]["timeout"], 1700, "the copy predates this session's writes")
+
+    def test_an_arriving_upstream_config_still_gets_an_unstripped_downgrade_copy(self):
+        """No migratedUpstreamSchema marker: the raw-text migration asks for
+        a config.json write before ready. The split's copy must still hold
+        appearance, and the write must land after ready (the marker persists)."""
+        del self.config["migratedUpstreamSchema"]
+        self.run_shell("unmarked", 5)
+        backups = list(self.cfg_dir.glob("config.json.pre-split-*"))
+        self.assertEqual(len(backups), 1)
+        old = json.loads(backups[0].read_text())
+        self.assertEqual(old["appearance"]["iconTheme"], "probe-theme", "the copy predates the first write")
+        self.assertNotIn("migratedUpstreamSchema", old)
+        main = json.loads((self.cfg_dir / "config.json").read_text())
+        self.assertTrue(main["migratedUpstreamSchema"], "the early write was flushed once ready")
+        self.assertNotIn("appearance", main)
+        self.assertEqual(json.loads((self.cfg_dir / "config.d" / "appearance.json").read_text())["appearance"]["fakeScreenRounding"], 1)
 
     def test_an_existing_split_file_wins_over_the_stale_copy(self):
         (self.cfg_dir / "config.d").mkdir()
