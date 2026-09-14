@@ -3,18 +3,20 @@ import QtQuick.Layouts
 import Quickshell.Io
 import qs.modules.common
 import qs.modules.common.widgets
+import "network_speed.js" as Net
 
 MouseArea {
     id: root
 
     property bool vertical: false
-    property real downloadBytesPerSecond: 0
-    property real uploadBytesPerSecond: 0
-    property real downloadedBytes: 0
-    property real uploadedBytes: 0
-    property real previousReceivedBytes: -1
-    property real previousTransmittedBytes: -1
-    property double previousSampleTime: 0
+    // The logic lives in network_speed.js (parser, sample state, label) so
+    // it is testable without the bar - tests/tst_network_speed.qml. This
+    // file owns the FileView, the poll and the state object.
+    property var sampleState: Net.initialState()
+    readonly property real downloadBytesPerSecond: root.sampleState.downloadBytesPerSecond
+    readonly property real uploadBytesPerSecond: root.sampleState.uploadBytesPerSecond
+    readonly property real downloadedBytes: root.sampleState.downloadedBytes
+    readonly property real uploadedBytes: root.sampleState.uploadedBytes
 
     implicitWidth: vertical ? 36 : speedColumn.implicitWidth + 8
     implicitHeight: vertical ? speedColumn.implicitHeight + 6 : 32
@@ -22,63 +24,12 @@ MouseArea {
     hoverEnabled: !Config.options.bar.tooltips.clickToShow
 
     function formatRate(rate, compact) {
-        const units = compact
-            ? ["B", "K", "M", "G"]
-            : ["B/s", "KB/s", "MB/s", "GB/s"]
-        let value = Math.max(0, Number(rate) || 0)
-        let unitIndex = 0
-
-        while (value >= 1024 && unitIndex < units.length - 1) {
-            value /= 1024
-            unitIndex++
-        }
-
-        const precision = unitIndex > 0 && value < 100 ? 1 : 0
-        return `${value.toFixed(precision)}${compact ? "" : " "}${units[unitIndex]}`
+        return Net.formatRate(rate, compact)
     }
 
     function updateRate(contents) {
-        let receivedBytes = 0
-        let transmittedBytes = 0
-        const lines = contents.split("\n")
-
-        for (const line of lines) {
-            const separator = line.indexOf(":")
-            if (separator < 0) continue
-
-            const interfaceName = line.slice(0, separator).trim()
-            if (!interfaceName || interfaceName === "lo") continue
-
-            const fields = line.slice(separator + 1).trim().split(/\s+/)
-            if (fields.length < 9) continue
-
-            const received = Number(fields[0])
-            const transmitted = Number(fields[8])
-            if (!Number.isFinite(received) || !Number.isFinite(transmitted)) continue
-
-            receivedBytes += received
-            transmittedBytes += transmitted
-        }
-
-        const sampleTime = Date.now()
-        if (previousSampleTime > 0 && sampleTime > previousSampleTime) {
-            const elapsedMilliseconds = sampleTime - previousSampleTime
-            const receivedDelta = receivedBytes >= previousReceivedBytes
-                ? receivedBytes - previousReceivedBytes
-                : 0
-            const transmittedDelta = transmittedBytes >= previousTransmittedBytes
-                ? transmittedBytes - previousTransmittedBytes
-                : 0
-
-            downloadBytesPerSecond = receivedDelta * 1000 / elapsedMilliseconds
-            uploadBytesPerSecond = transmittedDelta * 1000 / elapsedMilliseconds
-            downloadedBytes += receivedDelta
-            uploadedBytes += transmittedDelta
-        }
-
-        previousReceivedBytes = receivedBytes
-        previousTransmittedBytes = transmittedBytes
-        previousSampleTime = sampleTime
+        const totals = Net.parseProcNetDev(contents)
+        root.sampleState = Net.advance(root.sampleState, totals.rx, totals.tx, Date.now())
     }
 
     FileView {
