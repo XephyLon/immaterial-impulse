@@ -7,6 +7,7 @@ import qs.modules.common.widgets
 import qs.modules.common.plugins
 import "../../designsystem/widgets" as Expressive
 import "calendar_geometry.js" as Geometry
+import "calendar_matrix.js" as Matrix
 
 Item {
     id: root
@@ -132,46 +133,11 @@ Item {
     property int monthShift: 0
     readonly property var today: new Date()
 
-    property var viewingDate: {
-        let d = new Date();
-        d.setDate(1);
-        d.setMonth(d.getMonth() + monthShift);
-        return d;
-    }
+    // The arithmetic lives in calendar_matrix.js (tests/tst_calendar_matrix.qml).
+    property var viewingDate: Matrix.viewingDate(new Date(), monthShift)
 
     function getMonthMatrix(date) {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const firstOfMonth = new Date(year, month, 1);
-        const startOffset = (firstOfMonth.getDay() + 6) % 7;
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-        let cells = [];
-        for (let i = 0; i < startOffset; i++)
-            cells.push({
-                day: daysInPrevMonth - startOffset + i + 1,
-                currentMonth: false,
-                isToday: false
-            });
-
-        for (let d = 1; d <= daysInMonth; d++) {
-            const isToday = monthShift === 0 && d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-            cells.push({
-                day: d,
-                currentMonth: true,
-                isToday: isToday
-            });
-        }
-
-        let nextDay = 1;
-        while (cells.length < Geometry.CELLS)
-            cells.push({
-                day: nextDay++,
-                currentMonth: false,
-                isToday: false
-            });
-        return cells;
+        return Matrix.monthMatrix(date.getFullYear(), date.getMonth(), Geometry.CELLS, monthShift === 0 ? today : null);
     }
 
     // A flat forty-two, because the cells are the shared elements: the same
