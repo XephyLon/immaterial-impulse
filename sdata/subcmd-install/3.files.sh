@@ -95,7 +95,8 @@ function seed_default_config(){
     local f
     for f in "$domain_dir"/*.json; do
       [[ -f "$f" ]] || continue
-      local domain_target="$(dirname "$target")/config.d/$(basename "$f")"
+      local domain_target
+      domain_target="$(dirname "$target")/config.d/$(basename "$f")"
       if [[ -f "$domain_target" ]]; then continue; fi
       x cp "$f" "$domain_target"
       realpath -se "$domain_target" >> "${INSTALLED_LISTFILE}"

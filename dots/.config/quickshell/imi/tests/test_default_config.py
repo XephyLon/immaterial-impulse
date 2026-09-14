@@ -13,6 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "defaults/config.json"
+# The shipped defaults are split by domain (config-storage-split, stage 1):
+# every text-level guard runs over config.json AND each config.d/*.json.
+DEFAULT_CONFIGS = [DEFAULT_CONFIG] + sorted((ROOT / "defaults/config.d").glob("*.json"))
 CONFIG_QML = ROOT / "modules/common/Config.qml"
 
 
@@ -67,20 +70,32 @@ class DefaultConfigTest(unittest.TestCase):
     def setUp(self):
         self.text = DEFAULT_CONFIG.read_text()
         self.cfg = json.loads(self.text)
+        # The split defaults: every guard that reads text or walks keys runs
+        # over each shipped file, not only config.json.
+        self.texts = {path.name: path.read_text() for path in DEFAULT_CONFIGS}
+        self.appearance = json.loads(self.texts["appearance.json"])["appearance"]
 
     def test_parses_and_is_nonempty(self):
         self.assertIsInstance(self.cfg, dict)
         self.assertGreater(len(self.cfg), 10)
+        for name, text in self.texts.items():
+            with self.subTest(file=name):
+                self.assertIsInstance(json.loads(text), dict)
 
     def test_no_machine_or_personal_paths(self):
         # Any absolute home path, username, or Steam-content path is a leak
         # from the machine the file was generated on.
-        self.assertIsNone(
-            re.search(r"/home/|xephy|steamapps|\.local/share/Steam", self.text),
-            "defaults/config.json leaks a machine-specific path",
-        )
+        for name, text in self.texts.items():
+            with self.subTest(file=name):
+                self.assertIsNone(
+                    re.search(r"/home/|xephy|steamapps|\.local/share/Steam", text),
+                    f"defaults/{name} leaks a machine-specific path",
+                )
 
     def test_machine_state_keys_are_reset(self):
+        # The one machine-specific field in the appearance domain.
+        self.assertEqual(self.appearance.get("terminal", {}).get("background", {}).get("imagePath", ""), "",
+                         "appearance.terminal.background.imagePath must ship empty")
         bg = self.cfg["background"]
         for key in ("wallpaperPath", "thumbnailPath", "lockWall", "lockWallEngine"):
             self.assertEqual(bg[key], "", f"background.{key} must ship empty")
@@ -170,9 +185,6 @@ class ShippedDesktopWidgetsSurviveTheMigration(unittest.TestCase):
             self.assertIn(key, clock, f"clock.{key} would stop migrating")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 class MigrationSeedTests(unittest.TestCase):
     """defaults/config.json seeds fresh installs, so it must look like a
     config no migration has ever touched - and never like one a migration
@@ -180,6 +192,8 @@ class MigrationSeedTests(unittest.TestCase):
 
     def setUp(self):
         self.config = json.loads(DEFAULT_CONFIG.read_text(encoding="utf-8"))
+        for path in DEFAULT_CONFIGS[1:]:
+            self.config.update(json.loads(path.read_text(encoding="utf-8")))
 
     def test_no_migration_markers_shipped(self):
         # A shipped migrated* marker tells Config.qml the pass already ran,
@@ -202,3 +216,6 @@ class MigrationSeedTests(unittest.TestCase):
         # until 2026-08-31).
         self.assertIs(self.config["cheatsheet"]["splitButtons"], True)
 
+
+if __name__ == "__main__":
+    unittest.main()
