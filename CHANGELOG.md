@@ -28,6 +28,15 @@ own repo; the installer pins which revision it builds.
   my cloud key" is on as well, because keystroke-driven cloud calls cost
   money and send what you type.
 
+### Changed
+- Appearance settings now live in their own file, `~/.config/immaterial-impulse/config.d/appearance.json`,
+  instead of inside `config.json` (the first step of splitting the config by domain: a
+  slider on the Appearance page no longer rewrites and re-reads the whole 40 KB file). The
+  move happens once, on the first start; the old `config.json` is kept beside it as
+  `config.json.pre-split-<date>`, which is what to hand back to an older release if you
+  downgrade. Presets keep their single-file shape and split on apply; `switchwall`,
+  `applycolor` and presets read the new file.
+
 ### Fixed
 - **Update Dots no longer leaves a `hyprlock.conf.new` / `hypridle.conf.new`
   identical to your file.** The legacy files step wrote the backup copy

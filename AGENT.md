@@ -1216,6 +1216,19 @@ assets/                    Static images/fonts bundled with the shell; assets/ty
 1. Loads `~/.config/immaterial-impulse/config.json` into `Config.options` on startup.
 2. Persists any property write back to that file (debounced by `Config.readWriteDelay`, 50ms by
    default — see the claim entry below for what that debounce is for and who may shorten it).
+3. **`appearance` lives in its own file** (`config.d/appearance.json`) since the config split's
+   stage 1 (`docs/proposals/config-storage-split.md`). `Config.options` is a `QtObject` aggregator
+   of one alias per top-level domain (`Config.domains` lists them; `test_config_split_contract.py`
+   pins that every declared domain is aliased), so every `Config.options.x.y` read and write is
+   unchanged whichever file `x` is in. The split happens once, on the first load that finds
+   `appearance` in `config.json` and no split file: a `cp -n config.json config.json.pre-split-<date>`
+   first (the downgrade path: the main adapter's next write drops the key it no longer declares),
+   then the object becomes the file verbatim; `ready` waits for both files. Anything outside QML that
+   reads or writes `appearance.*` — `switchwall.sh`, `applycolor.sh`, `presets.sh` — goes to
+   `config.d/appearance.json` when it exists (presets fold it into the one shared document on save
+   and split it back out on apply). A new domain moved out of `config.json` follows the same shape:
+   its own `FileView` + `JsonAdapter` + the two timers, an alias on the aggregator, a name in
+   `domains`, and its outside readers redirected. 0ddb0df35 ("feat(config): appearance on its own file").
 
 Consequences for making changes:
 

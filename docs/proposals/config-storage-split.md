@@ -1,7 +1,8 @@
 # Proposal: split config.json by domain
 
-> Draft / tracking proposal. Not scheduled. Paths are relative to
-> `dots/.config/quickshell/imi/` unless written repo-relative.
+> Tracking proposal. **Stage 1 landed 2026-09-15** (step 6 below: the aggregator
+> with `appearance` on its own file; the other domains still share `config.json`).
+> Paths are relative to `dots/.config/quickshell/imi/` unless written repo-relative.
 
 ## Goal
 
@@ -74,9 +75,12 @@ still works. `presets.sh` gains a domain map: a preset file keeps its current
 single-object shape and the script splits it on apply (`jq` per top-level
 key) and merges on save.
 
-**4. Migration.** On first start with no `config.d/`: read `config.json`, write
-each top-level key to its file atomically (temp + rename), rename the old
-file, set `ready`. Idempotent; a partial `config.d/` beside a `config.json`
+**4. Migration.** On first start with no `config.d/<domain>.json`: read `config.json`,
+write the domain to its file, set `ready` once every file is loaded. Measured
+in stage 1: the main adapter's next write DROPS a key it no longer declares
+(`writeAdapter` serializes the schema it has, not the file it read), so the
+downgrade copy is taken first - `cp -n config.json config.json.pre-split-<date>`
+- and the split waits for it. Idempotent; a partial `config.d/` beside a `config.json`
 prefers `config.d/` and only fills missing domains. The existing
 `configDirTimedOut` gate covers the "never write this session" failure mode.
 
