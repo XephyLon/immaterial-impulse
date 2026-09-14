@@ -48,6 +48,16 @@ BANNED = (
         re.compile(r"\bcatch\s*\{"),
         "name the error (catch (e) {}), even when it goes unused",
     ),
+    (
+        "String trimEnd/trimStart",
+        re.compile(r"\.trim(?:End|Start)\s*\("),
+        "QV4 has no trimEnd/trimStart (AiInline's cut answer threw 'Property trimEnd of object ... is not a function'); use .replace(/\\s+$/, '') or .replace(/^\\s+/, '')",
+    ),
+    (
+        "String replaceAll",
+        re.compile(r"\.replaceAll\s*\("),
+        "QV4 has no replaceAll; use .split(a).join(b) or a /g regex",
+    ),
 )
 
 
