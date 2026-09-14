@@ -21,7 +21,6 @@ Singleton {
     // under config.d/; the rest still share config.json. See
     // docs/proposals/config-storage-split.md - this is its stage 1.
     property alias options: aggregate
-    readonly property list<string> domains: ["appearance", "panelFamily", "migratedUpstreamSchema", "plugins", "developer", "policies", "ai", "audio", "profile", "hyprland", "apps", "cheatsheet", "background", "bar", "battery", "calendar", "conflictKiller", "crosshair", "dock", "dropShelf", "interactions", "language", "launcher", "light", "lock", "media", "networking", "idleInhibitor", "screensaver", "notes", "notifications", "osd", "osk", "overlay", "overview", "regionSelector", "resources", "tray", "musicRecognition", "search", "sidebar", "custom", "screenRecord", "screenSnip", "screenshotResult", "sounds", "time", "updates", "wallpaperSelector", "windows", "hacks", "workSafety", "phone"]
     QtObject {
         id: aggregate
         property alias appearance: appearanceAdapter.appearance
@@ -550,6 +549,12 @@ Singleton {
         }
     }
 
+    // No write to config.json before `ready`: the migrations that run on
+    // the raw text (migrateUpstreamKeys) would otherwise fire the timer
+    // before the appearance split has taken its downgrade copy, and the
+    // copy would capture a file the write had already stripped. A write
+    // asked for early is remembered and flushed the moment ready flips.
+    property bool writeRequestedBeforeReady: false
     Timer {
         id: fileWriteTimer
         interval: root.readWriteDelay
@@ -557,6 +562,10 @@ Singleton {
         onTriggered: {
             if (root.configDirTimedOut)
                 return;
+            if (!root.ready) {
+                root.writeRequestedBeforeReady = true;
+                return;
+            }
             configFileView.writeAdapter()
         }
     }
@@ -578,6 +587,10 @@ Singleton {
     function finishLoad() {
         if (root.ready || !root.mainLoaded || !root.appearanceLoaded) return;
         root.ready = true;
+        if (root.writeRequestedBeforeReady) {
+            root.writeRequestedBeforeReady = false;
+            fileWriteTimer.restart();
+        }
         root.clearStaleKbOptions();
         root.migratePreferredPlayerToBusId();
         root.migrateDeadParallaxSwitches();
@@ -611,6 +624,15 @@ Singleton {
                 }
             }
             root.mainLoaded = true;
+            root.seedAppearanceIfMissing();
+            root.finishLoad();
+        }
+        onSaveFailed: error => {
+            // An unwritable directory must come up read-only, not hang the
+            // ready gate (see onLoadFailed below).
+            console.log(`[Config] Could not write ${root.filePath} (error ${error}); continuing read-only.`);
+            root.mainLoaded = true;
+            root.seedAppearanceIfMissing();
             root.finishLoad();
         }
         onLoadFailed: error => {
@@ -623,6 +645,7 @@ Singleton {
                     writeAdapter();
                 } else {
                     root.mainLoaded = true;
+                    root.seedAppearanceIfMissing();
                     root.finishLoad();
                 }
                 return;
@@ -636,6 +659,7 @@ Singleton {
             // Fall back to the built-in defaults instead.
             console.log(`[Config] Could not read ${root.filePath} (error ${error}); continuing with defaults.`);
             root.mainLoaded = true;
+            root.seedAppearanceIfMissing();
             root.finishLoad();
         }
 
@@ -1938,38 +1962,53 @@ Singleton {
             appearanceFileView.writeAdapter()
         }
     }
+    // The appearance file was found missing; the seed waits until the main
+    // file has been read (it needs the raw appearance object), so the two
+    // reads run in parallel and the seed runs once, from whichever finished
+    // last.
+    property bool appearanceMissing: false
+    function seedAppearanceIfMissing() {
+        if (!root.appearanceMissing || !root.mainLoaded || root.appearanceLoaded) return;
+        root.appearanceMissing = false;
+        if (root.configDirTimedOut) {
+            root.appearanceLoaded = true;
+            root.finishLoad();
+            return;
+        }
+        if (root.legacyAppearance !== null) {
+            // The split: the downgrade copy first, then config.json's
+            // appearance becomes the file, verbatim, and onSaved reloads it
+            // into the adapter. The copy is waited for, and no config.json
+            // write can happen before `ready` (see fileWriteTimer).
+            console.log(`[Config] Splitting appearance out of ${root.filePath} into ${root.appearanceFilePath}`);
+            preSplitBackup.running = true;
+        } else {
+            appearanceFileView.writeAdapter();
+        }
+    }
     FileView {
         id: appearanceFileView
-        // Only once the main file has been read: the seed below needs its
-        // raw appearance object, and a shell that timed out on the directory
-        // migration must not create files in it.
-        path: root.mainLoaded ? root.appearanceFilePath : ""
+        path: root.configDirReady ? root.appearanceFilePath : ""
         watchChanges: true
         blockWrites: root.blockWrites
         onFileChanged: appearanceReloadTimer.restart()
         onAdapterUpdated: appearanceWriteTimer.restart()
+        // A write emits saved, never loaded, and the directory watch may not
+        // be armed yet when the file is first created: reload on our own.
+        onSaved: if (!root.appearanceLoaded) appearanceReloadTimer.restart()
+        onSaveFailed: error => {
+            console.log(`[Config] Could not write ${root.appearanceFilePath} (error ${error}); continuing read-only.`);
+            root.appearanceLoaded = true;
+            root.finishLoad();
+        }
         onLoaded: {
             root.appearanceLoaded = true;
             root.finishLoad();
         }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
-                if (root.configDirTimedOut) {
-                    root.appearanceLoaded = true;
-                    root.finishLoad();
-                    return;
-                }
-                if (root.legacyAppearance !== null) {
-                    // The split: the downgrade copy first, then config.json's
-                    // appearance becomes the file, verbatim, and the watch
-                    // reloads it into the adapter. The copy is waited for:
-                    // `ready` (and the migrations that write) comes only
-                    // once appearance is loaded, which is after it.
-                    console.log(`[Config] Splitting appearance out of ${root.filePath} into ${root.appearanceFilePath}`);
-                    preSplitBackup.running = true;
-                } else {
-                    writeAdapter();
-                }
+                root.appearanceMissing = true;
+                root.seedAppearanceIfMissing();
                 return;
             }
             console.log(`[Config] Could not read ${root.appearanceFilePath} (error ${error}); continuing with defaults.`);
