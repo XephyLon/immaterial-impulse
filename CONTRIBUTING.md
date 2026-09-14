@@ -332,10 +332,11 @@ bug in anything that qualifies:
 A widget's logic - parsers, state machines, output naming, the table a look is
 picked from, anything that spawns a process and decides on its result - lives in
 a `.pragma library` JS module beside the widget or in the owning service, with a
-unit test of its own (`tests/tst_<name>.qml`). The visual component is a surface-free `Item` (or
-`MouseArea`) that reads state and calls functions; host files stay thin. The
-precedents are `modules/imi/bar/network_speed.js`, `bundled/calendar/calendar_matrix.js`,
-`bundled/image-converter/converter_queue.js` and `services/updates_outcome.js`; `docs/proposals/headless-widgets.md` has the
+unit test of its own (`tests/tst_<name>.qml`). The visual component is a
+surface-free `Item` (or `MouseArea`) that reads state and calls functions; host
+files stay thin. The precedents are `modules/imi/bar/network_speed.js`,
+`bundled/calendar/calendar_matrix.js`, `bundled/image-converter/converter_queue.js`
+and `services/updates_outcome.js`; `docs/proposals/headless-widgets.md` has the
 reasoning and the remaining phases. d249b36bf ("refactor(updates): the upgrade
 run and its outcome live in the service").
 
