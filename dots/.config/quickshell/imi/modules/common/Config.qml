@@ -2037,6 +2037,14 @@ Singleton {
                 // "" = follow the system icon theme; otherwise the directory
                 // name of an installed icon theme (see IconThemes.qml).
                 property string iconTheme: ""
+                // Frame mode (docs/proposals/frame-mode.md): bar, screen edges
+                // and inner corners drawn as one connected surface. Off by
+                // default: a look, not a fix. thickness 0 = the compositor's
+                // outer gap, so the band fills exactly what windows leave.
+                property JsonObject frame: JsonObject {
+                    property bool enable: false
+                    property int thickness: 0
+                }
                 property bool extraBackgroundTint: true
                 property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
                 // Automatic dark/light switching. "off" = manual only.

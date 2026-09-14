@@ -23,8 +23,17 @@ Scope {
         id: cornerPanelWindow
         property var brightnessMonitor: Brightness.getMonitorForScreen(screen)
         property bool fullscreen
-        visible: (Config.options.appearance.fakeScreenRounding === 1 || (Config.options.appearance.fakeScreenRounding === 2 && !fullscreen))
+        // Frame mode needs its four inner fillets whatever the fake-rounding
+        // setting says; outside it the setting rules as before.
+        visible: FrameGeometry.enabled ? !fullscreen
+            : (Config.options.appearance.fakeScreenRounding === 1 || (Config.options.appearance.fakeScreenRounding === 2 && !fullscreen))
         property var corner
+        // Where this fillet sits in frame mode: at the inner corner, where
+        // the bar (or band) meets the side band. FrameGeometry owns the
+        // arithmetic; nothing here computes an inset.
+        readonly property var frameMargins: FrameGeometry.enabled
+            ? FrameGeometry.cornerMargins(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight")
+            : ({ left: 0, top: 0, right: 0, bottom: 0 })
 
         exclusionMode: ExclusionMode.Ignore
         mask: Region {
@@ -41,8 +50,10 @@ Scope {
             right: cornerWidget.isTopRight || cornerWidget.isBottomRight
         }
         margins {
-            right: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * -1
-            bottom: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * -1
+            left: cornerPanelWindow.frameMargins.left
+            top: cornerPanelWindow.frameMargins.top
+            right: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * -1 + cornerPanelWindow.frameMargins.right
+            bottom: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * -1 + cornerPanelWindow.frameMargins.bottom
         }
 
         implicitWidth: cornerWidget.implicitWidth
@@ -52,6 +63,9 @@ Scope {
             id: cornerWidget
             anchors.fill: parent
             corner: cornerPanelWindow.corner
+            // The frame's colour joins the fillet to the bar and the bands;
+            // the fake screen rounding stays black.
+            color: FrameGeometry.enabled ? FrameGeometry.color : "#000000"
             rightVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.right) * 1
             bottomVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && cornerPanelWindow.anchors.bottom) * 1
 

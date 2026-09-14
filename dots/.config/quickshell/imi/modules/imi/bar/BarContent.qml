@@ -197,10 +197,12 @@ Item {
         border.width: root.floatPlate ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
 
-        bottomLeftRadius:  Config.options.bar.cornerStyle === 0 && !Config.options.bar.bottom ? Appearance.rounding.screenRounding : radius
-        bottomRightRadius: Config.options.bar.cornerStyle === 0 && !Config.options.bar.bottom ? Appearance.rounding.screenRounding : radius
-        topLeftRadius:     Config.options.bar.cornerStyle === 0 && Config.options.bar.bottom  ? Appearance.rounding.screenRounding : radius
-        topRightRadius:    Config.options.bar.cornerStyle === 0 && Config.options.bar.bottom  ? Appearance.rounding.screenRounding : radius
+        // In frame mode the plate is square: the fillets at its ends are the
+        // ScreenCorners inner corners, drawn in the same colour.
+        bottomLeftRadius:  FrameGeometry.enabled ? 0 : (Config.options.bar.cornerStyle === 0 && !Config.options.bar.bottom ? Appearance.rounding.screenRounding : radius)
+        bottomRightRadius: FrameGeometry.enabled ? 0 : (Config.options.bar.cornerStyle === 0 && !Config.options.bar.bottom ? Appearance.rounding.screenRounding : radius)
+        topLeftRadius:     FrameGeometry.enabled ? 0 : (Config.options.bar.cornerStyle === 0 && Config.options.bar.bottom  ? Appearance.rounding.screenRounding : radius)
+        topRightRadius:    FrameGeometry.enabled ? 0 : (Config.options.bar.cornerStyle === 0 && Config.options.bar.bottom  ? Appearance.rounding.screenRounding : radius)
     }
 
     Item {

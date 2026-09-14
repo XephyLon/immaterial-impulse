@@ -29,6 +29,7 @@ import qs.modules.imi.verticalBar
 import qs.modules.imi.wallpaperSelector
 import qs.modules.imi.desktopMenu
 import qs.modules.imi.dropShelf
+import qs.modules.imi.frame
 import qs.modules.imi.recordingRegion
 import qs.modules.imi.screenshotResult
 
@@ -52,6 +53,7 @@ Scope {
     PanelLoader { component: Polkit {} }
     PanelLoader { component: RegionSelector {} }
     PanelLoader { component: ScreenCorners {} }
+    PanelLoader { extraCondition: Config.options.appearance.frame.enable; component: Frame {} }
     PanelLoader { component: Screensaver {} }
     PanelLoader { component: ImageViewer {} }
     PanelLoader { component: ScreenTranslator {} }
