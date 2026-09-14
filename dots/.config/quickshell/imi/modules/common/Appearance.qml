@@ -639,6 +639,37 @@ Singleton {
             }
         }
 
+        // The transient overlays' enter and leave (OverlayLifecycle): a
+        // scrim-and-card arrival a touch quicker than a panel's, and a leave
+        // short enough that the surface outliving its flag is never felt.
+        property QtObject overlayEnter: QtObject {
+            property int duration: motion.scale(300)
+            property int type: Easing.BezierSpline
+            property list<real> bezierCurve: animationCurves.emphasizedDecel
+            property int velocity: motion.scaleVelocity(650)
+            property Component numberAnimation: Component {
+                NumberAnimation {
+                    alwaysRunToEnd: true
+                    duration: root.animation.overlayEnter.duration
+                    easing.type: root.animation.overlayEnter.type
+                    easing.bezierCurve: root.animation.overlayEnter.bezierCurve
+                }
+            }
+        }
+        property QtObject overlayExit: QtObject {
+            property int duration: motion.scale(180)
+            property int type: Easing.BezierSpline
+            property list<real> bezierCurve: animationCurves.emphasizedAccel
+            property int velocity: motion.scaleVelocity(650)
+            property Component numberAnimation: Component {
+                NumberAnimation {
+                    alwaysRunToEnd: true
+                    duration: root.animation.overlayExit.duration
+                    easing.type: root.animation.overlayExit.type
+                    easing.bezierCurve: root.animation.overlayExit.bezierCurve
+                }
+            }
+        }
         property QtObject elementMoveFast: QtObject {
             property int duration: motion.scale(animationCurves.expressiveEffectsDuration)
             property int type: Easing.BezierSpline
