@@ -152,6 +152,8 @@ ColumnLayout {
                 onClicked: OllamaCatalog.cancelPull()
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "close"
                     iconSize: Appearance.font.pixelSize.normal
                     color: Appearance.colors.colOnLayer1
@@ -361,6 +363,8 @@ ColumnLayout {
                             onClicked: Qt.openUrlExternally(`https://ollama.com/library/${libRow.modelData.name}`)
                             contentItem: MaterialSymbol {
                                 anchors.centerIn: parent
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
                                 text: "open_in_new"
                                 iconSize: Appearance.font.pixelSize.normal
                                 color: Appearance.colors.colSubtext
