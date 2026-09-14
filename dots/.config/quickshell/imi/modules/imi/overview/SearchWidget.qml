@@ -352,8 +352,9 @@ Item { // Wrapper
                     // the list (the builder never names AiInline).
                     readonly property bool isAskRow: modelData?.id === "ask-assistant"
                         && AiInline.question === (modelData?.name ?? "")
-                    inlineAnswer: isAskRow ? AiInline.answer : ""
+                    inlineAnswer: isAskRow ? (AiInline.answer !== "" ? AiInline.answer : AiInline.errorNote) : ""
                     inlineAnswerPending: isAskRow && AiInline.busy
+                    inlineAnswerStale: isAskRow && (AiInline.stale || (AiInline.answer === "" && AiInline.errorNote !== ""))
                     imageEntry: searchItem.cliphistRawString !== "" && Cliphist.entryIsImage(searchItem.cliphistRawString)
                     faviconPaths: {
                         const paths = {};

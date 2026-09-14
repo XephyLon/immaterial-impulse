@@ -307,6 +307,7 @@ a chat streaming at the same time) and exposes `apiKeyEnvVarName` because `Gemin
 reads it from `root` unqualified. Enter with an answer on the row mints a session and adds
 question + answer through `Ai.addMessage` instead of sending again. `test_ai_inline_contract.py`
 pins the shape; `test_ai_inline_runtime.py` counts requests against a fake streaming server.
+7703badd5 ("feat(launcher): one-sentence answers under the Ask row").
 **`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
 through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
 `/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)

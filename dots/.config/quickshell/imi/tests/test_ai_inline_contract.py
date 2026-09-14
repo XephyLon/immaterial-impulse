@@ -77,7 +77,7 @@ class InlineAnswerContract(unittest.TestCase):
         refresh = _block(self.search, "function refreshInlineAnswer() {")
         self.assertIn("AiInline.ask(StringUtils.cleanPrefix(root.query, aiPrefix))", refresh)
         self.assertIn("AiInline.cancel()", refresh)
-        self.assertIn("function onOverviewOpenChanged() {\n            if (!GlobalStates.overviewOpen) AiInline.cancel();", self.search)
+        self.assertIn("function onOverviewOpenChanged() {\n            if (!GlobalStates.overviewOpen && (Config.options.search.ai.inline ?? false)) AiInline.cancel();", self.search)
 
     def test_the_host_binds_the_row_to_the_singleton_and_the_builder_tags_the_row(self):
         # SearchItem is a gallery component (lint_dumb_widgets): it takes the
@@ -86,7 +86,8 @@ class InlineAnswerContract(unittest.TestCase):
         self.assertIn('id: "ask-assistant"', self.search)
         self.assertIn('modelData?.id === "ask-assistant"', widget)
         self.assertIn("AiInline.question === (modelData?.name ?? \"\")", widget)
-        self.assertIn("inlineAnswer: isAskRow ? AiInline.answer : \"\"", widget)
+        self.assertIn("inlineAnswer: isAskRow ? (AiInline.answer !== \"\" ? AiInline.answer : AiInline.errorNote) : \"\"", widget)
+        self.assertIn("inlineAnswerStale: isAskRow && (AiInline.stale", widget)
         self.assertIn("inlineAnswerPending: isAskRow && AiInline.busy", widget)
         self.assertNotIn("AiInline", self.item, "the row stays presentational")
         self.assertIn('property string inlineAnswer: ""', self.item)
@@ -94,14 +95,32 @@ class InlineAnswerContract(unittest.TestCase):
 
     def test_enter_carries_an_existing_answer_into_the_chat(self):
         ask = _block(self.search, "function askAssistant(question) {")
-        self.assertIn("const inlineAnswer = AiInline.take(text);", ask)
+        self.assertIn("AiInline.take(text)", ask)
         self.assertIn("AiSessions.mint(text);", ask)
         self.assertIn('Ai.addMessage(text, "user");', ask)
-        self.assertIn('Ai.addMessage(inlineAnswer, "assistant");', ask)
+        self.assertIn('Ai.addMessage(carried, "assistant");', ask)
         self.assertIn("Ai.sendUserMessage(text);", ask)
+        # The bubble is stamped with the model that answered, recorded when
+        # the request started - not whatever is selected at Enter.
+        self.assertIn("taken.model || Ai.currentModelId", ask)
         # The ordinary send is the fallback, not a second request on top.
-        self.assertLess(ask.index('Ai.addMessage(inlineAnswer, "assistant");'), ask.index("Ai.sendUserMessage(text);"))
-        self.assertIn("return;", ask[ask.index('Ai.addMessage(inlineAnswer, "assistant");'):ask.index("Ai.sendUserMessage(text);")])
+        self.assertLess(ask.index('Ai.addMessage(carried, "assistant");'), ask.index("Ai.sendUserMessage(text);"))
+        self.assertIn("return;", ask[ask.index('Ai.addMessage(carried, "assistant");'):ask.index("Ai.sendUserMessage(text);")])
+
+    def test_off_means_off_and_a_cancel_kills_curl(self):
+        refresh = _block(self.search, "function refreshInlineAnswer() {")
+        self.assertIn("if (!(Config.options.search.ai.inline ?? false)) return;", refresh)
+        # The request script: a trap that removes the body file (it holds the
+        # typed question) and kills curl, which runs backgrounded under wait.
+        self.assertIn("trap 'rm -f \"$BODY_FILE\"; [ -n \"$CURL_PID\" ] && kill \"$CURL_PID\" 2>/dev/null' EXIT TERM INT", self.inline)
+        self.assertIn('--data @\"$BODY_FILE\" &', self.inline)
+        self.assertIn('wait \"$CURL_PID\"', self.inline)
+        # The per-request message objects are destroyed, not merely dropped.
+        self.assertIn("function releaseMessages()", self.inline)
+        self.assertIn("root.answerMessage.destroy()", self.inline)
+        self.assertIn("root.userMessage.destroy()", self.inline)
+        # A failure says so where the answer would be.
+        self.assertIn("root.errorNote = Translation.tr(", self.inline)
 
     def test_debounced_bounded_and_isolated_from_the_chat(self):
         self.assertIn("debounce.restart()", self.inline)
@@ -119,9 +138,11 @@ class InlineAnswerContract(unittest.TestCase):
     def test_settings_rows_come_and_go_with_rowvisible(self):
         page = _strip(PAGE.read_text())
         self.assertIn("Config.options.search.ai.inline = !Config.options.search.ai.inline", page)
-        cloud = page[page.index("Config.options.search.ai.inlineWithCloud") - 400:page.index("Config.options.search.ai.inlineWithCloud")]
-        self.assertIn("property bool rowVisible: Config.options.search.ai.inline", cloud)
+        self.assertIn("property bool rowVisible: Config.options.search.ai.inline && Ai.currentModelHasApiKey && !AiInline.modelIsLocal && !Config.options.search.ai.inlineWithCloud", page,
+                      "the hint row: a cloud model with the cloud switch off is the case where the feature does nothing")
+        self.assertIn("Config.options.search.ai.inlineWithCloud = !Config.options.search.ai.inlineWithCloud", page)
         self.assertIn("Config.options.search.ai.inlineDelayMs = newValue", page)
+        self.assertIn("Config.options.search.ai.inlineMinWords = newValue", page, "every persisted option has its row")
 
 
 if __name__ == "__main__":

@@ -44,6 +44,9 @@ RippleButton {
     // is on its way; the host that builds the row supplies both.
     property string inlineAnswer: ""
     property bool inlineAnswerPending: false
+    // Dimmed: the answer belongs to the previous question (kept so the row
+    // does not collapse while typing), or it is a failure note.
+    property bool inlineAnswerStale: false
     
     visible: root.entryShown
     property int horizontalMargin: Appearance.spacing.space125
@@ -272,6 +275,8 @@ RippleButton {
                 Layout.fillWidth: true
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: root.selected ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colSubtext
+                opacity: root.inlineAnswerStale ? 0.55 : 1
+                Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
                 wrapMode: Text.WordWrap
                 text: root.inlineAnswer !== "" ? root.inlineAnswer : Translation.tr("Thinking…")
             }

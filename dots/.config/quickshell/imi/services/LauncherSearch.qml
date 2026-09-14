@@ -36,6 +36,8 @@ Singleton {
     // word count, debounce); a query without the prefix cancels whatever
     // was in flight. Closing the overview cancels it too.
     function refreshInlineAnswer() {
+        // Off means off: nothing here instantiates or pokes AiInline.
+        if (!(Config.options.search.ai.inline ?? false)) return;
         const aiPrefix = Config.options.search.prefix.ai ?? "";
         if (aiPrefix.length > 0 && root.query.startsWith(aiPrefix))
             AiInline.ask(StringUtils.cleanPrefix(root.query, aiPrefix));
@@ -45,7 +47,7 @@ Singleton {
     Connections {
         target: GlobalStates
         function onOverviewOpenChanged() {
-            if (!GlobalStates.overviewOpen) AiInline.cancel();
+            if (!GlobalStates.overviewOpen && (Config.options.search.ai.inline ?? false)) AiInline.cancel();
         }
     }
 
@@ -797,18 +799,23 @@ Singleton {
     function askAssistant(question) {
         const text = String(question ?? "").trim();
         if (text.length === 0) return;
-        const inlineAnswer = AiInline.take(text);
+        const taken = (Config.options.search.ai.inline ?? false) ? AiInline.take(text) : { "answer": "", "model": "" };
         GlobalStates.overviewOpen = false;
         GlobalStates.sidebarLeftTab = "intelligence";
         GlobalStates.sidebarLeftOpen = true;
-        if (inlineAnswer.length > 0) {
+        if (taken.answer.length > 0) {
             AiSessions.mint(text);
             Ai.addMessage(text, "user");
-            Ai.addMessage(inlineAnswer, "assistant");
+            // A cut answer says so in the transcript, so the "…" reads as the
+            // launcher's budget and not as the model trailing off.
+            const carried = taken.answer.endsWith("…")
+                ? taken.answer + " " + Translation.tr("*(cut in the launcher; ask to continue)*")
+                : taken.answer;
+            Ai.addMessage(carried, "assistant");
             // Stamped with the model that answered, like a streamed reply,
             // so the bubble shows its icon and name instead of a blank.
             const answerId = Ai.messageIDs[Ai.messageIDs.length - 1];
-            if (Ai.messageByID[answerId]) Ai.messageByID[answerId].model = Ai.currentModelId;
+            if (Ai.messageByID[answerId]) Ai.messageByID[answerId].model = taken.model || Ai.currentModelId;
             return;
         }
         Ai.sendUserMessage(text);

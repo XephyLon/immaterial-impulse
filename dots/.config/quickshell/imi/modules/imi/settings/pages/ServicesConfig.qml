@@ -503,11 +503,25 @@ ContentPage {
 
                 GroupedList {
                     ConfigSwitch {
-                        buttonIcon: "bolt"
+                        buttonIcon: "auto_awesome"
                         text: Translation.tr("Answer short questions inline, under the Ask row")
                         checked: Config.options.search.ai.inline
                         onToggleRequested: Config.options.search.ai.inline = !Config.options.search.ai.inline
                         StyledToolTip { text: Translation.tr("Under the assistant prefix, after a pause in typing, a one-sentence answer appears under the Ask row. This sends what you type to the selected model: only a local model answers unless the next switch is on. Enter carries the answer into the chat.") }
+                    }
+                    ConfigRow {
+                        // Why nothing happens: the majority case is a cloud
+                        // model selected and the cloud switch off.
+                        property bool rowVisible: Config.options.search.ai.inline && Ai.currentModelHasApiKey && !AiInline.modelIsLocal && !Config.options.search.ai.inlineWithCloud
+                        StyledText {
+                            Layout.fillWidth: true
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: Appearance.colors.colSubtext
+                            wrapMode: Text.WordWrap
+                            text: Ai.models[Ai.currentModelId]
+                                ? Translation.tr("The selected model (%1) runs in the cloud, so nothing answers inline until the next switch is on.").arg(Ai.models[Ai.currentModelId].name ?? Ai.currentModelId)
+                                : Translation.tr("No model is selected, so nothing answers inline yet.")
+                        }
                     }
                     ConfigSwitch {
                         property bool rowVisible: Config.options.search.ai.inline
@@ -526,6 +540,16 @@ ContentPage {
                         to: 3000
                         stepSize: 100
                         onValueModified: Config.options.search.ai.inlineDelayMs = newValue
+                    }
+                    ConfigSpinBox {
+                        property bool rowVisible: Config.options.search.ai.inline
+                        icon: "short_text"
+                        text: Translation.tr("Minimum words in the question")
+                        value: Config.options.search.ai.inlineMinWords
+                        from: 1
+                        to: 10
+                        stepSize: 1
+                        onValueModified: Config.options.search.ai.inlineMinWords = newValue
                     }
                 }
             }
