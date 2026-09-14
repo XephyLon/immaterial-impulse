@@ -1065,6 +1065,12 @@ if ! python3 "$SCRIPT_DIR/test_launcher_ai_ask.py"; then
     exit 1
 fi
 
+echo "Running inline launcher answers contract..."
+if ! python3 "$SCRIPT_DIR/test_ai_inline_contract.py"; then
+    echo "Inline launcher answers contract failed."
+    exit 1
+fi
+
 echo "Running settings page id tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_page_ids.py"; then
     echo "Settings page id tests failed."
@@ -1217,6 +1223,12 @@ fi
 echo "Running launcher Ask row runtime tests..."
 if ! python3 "$SCRIPT_DIR/test_launcher_ask_runtime.py"; then
     echo "Launcher Ask row runtime tests failed."
+    exit 1
+fi
+
+echo "Running inline launcher answers runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_inline_runtime.py"; then
+    echo "Inline launcher answers runtime tests failed."
     exit 1
 fi
 
