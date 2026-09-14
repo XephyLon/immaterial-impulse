@@ -9,13 +9,17 @@ CACHE_DIR="$XDG_CACHE_HOME/quickshell"
 STATE_DIR="$XDG_STATE_HOME/quickshell"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_CONFIG_FILE="$XDG_CONFIG_HOME/immaterial-impulse/config.json"
+# appearance.* lives in config.d/appearance.json since the config split
+# (stage 1); config.json is read only when that file does not exist yet.
+APPEARANCE_CONFIG_FILE="$XDG_CONFIG_HOME/immaterial-impulse/config.d/appearance.json"
+[ -f "$APPEARANCE_CONFIG_FILE" ] || APPEARANCE_CONFIG_FILE="$SHELL_CONFIG_FILE"
 PLUGIN_STATE_FILE="$XDG_CONFIG_HOME/immaterial-impulse/plugin-state.json"
 MATUGEN_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
 
 handle_kde_material_you_colors() {
     if [ -f "$SHELL_CONFIG_FILE" ]; then
-        enable_qt_apps=$(jq -r '.appearance.wallpaperTheming.enableQtApps' "$SHELL_CONFIG_FILE")
+        enable_qt_apps=$(jq -r '.appearance.wallpaperTheming.enableQtApps' "$APPEARANCE_CONFIG_FILE")
         if [ "$enable_qt_apps" == "false" ]; then
             return
         fi
@@ -201,7 +205,7 @@ switch() {
     # so for those a dry run asks it, and the terminal generator is handed
     # that hex as --color - otherwise the shell and the terminal would score
     # the image independently and disagree.
-    source_mode="$(jq -r '.appearance.palette.sourceMode // "dominant"' "$SHELL_CONFIG_FILE" 2>/dev/null)"
+    source_mode="$(jq -r '.appearance.palette.sourceMode // "dominant"' "$APPEARANCE_CONFIG_FILE" 2>/dev/null)"
     case "$source_mode" in
         saturation|less-saturation|lightness|darkness|value) matugen_args=(--prefer "$source_mode") ;;
         *) source_mode="dominant"; matugen_args=(--source-color-index 0) ;;
@@ -316,7 +320,7 @@ switch() {
 
     if [[ -n "$mode_flag" ]]; then
         matugen_args+=(--mode "$mode_flag")
-        if [[ $(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode' "$SHELL_CONFIG_FILE") == "true" ]]; then
+        if [[ $(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode' "$APPEARANCE_CONFIG_FILE") == "true" ]]; then
             generate_colors_material_args+=(--mode "dark")
         else
             generate_colors_material_args+=(--mode "$mode_flag")
@@ -329,7 +333,7 @@ switch() {
     pre_process "$mode_flag"
 
     if [ -f "$SHELL_CONFIG_FILE" ]; then
-        enable_apps_shell=$(jq -r '.appearance.wallpaperTheming.enableAppsAndShell' "$SHELL_CONFIG_FILE")
+        enable_apps_shell=$(jq -r '.appearance.wallpaperTheming.enableAppsAndShell' "$APPEARANCE_CONFIG_FILE")
         if [ "$enable_apps_shell" == "false" ]; then
             echo "App and shell theming disabled, skipping matugen and color generation"
             return
@@ -337,9 +341,9 @@ switch() {
     fi
 
     if [ -f "$SHELL_CONFIG_FILE" ]; then
-        harmony=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmony' "$SHELL_CONFIG_FILE")
-        harmonize_threshold=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold' "$SHELL_CONFIG_FILE")
-        term_fg_boost=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.termFgBoost' "$SHELL_CONFIG_FILE")
+        harmony=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmony' "$APPEARANCE_CONFIG_FILE")
+        harmonize_threshold=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold' "$APPEARANCE_CONFIG_FILE")
+        term_fg_boost=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.termFgBoost' "$APPEARANCE_CONFIG_FILE")
         [[ "$harmony" != "null" && -n "$harmony" ]] && generate_colors_material_args+=(--harmony "$harmony")
         [[ "$harmonize_threshold" != "null" && -n "$harmonize_threshold" ]] && generate_colors_material_args+=(--harmonize_threshold "$harmonize_threshold")
         [[ "$term_fg_boost" != "null" && -n "$term_fg_boost" ]] && generate_colors_material_args+=(--term_fg_boost "$term_fg_boost")
@@ -370,14 +374,16 @@ main() {
     start_dir_flag=""
 
     get_type_from_config() {
-        jq -r '.appearance.palette.type' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "auto"
+        jq -r '.appearance.palette.type' "$APPEARANCE_CONFIG_FILE" 2>/dev/null || echo "auto"
     }
     get_accent_color_from_config() {
-        jq -r '.appearance.palette.accentColor' "$SHELL_CONFIG_FILE" 2>/dev/null || echo ""
+        jq -r '.appearance.palette.accentColor' "$APPEARANCE_CONFIG_FILE" 2>/dev/null || echo ""
     }
     set_accent_color() {
         local color="$1"
-        jq --arg color "$color" '.appearance.palette.accentColor = $color' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
+        # Written to the file appearance lives in (config.d/appearance.json
+        # once split, config.json before), never into the other one.
+        jq --arg color "$color" '.appearance.palette.accentColor = $color' "$APPEARANCE_CONFIG_FILE" > "$APPEARANCE_CONFIG_FILE.tmp" && mv "$APPEARANCE_CONFIG_FILE.tmp" "$APPEARANCE_CONFIG_FILE"
     }
 
     detect_scheme_type_from_image() {

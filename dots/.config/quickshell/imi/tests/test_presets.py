@@ -450,5 +450,53 @@ class PresetTests(unittest.TestCase):
             self.assertEqual(saved.get("bar", {}).get("weather", {}).get("apiKey", ""), "")
 
 
+    def test_a_split_appearance_file_round_trips_through_one_preset_document(self):
+        """config split, stage 1: the preset stays one document; --save folds
+        config.d/appearance.json in, --apply writes appearance back to that
+        file and everything else to config.json without an appearance key."""
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            config_dir = home / ".config/immaterial-impulse"
+            script_dir = home / ".config/quickshell/imi/scripts"
+            (config_dir / "config.d").mkdir(parents=True)
+            (script_dir / "wallpapers").mkdir(parents=True)
+            (script_dir / "colors").mkdir(parents=True)
+            (config_dir / "config.json").write_text(json.dumps({
+                "background": {"wallpaperPath": "/tmp/w.jpg"},
+                "bar": {"cornerStyle": 1},
+                "wallpaperSelector": {"wallpaperEngine": {"activePath": ""}},
+            }))
+            (config_dir / "config.d/appearance.json").write_text(json.dumps({
+                "appearance": {"iconTheme": "saved-theme", "fakeScreenRounding": 2}}))
+            (config_dir / "plugin-state.json").write_text(json.dumps({"version": 2}))
+            for helper in (script_dir / "wallpapers/wallpaper-engine.sh", script_dir / "colors/switchwall.sh"):
+                helper.write_text("#!/usr/bin/env bash\nexit 0\n")
+                helper.chmod(0o755)
+            presets = script_dir / "presets.sh"
+            shutil.copy(PRESETS, presets)
+            presets.chmod(0o755)
+            env = dict(os.environ, HOME=str(home))
+            subprocess.run(["bash", str(presets), "--save", "look"], env=env, check=True)
+            preset = json.loads((config_dir / "presets/look.json").read_text())
+            self.assertEqual(preset["appearance"]["iconTheme"], "saved-theme", "save folds the split file in")
+            self.assertEqual(preset["bar"]["cornerStyle"], 1)
+            # Change both files, then apply: the preset's values come back to
+            # their own files.
+            (config_dir / "config.d/appearance.json").write_text(json.dumps({
+                "appearance": {"iconTheme": "changed", "fakeScreenRounding": 0, "extra": True}}))
+            (config_dir / "config.json").write_text(json.dumps({
+                "background": {"wallpaperPath": "/tmp/w.jpg"},
+                "bar": {"cornerStyle": 3},
+                "wallpaperSelector": {"wallpaperEngine": {"activePath": ""}},
+            }))
+            subprocess.run(["bash", str(presets), "--apply", "look"], env=env, check=True)
+            appearance = json.loads((config_dir / "config.d/appearance.json").read_text())["appearance"]
+            self.assertEqual(appearance["iconTheme"], "saved-theme")
+            self.assertEqual(appearance["fakeScreenRounding"], 2)
+            self.assertTrue(appearance["extra"], "keys the preset does not carry survive, as in config.json")
+            main = json.loads((config_dir / "config.json").read_text())
+            self.assertEqual(main["bar"]["cornerStyle"], 1)
+            self.assertNotIn("appearance", main, "apply never writes appearance into config.json once split")
+
 if __name__ == "__main__":
     unittest.main()

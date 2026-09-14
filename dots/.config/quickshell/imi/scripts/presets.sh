@@ -7,6 +7,11 @@
 
 CONFIG_DIR="$HOME/.config/immaterial-impulse"
 CONFIG_FILE="$CONFIG_DIR/config.json"
+# appearance.* lives in config.d/appearance.json since the config split
+# (stage 1). A preset stays ONE document (it is shared): --save folds the
+# file's appearance back in, --apply splits it back out. Until the shell has
+# split (no file yet), everything is config.json as before.
+APPEARANCE_FILE="$CONFIG_DIR/config.d/appearance.json"
 PLUGIN_STATE_FILE="$CONFIG_DIR/plugin-state.json"
 PRESETS_DIR="$CONFIG_DIR/presets"
 # Derive locations from the script itself, so this works regardless of where the
@@ -82,11 +87,17 @@ case "$action" in
         # key left in the file would also overwrite the recipient's own.
         # (The AI provider keys are not affected - those live in the keyring,
         # never in this document.)
-        jq --argjson pluginState "$plugin_state" \
+        if [ -f "$APPEARANCE_FILE" ]; then
+            # config.json * {appearance}: the split file is the live copy.
+            config_doc="$(jq -s '.[0] * (.[1] | {appearance: (.appearance // {})})' "$CONFIG_FILE" "$APPEARANCE_FILE")"
+        else
+            config_doc="$(cat "$CONFIG_FILE")"
+        fi
+        printf '%s' "$config_doc" | jq --argjson pluginState "$plugin_state" \
             'del(._presetMeta, ._pluginState)
              | ._pluginState = $pluginState
              | if .bar.weather.apiKey? then .bar.weather.apiKey = "" else . end' \
-            "$CONFIG_FILE" > "$PRESETS_DIR/${name}.json"
+            > "$PRESETS_DIR/${name}.json"
         if [ -n "$description" ]; then
             jq --arg desc "$description" '._presetMeta = {"description": $desc}' \
                 "$PRESETS_DIR/${name}.json" > "$PRESETS_DIR/${name}.json.tmp" \
@@ -221,8 +232,21 @@ case "$action" in
                         + ($persistIds | map(select(. as $x | ($curEnabled | index($x)) != null))))
                   else . end' \
             "$CONFIG_FILE" "$preset_file" \
-            > "${CONFIG_FILE}.tmp" \
-            && replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
+            > "${CONFIG_FILE}.merged" || true
+        if [ -f "$APPEARANCE_FILE" ]; then
+            # The split: appearance goes to its own file (merged over what is
+            # there), everything else to config.json without it. Temp files
+            # first, then the two renames back to back.
+            jq -s '.[0] * (.[1] | {appearance: (.appearance // {})})' "$APPEARANCE_FILE" "${CONFIG_FILE}.merged" \
+                > "${APPEARANCE_FILE}.tmp" || true
+            jq 'del(.appearance)' "${CONFIG_FILE}.merged" > "${CONFIG_FILE}.tmp" || true
+            rm -f "${CONFIG_FILE}.merged"
+            replace_if_changed "${APPEARANCE_FILE}.tmp" "$APPEARANCE_FILE" || true
+            replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
+        else
+            mv "${CONFIG_FILE}.merged" "${CONFIG_FILE}.tmp"
+            replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
+        fi
         engine_path="$(jq -r '.wallpaperSelector.wallpaperEngine.activePath // empty' "$CONFIG_FILE")"
         engine_preview="$(jq -r '.wallpaperSelector.wallpaperEngine.activePreview // empty' "$CONFIG_FILE")"
         if [ -n "$engine_path" ] && [ -d "$engine_path" ] && [ -n "$engine_preview" ]; then

@@ -61,7 +61,7 @@ apply_kitty() {
 
   # Re-append the managed Kitty background block after regenerating colors.
   python3 "$SCRIPT_DIR/../terminal/apply_terminal_background.py" \
-    --config "$XDG_CONFIG_HOME/immaterial-impulse/config.json" \
+    --config "$APPEARANCE_CONFIG_FILE" \
     --theme "$STATE_DIR/user/generated/terminal/kitty-theme.conf" || true
 
   # Reload
@@ -133,8 +133,12 @@ apply_qt() {
 
 # Check if terminal theming is enabled in config
 CONFIG_FILE="$XDG_CONFIG_HOME/immaterial-impulse/config.json"
-if [ -f "$CONFIG_FILE" ]; then
-  enable_terminal=$(jq -r '.appearance.wallpaperTheming.enableTerminal' "$CONFIG_FILE")
+# appearance.* lives in config.d/appearance.json since the config split
+# (stage 1); config.json is read only when that file does not exist yet.
+APPEARANCE_CONFIG_FILE="$XDG_CONFIG_HOME/immaterial-impulse/config.d/appearance.json"
+[ -f "$APPEARANCE_CONFIG_FILE" ] || APPEARANCE_CONFIG_FILE="$CONFIG_FILE"
+if [ -f "$APPEARANCE_CONFIG_FILE" ]; then
+  enable_terminal=$(jq -r '.appearance.wallpaperTheming.enableTerminal' "$APPEARANCE_CONFIG_FILE")
   if [ "$enable_terminal" = "true" ]; then
     apply_term &
   fi
