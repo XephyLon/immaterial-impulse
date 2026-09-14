@@ -148,7 +148,10 @@ Rectangle {
         // is for narrowing a list, not for choosing between two stores).
         // OpenRouter/providers on the left, Ollama on the right; the search
         // field below filters whichever is shown.
-        RowLayout {
+        // A Flow, not a RowLayout: GroupButton carries Layout.fill hints for
+        // its bounce group, and a Layout honours them - the pair stretched to
+        // the whole column.
+        Flow {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space25
             SelectionGroupButton {
@@ -165,7 +168,6 @@ Rectangle {
                 toggled: root.ollamaMode
                 onClicked: root.source = "ollama"
             }
-            Item { Layout.fillWidth: true }
         }
 
         ConfigTextArea {
