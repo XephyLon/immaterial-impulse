@@ -805,6 +805,10 @@ Singleton {
             AiSessions.mint(text);
             Ai.addMessage(text, "user");
             Ai.addMessage(inlineAnswer, "assistant");
+            // Stamped with the model that answered, like a streamed reply,
+            // so the bubble shows its icon and name instead of a blank.
+            const answerId = Ai.messageIDs[Ai.messageIDs.length - 1];
+            if (Ai.messageByID[answerId]) Ai.messageByID[answerId].model = Ai.currentModelId;
             return;
         }
         Ai.sendUserMessage(text);

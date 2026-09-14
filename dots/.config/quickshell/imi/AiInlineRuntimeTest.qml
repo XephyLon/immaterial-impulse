@@ -160,7 +160,8 @@ ShellRoot {
                 const msgs = Ai.messageIDs.map(id => Ai.messageByID[id]);
                 harness.check("Enter with an answer: question and answer land in the chat, no request",
                     msgs.length === 2 && msgs[0].role === "user" && msgs[0].rawContent === "what is a wayland compositor"
-                    && msgs[1].role === "assistant" && msgs[1].rawContent === answer && answer.length > 0 && !Ai.isGenerating);
+                    && msgs[1].role === "assistant" && msgs[1].rawContent === answer && answer.length > 0 && !Ai.isGenerating
+                    && msgs[1].model === Ai.currentModelId);
                 harness.check("Enter opens the Intelligence tab and closes the overview",
                     GlobalStates.sidebarLeftOpen === true && GlobalStates.overviewOpen === false);
                 harness.check("the answer was taken: AiInline is clear", AiInline.answer === "" && AiInline.question === "" && AiInline.lastAnswer === "");
