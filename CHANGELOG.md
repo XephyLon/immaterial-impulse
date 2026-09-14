@@ -48,6 +48,11 @@ own repo; the installer pins which revision it builds.
   uses the configured duration, including ones an app marked "never dismiss".
 
 ### Changed
+- **The desktop menu, the screenshot toast and the drop shelf now leave the
+  way they arrive.** They faded or scaled in but vanished in one frame; each
+  now plays a short leave motion, stops taking input the moment it is
+  dismissed, and the drop shelf gains an entrance it never had. Both follow
+  the motion speed setting and collapse under reduce-motion.
 - **The shell no longer loads Mesa's software renderer beside the NVIDIA
   driver.** On a machine where NVIDIA is the only GPU the `qs` wrapper pins
   the EGL vendor, dropping about 110 MB of resident memory from the shell and

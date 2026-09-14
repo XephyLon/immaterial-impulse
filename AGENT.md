@@ -293,6 +293,20 @@ JSON catalog; anything else is pulled by typed `name:tag`. Discovery for the cha
 daemon with a tiny HTTP server and a stub `ollama` on PATH; `test_ollama_catalog_contract.py`
 pins the no-CLI, watcher-gated, explicit-start rules. A pull asks twice (armed chip shows size and
 free disk) and refuses outright when it would not fit.
+**A transient overlay's surface outlives its flag by the leave motion, and its input does not.**
+`modules/common/widgets/OverlayLifecycle.qml` is the one mechanism: `wanted` follows the
+`GlobalStates.*Open` flag, `alive` is what the host's Loader/LazyLoader binds `active:` to, and
+`progress` (0→1 on `animation.overlayEnter`, 1→0 on `animation.overlayExit`, both through the
+motion policy) is the only scalar the card's opacity/scale read; `closed()` fires when the leave
+finishes and only then does `alive` drop. The host's `PanelWindow.mask` follows the FLAG
+(`flag ? null : emptyRegion`), so the leaving surface never eats a click - a leave that keeps input
+is 180 ms of dead desktop, the trap the 2026-08-02 branch recorded. The desktop menu, screenshot
+toast and drop shelf use it (the session screen has its own older `openProgress`/`reallyOpen`
+pair of the same shape; the cheatsheet is a FloatingWindow and the compositor animates it).
+`tests/lint_overlay_lifecycle.py` fails a host whose surface `active:` reads the flag or that has
+no flag-gated mask; `OverlayLifecycleRuntimeTest.qml` measures the sequence against the real
+catalogue, reduce-motion included. Do not put Behaviors back on those cards: a Behavior cannot
+play a leave on a window destroyed the frame its flag drops.
 
 **Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
 `--only apps` is asked for, and names are validated before they touch the filesystem.** A shared
