@@ -129,9 +129,11 @@ def test_the_bar_widget_is_a_view_of_the_service():
     assert "Updates.runUpgrade()" in widget and "Updates.checkNow()" in widget
     source = UPDATES.read_text()
     assert "function runUpgrade()" in source and "function checkNow()" in source
-    assert re.search(r"function outcomeFor\(countAfter\)\s*\{\s*return countAfter === 0", source), \
-        "the outcome is decided by the count read after the run: 0 = up to date, else cancelled"
+    # The outcome itself is driven in tests/tst_updates_outcome.qml; here only
+    # the wiring: the timer fires the command the service builds.
+    assert "onTriggered: Quickshell.execDetached(root.outcomeCommand(root.count))" in source
     assert "outcomeTimer.restart()" in source and "interval: 5000" in source
+    assert "property alias upgrading" not in source, "a writable alias would bypass the re-entry guard"
     # The upgrade never runs twice at once.
     assert re.search(r"function runUpgrade\(\)\s*\{\s*if \(upgradeProc\.running\) return;", source)
 

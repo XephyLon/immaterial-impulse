@@ -5,7 +5,6 @@ import qs.services
 import qs
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 
 MouseArea {
     id: root

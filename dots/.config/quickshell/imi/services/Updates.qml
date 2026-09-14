@@ -5,6 +5,7 @@ import qs.modules.common.functions
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "updates_outcome.js" as UpdatesOutcome
 
 /*
  * System updates service. Currently only supports Arch.
@@ -34,17 +35,20 @@ Singleton {
         root.refresh();
         Quickshell.execDetached(["notify-send", Translation.tr("Updates"), Translation.tr("Checking for updates..."), "-a", "Shell"]);
     }
-    property alias upgrading: upgradeProc.running
     function runUpgrade() {
         if (upgradeProc.running) return;
         upgradeProc.running = true;
     }
-    // The outcome, as a notification body and urgency, for the count read
-    // after an upgrade run. Pure, so tests/test_updates_contract.py can pin it.
-    function outcomeFor(countAfter) {
-        return countAfter === 0
-            ? { "body": Translation.tr("System up to date"), "urgency": "low" }
-            : { "body": Translation.tr("Update cancelled — %1 updates still pending").arg(countAfter), "urgency": "normal" };
+    // The outcome notification for the count read after an upgrade run:
+    // decided by updates_outcome.js (tests/tst_updates_outcome.qml drives
+    // it), worded here. The two commands are the bar widget's old ones
+    // byte for byte: "up to date" carried no urgency flag, "cancelled"
+    // carried `-u normal`.
+    function outcomeCommand(countAfter) {
+        const body = UpdatesOutcome.outcome(countAfter).upToDate
+            ? Translation.tr("System up to date")
+            : Translation.tr("Update cancelled — %1 updates still pending").arg(countAfter);
+        return UpdatesOutcome.command(countAfter, Translation.tr("Updates"), body);
     }
 
     Process {
@@ -59,10 +63,7 @@ Singleton {
         id: outcomeTimer
         interval: 5000
         repeat: false
-        onTriggered: {
-            const outcome = root.outcomeFor(root.count);
-            Quickshell.execDetached(["notify-send", Translation.tr("Updates"), outcome.body, "-a", "Shell", "-u", outcome.urgency]);
-        }
+        onTriggered: Quickshell.execDetached(root.outcomeCommand(root.count))
     }
 
     Timer {
