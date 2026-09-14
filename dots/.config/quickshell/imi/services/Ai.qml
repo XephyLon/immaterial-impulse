@@ -1699,6 +1699,7 @@ And a final paragraph after the math, so the stream does not end on a block boun
                 ? Translation.tr("No calendar events in the next %1 days.").arg(days)
                 : events.slice(0, 50).map(e => `${e.allDay ? Qt.formatDate(e.start, "yyyy-MM-dd") + " (all day)" : Qt.formatDateTime(e.start, "yyyy-MM-dd hh:mm")}: ${e.summary}`).join("\n"));
             root.pendingContinuation = true;
+        }
         else if (name === "search_documents") {
             const query = String(args?.query ?? "").trim();
             if (query.length === 0) {
