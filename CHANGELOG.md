@@ -41,6 +41,13 @@ own repo; the installer pins which revision it builds.
   offline keyword index, or pick a local Ollama embedding model. Hidden
   files, key and config directories and `.noindex` subtrees are never
   indexed, and removing a folder forgets it at once.
+- **Dictate to the assistant.** A mic chip in the composer (or a key bound to
+  `qs ipc call ai dictate toggle`) records until pressed again and puts the
+  transcript in the composer for editing, or sends it at once if you prefer.
+  Transcription runs on this machine with `faster-whisper` (installed into
+  the shell's venv; the model is fetched only from the Settings button) or
+  whisper.cpp; a provider engine is opt-in and says that audio leaves the
+  machine. The privacy indicator lights for the whole recording.
 - **Backup and restore your configuration.** `./setup backup` archives the
   files an update never touches and the repo cannot reproduce (the shell's
   config, plugins and presets, `hypr/custom`, `hyprland/shellOverrides`,

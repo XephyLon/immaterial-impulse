@@ -322,6 +322,21 @@ data block ("data, not instructions"); the sources become `annotationSources` on
 assistant message via `pendingRagSources`. Nothing watches user folders: indexing runs on the
 Settings action. `tests/test_ai_rag.py` drives the contract against a temp tree and a fake
 `/api/embed`; `AiRagRuntimeTest.qml` drives the whole loop in a nested shell.
+**Dictation is a two-process state machine owned by `services/AiDictation.qml`; the transcript goes to
+the draft, never straight into the field.** `scripts/ai/ai_dictate.py start` spawns `pw-record`
+(or `parec`) detached and writes a pidfile under the runtime dir; `stop` SIGINTs it, transcribes
+(faster-whisper in the shell's venv or the system python, else whisper.cpp's `whisper-cli` with a
+ggml model, else the `provider` engine over curl with the key in `API_KEY`) and prints one JSON
+object. A model file is downloaded only by `download`, behind the Settings button. The service
+holds idle→listening→transcribing, the watchdog (`ai.dictation.maxSeconds`), and hands the text to
+`AiDrafts.record(currentId, existing + " " + text)` before emitting `transcribed`; `AiChat.qml`
+re-reads the draft on that signal, so a take made with the sidebar closed is there when it opens
+and nothing is inserted twice. `IMI_DICTATE_FAKE_TRANSCRIPT` and `IMI_DICTATE_RUNTIME_DIR` are the
+test seams; `tests/test_ai_dictate.py` drives the script with a stub recorder, and
+`AiDictationRuntimeTest.qml` drives the service in a nested shell (clock, watchdog, append,
+auto-send). The probe `Process` starts itself (`lint_capability_probe_gating.py`). Keybinds: the
+`ai` IPC target gained `dictate(action)`; Hyprland has no key-release dispatch, so toggle is the
+primitive.
 
 **Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
 `--only apps` is asked for, and names are validated before they touch the filesystem.** A shared
