@@ -358,6 +358,27 @@ ContentPage {
                         uniform: true
                         ConfigTextArea {
                             Layout.fillWidth: true
+                            fieldWidth: 100
+                            buttonIcon: "star_shine"
+                            text: Translation.tr("Ask the assistant")
+                            value: Config.options.search.prefix.ai
+                            onValueChanged: {
+                                Config.options.search.prefix.ai = value;
+                            }
+                        }
+                        ConfigSwitch {
+                            buttonIcon: "low_priority"
+                            text: Translation.tr("Offer \"Ask\" for long queries nothing else matches")
+                            checked: Config.options.search.ai.fallthrough
+                            onToggleRequested: Config.options.search.ai.fallthrough = !Config.options.search.ai.fallthrough
+                            StyledToolTip { text: Translation.tr("Four or more words, no app, setting or action matched, and a usable model selected. Nothing is sent before Enter.") }
+                        }
+                    }
+
+                    ConfigRow {
+                        uniform: true
+                        ConfigTextArea {
+                            Layout.fillWidth: true
                             buttonIcon: "apps"
                             fieldWidth: 100
                             text: Translation.tr("Apps")
