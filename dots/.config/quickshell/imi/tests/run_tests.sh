@@ -1065,6 +1065,12 @@ if ! python3 "$SCRIPT_DIR/test_config_split_contract.py"; then
     exit 1
 fi
 
+echo "Running frame mode contract..."
+if ! python3 "$SCRIPT_DIR/test_frame_mode_contract.py"; then
+    echo "Frame mode contract failed."
+    exit 1
+fi
+
 echo "Running launcher Ask row contract..."
 if ! python3 "$SCRIPT_DIR/test_launcher_ai_ask.py"; then
     echo "Launcher Ask row contract failed."
