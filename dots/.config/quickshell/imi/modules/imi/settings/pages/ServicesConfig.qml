@@ -184,6 +184,119 @@ ContentPage {
             }
 
             ContentSubsection {
+                title: Translation.tr("Documents")
+                tooltip: Translation.tr("Folders the assistant may search. Hidden files, key and config directories, and .noindex subtrees are never indexed.")
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space100
+
+                    Repeater {
+                        model: Config.options.ai.documents.folders
+                        delegate: RowLayout {
+                            id: docFolderRow
+                            required property string modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            spacing: Appearance.spacing.space200
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: docFolderRow.modelData
+                                elide: Text.ElideMiddle
+                                color: Appearance.colors.colOnLayer1
+                            }
+                            RippleButton {
+                                implicitWidth: 32
+                                implicitHeight: 32
+                                buttonRadius: Appearance.rounding.full
+                                colBackground: "transparent"
+                                colRipple: Appearance.colors.colErrorActive
+                                onClicked: {
+                                    const gone = docFolderRow.modelData;
+                                    const next = (Config.options.ai.documents.folders ?? []).slice();
+                                    next.splice(docFolderRow.index, 1);
+                                    Config.options.ai.documents.folders = next;
+                                    AiRag.forget(gone);
+                                }
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: "delete"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colError
+                                }
+                                StyledToolTip { text: Translation.tr("Remove and forget this folder") }
+                            }
+                        }
+                    }
+
+                    MaterialTextField {
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents, then press Enter")
+                        onAccepted: {
+                            const value = text.trim();
+                            if (value.length === 0) return;
+                            const next = (Config.options.ai.documents.folders ?? []).slice();
+                            if (next.indexOf(value) === -1) next.push(value);
+                            Config.options.ai.documents.folders = next;
+                            text = "";
+                        }
+                    }
+
+                    ConfigSelectionArray {
+                        text: Translation.tr("Embeddings")
+                        currentValue: Config.options.ai.documents.embedder
+                        onSelected: value => { Config.options.ai.documents.embedder = value; }
+                        options: [
+                            { "displayName": Translation.tr("Keywords (offline)"), "value": "lexical" },
+                            { "displayName": "nomic-embed-text (Ollama)", "value": "ollama:nomic-embed-text" },
+                            { "displayName": "mxbai-embed-large (Ollama)", "value": "ollama:mxbai-embed-large" },
+                        ]
+                    }
+
+                    ConfigSwitch {
+                        buttonIcon: "attach_file"
+                        text: Translation.tr("Attach matching passages to every message")
+                        checked: Config.options.ai.documents.alwaysAttach
+                        onToggleRequested: Config.options.ai.documents.alwaysAttach = !Config.options.ai.documents.alwaysAttach
+                        StyledToolTip { text: Translation.tr("Off: the model calls search_documents when it decides to look") }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Appearance.spacing.space100
+                        RippleButton {
+                            enabled: AiRag.configured && !AiRag.indexing
+                            implicitHeight: 32
+                            padding: Appearance.spacing.space150
+                            buttonRadius: Appearance.rounding.full
+                            colBackground: Appearance.colors.colSecondaryContainer
+                            colRipple: Appearance.colors.colSecondaryContainerActive
+                            onClicked: AiRag.index()
+                            contentItem: StyledText {
+                                text: AiRag.indexing
+                                    ? Translation.tr("Indexing %1 / %2").arg(AiRag.progressDone).arg(AiRag.progressTotal)
+                                    : Translation.tr("Index now")
+                                color: Appearance.colors.colOnSecondaryContainer
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                            }
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            text: AiRag.error.length > 0 ? AiRag.error
+                                : AiRag.files === 0 ? Translation.tr("Nothing indexed yet")
+                                : Translation.tr("%1 files, %2 passages, %3").arg(AiRag.files).arg(AiRag.chunks)
+                                      .arg(AiRag.indexedWith.length > 0 ? AiRag.indexedWith : "")
+                            color: AiRag.error.length > 0 ? Appearance.m3colors.m3error : Appearance.colors.colSubtext
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                        }
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Custom OpenAI-compatible Providers")
 
                 AiProvidersEditor {

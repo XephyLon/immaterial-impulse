@@ -161,6 +161,15 @@ Item {
 
         Item { Layout.fillWidth: true }
 
+        ControlChip { // Documents: retrieval on every send, while folders are configured.
+            visible: AiRag.configured
+            chipIcon: AiRag.alwaysAttach ? "folder_open" : "folder"
+            chipInk: AiRag.alwaysAttach ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer1
+            hint: AiRag.alwaysAttach
+                ? Translation.tr("Documents: attaching matching passages to every message\nClick to stop")
+                : Translation.tr("Documents: the model searches on demand\nClick to attach matching passages to every message")
+            onClicked: Config.options.ai.documents.alwaysAttach = !Config.options.ai.documents.alwaysAttach
+        }
         ControlChip {
             chipIcon: "edit_square"
             hint: Translation.tr("New chat")
