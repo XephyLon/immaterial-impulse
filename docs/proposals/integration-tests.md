@@ -1,7 +1,15 @@
 # Proposal: integration test script
 
-**Status:** parked (2026-07-24). Captured from the wallpaper-freeze debugging
-session so the idea and findings survive until someone picks it up.
+**Status:** scope 1 implemented (2026-09-14) as `sdata/tests/test_install_lifecycle.py`,
+run by `run_tests.sh`'s installer loop; scopes 2-4 still parked. Captured from
+the wallpaper-freeze debugging session so the idea and findings survive.
+
+The first run of scope 1 found three defects in the yaml (`--exp-files`)
+step that the legacy step did not have: rsync was never given a parent
+directory to land in on a fresh home (the very first pattern aborted the
+step), `hyprland/shellOverrides` was excluded from the hypr sync but never
+seeded, and a pre-lua `hyprland.conf` was left in place. All three are fixed
+in the same change.
 
 ## Why
 

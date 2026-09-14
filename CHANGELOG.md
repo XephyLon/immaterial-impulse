@@ -80,6 +80,12 @@ own repo; the installer pins which revision it builds.
   process spawns per second are gone.
 
 ### Fixed
+- **The experimental yaml installer (`setup install --exp-files`) works on a
+  fresh machine.** Its first pattern aborted because rsync had no parent
+  directory to land in, it never created `hyprland/shellOverrides`, and it
+  left a pre-lua `hyprland.conf` in place. An installer lifecycle test now
+  runs both file steps twice against a throwaway home and asserts what an
+  update keeps and what it owns.
 - **Lyrics translations and romanizations from Glassy no longer go missing.**
   The lyrics page renders them a few seconds after the lyrics, so a fetch
   that ran first cached a result without them and the toggles never appeared
