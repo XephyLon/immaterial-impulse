@@ -11,6 +11,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-14
+
+The first feature release after 1.0. The assistant learns to look (files,
+clipboard, wallpaper, to-dos, calendar), to search your own documents, to be
+asked from the launcher, to be dictated to, and to manage local Ollama models;
+the overlays leave the way they arrive; the installer gains backup/restore, a
+lifecycle test that found three defects, and an NVIDIA-only EGL pin that
+drops ~110 MB from every shell process.
+
 ### Added
 - **The assistant can look at your files, clipboard, wallpaper, to-dos and
   calendar.** Six new read-only tools (`read_file`, `list_directory`,
