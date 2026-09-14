@@ -278,6 +278,21 @@ closes the overview, sets `GlobalStates.sidebarLeftTab = "intelligence"` (consum
 empty, because it changes what Enter does on a miss. `LauncherAskRuntimeTest.qml` drives it with a
 keyless probe model injected the way ollama discovery injects one; a fresh install persists
 `ai.model = ""`, so the harness selects the probe explicitly.
+**`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
+through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
+`/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)
+and `/api/delete`; the base URL is `IMI_OLLAMA_URL` (the test seam), else `OLLAMA_HOST`, else
+`127.0.0.1:11434`. The refresh timer runs only while `watchers > 0` - the browse page counts
+itself in on completion and out on destruction - so nothing polls the daemon in the background,
+and the only non-curl processes are `df` (free space where the daemon stores models) and the
+`systemctl --user start ollama.service` behind the explicit Start button. The remote library is
+a hand-refreshed snapshot (`services/ai/ollama_library.js`, dated) because ollama.com has no
+JSON catalog; anything else is pulled by typed `name:tag`. Discovery for the chat is still
+`show-installed-ollama-models.sh`; `Ai.refreshOllamaModels()` re-runs it after a pull and
+`Ai.forgetOllamaModel()` drops a removed model at once. `test_ollama_catalog_runtime.py` plays the
+daemon with a tiny HTTP server and a stub `ollama` on PATH; `test_ollama_catalog_contract.py`
+pins the no-CLI, watcher-gated, explicit-start rules. A pull asks twice (armed chip shows size and
+free disk) and refuses outright when it would not fit.
 
 **Preset `apps.*` values are shell commands the shell runs; `presets.sh --apply` strips them unless
 `--only apps` is asked for, and names are validated before they touch the filesystem.** A shared

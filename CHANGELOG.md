@@ -26,6 +26,13 @@ own repo; the installer pins which revision it builds.
   four or more words that matches no app, setting or action offers the same
   row last. The row appears only while the selected model is usable, and
   nothing is sent before Enter. The prefix is configurable.
+- **Manage local Ollama models from the model browser.** The assistant's
+  Browse view gains an Ollama page: whether the daemon is running (with a
+  Start button), what is installed and loaded, a curated library with a pull
+  per size that shows the download size and your free disk before it starts
+  and streams its progress, a "pull anything by name" field, removal with a
+  confirm, and a hint whether a size fits your GPU memory. Pulled models
+  appear in the model picker at once; removed ones leave it.
 - **Backup and restore your configuration.** `./setup backup` archives the
   files an update never touches and the repo cannot reproduce (the shell's
   config, plugins and presets, `hypr/custom`, `hyprland/shellOverrides`,
