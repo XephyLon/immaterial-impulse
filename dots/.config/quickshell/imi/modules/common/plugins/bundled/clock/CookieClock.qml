@@ -19,6 +19,7 @@ import qs.modules.common.plugins.designsystem.widgets as Expressive
 // docs/PLUGINS.md, "Multi-file packages".
 import "dateIndicator"
 import "minuteMarks"
+import "cookie_presets.js" as CookiePresets
 
 Item {
     id: root
@@ -105,24 +106,11 @@ Item {
 
     function setClockPreset(category) {
         if (!root.aiStyling) return;
-        if (category === "") return;
+        // The table lives in cookie_presets.js (tests/tst_cookie_presets.qml).
+        const preset = CookiePresets.presetFor(category)
+        if (!preset) return;
         print("[Cookie clock] Setting clock preset for category: " + category)
-        // "abstract", "anime", "city", "minimalist", "landscape", "plants", "person", "space"
-        if (category == "abstract") {
-            applyStyle(9, "none", "fill", "medium", "dot", "bubble")
-        } else if (category == "anime") {
-            applyStyle(7, "none", "fill", "bold", "dot", "bubble")
-        } else if (category == "city" || category == "space") {
-            applyStyle(23, "full", "hollow", "thin", "classic", "bubble")
-        } else if (category == "minimalist") {
-            applyStyle(6, "none", "fill", "bold", "dot", "hide")
-        } else if (category == "landscape") {
-            applyStyle(14, "full", "hollow", "medium", "classic", "bubble")
-        } else if (category == "plants") {
-            applyStyle(9, "dots", "fill", "bold", "dot", "border")
-        } else if (category == "person") {
-            applyStyle(14, "full", "classic", "classic", "classic", "rect")
-        }
+        applyStyle(preset[0], preset[1], preset[2], preset[3], preset[4], preset[5])
     }
 
     FileView {
