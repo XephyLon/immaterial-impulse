@@ -1838,6 +1838,14 @@ if ! python3 "$SCRIPT_DIR/test_ai_rag_runtime.py"; then
     exit 1
 fi
 
+# Dictation end to end in a real shell: listen, stop, the transcript lands
+# in the draft; the watchdog stops a stuck recording; auto-send sends.
+echo "Running AI dictation runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_dictation_runtime.py"; then
+    echo "AI dictation runtime tests failed."
+    exit 1
+fi
+
 # The block is a set of paths into the theme's directory and at the apply
 # script sudo will accept; the directory was renamed and the script moved. A
 # wrong path here means the login screen silently stops following the
@@ -2472,6 +2480,14 @@ fi
 echo "Running AI local retrieval script tests..."
 if ! python3 "$SCRIPT_DIR/test_ai_rag.py"; then
     echo "AI local retrieval script tests failed."
+    exit 1
+fi
+
+# Dictation: scripts/ai/ai_dictate.py's recording state machine with a stub
+# recorder and the fake-transcript seam; refusals are JSON, not tracebacks.
+echo "Running AI dictation script tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_dictate.py"; then
+    echo "AI dictation script tests failed."
     exit 1
 fi
 
