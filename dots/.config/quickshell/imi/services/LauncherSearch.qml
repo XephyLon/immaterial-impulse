@@ -374,6 +374,9 @@ Singleton {
         Config.options.search.prefix.math, Config.options.search.prefix.shellCommand,
         Config.options.search.prefix.webSearch, Config.options.search.prefix.file,
         Config.options.search.prefix.prism,
+        Config.options.search.prefix.ai, Config.options.search.ai.fallthrough,
+        Config.options.search.ai.fallthroughMinWords,
+        Ai.models, Ai.currentModelId, Ai.currentModelHasApiKey,
     ]
     onResultInputsChanged: Qt.callLater(root.rebuildResults)
 
@@ -673,6 +676,25 @@ Singleton {
                 Qt.openUrlExternally(url);
             }
         });
+        // The assistant. Offered under its prefix, and (opt-in) as the last
+        // row for a long query nothing else matched. Built only while the
+        // selected model can actually answer, so the launcher never offers a
+        // dead end; the question is sent on Enter, never while typing.
+        const aiPrefix = Config.options.search.prefix.ai ?? "";
+        const startsWithAiPrefix = aiPrefix.length > 0 && root.query.startsWith(aiPrefix);
+        const aiModel = Ai.models[Ai.currentModelId];
+        const aiUsable = !!aiModel && Ai.currentModelHasApiKey;
+        const aiQuestion = (startsWithAiPrefix ? StringUtils.cleanPrefix(root.query, aiPrefix) : root.query).trim();
+        const aiResultObject = (aiUsable && aiQuestion.length > 0) ? resultComp.createObject(null, {
+            name: aiQuestion,
+            verb: Translation.tr("Ask"),
+            type: Translation.tr("Ask %1").arg(aiModel.name ?? "AI"),
+            iconName: "star_shine",
+            iconType: LauncherSearchResult.IconType.Material,
+            execute: () => {
+                root.askAssistant(aiQuestion);
+            }
+        }) : null;
         const launcherActionObjects = root.allActions.map(action => {
             const actionString = `${Config.options.search.prefix.action}${action.action}`;
             if (actionString.startsWith(root.query) || root.query.startsWith(actionString)) {
@@ -702,6 +724,8 @@ Singleton {
             result.push(commandResultObject);
         } else if (startsWithWebSearchPrefix) {
             result.push(webSearchResultObject);
+        } else if (startsWithAiPrefix && aiResultObject) {
+            result.push(aiResultObject);
         }
 
         //////////////// Apps //////////////////
@@ -716,6 +740,18 @@ Singleton {
         ////////// Launcher actions ////////////
         result = result.concat(launcherActionObjects);
 
+        ////////// Ask the assistant ///////////
+        // Fallthrough: a real sentence that matched nothing launchable.
+        if (aiResultObject && !startsWithAiPrefix
+                && (Config.options.search.ai.fallthrough ?? false)
+                && appResultObjects.length === 0 && prismResultObjects.length === 0
+                && settingsResults.length === 0 && launcherActionObjects.length === 0
+                && !startsWithShellCommandPrefix && !startsWithWebSearchPrefix
+                && !startsWithNumber && !startsWithMathPrefix
+                && aiQuestion.split(/\s+/).length >= (Config.options.search.ai.fallthroughMinWords ?? 4)) {
+            result.push(aiResultObject);
+        }
+
         /// Math result, command, web search ///
         if (Config.options.search.prefix.showDefaultActionsWithoutPrefix) {
             if (!startsWithShellCommandPrefix)
@@ -727,6 +763,19 @@ Singleton {
         }
         
         return result;
+    }
+
+    // Enter on the Ask row: close the launcher, open the left sidebar on the
+    // Intelligence tab (the deep link is consumed by SidebarLeftContent) and
+    // send the question. Ai is a singleton, so the send does not wait for the
+    // panel to be built.
+    function askAssistant(question) {
+        const text = String(question ?? "").trim();
+        if (text.length === 0) return;
+        GlobalStates.overviewOpen = false;
+        GlobalStates.sidebarLeftTab = "intelligence";
+        GlobalStates.sidebarLeftOpen = true;
+        Ai.sendUserMessage(text);
     }
 
     Component {

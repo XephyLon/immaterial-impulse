@@ -1579,8 +1579,19 @@ Singleton {
                     property string math: "="
                     property string shellCommand: "$"
                     property string webSearch: "?"
+                    property string ai: "@" // Ask the assistant (opens the Intelligence tab)
                     property string file: "~" // File/folder search
                     property string prism: "%" // Prism Launcher modpacks; inert without Prism installed
+                }
+                // The assistant in the overview: `@question` always offers an
+                // "Ask" row; `fallthrough` also offers it, last, for a query of
+                // at least `fallthroughMinWords` words that matched no app,
+                // pack, setting or action. The row exists only while the
+                // selected model is usable (a key for it, or a local model).
+                // Nothing is sent before Enter.
+                property JsonObject ai: JsonObject {
+                    property bool fallthrough: false
+                    property int fallthroughMinWords: 4
                 }
                 property JsonObject fileSearch: JsonObject {
                     property bool enable: true

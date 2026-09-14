@@ -19,7 +19,7 @@ RowLayout {
         searchInput.forceActiveFocus();
     }
 
-    enum SearchPrefixType { Action, App, Clipboard, Emojis, Symbols, Math, ShellCommand, WebSearch, Keybinds, DefaultSearch }
+    enum SearchPrefixType { Action, App, Clipboard, Emojis, Symbols, Math, ShellCommand, WebSearch, Keybinds, Ai, DefaultSearch }
 
     property var searchPrefixType: {
         if (root.searchingText.startsWith(Config.options.search.prefix.action)) return SearchBar.SearchPrefixType.Action;
@@ -31,6 +31,7 @@ RowLayout {
         if (root.searchingText.startsWith(Config.options.search.prefix.shellCommand)) return SearchBar.SearchPrefixType.ShellCommand;
         if (root.searchingText.startsWith(Config.options.search.prefix.webSearch)) return SearchBar.SearchPrefixType.WebSearch;
         if (root.searchingText.startsWith(Config.options.search.prefix.keybinds ?? "<")) return SearchBar.SearchPrefixType.Keybinds;
+        if ((Config.options.search.prefix.ai ?? "").length > 0 && root.searchingText.startsWith(Config.options.search.prefix.ai)) return SearchBar.SearchPrefixType.Ai;
         return SearchBar.SearchPrefixType.DefaultSearch;
     }
     
@@ -48,6 +49,7 @@ RowLayout {
             case SearchBar.SearchPrefixType.ShellCommand: return MaterialShape.Shape.PixelCircle;
             case SearchBar.SearchPrefixType.WebSearch: return MaterialShape.Shape.SoftBurst;
             case SearchBar.SearchPrefixType.Keybinds: return MaterialShape.Shape.Cookie4Sided;
+            case SearchBar.SearchPrefixType.Ai: return MaterialShape.Shape.Ghostish;
             default: return MaterialShape.Shape.Cookie7Sided;
         }
         text: switch (root.searchPrefixType) {
@@ -61,6 +63,7 @@ RowLayout {
             case SearchBar.SearchPrefixType.WebSearch: return "travel_explore";
             case SearchBar.SearchPrefixType.DefaultSearch: return "search";
             case SearchBar.SearchPrefixType.Keybinds: return "keyboard_command_key";
+            case SearchBar.SearchPrefixType.Ai: return "star_shine";
             default: return "search";
         }
     }
