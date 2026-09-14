@@ -28,6 +28,14 @@ mkdir -p "$PRESETS_DIR"
 replace_if_changed() {
     local candidate="$1"
     local destination="$2"
+    # Never install a candidate that is not a JSON object: a failed jq
+    # leaves an empty file, and renaming that over config.json is the
+    # settings wipe this script must never cause.
+    if ! jq -e 'type == "object"' "$candidate" >/dev/null 2>&1; then
+        echo "Error: refusing to install $candidate over $destination: not a JSON object" >&2
+        rm -f "$candidate"
+        return 2
+    fi
 
     if [ -f "$destination" ] && cmp -s "$candidate" "$destination"; then
         rm -f "$candidate"
@@ -224,7 +232,7 @@ case "$action" in
             fi
         fi
         current_enabled="$(jq -c '.plugins.enabled // []' "$CONFIG_FILE" 2>/dev/null || printf '[]')"
-        jq -s --argjson persistIds "$persist_ids" --argjson curEnabled "$current_enabled" \
+        if jq -s --argjson persistIds "$persist_ids" --argjson curEnabled "$current_enabled" \
             '.[0] * .[1] | del(._presetMeta, ._pluginState)
                 | if (.plugins.enabled? != null) and ($persistIds | length > 0) then
                     .plugins.enabled = (
@@ -232,14 +240,25 @@ case "$action" in
                         + ($persistIds | map(select(. as $x | ($curEnabled | index($x)) != null))))
                   else . end' \
             "$CONFIG_FILE" "$preset_file" \
-            > "${CONFIG_FILE}.merged" || true
+            > "${CONFIG_FILE}.merged"
+        then
+            :
+        else
+            echo "Error: could not merge the preset into $CONFIG_FILE; nothing was changed" >&2
+            rm -f "${CONFIG_FILE}.merged"
+            exit 1
+        fi
         if [ -f "$APPEARANCE_FILE" ]; then
             # The split: appearance goes to its own file (merged over what is
-            # there), everything else to config.json without it. Temp files
-            # first, then the two renames back to back.
-            jq -s '.[0] * (.[1] | {appearance: (.appearance // {})})' "$APPEARANCE_FILE" "${CONFIG_FILE}.merged" \
-                > "${APPEARANCE_FILE}.tmp" || true
-            jq 'del(.appearance)' "${CONFIG_FILE}.merged" > "${CONFIG_FILE}.tmp" || true
+            # there), everything else to config.json without it. Both temp
+            # files are built and checked before either rename.
+            if ! jq -s '.[0] * (.[1] | {appearance: (.appearance // {})})' "$APPEARANCE_FILE" "${CONFIG_FILE}.merged" \
+                    > "${APPEARANCE_FILE}.tmp" \
+                || ! jq 'del(.appearance)' "${CONFIG_FILE}.merged" > "${CONFIG_FILE}.tmp"; then
+                echo "Error: could not split the merged preset; nothing was changed" >&2
+                rm -f "${CONFIG_FILE}.merged" "${APPEARANCE_FILE}.tmp" "${CONFIG_FILE}.tmp"
+                exit 1
+            fi
             rm -f "${CONFIG_FILE}.merged"
             replace_if_changed "${APPEARANCE_FILE}.tmp" "$APPEARANCE_FILE" || true
             replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
