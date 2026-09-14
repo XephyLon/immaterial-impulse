@@ -1,0 +1,209 @@
+{
+  "appearance": {
+    "atAGlance": {
+      "alignment": "left",
+      "customWidth": 0,
+      "dateColorStyle": "onLayer1",
+      "fontFamily": "",
+      "fontSize": 24,
+      "greetingColorStyle": "primary",
+      "locked": false,
+      "quoteColorStyle": "onLayer1",
+      "showDate": true,
+      "showEvents": true,
+      "showGreeting": true,
+      "showQuote": true
+    },
+    "clock": {
+      "analog": {
+        "backgroundShape": "Circle",
+        "backgroundStyle": "shape",
+        "constantlyRotate": false,
+        "dateStyle": "bubble",
+        "dialStyle": "dots",
+        "handStyle": "modern",
+        "hourHandStyle": "fill",
+        "hourMarks": false,
+        "minuteHandStyle": "bold",
+        "secondHandStyle": "dot",
+        "shape": "Circle",
+        "showMarks": true,
+        "sides": 12,
+        "size": 240,
+        "timeIndicators": false
+      },
+      "analogLocked": {
+        "backgroundShape": "Circle",
+        "backgroundStyle": "shape",
+        "constantlyRotate": false,
+        "dateStyle": "bubble",
+        "dialStyle": "dots",
+        "handStyle": "modern",
+        "hourHandStyle": "fill",
+        "hourMarks": false,
+        "minuteHandStyle": "bold",
+        "secondHandStyle": "dot",
+        "shape": "Circle",
+        "showMarks": true,
+        "sides": 12,
+        "size": 240,
+        "timeIndicators": false
+      },
+      "code": {
+        "blockColorStyle": "primary",
+        "blockType": "js",
+        "fontFamily": "JetBrains Mono NF",
+        "fontSize": 18,
+        "keywordColorStyle": "tertiary",
+        "valueColorStyle": "primary"
+      },
+      "codeLocked": {
+        "blockColorStyle": "primary",
+        "blockType": "js",
+        "fontFamily": "JetBrains Mono NF",
+        "fontSize": 18,
+        "keywordColorStyle": "tertiary",
+        "valueColorStyle": "primary"
+      },
+      "digital": {
+        "alignment": "center",
+        "colorStyle": "primary",
+        "dateFontSize": 24,
+        "dateGap": 4,
+        "fontSize": 84,
+        "hideAmPm": false,
+        "isVertical": false
+      },
+      "digitalLocked": {
+        "alignment": "center",
+        "colorStyle": "primary",
+        "dateFontSize": 24,
+        "dateGap": 4,
+        "fontSize": 84,
+        "hideAmPm": false,
+        "isVertical": false
+      },
+      "offsetX": 0,
+      "offsetY": -50,
+      "pill": {
+        "dateColorStyle": "primary",
+        "isVertical": false,
+        "pillColorStyle": "surfaceContainerHigh",
+        "showBackground": true,
+        "size": 120,
+        "timeColorStyle": "onLayer0"
+      },
+      "pillLocked": {
+        "dateColorStyle": "primary",
+        "isVertical": false,
+        "pillColorStyle": "surfaceContainerHigh",
+        "showBackground": true,
+        "size": 120,
+        "timeColorStyle": "onLayer0"
+      },
+      "showDesktopDate": true,
+      "showLockscreenDate": true,
+      "showOnDesktop": true,
+      "style": "digital",
+      "styleLocked": "digital",
+      "text": {
+        "alignment": "center",
+        "dateColorStyle": "primary",
+        "dateFontSize": 18,
+        "fontSize": 42,
+        "timeColorStyle": "onSurface"
+      },
+      "textLocked": {
+        "alignment": "center",
+        "dateColorStyle": "primary",
+        "dateFontSize": 18,
+        "fontSize": 42,
+        "timeColorStyle": "onSurface"
+      },
+      "useSameStyle": true
+    },
+    "clockFonts": {
+      "desktopTimeFont": "Google Sans Flex",
+      "lockscreenTimeFont": "Google Sans Flex"
+    },
+    "currencyWidget": {
+      "baseCurrency": "USD",
+      "locked": false,
+      "quote1": "EUR",
+      "quote2": "GBP",
+      "quote3": "JPY",
+      "quote4": "CAD",
+      "sizeMode": "1x1"
+    },
+    "extraBackgroundTint": true,
+    "fakeScreenRounding": 2,
+    "fonts": {
+      "expressive": "Space Grotesk",
+      "iconNerd": "JetBrains Mono NF",
+      "main": "Google Sans Flex",
+      "monospace": "JetBrains Mono NF",
+      "numbers": "Google Sans Flex",
+      "reading": "Readex Pro",
+      "title": "Google Sans Flex"
+    },
+    "iconTheme": "",
+    "lyrics": {
+      "lyricsUseRomaji": false,
+      "showFloatingLyrics": false
+    },
+    "mediaWidget": {
+      "locked": false,
+      "showLyrics": false
+    },
+    "openrgb": {
+      "enable": false,
+      "excludedDevices": [],
+      "colorSource": "accent",
+      "monitorFullscreenOnly": true,
+      "monitorPollInterval": 200,
+      "monitorColorDelta": 12,
+      "monitorSmooth": true,
+      "monitorExcludedTypes": [
+        "GPU"
+      ]
+    },
+    "palette": {
+      "accentColor": "",
+      "type": "auto"
+    },
+    "systemMonitor": {
+      "locked": false,
+      "updateInterval": 3000,
+      "vertical": false
+    },
+    "terminal": {
+      "background": {
+        "enabled": true,
+        "imagePath": "",
+        "layout": "tiled",
+        "opacity": 0.1
+      }
+    },
+    "transparency": {
+      "automatic": false,
+      "backgroundTransparency": 0.11,
+      "contentTransparency": 0.57,
+      "enable": true
+    },
+    "wallpaperTheming": {
+      "enableAppsAndShell": true,
+      "enableQtApps": true,
+      "enableTerminal": true,
+      "terminalGenerationProps": {
+        "forceDarkMode": false,
+        "harmonizeThreshold": 100,
+        "harmony": 0.6,
+        "termFgBoost": 0.35
+      }
+    },
+    "weatherWidget": {
+      "locked": false,
+      "sizeMode": "1x1"
+    }
+  }
+}

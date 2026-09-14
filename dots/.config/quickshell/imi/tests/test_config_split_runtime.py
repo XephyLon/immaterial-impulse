@@ -28,7 +28,10 @@ class ConfigSplitRuntimeTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
         self.cfg_dir = self.home / "config" / "immaterial-impulse"
         self.cfg_dir.mkdir(parents=True)
+        # An OLD-style config.json: the shipped defaults with appearance folded
+        # back in, the shape every pre-split install has on disk.
         self.config = json.loads(SHIPPED_DEFAULT.read_text())
+        self.config.update(json.loads((ROOT / "defaults/config.d/appearance.json").read_text()))
         self.config["migratedUpstreamSchema"] = True
         self.config.setdefault("osd", {})["timeout"] = 1700
         self.config.setdefault("appearance", {})["iconTheme"] = "probe-theme"

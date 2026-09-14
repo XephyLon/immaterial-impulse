@@ -93,6 +93,20 @@ class ConfigSplitContract(unittest.TestCase):
         self.assertIn("if (root.configDirTimedOut) {\n            root.appearanceLoaded = true;", self.src)
         self.assertIn('Quickshell.execDetached(["mkdir", "-p", `${root.shellConfig}/config.d`])', DIRECTORIES.read_text())
 
+    def test_the_shipped_defaults_are_already_split(self):
+        # A fresh install must not split (and leave a pre-split copy of the
+        # shipped defaults behind): defaults/config.json carries no
+        # appearance, defaults/config.d/appearance.json does, and the
+        # installer seeds both.
+        import json
+        main = json.loads((ROOT / "defaults/config.json").read_text())
+        self.assertNotIn("appearance", main)
+        split = json.loads((ROOT / "defaults/config.d/appearance.json").read_text())
+        self.assertEqual(list(split), ["appearance"])
+        self.assertIn("iconTheme", split["appearance"])
+        inst = SCRIPTS["installer"].read_text()
+        self.assertIn('local domain_dir="${XDG_CONFIG_HOME}/quickshell/imi/defaults/config.d"', inst)
+
     def test_scripts_read_the_split_file_first(self):
         for name, path in SCRIPTS.items():
             text = path.read_text()

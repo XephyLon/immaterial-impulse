@@ -86,6 +86,21 @@ function seed_default_config(){
   x cp "$source" "$target"
   x mkdir -p "$(dirname ${INSTALLED_LISTFILE})"
   realpath -se "$target" >> "${INSTALLED_LISTFILE}"
+  # The per-domain files beside it (config-storage-split, stage 1:
+  # appearance), seeded the same way so a fresh install never has to split
+  # config.json itself and never leaves a pre-split copy behind.
+  local domain_dir="${XDG_CONFIG_HOME}/quickshell/imi/defaults/config.d"
+  if [[ -d "$domain_dir" ]]; then
+    x mkdir -p "$(dirname "$target")/config.d"
+    local f
+    for f in "$domain_dir"/*.json; do
+      [[ -f "$f" ]] || continue
+      local domain_target="$(dirname "$target")/config.d/$(basename "$f")"
+      if [[ -f "$domain_target" ]]; then continue; fi
+      x cp "$f" "$domain_target"
+      realpath -se "$domain_target" >> "${INSTALLED_LISTFILE}"
+    done
+  fi
 }
 cp_file(){
   # NOTE: This function is only for using in other functions

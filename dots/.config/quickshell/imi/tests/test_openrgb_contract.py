@@ -19,7 +19,7 @@ SERVICE = ROOT / "services" / "OpenRgb.qml"
 CONFIG = ROOT / "modules" / "common" / "Config.qml"
 SHELL = ROOT / "shell.qml"
 QUICK_CONFIG = ROOT / "modules" / "imi" / "settings" / "pages" / "QuickConfig.qml"
-DEFAULT_CONFIG = ROOT / "defaults" / "config.json"
+DEFAULT_CONFIG = ROOT / "defaults" / "config.d" / "appearance.json"  # appearance ships in its own file (config split)
 
 
 def _source() -> str:
