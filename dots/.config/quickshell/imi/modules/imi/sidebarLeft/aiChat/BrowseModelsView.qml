@@ -143,20 +143,25 @@ Rectangle {
             }
         }
 
-        // The store switch. OpenRouter/providers on the left, Ollama on the
-        // right; the search field below filters whichever is shown.
+        // The store switch: a single-choice segmented group, the same
+        // SelectionGroupButton pair ConfigSelectionArray draws (a filter chip
+        // is for narrowing a list, not for choosing between two stores).
+        // OpenRouter/providers on the left, Ollama on the right; the search
+        // field below filters whichever is shown.
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.space50
-            FilterChip {
-                label: root.openRouterMode ? "OpenRouter" : Translation.tr("Your providers")
-                chipIcon: "cloud"
+            spacing: Appearance.spacing.space25
+            SelectionGroupButton {
+                leftmost: true
+                buttonIcon: "cloud"
+                buttonText: root.openRouterMode ? "OpenRouter" : Translation.tr("Your providers")
                 toggled: !root.ollamaMode
                 onClicked: root.source = "remote"
             }
-            FilterChip {
-                label: "Ollama"
-                chipIcon: "memory"
+            SelectionGroupButton {
+                rightmost: true
+                buttonIcon: "memory"
+                buttonText: "Ollama"
                 toggled: root.ollamaMode
                 onClicked: root.source = "ollama"
             }
