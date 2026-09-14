@@ -38,26 +38,40 @@ class FrameModeContract(unittest.TestCase):
         geo = _strip(GEOMETRY.read_text())
         self.assertIn("Geo.bandThickness(Config.options.appearance.frame.thickness, Config.options.hyprland.general.gapsOut)", geo)
         self.assertIn("&& !Config.options.bar.vertical", geo, "the vertical bar is not framed in stage 1")
+        # The bar's edge is what the compositor reserves, not what the bar paints.
+        self.assertIn("readonly property real barThickness: Appearance.sizes.baseBarHeight", geo)
+        self.assertNotIn("Appearance.sizes.barHeight", geo)
+        self.assertIn("Geo.innerRadius(Config.options.hyprland.decoration.rounding, root.thickness)", geo)
+        self.assertIn("Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge)", geo)
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
         self.assertIn("FrameGeometry.cornerMargins(", corners)
         self.assertIn('color: FrameGeometry.enabled ? FrameGeometry.color : "#000000"', corners)
-        for side in ("left", "top", "right", "bottom"):
-            self.assertIn(f"cornerPanelWindow.frameMargins.{side}", corners, side)
-        self.assertNotRegex(corners, r"gapsOut|barHeight", "ScreenCorners computes no inset of its own")
+        # The window stays at the screen corner (the corner-open hit rect
+        # lives there); only the fillet SHAPE moves inward.
+        for side in ("left", "top"):
+            self.assertIn(f"{side}VisualMargin: cornerPanelWindow.frameMargins.{side}", corners, side)
+        self.assertNotIn("left: cornerPanelWindow.frameMargins.left", corners)
+        self.assertIn("implicitSize: FrameGeometry.enabled ? Math.round(FrameGeometry.innerRadius) : Appearance.rounding.screenRounding", corners)
+        self.assertNotRegex(corners, r"gapsOut|barHeight|decoration\.rounding", "ScreenCorners computes no inset or radius of its own")
         bar = _strip(BAR.read_text())
-        self.assertEqual(bar.count("FrameGeometry.enabled ? 0 :"), 4, "the plate squares all four corners in frame mode")
+        self.assertEqual(bar.count("FrameGeometry.enabled ? 0 :"), 4, "the centre-only pill squares all four corners in frame mode")
         frame = _strip(FRAME.read_text())
-        self.assertIn("color: FrameGeometry.color", frame)
+        self.assertIn('color: band.painted ? FrameGeometry.color : "transparent"', frame, "painted or transparent, never unmapped")
+        self.assertIn("visible: FrameGeometry.enabled\n", frame)
+        self.assertNotIn("visible: FrameGeometry.enabled && !fullscreen", frame)
         self.assertIn("exclusionMode: ExclusionMode.Ignore", frame, "the band lives in the gap; it reserves nothing")
         self.assertIn("mask: Region {}", frame, "the band takes no input")
-        self.assertIn("visible: FrameGeometry.enabled && !fullscreen && FrameGeometry.thickness > 0", frame)
-        self.assertIn('edge: FrameGeometry.barEdge === "top" ? "bottom" : "top"', frame, "the third band is opposite the bar")
+        self.assertEqual(frame.count("Band { screen: screenScope.modelData; edge:"), 4, "four bands, one per edge")
+        self.assertIn('FrameGeometry.bandOffset("top")', frame, "the bar-edge band starts under the bar's zone")
+        self.assertIn("HyprlandData.specialWorkspaceByMonitorName[", frame)
+        rules = (ROOT.parents[1] / "hypr/hyprland/rules.lua").read_text()
+        self.assertIn('namespace = "quickshell:frame" }, no_anim = true', rules)
 
     def test_the_family_gates_the_surface_on_the_option(self):
         fam = FAMILY.read_text()
-        self.assertIn("PanelLoader { extraCondition: Config.options.appearance.frame.enable; component: Frame {} }", fam)
+        self.assertIn("PanelLoader { extraCondition: FrameGeometry.enabled; component: Frame {} }", fam, "the family agrees with the authority (the vertical bar is not framed)")
         self.assertIn("import qs.modules.imi.frame", fam)
 
     def test_settings_rows_and_index(self):

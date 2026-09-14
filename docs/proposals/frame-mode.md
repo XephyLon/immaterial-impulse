@@ -3,8 +3,11 @@
 > Tracking proposal. **Stage 1 landed 2026-09-15**: the geometry authority
 > (`services/FrameGeometry.qml` + `frame_geometry.js`), the three bands
 > (`modules/imi/frame/Frame.qml`), the inner fillets (ScreenCorners) and the
-> square bar plate, behind `appearance.frame.enable` (off). Modals docking into
-> the frame, the vertical bar and per-screen frames are the next slices.
+> square centre-only pill, behind `appearance.frame.enable` (off). The bar's edge
+> inset is the reserved zone plus the outer gap (measured). Not modelled yet, and
+> the next slices: modals docking into the frame; the edge the dock is pinned to
+> (no band or fillet there); the vertical bar; a bar hidden by auto-hide or absent
+> from a screen's list; per-screen frames.
 
 ## Goal
 
