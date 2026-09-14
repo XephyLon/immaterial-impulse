@@ -1774,6 +1774,15 @@ if ! python3 "$SCRIPT_DIR/test_theme_reload_runtime.py"; then
     exit 1
 fi
 
+# The assistant's read-tier tools answer inside a real shell: sync tools at
+# once, file tools through the fenced script (allowed file, dotfile refused,
+# outside refused, listing hides dotfiles). Brings its own headless weston.
+echo "Running AI tools runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_tools_runtime.py"; then
+    echo "AI tools runtime tests failed."
+    exit 1
+fi
+
 # The block is a set of paths into the theme's directory and at the apply
 # script sudo will accept; the directory was renamed and the script moved. A
 # wrong path here means the login screen silently stops following the
