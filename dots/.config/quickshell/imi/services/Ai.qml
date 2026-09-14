@@ -393,6 +393,31 @@ Singleton {
         });
     }
 
+    /** Re-runs local model discovery - after a pull or a removal in the
+        Ollama browser. The Process exits after one listing, so running=true
+        starts it again; addModel replaces an existing entry by key. */
+    function refreshOllamaModels() {
+        if (getOllamaModels.running) return;
+        getOllamaModels.running = true;
+    }
+
+    /** Drops a removed local model from the picker at once, and moves the
+        selection off it; discovery would otherwise keep offering a model the
+        daemon no longer has until the next shell start. */
+    function forgetOllamaModel(modelName) {
+        const id = root.safeModelName(String(modelName ?? ""));
+        if (!(id in root.models)) return;
+        const next = Object.assign({}, root.models);
+        delete next[id];
+        root.models = next;
+        root.modelList = Object.keys(root.models);
+        if (root.currentModelId === id) {
+            const fallback = root.modelList[0] ?? "";
+            if (fallback.length > 0) root.setModel(fallback, false);
+            else if (Persistent.states?.ai) Persistent.states.ai.model = "";
+        }
+    }
+
     Process {
         id: getOllamaModels
         running: true

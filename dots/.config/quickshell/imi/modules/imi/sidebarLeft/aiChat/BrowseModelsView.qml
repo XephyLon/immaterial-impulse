@@ -36,6 +36,11 @@ Rectangle {
     }
 
     property string query: ""
+    // Which store the view shows: the remote index / your providers, or the
+    // local Ollama daemon (docs/proposals/ollama-catalog.md). Remembered for
+    // the session only.
+    property string source: "remote"
+    readonly property bool ollamaMode: root.source === "ollama"
     // With providers of your own, browse IS your providers; the OpenRouter
     // index (and its fetch, refresh, key) only exists while the provider
     // list is empty and importing is the sole way in.
@@ -119,7 +124,7 @@ Rectangle {
             }
             Item { Layout.fillWidth: true }
             RippleButton {
-                visible: root.openRouterMode
+                visible: root.openRouterMode && !root.ollamaMode
                 implicitWidth: 32
                 implicitHeight: 32
                 buttonRadius: Appearance.rounding.full
@@ -138,11 +143,31 @@ Rectangle {
             }
         }
 
+        // The store switch. OpenRouter/providers on the left, Ollama on the
+        // right; the search field below filters whichever is shown.
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Appearance.spacing.space50
+            FilterChip {
+                label: root.openRouterMode ? "OpenRouter" : Translation.tr("Your providers")
+                chipIcon: "cloud"
+                toggled: !root.ollamaMode
+                onClicked: root.source = "remote"
+            }
+            FilterChip {
+                label: "Ollama"
+                chipIcon: "memory"
+                toggled: root.ollamaMode
+                onClicked: root.source = "ollama"
+            }
+            Item { Layout.fillWidth: true }
+        }
+
         ConfigTextArea {
             // With providers of your own, OpenRouter is just one of them and
             // its key lives in the editor; this field only earns its row when
             // the list is empty and importing is the sole way in.
-            visible: (Config.options.ai.customProviders ?? []).length === 0
+            visible: !root.ollamaMode && (Config.options.ai.customProviders ?? []).length === 0
             Layout.fillWidth: true
             buttonIcon: "key"
             placeholderText: Translation.tr("OpenRouter API key")
@@ -162,13 +187,20 @@ Rectangle {
         ConfigTextArea {
             Layout.fillWidth: true
             buttonIcon: "search"
-            placeholderText: Translation.tr("Search model, provider…")
+            placeholderText: root.ollamaMode ? Translation.tr("Search the library or your installed models…") : Translation.tr("Search model, provider…")
             value: root.query
             onValueChanged: root.query = value
         }
 
+        OllamaBrowsePage {
+            visible: root.ollamaMode
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            query: root.query
+        }
+
         StyledText {
-            visible: root.openRouterMode && OpenRouterModels.loading
+            visible: !root.ollamaMode && root.openRouterMode && OpenRouterModels.loading
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             text: Translation.tr("Fetching the index…")
@@ -176,7 +208,7 @@ Rectangle {
             font.pixelSize: Appearance.font.pixelSize.small
         }
         StyledText {
-            visible: root.openRouterMode && OpenRouterModels.error.length > 0 && !OpenRouterModels.loading
+            visible: !root.ollamaMode && root.openRouterMode && OpenRouterModels.error.length > 0 && !OpenRouterModels.loading
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
@@ -186,6 +218,7 @@ Rectangle {
         }
 
         StyledFlickable {
+            visible: !root.ollamaMode
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
