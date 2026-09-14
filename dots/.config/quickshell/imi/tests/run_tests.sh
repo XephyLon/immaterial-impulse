@@ -1056,6 +1056,15 @@ if ! python3 "$SCRIPT_DIR/test_launcher_result_inputs.py"; then
     exit 1
 fi
 
+# The assistant in the overview: an Ask row under `@` (and, opt-in, as the
+# last row for a long unmatched query), only while the selected model is
+# usable, and nothing sent before Enter. docs/proposals/ai-in-overview.md.
+echo "Running launcher Ask row contract..."
+if ! python3 "$SCRIPT_DIR/test_launcher_ai_ask.py"; then
+    echo "Launcher Ask row contract failed."
+    exit 1
+fi
+
 echo "Running settings page id tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_page_ids.py"; then
     echo "Settings page id tests failed."
@@ -1198,6 +1207,16 @@ fi
 echo "Running launcher qalc spawn runtime tests..."
 if ! python3 "$SCRIPT_DIR/test_launcher_qalc_runtime.py"; then
     echo "Launcher qalc spawn runtime tests failed."
+    exit 1
+fi
+
+# The Ask row in a real shell: hidden without a usable model, first under the
+# prefix with a keyless probe model, fallthrough gated by the switch and the
+# word count, nothing sent while typing, askAssistant opens the Intelligence
+# tab and sends the question. Brings its own headless weston.
+echo "Running launcher Ask row runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_launcher_ask_runtime.py"; then
+    echo "Launcher Ask row runtime tests failed."
     exit 1
 fi
 
