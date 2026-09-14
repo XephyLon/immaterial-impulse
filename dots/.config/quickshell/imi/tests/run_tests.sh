@@ -1829,6 +1829,15 @@ if ! python3 "$SCRIPT_DIR/test_overlay_lifecycle_runtime.py"; then
     exit 1
 fi
 
+# Local retrieval end to end in a real shell: index a probe folder, the
+# search_documents tool answers in a labelled data block with citation
+# sources queued, the Documents toggle rides passages in the wire content.
+echo "Running AI local retrieval runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_rag_runtime.py"; then
+    echo "AI local retrieval runtime tests failed."
+    exit 1
+fi
+
 # The block is a set of paths into the theme's directory and at the apply
 # script sudo will accept; the directory was renamed and the script moved. A
 # wrong path here means the login screen silently stops following the
@@ -2454,6 +2463,15 @@ fi
 echo "Running Ollama catalog contract tests..."
 if ! python3 "$SCRIPT_DIR/test_ollama_catalog_contract.py"; then
     echo "Ollama catalog contract tests failed."
+    exit 1
+fi
+
+# Local retrieval: scripts/ai/ai_rag.py's privacy contract (only the named
+# folders, never dotfiles/key dirs/.noindex, binaries and oversize skipped),
+# incremental index, forget, lexical and fake-Ollama embedders.
+echo "Running AI local retrieval script tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_rag.py"; then
+    echo "AI local retrieval script tests failed."
     exit 1
 fi
 
