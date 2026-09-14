@@ -1259,6 +1259,15 @@ if ! python3 "$SCRIPT_DIR/lint_harness_check_counts.py"; then
     exit 1
 fi
 
+# Transient overlays hide after their leave motion and drop input before it:
+# each OverlayLifecycle host binds its surface to .alive and gates its mask
+# on the flag. docs/proposals/overlay-motion-tier.md.
+echo "Running overlay lifecycle lint..."
+if ! python3 "$SCRIPT_DIR/lint_overlay_lifecycle.py"; then
+    echo "Overlay lifecycle lint failed."
+    exit 1
+fi
+
 echo "Running settings search index tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_search_index.py"; then
     echo "Settings search index tests failed."
@@ -1808,6 +1817,15 @@ fi
 echo "Running Ollama catalog runtime tests..."
 if ! python3 "$SCRIPT_DIR/test_ollama_catalog_runtime.py"; then
     echo "Ollama catalog runtime tests failed."
+    exit 1
+fi
+
+# OverlayLifecycle against the real motion catalogue: alive at once, enter
+# within its tier, alive through the leave, closed() then alive drops, a
+# re-open during the leave keeps the surface, reduce-motion still fires.
+echo "Running overlay lifecycle runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_overlay_lifecycle_runtime.py"; then
+    echo "Overlay lifecycle runtime tests failed."
     exit 1
 fi
 
