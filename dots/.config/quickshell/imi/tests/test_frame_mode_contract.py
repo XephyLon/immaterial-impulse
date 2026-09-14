@@ -49,7 +49,7 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows))\n                        ? 0 : Appearance.sizes.barReservedHeight",
                       _strip((ROOT / "modules/imi/bar/Bar.qml").read_text()))
         # The fillet radius is the window rounding, full stop.
-        self.assertIn("Geo.innerRadius(Config.options.hyprland.decoration.rounding)", geo)
+        self.assertIn("Geo.innerRadius(root.liveRounding >= 0 ? root.liveRounding : Config.options.hyprland.decoration.rounding)", geo)
         # The dock is an occupant only while it reserves (pinned), through
         # the dock's own zone arithmetic.
         self.assertIn("readonly property bool dockReserves: (Config.options.dock.enable ?? false) && GlobalStates.dockPinned", geo)
@@ -73,7 +73,7 @@ class FrameModeContract(unittest.TestCase):
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
-        self.assertIn("FrameGeometry.cornerMargins(", corners)
+        self.assertIn("FrameGeometry.cornerMarginsFor(", corners)
         self.assertIn('color: FrameGeometry.enabled ? FrameGeometry.color : "#000000"', corners)
         # The window stays at the screen corner (the corner-open hit rect
         # lives there); only the fillet SHAPE moves inward.
