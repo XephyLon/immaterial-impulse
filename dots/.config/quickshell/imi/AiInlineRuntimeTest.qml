@@ -149,7 +149,13 @@ ShellRoot {
                 const r = harness.waitFor(() => AiInline.done, 8000);
                 if (r === null) return;
                 const answer = AiInline.answer;
+                // The real order: the row's activated() closes the overview
+                // (LauncherSearch cancels AiInline on that) BEFORE execute()
+                // reaches askAssistant. The answer must survive that.
                 GlobalStates.overviewOpen = true;
+                GlobalStates.overviewOpen = false;
+                harness.check("closing the overview parks the answer for Enter",
+                    AiInline.answer === "" && !AiInline.busy && AiInline.lastAnswer === answer);
                 LauncherSearch.askAssistant("what is a wayland compositor");
                 const msgs = Ai.messageIDs.map(id => Ai.messageByID[id]);
                 harness.check("Enter with an answer: question and answer land in the chat, no request",
@@ -157,7 +163,7 @@ ShellRoot {
                     && msgs[1].role === "assistant" && msgs[1].rawContent === answer && answer.length > 0 && !Ai.isGenerating);
                 harness.check("Enter opens the Intelligence tab and closes the overview",
                     GlobalStates.sidebarLeftOpen === true && GlobalStates.overviewOpen === false);
-                harness.check("the answer was taken: AiInline is clear", AiInline.answer === "" && AiInline.question === "");
+                harness.check("the answer was taken: AiInline is clear", AiInline.answer === "" && AiInline.question === "" && AiInline.lastAnswer === "");
                 GlobalStates.overviewOpen = true;
                 harness.type("what is a wayland compositor");
                 harness.step = 8;

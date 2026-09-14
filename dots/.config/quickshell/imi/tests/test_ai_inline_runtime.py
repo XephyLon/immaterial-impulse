@@ -22,7 +22,7 @@ import nested_display
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS = ROOT / "AiInlineRuntimeTest.qml"
 SHIPPED_DEFAULT = ROOT / "defaults/config.json"
-EXPECTED_CHECKS = 15
+EXPECTED_CHECKS = 16
 SHORT = "A Wayland compositor is the display server that draws every window itself."
 LONG = "This answer is long on purpose. " * 12
 

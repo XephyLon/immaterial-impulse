@@ -57,6 +57,14 @@ Singleton {
     // generation touches nothing.
     property int generation: 0
     property var answerMessage: null
+    // What Enter can still claim after a cancel. The row's activated()
+    // closes the overview (which cancels) BEFORE its execute() runs, so the
+    // answer on the row would be gone by the time askAssistant asks for it
+    // (found in the sandbox: Enter re-asked instead of carrying). A cancel
+    // parks the current question and answer here; take() claims them once;
+    // a different question replaces them.
+    property string lastQuestion: ""
+    property string lastAnswer: ""
 
     /** The launcher's question as typed (prefix removed). Debounced; a
         repeat of the question already answered or in flight is a no-op. */
@@ -69,14 +77,17 @@ Singleton {
         }
         if (q === root.question && (root.busy || root.done || debounce.running)) return;
         root.cancel();
+        if (q !== root.lastQuestion) { root.lastQuestion = ""; root.lastAnswer = ""; }
         root.question = q;
         debounce.interval = Math.max(100, Config.options.search.ai.inlineDelayMs ?? 700);
         debounce.restart();
     }
 
-    /** Stops the debounce and any request; clears the answer. */
+    /** Stops the debounce and any request; clears the answer (parking a
+        non-empty one for take()). */
     function cancel() {
         debounce.stop();
+        if (root.answer.length > 0) { root.lastQuestion = root.question; root.lastAnswer = root.answer; }
         root.generation++;
         if (proc.running) proc.running = false;
         root.busy = false;
@@ -90,9 +101,12 @@ Singleton {
         on the way out so Enter carries it into the chat exactly once. */
     function take(text) {
         const q = String(text ?? "").trim();
-        if (q !== root.question || root.answer.length === 0) return "";
-        const a = root.answer;
+        let a = "";
+        if (q === root.question && root.answer.length > 0) a = root.answer;
+        else if (q === root.lastQuestion && root.lastAnswer.length > 0) a = root.lastAnswer;
         root.cancel();
+        root.lastQuestion = "";
+        root.lastAnswer = "";
         return a;
     }
 
