@@ -90,12 +90,21 @@ Scope {
         }
     }
 
+    // The shelf outlives its flag by the leave motion; input follows the
+    // flag so a leaving shelf never takes a click or a drop.
+    OverlayLifecycle {
+        id: shelfLife
+        wanted: GlobalStates.dropShelfOpen
+    }
+    Region { id: shelfNoInput }
+
     LazyLoader {
-        active: GlobalStates.dropShelfOpen
+        active: shelfLife.alive
 
         component: PanelWindow {
             id: shelfWindow
             visible: true
+            mask: GlobalStates.dropShelfOpen ? null : shelfNoInput
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.namespace: "quickshell:dropshelf"
@@ -141,11 +150,17 @@ Scope {
 
             StyledRectangularShadow {
                 target: shelfBg
+                opacity: shelfLife.progress
             }
 
             Rectangle {
                 id: shelfBg
                 anchors.fill: parent
+                // Enter and leave from the lifecycle's one scalar: a fade
+                // with a small settle, the rise the summon position implies.
+                opacity: shelfLife.progress
+                scale: 0.94 + 0.06 * shelfLife.progress
+                transformOrigin: Item.Top
 
                 HoverHandler {
                     id: shelfHoverHandler

@@ -95,12 +95,21 @@ Scope {
         }
     }
 
+    // The toast outlives its path by the leave motion; a newer screenshot
+    // replaying the entrance on a surface that stays alive is replay().
+    OverlayLifecycle {
+        id: toastLife
+        wanted: root.currentPath !== ""
+    }
+    Region { id: toastNoInput }
+
     LazyLoader {
         id: panelLoader
-        active: root.currentPath !== ""
+        active: toastLife.alive
 
         PanelWindow {
             id: popupWindow
+            mask: root.currentPath !== "" ? null : toastNoInput
             readonly property bool hovered: hoverHandler.hovered
             screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
             anchors { bottom: true; left: true }
@@ -120,12 +129,12 @@ Scope {
 
                 HoverHandler { id: hoverHandler }
 
-                // Re-run the entrance motion when a new screenshot replaces
-                // the one on display (the window itself is not recreated).
+                // Re-run the entrance when a new screenshot replaces the one
+                // on display (the window itself is not recreated).
                 Connections {
                     target: root
                     function onCurrentPathChanged() {
-                        if (root.currentPath !== "") enterAnimation.restart();
+                        if (root.currentPath !== "") toastLife.replay();
                     }
                 }
 
@@ -133,26 +142,9 @@ Scope {
                     id: content
                     anchors.centerIn: parent
                     spacing: Appearance.spacing.space100
-
-                    Component.onCompleted: enterAnimation.restart()
-
-                    // Entrance motion: tokens only (durations/easings come
-                    // from Appearance.animation, never raw literals).
-                    ParallelAnimation {
-                        id: enterAnimation
-                        NumberAnimation {
-                            target: content; property: "opacity"; from: 0; to: 1
-                            duration: Appearance.animation.elementMoveEnter.duration
-                            easing.type: Appearance.animation.elementMoveEnter.type
-                            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-                        }
-                        NumberAnimation {
-                            target: content; property: "scale"; from: 0.92; to: 1
-                            duration: Appearance.animation.elementMoveFast.duration
-                            easing.type: Appearance.animation.elementMoveFast.type
-                            easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
-                        }
-                    }
+                    // Enter and leave from the lifecycle's one scalar.
+                    opacity: toastLife.progress
+                    scale: 0.92 + 0.08 * toastLife.progress
 
                     Rectangle {
                         Layout.preferredWidth: previewImage.paintedWidth + Appearance.spacing.space100 * 2

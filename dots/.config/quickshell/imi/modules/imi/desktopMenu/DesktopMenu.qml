@@ -117,11 +117,20 @@ Scope {
         return currentEntry ? [currentEntry, ...visibleExtras] : visibleExtras
     }
 
+    // The surface outlives the flag by the leave motion; input follows the
+    // flag, not the surface, so the leaving card never eats a click.
+    OverlayLifecycle {
+        id: menuLife
+        wanted: GlobalStates.desktopMenuOpen
+    }
+    Region { id: menuNoInput }
+
     // Menu window
     Loader {
-        active: GlobalStates.desktopMenuOpen
+        active: menuLife.alive
         sourceComponent: PanelWindow {
             id: menuWindow
+            mask: GlobalStates.desktopMenuOpen ? null : menuNoInput
 
             screen: GlobalStates.desktopMenuScreen ?? Quickshell.screens[0]
 
@@ -164,8 +173,12 @@ Scope {
                 radius: Appearance.rounding.verylarge
                 color: "transparent"
 
-                scale: 0.85
-                opacity: 0
+                // Enter and leave from one scalar (OverlayLifecycle): no
+                // Behaviors, so the close plays the same curve backwards
+                // instead of destroying the window on the frame the flag
+                // drops.
+                scale: 0.85 + 0.15 * menuLife.progress
+                opacity: menuLife.progress
                 transformOrigin: Item.Center
 
                 // Container, then fill: the card's own entrance is the scale
@@ -176,9 +189,9 @@ Scope {
                 // animates the property itself), so the wave gates on the
                 // real container rather than on a guessed leadIn - the exact
                 // scalar whose absence is half of why the right sidebar's
-                // wave came back off. Enter-only, because the close destroys
-                // this window on the frame the flag drops: there is no exit
-                // for a wave to animate, so nothing here calls leave().
+                // wave came back off. Enter-only still: the card's leave is
+                // the lifecycle's scalar falling, and rows fading with their
+                // card need no second wave.
                 readonly property bool contentsIn:
                     Appearance.animation.contentsArrived(menuCard.opacity, true)
                 onContentsInChanged: {
@@ -192,15 +205,6 @@ Scope {
                     // blink out to cascade back in - the arming-vs-running
                     // lesson the drawer already paid for.
                     rowsEntrance.park()
-                    scale = 1.0
-                    opacity = 1.0
-                }
-
-                Behavior on scale {
-                    animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-                }
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
 
                 // The rows are RippleButtons, so each already declares
