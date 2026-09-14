@@ -23,7 +23,9 @@ SCRIPT = ROOT / "scripts/ai/ai_dictate.py"
 
 STUB_RECORDER = """#!/bin/sh
 # Writes a small (silent) WAV to the last argument, then waits for SIGINT.
-out="${@: -1}"
+# POSIX sh on purpose: CI's /bin/sh is dash, where ${@: -1} is a syntax error
+# and the stub died before recording anything.
+for out; do :; done
 python3 - "$out" <<'PY'
 import struct, sys, wave
 with wave.open(sys.argv[1], "wb") as w:
