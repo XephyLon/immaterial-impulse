@@ -255,6 +255,23 @@ timer and a slow poll (60 s / 10 s) for anything the stream misses. When adding 
 emits the change first; `tests/test_sni_watchdog.py` and `tests/test_media_capture_contract.py`
 pin the subscriptions. 82627cb23 ("perf(tray): the SNI watchdog listens on the bus instead of polling it"), 8c9ac38b8 ("perf(privacy): detect capture by subscription, poll only as a safety net").
 
+**A tool that changes something is `reviewed`: it raises the approval card and runs only from
+`approveCommand()`; the tier lives in `services/ai/ai_tool_policy.js`, never in the dispatch chain.**
+`handleFunctionCall` asks `ToolPolicy.tierOf(name)` first: a `reviewed` tool is validated against the
+registry schema (`validateArgs`: coerce, drop unknown keys, report missing), stamped on the message
+as `functionCall`, and rendered as a ```` ```mutation ```` fence with `summaryFor()`'s one line - the
+same card `run_shell_command` has, in `MessageCodeBlock.qml`. Approve calls `applyMutation()`, whose
+every branch answers the model and continues; reject answers "rejected". A tool nobody classified
+is `reviewed`, never auto-run. `write_file`/`append_file` reuse `scripts/ai/ai_fs_tool.py` (content
+on stdin, `.bak` kept once, size cap, dotfiles and symlinks out refused even when approved).
+`test_ai_skeleton_contract.py` counts `case "x"` in applyMutation as handled, so a reviewed tool is
+never added as a `name === "x"` branch. The four tool entry points take an UNTYPED `message`: a
+parameter typed `AiMessageData` made Qt 6.11 segfault in `QObjectMethod::resolveOverloaded` when
+called from another QML context (the runtime harnesses); the harness also mints its message through
+`Ai.addMessage`, not `Component.createObject`, for the same reason.
+`AiMutationRuntimeTest.qml` drives card → reject → approve for a to-do, a file (+ .bak), a palette
+source, an invalid call and an out-of-allowlist write. 
+
 **The assistant's file tools never read a path from QML; `scripts/ai/ai_fs_tool.py` decides on the
 real path and answers JSON.** `read_file`/`list_directory` (services/AiToolRegistry.qml, dispatched
 from `Ai.qml`'s `handleFunctionCall` through `runFsTool`) spawn the script with every folder in

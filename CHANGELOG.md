@@ -11,11 +11,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **The assistant can change things, after you approve.** Eight reviewed
+  tools: `write_file` / `append_file` (inside the folders you allowed, the
+  previous contents kept as `.bak`), `set_clipboard`, `set_wallpaper` (a path
+  or random), `set_accent`, `set_palette_source`, `set_color_scheme` and
+  `add_todo`. Each raises the same approve/reject card as a shell command,
+  with a one-line summary of the change; nothing runs before you approve, and
+  `set_shell_config` now goes through that card too.
+
 ### Fixed
 - **Update Dots no longer leaves a `hyprlock.conf.new` / `hypridle.conf.new`
   identical to your file.** The legacy files step wrote the backup copy
   whenever the file existed; it now compares first, and removes a stale
   identical `.new` from an earlier update.
+
 
 ## [1.1.0] — 2026-09-14
 
