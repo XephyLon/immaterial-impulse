@@ -32,7 +32,7 @@ Scope {
         // the bar (or band) meets the side band. FrameGeometry owns the
         // arithmetic; nothing here computes an inset.
         readonly property var frameMargins: FrameGeometry.enabled
-            ? FrameGeometry.cornerMargins(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight")
+            ? FrameGeometry.cornerMarginsFor(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight", cornerPanelWindow.fullscreen)
             : ({ left: 0, top: 0, right: 0, bottom: 0 })
 
         exclusionMode: ExclusionMode.Ignore

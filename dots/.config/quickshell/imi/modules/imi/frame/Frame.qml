@@ -41,10 +41,15 @@ Scope {
             top: band.edge !== "bottom"
             bottom: band.edge !== "top"
         }
-        // The band on the bar's edge starts where the bar's zone ends.
+        // The band on an occupied edge starts where that edge's zone(s) end;
+        // `fullscreen` is this screen's, because the dock drops its zone on a
+        // fullscreen monitor.
+        property bool fullscreen: false
         margins {
-            top: band.edge === "top" ? FrameGeometry.bandOffset("top") : 0
-            bottom: band.edge === "bottom" ? FrameGeometry.bandOffset("bottom") : 0
+            top: band.edge === "top" ? FrameGeometry.bandOffsetFor("top", band.fullscreen) : 0
+            bottom: band.edge === "bottom" ? FrameGeometry.bandOffsetFor("bottom", band.fullscreen) : 0
+            left: band.edge === "left" ? FrameGeometry.bandOffsetFor("left", band.fullscreen) : 0
+            right: band.edge === "right" ? FrameGeometry.bandOffsetFor("right", band.fullscreen) : 0
         }
         implicitWidth: (band.edge === "left" || band.edge === "right") ? Math.max(1, FrameGeometry.thickness) : 0
         implicitHeight: (band.edge === "top" || band.edge === "bottom") ? Math.max(1, FrameGeometry.thickness) : 0
@@ -64,21 +69,25 @@ Scope {
                 screen: screenScope.modelData
                 edge: "left"
                 hidden: screenScope.hidden
+                fullscreen: screenScope.fullscreen
             }
             Band {
                 screen: screenScope.modelData
                 edge: "right"
                 hidden: screenScope.hidden
+                fullscreen: screenScope.fullscreen
             }
             Band {
                 screen: screenScope.modelData
                 edge: "top"
                 hidden: screenScope.hidden
+                fullscreen: screenScope.fullscreen
             }
             Band {
                 screen: screenScope.modelData
                 edge: "bottom"
                 hidden: screenScope.hidden
+                fullscreen: screenScope.fullscreen
             }
         }
     }

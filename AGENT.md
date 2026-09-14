@@ -315,11 +315,18 @@ inset - an occupant's reserved zone(s) plus the band, because the compositor app
 after the zone (measured: modelling the bar's edge as the painted height left a gap-wide wallpaper
 stripe under the bar); a free edge is the band - the fillet's radius (the compositor's window
 rounding, no more: the fillet's box already sits at the inset, so the arcs are concentric only when
-the radii are equal) and each fillet's margins. The occupants are the bar, whose zone is
+the radii are equal; the LIVE value, `hyprctl getoption decoration:rounding` at start and on every
+`configreloaded`, so a hypr/custom override is honoured, the option as the fallback) and each
+fillet's margins. The occupants are the bar, whose zone is
 `Appearance.sizes.barExclusiveZone` (the settled zone `Bar.qml`'s reserver asks for; `Bar.qml` reads
 `barReservedHeight` from the same place, so there is no second copy to drift), and a PINNED dock
-(`GlobalStates.dockPinned`, written by `Dock.qml`; its zone through `dock_geometry.js`) - an unpinned
-dock reserves nothing and is no occupant. `modules/imi/frame/Frame.qml` draws four bands per screen,
+(`GlobalStates.dockPinned`, written by `Dock.qml`; its zone is `Appearance.sizes.dockExclusiveZone`,
+the token `Dock.qml`'s own exclusiveZone reads) - an unpinned dock reserves nothing and is no
+occupant, and on a monitor with a fullscreen window the dock drops its zone, so the bands and fillets
+read the authority per screen (`insetsFor`, `bandOffsetFor`, `cornerMarginsFor`). `FrameGeometry`
+names `GlobalStates`, so it imports `qs`; `lint_globalstates_import.py` now refuses a QML file that
+names it without a way to resolve it (a throwing binding is a warning, not a load failure: the dock
+occupant was inert for a whole review round). `modules/imi/frame/Frame.qml` draws four bands per screen,
 each starting under its edge's occupants, Top layer, `ExclusionMode.Ignore`, an empty mask; they stay
 mapped and paint transparent for a fullscreen window (`visible` on a layer surface destroys it;
 `rules.lua` gives `quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen

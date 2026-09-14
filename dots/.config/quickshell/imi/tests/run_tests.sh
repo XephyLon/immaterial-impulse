@@ -1065,6 +1065,12 @@ if ! python3 "$SCRIPT_DIR/test_config_split_contract.py"; then
     exit 1
 fi
 
+echo "Running GlobalStates import lint..."
+if ! python3 "$SCRIPT_DIR/lint_globalstates_import.py"; then
+    echo "GlobalStates import lint failed."
+    exit 1
+fi
+
 echo "Running frame mode contract..."
 if ! python3 "$SCRIPT_DIR/test_frame_mode_contract.py"; then
     echo "Frame mode contract failed."

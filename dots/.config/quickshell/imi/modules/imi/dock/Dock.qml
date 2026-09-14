@@ -75,11 +75,8 @@ Scope {
             readonly property var dockMargins: DockGeometry.margins(
                 root.edge, Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
 
-            exclusiveZone: (root.pinned && !fullscreenOnThisMonitor)
-                ? DockGeometry.exclusiveZone(
-                    Config.options?.dock.height ?? 60,
-                    Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
-                : 0
+            // One token with FrameGeometry (Appearance.sizes.dockExclusiveZone).
+            exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? Appearance.sizes.dockExclusiveZone : 0
 
             anchors {
                 top: DockGeometry.anchors(root.edge).top

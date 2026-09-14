@@ -43,6 +43,8 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("readonly property real barThickness: Appearance.sizes.barExclusiveZone", geo)
         self.assertNotRegex(geo, r"baseBarHeight|Appearance\.sizes\.barHeight", "no hand copy of the reserver's expression")
         appearance = _strip((ROOT / "modules/common/Appearance.qml").read_text())
+        frame = _strip(FRAME.read_text())
+        corners = _strip(CORNERS.read_text())
         self.assertIn("property real barExclusiveZone: root.sizes.barReservedHeight", appearance)
         self.assertIn("zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows))\n                        ? 0 : Appearance.sizes.barReservedHeight",
                       _strip((ROOT / "modules/imi/bar/Bar.qml").read_text()))
@@ -51,10 +53,23 @@ class FrameModeContract(unittest.TestCase):
         # The dock is an occupant only while it reserves (pinned), through
         # the dock's own zone arithmetic.
         self.assertIn("readonly property bool dockReserves: (Config.options.dock.enable ?? false) && GlobalStates.dockPinned", geo)
-        self.assertIn("DockGeo.exclusiveZone(Config.options.dock.height ?? 60, Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)", geo)
-        self.assertIn("Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge, root.dockThickness)", geo)
+        self.assertRegex(GEOMETRY.read_text(), r"^import qs\s*$", "GlobalStates resolves only through the root module - the dock occupant was inert without it")
+        # The dock's zone is one token too, read by Dock.qml and the authority.
+        self.assertIn("readonly property real dockThickness: root.dockReserves ? Appearance.sizes.dockExclusiveZone : 0", geo)
+        self.assertNotIn("DockGeo.", geo, "no second copy of the dock's zone arithmetic here")
+        self.assertIn("property real dockExclusiveZone: DockGeo.exclusiveZone(", appearance)
         dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
+        self.assertIn("exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? Appearance.sizes.dockExclusiveZone : 0", dock)
         self.assertIn("onPinnedChanged: GlobalStates.dockPinned = root.pinned", dock)
+        self.assertIn("Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge, root.dockThickness)", geo)
+        # Per screen: the dock drops its zone on a fullscreen monitor, so the
+        # bands and fillets read the authority through the screen's flag.
+        self.assertIn("function insetsFor(fullscreen)", geo)
+        self.assertIn('FrameGeometry.bandOffsetFor("top", band.fullscreen)', frame)
+        self.assertIn("FrameGeometry.cornerMarginsFor(", corners)
+        # The compositor's live rounding, the option as the fallback.
+        self.assertIn('command: ["hyprctl", "getoption", "decoration:rounding", "-j"]', geo)
+        self.assertIn('if (event.name === "configreloaded") roundingProbe.running = true;', geo)
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
