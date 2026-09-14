@@ -21,7 +21,15 @@ TestCase {
     function test_no_output_means_no_cli() {
         compare(Warp.parse("").available, false);
         compare(Warp.parse(null).available, false);
-        compare(Warp.parse("   \n").state, "unknown");
+        // Any output at all is the CLI answering (the toggle's old rule).
+        const blank = Warp.parse("   \n");
+        verify(blank.available); compare(blank.state, "unknown");
+    }
+
+    function test_the_words_do_not_shadow_each_other() {
+        // "Disconnected" does not contain "Connected", so the plain order holds.
+        compare(Warp.parse("Disconnected").state, "disconnected");
+        compare(Warp.parse("Connected").state, "connected");
     }
 
     function test_unknown_wording_is_unknown_not_connected() {

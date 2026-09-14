@@ -7,12 +7,15 @@
 //
 // Returns { available, state } with state one of
 // "connected" | "disconnected" | "unregistered" | "unknown".
-// available: the CLI answered at all (any output).
+// available: the CLI answered at all (any output, whitespace included -
+// exactly the toggle's old `text.length > 0`). The checks run in the
+// toggle's old order, and "Disconnected" does not contain "Connected"
+// (capital C), so no guard is needed between the two.
 function parse(text) {
     var s = String(text === undefined || text === null ? "" : text);
-    if (s.trim().length === 0) return { available: false, state: "unknown" };
+    if (s.length === 0) return { available: false, state: "unknown" };
     if (s.indexOf("Unable") !== -1) return { available: true, state: "unregistered" };
-    if (s.indexOf("Connected") !== -1 && s.indexOf("Disconnected") === -1) return { available: true, state: "connected" };
+    if (s.indexOf("Connected") !== -1) return { available: true, state: "connected" };
     if (s.indexOf("Disconnected") !== -1) return { available: true, state: "disconnected" };
     return { available: true, state: "unknown" };
 }
