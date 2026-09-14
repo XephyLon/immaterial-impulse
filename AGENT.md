@@ -295,6 +295,18 @@ closes the overview, sets `GlobalStates.sidebarLeftTab = "intelligence"` (consum
 empty, because it changes what Enter does on a miss. `LauncherAskRuntimeTest.qml` drives it with a
 keyless probe model injected the way ollama discovery injects one; a fresh install persists
 `ai.model = ""`, so the harness selects the probe explicitly.
+**Inline launcher answers live in `services/AiInline.qml`, driven from `onQueryChanged`, never
+from the results build, and never through the chat.** `LauncherSearch.refreshInlineAnswer()` hands
+a `@question` to `AiInline.ask()` the way `refreshMathResult()` drives qalc (decided from the query
+alone; a query without the prefix, or the overview closing, cancels); `buildResults()` never names
+`AiInline`, and `SearchItem` binds the Ask row's subtitle straight to `AiInline.answer`, so a
+streaming answer never rebuilds the list. The gate is opt-in (`search.ai.inline`), a usable model,
+and loopback endpoint OR `search.ai.inlineWithCloud` - keyless is not local. AiInline owns its own
+strategy instances (a strategy carries tool-call state between lines; sharing `Ai`'s would corrupt
+a chat streaming at the same time) and exposes `apiKeyEnvVarName` because `GeminiApiStrategy`
+reads it from `root` unqualified. Enter with an answer on the row mints a session and adds
+question + answer through `Ai.addMessage` instead of sending again. `test_ai_inline_contract.py`
+pins the shape; `test_ai_inline_runtime.py` counts requests against a fake streaming server.
 **`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
 through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
 `/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)
