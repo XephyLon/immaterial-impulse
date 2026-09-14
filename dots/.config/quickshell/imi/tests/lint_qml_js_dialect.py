@@ -54,6 +54,11 @@ BANNED = (
         "QV4 has no trimEnd/trimStart (AiInline's cut answer threw 'Property trimEnd of object ... is not a function'); use .replace(/\\s+$/, '') or .replace(/^\\s+/, '')",
     ),
     (
+        "reserved word as a name",
+        re.compile(r"\b(?:const|let|var|function)\s+(?:long|short|byte|char|int|float|double|boolean|native|synchronized|transient|volatile|final|abstract|goto|enum|package|interface|implements|private|protected|public|static)\b"),
+        "CI's older Qt still reserves Java's old future-reserved words (tst_ai_tool_policy's `const long` failed there with \"Expected token `identifier'\"); pick another name",
+    ),
+    (
         "String replaceAll",
         re.compile(r"\.replaceAll\s*\("),
         "QV4 has no replaceAll; use .split(a).join(b) or a /g regex",
