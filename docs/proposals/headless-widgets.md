@@ -1,6 +1,6 @@
 # Research: making all widgets headless by design
 
-Feasibility study, 2026-08-07. No code changes; this document records what "headless by design"
+Feasibility study, 2026-08-07; Phase 1 started 2026-09-14 (first row of the backlog table). Originally no code changes; this document records what "headless by design"
 would mean for this shell, how much of it already exists, what blocks the rest, and a phased route
 if the direction is adopted. Paths are relative to the theme root `dots/.config/quickshell/imi/`
 unless written repo-relative.
@@ -106,7 +106,7 @@ singleton owning the file, the widget owning only its view of it."
 
 | File | Trapped logic |
 |---|---|
-| `modules/imi/bar/NetworkSpeed.qml` | `/proc/net/dev` parser, rate state, `FileView` + poll `Timer` — no service exists |
+| `modules/imi/bar/NetworkSpeed.qml` | ~~`/proc/net/dev` parser, rate state~~ — **done**: `modules/imi/bar/network_speed.js` (`parseProcNetDev`, `advance`, `formatRate`) + `tests/tst_network_speed.qml`; the widget keeps only the `FileView`, the poll and the state object |
 | `modules/imi/bar/UpdatesCount.qml` | spawns the upgrade terminal, then a 5s post-upgrade outcome state machine + `notify-send` |
 | `modules/imi/bar/Media.qml` | album-art `curl` download inside the bar item |
 | `sidebarRight/quickToggles/classicStyle/CloudflareWarp.qml` | three `Process`es + `warp-cli` output parsing; the whole WARP integration (same pattern, smaller: `GameMode.qml`) |
