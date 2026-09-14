@@ -14,7 +14,70 @@ import "../../services/MprisSelection.js" as MprisSelection
 Singleton {
     id: root
     property string filePath: Directories.shellConfigPath
-    property alias options: configOptionsJsonAdapter
+    // `options` is an aggregator, not the adapter: every top-level domain is an
+    // alias onto the adapter that owns it, so `Config.options.bar.style` reads
+    // and writes exactly as before whichever file `bar` lives in. Today one
+    // domain (appearance, the largest and the busiest writer) has its own file
+    // under config.d/; the rest still share config.json. See
+    // docs/proposals/config-storage-split.md - this is its stage 1.
+    property alias options: aggregate
+    readonly property list<string> domains: ["appearance", "panelFamily", "migratedUpstreamSchema", "plugins", "developer", "policies", "ai", "audio", "profile", "hyprland", "apps", "cheatsheet", "background", "bar", "battery", "calendar", "conflictKiller", "crosshair", "dock", "dropShelf", "interactions", "language", "launcher", "light", "lock", "media", "networking", "idleInhibitor", "screensaver", "notes", "notifications", "osd", "osk", "overlay", "overview", "regionSelector", "resources", "tray", "musicRecognition", "search", "sidebar", "custom", "screenRecord", "screenSnip", "screenshotResult", "sounds", "time", "updates", "wallpaperSelector", "windows", "hacks", "workSafety", "phone"]
+    QtObject {
+        id: aggregate
+        property alias appearance: appearanceAdapter.appearance
+        property alias panelFamily: configOptionsJsonAdapter.panelFamily
+        property alias migratedUpstreamSchema: configOptionsJsonAdapter.migratedUpstreamSchema
+        property alias plugins: configOptionsJsonAdapter.plugins
+        property alias developer: configOptionsJsonAdapter.developer
+        property alias policies: configOptionsJsonAdapter.policies
+        property alias ai: configOptionsJsonAdapter.ai
+        property alias audio: configOptionsJsonAdapter.audio
+        property alias profile: configOptionsJsonAdapter.profile
+        property alias hyprland: configOptionsJsonAdapter.hyprland
+        property alias apps: configOptionsJsonAdapter.apps
+        property alias cheatsheet: configOptionsJsonAdapter.cheatsheet
+        property alias background: configOptionsJsonAdapter.background
+        property alias bar: configOptionsJsonAdapter.bar
+        property alias battery: configOptionsJsonAdapter.battery
+        property alias calendar: configOptionsJsonAdapter.calendar
+        property alias conflictKiller: configOptionsJsonAdapter.conflictKiller
+        property alias crosshair: configOptionsJsonAdapter.crosshair
+        property alias dock: configOptionsJsonAdapter.dock
+        property alias dropShelf: configOptionsJsonAdapter.dropShelf
+        property alias interactions: configOptionsJsonAdapter.interactions
+        property alias language: configOptionsJsonAdapter.language
+        property alias launcher: configOptionsJsonAdapter.launcher
+        property alias light: configOptionsJsonAdapter.light
+        property alias lock: configOptionsJsonAdapter.lock
+        property alias media: configOptionsJsonAdapter.media
+        property alias networking: configOptionsJsonAdapter.networking
+        property alias idleInhibitor: configOptionsJsonAdapter.idleInhibitor
+        property alias screensaver: configOptionsJsonAdapter.screensaver
+        property alias notes: configOptionsJsonAdapter.notes
+        property alias notifications: configOptionsJsonAdapter.notifications
+        property alias osd: configOptionsJsonAdapter.osd
+        property alias osk: configOptionsJsonAdapter.osk
+        property alias overlay: configOptionsJsonAdapter.overlay
+        property alias overview: configOptionsJsonAdapter.overview
+        property alias regionSelector: configOptionsJsonAdapter.regionSelector
+        property alias resources: configOptionsJsonAdapter.resources
+        property alias tray: configOptionsJsonAdapter.tray
+        property alias musicRecognition: configOptionsJsonAdapter.musicRecognition
+        property alias search: configOptionsJsonAdapter.search
+        property alias sidebar: configOptionsJsonAdapter.sidebar
+        property alias custom: configOptionsJsonAdapter.custom
+        property alias screenRecord: configOptionsJsonAdapter.screenRecord
+        property alias screenSnip: configOptionsJsonAdapter.screenSnip
+        property alias screenshotResult: configOptionsJsonAdapter.screenshotResult
+        property alias sounds: configOptionsJsonAdapter.sounds
+        property alias time: configOptionsJsonAdapter.time
+        property alias updates: configOptionsJsonAdapter.updates
+        property alias wallpaperSelector: configOptionsJsonAdapter.wallpaperSelector
+        property alias windows: configOptionsJsonAdapter.windows
+        property alias hacks: configOptionsJsonAdapter.hacks
+        property alias workSafety: configOptionsJsonAdapter.workSafety
+        property alias phone: configOptionsJsonAdapter.phone
+    }
     property bool ready: false
 
     // What the debounce below is for, because it is not "saving is slow".
@@ -498,6 +561,32 @@ Singleton {
         }
     }
 
+    // The one-time split of `appearance` out of config.json: the main load
+    // keeps the raw object it finds under that key, and the appearance file,
+    // when it does not exist yet, is seeded from it (or from the defaults).
+    // The main adapter's next write drops the key from config.json (measured:
+    // writeAdapter serializes the schema it has, not the file it read), so
+    // the downgrade path is a copy taken before that write:
+    // config.json.pre-split-<date>, which an older shell can be handed back.
+    // Anything outside the shell that reads appearance.* reads
+    // config.d/appearance.json first (switchwall, applycolor, presets).
+    property bool mainLoaded: false
+    property bool appearanceLoaded: false
+    property var legacyAppearance: null
+    readonly property string appearanceDirPath: `${Directories.shellConfig}/config.d`
+    readonly property string appearanceFilePath: `${root.appearanceDirPath}/appearance.json`
+    function finishLoad() {
+        if (root.ready || !root.mainLoaded || !root.appearanceLoaded) return;
+        root.ready = true;
+        root.clearStaleKbOptions();
+        root.migratePreferredPlayerToBusId();
+        root.migrateDeadParallaxSwitches();
+        root.migrateSplitCheatsheetButtons();
+        root.migrateRecordIndicatorIntoBar();
+        root.migrateDesktopWidgetsToPlugins();
+        root.migrateDesktopWidgetOptionsToPlugins();
+    }
+
     FileView {
         id: configFileView
         path: root.configDirReady ? root.filePath : ""
@@ -512,14 +601,17 @@ Singleton {
             // dropped. It can also rewrite panelFamily, which decides which
             // panel family loads at all.
             root.migrateUpstreamKeys(text());
-            root.ready = true;
-            root.clearStaleKbOptions();
-            root.migratePreferredPlayerToBusId();
-            root.migrateDeadParallaxSwitches();
-            root.migrateSplitCheatsheetButtons();
-            root.migrateRecordIndicatorIntoBar();
-            root.migrateDesktopWidgetsToPlugins();
-            root.migrateDesktopWidgetOptionsToPlugins();
+            if (root.legacyAppearance === null) {
+                try {
+                    const raw = JSON.parse(text());
+                    if (raw && typeof raw.appearance === "object" && raw.appearance !== null)
+                        root.legacyAppearance = raw.appearance;
+                } catch (e) {
+                    root.legacyAppearance = null;
+                }
+            }
+            root.mainLoaded = true;
+            root.finishLoad();
         }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
@@ -527,10 +619,12 @@ Singleton {
                 // kill the directory migration, so a timed-out gate must not
                 // do it - the migration is still running and may be about to
                 // put the user's own config at this path.
-                if (!root.configDirTimedOut)
+                if (!root.configDirTimedOut) {
                     writeAdapter();
-                else
-                    root.ready = true;
+                } else {
+                    root.mainLoaded = true;
+                    root.finishLoad();
+                }
                 return;
             }
             // Any other read failure - bad permissions, an unreadable mount,
@@ -541,7 +635,8 @@ Singleton {
             // "the app is broken" rather than "your config is unreadable".
             // Fall back to the built-in defaults instead.
             console.log(`[Config] Could not read ${root.filePath} (error ${error}); continuing with defaults.`);
-            root.ready = true;
+            root.mainLoaded = true;
+            root.finishLoad();
         }
 
         JsonAdapter {
@@ -670,136 +765,6 @@ Singleton {
                     property bool autoSend: false
                     property int maxSeconds: 60
                 }
-            }
-
-            property JsonObject appearance: JsonObject {
-                // "" = follow the system icon theme; otherwise the directory
-                // name of an installed icon theme (see IconThemes.qml).
-                property string iconTheme: ""
-                property bool extraBackgroundTint: true
-                property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
-                // Automatic dark/light switching. "off" = manual only.
-                property JsonObject autoTheme: JsonObject {
-                    property string mode: "off" // off | sunset | fixed
-                    property string lightTime: "07:00" // HH:MM (fixed mode)
-                    property string darkTime: "19:00" // HH:MM (fixed mode)
-                }
-                property JsonObject fonts: JsonObject {
-                    property string main: "Google Sans Flex"
-                    property string numbers: "Google Sans Flex"
-                    property string title: "Google Sans Flex"
-                    property string iconNerd: "JetBrains Mono NF"
-                    property string monospace: "JetBrains Mono NF"
-                    property string reading: "Readex Pro"
-                    property string expressive: "Space Grotesk"
-                }
-                // How fast the shell moves. `multiplier` is a speed preference
-                // and is clamped to motion_policy.js's sanctioned range;
-                // `reduceMotion` is an accessibility state and is deliberately
-                // a separate key, because a floor a slider can land on is a
-                // floor a user can leave by accident.
-                property JsonObject motion: JsonObject {
-                    property real multiplier: 1.0
-                    property bool reduceMotion: false
-                }
-                property JsonObject transparency: JsonObject {
-                    property bool enable: false
-                    property bool automatic: true
-                    property real backgroundTransparency: 0.11
-                    property real contentTransparency: 0.57
-                }
-                property JsonObject terminal: JsonObject {
-                    // kitty's window opacity (background_opacity), 1 = opaque.
-                    // Written into the generated theme's managed block, so it
-                    // is shell config - a preset carries it with appearance -
-                    // rather than a hand edit an update would lose.
-                    property real opacity: 1.0
-                    property JsonObject background: JsonObject {
-                        property bool enabled: false
-                        property string imagePath: ""
-                        property string layout: "tiled"
-                        property real opacity: 0.18
-                    }
-                }
-                property JsonObject wallpaperTheming: JsonObject {
-                    property bool enableAppsAndShell: true
-                    property bool enableQtApps: true
-                    property bool enableTerminal: true
-                    property JsonObject terminalGenerationProps: JsonObject {
-                        property real harmony: 0.6
-                        property real harmonizeThreshold: 100
-                        property real termFgBoost: 0.35
-                        property bool forceDarkMode: false
-                    }
-                }
-                // Sync RGB peripherals to the generated accent color via the
-                // OpenRGB CLI (see services/OpenRgb.qml). Off by default:
-                // not everyone has RGB devices or openrgb installed.
-                property JsonObject openrgb: JsonObject {
-                    property bool enable: false
-                    // Device names (as printed by `openrgb --list-devices`)
-                    // to leave out of the color sync.
-                    property list<string> excludedDevices: []
-                    // "accent" follows the Material You accent (default);
-                    // "monitor" samples the focused monitor's dominant color
-                    // (ambient bias lighting, needs grim).
-                    property string colorSource: "accent"
-                    // With "monitor": only sample while a fullscreen client is
-                    // on the focused monitor, falling back to the accent
-                    // otherwise. false samples continuously.
-                    property bool monitorFullscreenOnly: true
-                    property int monitorPollInterval: 200 // ms between samples
-                    // Minimum summed per-channel difference (0-765) before a
-                    // sampled color is written; below it the sample is dropped.
-                    property int monitorColorDelta: 12
-                    // Blend each sample halfway toward the previous applied
-                    // color instead of snapping on hard scene cuts.
-                    property bool monitorSmooth: true
-                    // Device types (as printed by `openrgb --list-devices`)
-                    // the ambient loop never writes to. GPU RGB rides the
-                    // graphics card's i2c bus - streaming to it mid-game
-                    // stalls rendering. The accent sync still covers these.
-                    property list<string> monitorExcludedTypes: ["GPU"]
-                }
-                property JsonObject palette: JsonObject {
-                    property string type: "auto"
-                    // Which colour matugen lifts from the wallpaper. "dominant" is the
-                    // scorer's first pick (matugen's --source-color-index 0); the rest are
-                    // matugen's --prefer criteria over the same candidates.
-                    property string sourceMode: "dominant" // dominant | saturation | less-saturation | lightness | darkness | value // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot
-                    property string accentColor: ""
-                }
-                // Shared defaults for Material 3 Expressive plugin widgets.
-                property JsonObject clockFonts: JsonObject {
-                    property string desktopTimeFont: "Google Sans Flex"
-                    property string lockscreenTimeFont: "Google Sans Flex"
-                }
-                property JsonObject clock: JsonObject {
-                    property string style: "digital"
-                    property string styleLocked: "digital"
-                    property bool showOnDesktop: true
-                    property bool showDesktopDate: true
-                    property bool showLockscreenDate: true
-                    property bool useSameStyle: true
-                    property int offsetX: 0
-                    property int offsetY: -50
-                    property JsonObject digital: JsonObject { property bool isVertical: false; property string colorStyle: "primary"; property int fontSize: 84; property int dateFontSize: 24; property int dateGap: 4; property bool hideAmPm: false; property string alignment: "center" }
-                    property JsonObject digitalLocked: JsonObject { property bool isVertical: false; property string colorStyle: "primary"; property int fontSize: 84; property int dateFontSize: 24; property int dateGap: 4; property bool hideAmPm: false; property string alignment: "center" }
-                    property JsonObject analog: JsonObject { property bool constantlyRotate: false; property string backgroundStyle: "shape"; property int sides: 12; property string backgroundShape: "Circle"; property string shape: "Circle"; property bool showMarks: true; property bool hourMarks: false; property bool timeIndicators: false; property string dateStyle: "bubble"; property string handStyle: "modern"; property string hourHandStyle: "fill"; property string minuteHandStyle: "bold"; property string secondHandStyle: "dot"; property string dialStyle: "dots"; property int size: 240 }
-                    property JsonObject analogLocked: JsonObject { property bool constantlyRotate: false; property string backgroundStyle: "shape"; property int sides: 12; property string backgroundShape: "Circle"; property string shape: "Circle"; property bool showMarks: true; property bool hourMarks: false; property bool timeIndicators: false; property string dateStyle: "bubble"; property string handStyle: "modern"; property string hourHandStyle: "fill"; property string minuteHandStyle: "bold"; property string secondHandStyle: "dot"; property string dialStyle: "dots"; property int size: 240 }
-                    property JsonObject code: JsonObject { property string valueColorStyle: "primary"; property string keywordColorStyle: "tertiary"; property string blockColorStyle: "primary"; property int fontSize: 18; property string blockType: "js"; property string fontFamily: "JetBrains Mono NF" }
-                    property JsonObject codeLocked: JsonObject { property string valueColorStyle: "primary"; property string keywordColorStyle: "tertiary"; property string blockColorStyle: "primary"; property int fontSize: 18; property string blockType: "js"; property string fontFamily: "JetBrains Mono NF" }
-                    property JsonObject text: JsonObject { property int fontSize: 42; property int dateFontSize: 18; property string alignment: "center"; property string timeColorStyle: "onSurface"; property string dateColorStyle: "primary" }
-                    property JsonObject textLocked: JsonObject { property int fontSize: 42; property int dateFontSize: 18; property string alignment: "center"; property string timeColorStyle: "onSurface"; property string dateColorStyle: "primary" }
-                    property JsonObject pill: JsonObject { property int size: 120; property bool isVertical: false; property bool showBackground: true; property string timeColorStyle: "onLayer0"; property string dateColorStyle: "primary"; property string pillColorStyle: "surfaceContainerHigh" }
-                    property JsonObject pillLocked: JsonObject { property int size: 120; property bool isVertical: false; property bool showBackground: true; property string timeColorStyle: "onLayer0"; property string dateColorStyle: "primary"; property string pillColorStyle: "surfaceContainerHigh" }
-                }
-                property JsonObject atAGlance: JsonObject { property bool showGreeting: true; property bool showDate: true; property bool showEvents: true; property bool showQuote: true; property real customWidth: 0; property string alignment: "left"; property string fontFamily: ""; property int fontSize: 24; property string greetingColorStyle: "primary"; property string dateColorStyle: "onLayer1"; property string quoteColorStyle: "onLayer1"; property bool locked: false }
-                property JsonObject mediaWidget: JsonObject { property bool locked: false; property bool showLyrics: false }
-                property JsonObject systemMonitor: JsonObject { property bool locked: false; property bool vertical: false; property int updateInterval: 3000 }
-                property JsonObject weatherWidget: JsonObject { property bool locked: false; property string sizeMode: "3x1" }
-                property JsonObject currencyWidget: JsonObject { property bool locked: false; property string sizeMode: "2x1"; property string baseCurrency: "USD"; property string quote1: "EUR"; property string quote2: "GBP"; property string quote3: "JPY"; property string quote4: "CAD" }
-                property JsonObject lyrics: JsonObject { property bool showFloatingLyrics: false; property bool lyricsUseRomaji: false; property bool showRomanization: false; property bool showTranslation: false }
             }
 
             property JsonObject audio: JsonObject {
@@ -1943,6 +1908,206 @@ Singleton {
                     property int micGain: 100 // percent
                     property bool setAsDefault: false
                 }
+            }
+        }
+    }
+
+    // `cp -n`: never over a copy from an earlier split of the same day.
+    Process {
+        id: preSplitBackup
+        command: ["cp", "-n", root.filePath, `${root.filePath}.pre-split-${Qt.formatDate(new Date(), "yyyy-MM-dd")}`]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                console.log(`[Config] The pre-split copy of ${root.filePath} failed (${exitCode}); splitting anyway.`);
+            appearanceFileView.setText(JSON.stringify({ "appearance": root.legacyAppearance }, null, 2));
+        }
+    }
+    Timer {
+        id: appearanceReloadTimer
+        interval: root.readWriteDelay
+        repeat: false
+        onTriggered: appearanceFileView.reload()
+    }
+    Timer {
+        id: appearanceWriteTimer
+        interval: root.readWriteDelay
+        repeat: false
+        onTriggered: {
+            if (root.configDirTimedOut)
+                return;
+            appearanceFileView.writeAdapter()
+        }
+    }
+    FileView {
+        id: appearanceFileView
+        // Only once the main file has been read: the seed below needs its
+        // raw appearance object, and a shell that timed out on the directory
+        // migration must not create files in it.
+        path: root.mainLoaded ? root.appearanceFilePath : ""
+        watchChanges: true
+        blockWrites: root.blockWrites
+        onFileChanged: appearanceReloadTimer.restart()
+        onAdapterUpdated: appearanceWriteTimer.restart()
+        onLoaded: {
+            root.appearanceLoaded = true;
+            root.finishLoad();
+        }
+        onLoadFailed: error => {
+            if (error == FileViewError.FileNotFound) {
+                if (root.configDirTimedOut) {
+                    root.appearanceLoaded = true;
+                    root.finishLoad();
+                    return;
+                }
+                if (root.legacyAppearance !== null) {
+                    // The split: the downgrade copy first, then config.json's
+                    // appearance becomes the file, verbatim, and the watch
+                    // reloads it into the adapter. The copy is waited for:
+                    // `ready` (and the migrations that write) comes only
+                    // once appearance is loaded, which is after it.
+                    console.log(`[Config] Splitting appearance out of ${root.filePath} into ${root.appearanceFilePath}`);
+                    preSplitBackup.running = true;
+                } else {
+                    writeAdapter();
+                }
+                return;
+            }
+            console.log(`[Config] Could not read ${root.appearanceFilePath} (error ${error}); continuing with defaults.`);
+            root.appearanceLoaded = true;
+            root.finishLoad();
+        }
+
+        JsonAdapter {
+            id: appearanceAdapter
+
+            property JsonObject appearance: JsonObject {
+                // "" = follow the system icon theme; otherwise the directory
+                // name of an installed icon theme (see IconThemes.qml).
+                property string iconTheme: ""
+                property bool extraBackgroundTint: true
+                property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
+                // Automatic dark/light switching. "off" = manual only.
+                property JsonObject autoTheme: JsonObject {
+                    property string mode: "off" // off | sunset | fixed
+                    property string lightTime: "07:00" // HH:MM (fixed mode)
+                    property string darkTime: "19:00" // HH:MM (fixed mode)
+                }
+                property JsonObject fonts: JsonObject {
+                    property string main: "Google Sans Flex"
+                    property string numbers: "Google Sans Flex"
+                    property string title: "Google Sans Flex"
+                    property string iconNerd: "JetBrains Mono NF"
+                    property string monospace: "JetBrains Mono NF"
+                    property string reading: "Readex Pro"
+                    property string expressive: "Space Grotesk"
+                }
+                // How fast the shell moves. `multiplier` is a speed preference
+                // and is clamped to motion_policy.js's sanctioned range;
+                // `reduceMotion` is an accessibility state and is deliberately
+                // a separate key, because a floor a slider can land on is a
+                // floor a user can leave by accident.
+                property JsonObject motion: JsonObject {
+                    property real multiplier: 1.0
+                    property bool reduceMotion: false
+                }
+                property JsonObject transparency: JsonObject {
+                    property bool enable: false
+                    property bool automatic: true
+                    property real backgroundTransparency: 0.11
+                    property real contentTransparency: 0.57
+                }
+                property JsonObject terminal: JsonObject {
+                    // kitty's window opacity (background_opacity), 1 = opaque.
+                    // Written into the generated theme's managed block, so it
+                    // is shell config - a preset carries it with appearance -
+                    // rather than a hand edit an update would lose.
+                    property real opacity: 1.0
+                    property JsonObject background: JsonObject {
+                        property bool enabled: false
+                        property string imagePath: ""
+                        property string layout: "tiled"
+                        property real opacity: 0.18
+                    }
+                }
+                property JsonObject wallpaperTheming: JsonObject {
+                    property bool enableAppsAndShell: true
+                    property bool enableQtApps: true
+                    property bool enableTerminal: true
+                    property JsonObject terminalGenerationProps: JsonObject {
+                        property real harmony: 0.6
+                        property real harmonizeThreshold: 100
+                        property real termFgBoost: 0.35
+                        property bool forceDarkMode: false
+                    }
+                }
+                // Sync RGB peripherals to the generated accent color via the
+                // OpenRGB CLI (see services/OpenRgb.qml). Off by default:
+                // not everyone has RGB devices or openrgb installed.
+                property JsonObject openrgb: JsonObject {
+                    property bool enable: false
+                    // Device names (as printed by `openrgb --list-devices`)
+                    // to leave out of the color sync.
+                    property list<string> excludedDevices: []
+                    // "accent" follows the Material You accent (default);
+                    // "monitor" samples the focused monitor's dominant color
+                    // (ambient bias lighting, needs grim).
+                    property string colorSource: "accent"
+                    // With "monitor": only sample while a fullscreen client is
+                    // on the focused monitor, falling back to the accent
+                    // otherwise. false samples continuously.
+                    property bool monitorFullscreenOnly: true
+                    property int monitorPollInterval: 200 // ms between samples
+                    // Minimum summed per-channel difference (0-765) before a
+                    // sampled color is written; below it the sample is dropped.
+                    property int monitorColorDelta: 12
+                    // Blend each sample halfway toward the previous applied
+                    // color instead of snapping on hard scene cuts.
+                    property bool monitorSmooth: true
+                    // Device types (as printed by `openrgb --list-devices`)
+                    // the ambient loop never writes to. GPU RGB rides the
+                    // graphics card's i2c bus - streaming to it mid-game
+                    // stalls rendering. The accent sync still covers these.
+                    property list<string> monitorExcludedTypes: ["GPU"]
+                }
+                property JsonObject palette: JsonObject {
+                    property string type: "auto"
+                    // Which colour matugen lifts from the wallpaper. "dominant" is the
+                    // scorer's first pick (matugen's --source-color-index 0); the rest are
+                    // matugen's --prefer criteria over the same candidates.
+                    property string sourceMode: "dominant" // dominant | saturation | less-saturation | lightness | darkness | value // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot
+                    property string accentColor: ""
+                }
+                // Shared defaults for Material 3 Expressive plugin widgets.
+                property JsonObject clockFonts: JsonObject {
+                    property string desktopTimeFont: "Google Sans Flex"
+                    property string lockscreenTimeFont: "Google Sans Flex"
+                }
+                property JsonObject clock: JsonObject {
+                    property string style: "digital"
+                    property string styleLocked: "digital"
+                    property bool showOnDesktop: true
+                    property bool showDesktopDate: true
+                    property bool showLockscreenDate: true
+                    property bool useSameStyle: true
+                    property int offsetX: 0
+                    property int offsetY: -50
+                    property JsonObject digital: JsonObject { property bool isVertical: false; property string colorStyle: "primary"; property int fontSize: 84; property int dateFontSize: 24; property int dateGap: 4; property bool hideAmPm: false; property string alignment: "center" }
+                    property JsonObject digitalLocked: JsonObject { property bool isVertical: false; property string colorStyle: "primary"; property int fontSize: 84; property int dateFontSize: 24; property int dateGap: 4; property bool hideAmPm: false; property string alignment: "center" }
+                    property JsonObject analog: JsonObject { property bool constantlyRotate: false; property string backgroundStyle: "shape"; property int sides: 12; property string backgroundShape: "Circle"; property string shape: "Circle"; property bool showMarks: true; property bool hourMarks: false; property bool timeIndicators: false; property string dateStyle: "bubble"; property string handStyle: "modern"; property string hourHandStyle: "fill"; property string minuteHandStyle: "bold"; property string secondHandStyle: "dot"; property string dialStyle: "dots"; property int size: 240 }
+                    property JsonObject analogLocked: JsonObject { property bool constantlyRotate: false; property string backgroundStyle: "shape"; property int sides: 12; property string backgroundShape: "Circle"; property string shape: "Circle"; property bool showMarks: true; property bool hourMarks: false; property bool timeIndicators: false; property string dateStyle: "bubble"; property string handStyle: "modern"; property string hourHandStyle: "fill"; property string minuteHandStyle: "bold"; property string secondHandStyle: "dot"; property string dialStyle: "dots"; property int size: 240 }
+                    property JsonObject code: JsonObject { property string valueColorStyle: "primary"; property string keywordColorStyle: "tertiary"; property string blockColorStyle: "primary"; property int fontSize: 18; property string blockType: "js"; property string fontFamily: "JetBrains Mono NF" }
+                    property JsonObject codeLocked: JsonObject { property string valueColorStyle: "primary"; property string keywordColorStyle: "tertiary"; property string blockColorStyle: "primary"; property int fontSize: 18; property string blockType: "js"; property string fontFamily: "JetBrains Mono NF" }
+                    property JsonObject text: JsonObject { property int fontSize: 42; property int dateFontSize: 18; property string alignment: "center"; property string timeColorStyle: "onSurface"; property string dateColorStyle: "primary" }
+                    property JsonObject textLocked: JsonObject { property int fontSize: 42; property int dateFontSize: 18; property string alignment: "center"; property string timeColorStyle: "onSurface"; property string dateColorStyle: "primary" }
+                    property JsonObject pill: JsonObject { property int size: 120; property bool isVertical: false; property bool showBackground: true; property string timeColorStyle: "onLayer0"; property string dateColorStyle: "primary"; property string pillColorStyle: "surfaceContainerHigh" }
+                    property JsonObject pillLocked: JsonObject { property int size: 120; property bool isVertical: false; property bool showBackground: true; property string timeColorStyle: "onLayer0"; property string dateColorStyle: "primary"; property string pillColorStyle: "surfaceContainerHigh" }
+                }
+                property JsonObject atAGlance: JsonObject { property bool showGreeting: true; property bool showDate: true; property bool showEvents: true; property bool showQuote: true; property real customWidth: 0; property string alignment: "left"; property string fontFamily: ""; property int fontSize: 24; property string greetingColorStyle: "primary"; property string dateColorStyle: "onLayer1"; property string quoteColorStyle: "onLayer1"; property bool locked: false }
+                property JsonObject mediaWidget: JsonObject { property bool locked: false; property bool showLyrics: false }
+                property JsonObject systemMonitor: JsonObject { property bool locked: false; property bool vertical: false; property int updateInterval: 3000 }
+                property JsonObject weatherWidget: JsonObject { property bool locked: false; property string sizeMode: "3x1" }
+                property JsonObject currencyWidget: JsonObject { property bool locked: false; property string sizeMode: "2x1"; property string baseCurrency: "USD"; property string quote1: "EUR"; property string quote2: "GBP"; property string quote3: "JPY"; property string quote4: "CAD" }
+                property JsonObject lyrics: JsonObject { property bool showFloatingLyrics: false; property bool lyricsUseRomaji: false; property bool showRomanization: false; property bool showTranslation: false }
             }
         }
     }

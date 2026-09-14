@@ -139,6 +139,8 @@ Singleton {
         if (!root.configDirReady)
             return;
         Quickshell.execDetached(["mkdir", "-p", `${root.shellConfig}`])
+        // Per-domain config files (config-storage-split, stage 1: appearance).
+        Quickshell.execDetached(["mkdir", "-p", `${root.shellConfig}/config.d`])
         Quickshell.execDetached(["mkdir", "-p", `${root.userPresetsPath}`])
         Quickshell.execDetached(["mkdir", "-p", `${root.userActions}`])
         Quickshell.execDetached(["mkdir", "-p", `${root.aiAttachments}`])
