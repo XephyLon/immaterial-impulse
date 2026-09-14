@@ -329,7 +329,6 @@ ContentPage {
                     }
                     ConfigSelectionArray {
                         property bool rowVisible: Config.options.ai.dictation.engine === "local"
-                        visible: rowVisible
                         text: Translation.tr("Model")
                         currentValue: Config.options.ai.dictation.model
                         onSelected: value => { Config.options.ai.dictation.model = value; }
@@ -343,7 +342,6 @@ ContentPage {
                     }
                     RowLayout {
                         property bool rowVisible: Config.options.ai.dictation.engine === "local"
-                        visible: rowVisible
                         spacing: Appearance.spacing.space200
                         MaterialSymbol {
                             Layout.leftMargin: Appearance.spacing.space100
