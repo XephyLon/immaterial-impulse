@@ -5,6 +5,7 @@ import qs.modules.common.functions
 import qs.modules.common.widgets
 import Quickshell
 import Quickshell.Io
+import "warp_status.js" as WarpStatus
 
 QuickToggleModel {
     id: root
@@ -61,16 +62,12 @@ QuickToggleModel {
         stdout: StdioCollector {
             id: warpStatusCollector
             onStreamFinished: {
-                if (warpStatusCollector.text.length > 0) {
-                    root.available = true
-                }
-                if (warpStatusCollector.text.includes("Unable")) {
-                    registrationProc.running = true
-                } else if (warpStatusCollector.text.includes("Connected")) {
-                    root.toggled = true
-                } else if (warpStatusCollector.text.includes("Disconnected")) {
-                    root.toggled = false
-                }
+                // The reading lives in warp_status.js (tests/tst_warp_status.qml).
+                const status = WarpStatus.parse(warpStatusCollector.text)
+                if (status.available) root.available = true
+                if (status.state === "unregistered") registrationProc.running = true
+                else if (status.state === "connected") root.toggled = true
+                else if (status.state === "disconnected") root.toggled = false
             }
         }
     }
