@@ -75,11 +75,27 @@ Item {
                 Layout.rightMargin: Appearance.spacing.space50
                 spacing: Appearance.spacing.space150
 
-                StyledText {
-                    text: Translation.tr("Activity")
-                    font.pixelSize: Appearance.font.pixelSize.larger
-                    font.weight: Font.Medium
-                    color: Appearance.colors.colOnLayer1
+                ColumnLayout {
+                    spacing: 0
+
+                    StyledText {
+                        text: Translation.tr("Activity")
+                        font.pixelSize: Appearance.font.pixelSize.larger
+                        font.weight: Font.Medium
+                        color: Appearance.colors.colOnLayer1
+                    }
+
+                    // Under the title rather than beside the button, so the
+                    // filter chips keep their place whether or not there is
+                    // anything to count.
+                    StyledText {
+                        visible: Modes.history.length > 0
+                        text: root.entries.length === Modes.history.length
+                            ? (Modes.history.length === 1 ? Translation.tr("1 entry") : Translation.tr("%1 entries").arg(Modes.history.length))
+                            : Translation.tr("%1 of %2").arg(root.entries.length).arg(Modes.history.length)
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
                 }
 
                 ConfigSelectionArray {
@@ -97,17 +113,12 @@ Item {
                     Layout.fillWidth: true
                 }
 
-                StyledText {
-                    visible: !root.confirmClear && Modes.history.length > 0
-                    text: root.entries.length === Modes.history.length
-                        ? (Modes.history.length === 1 ? Translation.tr("1 entry") : Translation.tr("%1 entries").arg(Modes.history.length))
-                        : Translation.tr("%1 of %2").arg(root.entries.length).arg(Modes.history.length)
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colSubtext
-                }
-
+                // Always in the row (dimmed with nothing to clear), so the
+                // header's right edge does not rearrange when the first entry
+                // arrives.
                 FooterButton {
-                    visible: !root.confirmClear && Modes.history.length > 0
+                    visible: !root.confirmClear
+                    enabled: Modes.history.length > 0
                     buttonIcon: "delete_sweep"
                     buttonText: Translation.tr("Clear")
                     onClicked: root.confirmClear = true

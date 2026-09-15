@@ -43,13 +43,12 @@ ColumnLayout {
             value: row.trigger.to
             onCommitted: v => row.set({ to: v })
         }
+    }
 
-        StyledText {
-            visible: fromMin >= 0 && toMin >= 0 && fromMin >= toMin
-            text: Translation.tr("overnight")
-            font.pixelSize: Appearance.font.pixelSize.smaller
-            color: Appearance.colors.colSubtext
-        }
+    // Its own line: beside the fields it ran past the card's edge.
+    FormHint {
+        visible: fromMin >= 0 && toMin >= 0 && fromMin >= toMin
+        text: Translation.tr("Overnight: the window runs past midnight into the next day")
     }
 
     FormHint {
@@ -71,7 +70,9 @@ ColumnLayout {
                 id: dayButton
                 required property int index
                 readonly property int day: dayButton.index + 1
-                readonly property bool on: ModeSchema.toArray(row.trigger.days).indexOf(dayButton.day) !== -1
+                // No days listed means every day, and is drawn that way.
+                readonly property var days: ModeSchema.toArray(row.trigger.days).map(Number)
+                readonly property bool on: dayButton.days.length === 0 || dayButton.days.indexOf(dayButton.day) !== -1
 
                 implicitWidth: 44
                 implicitHeight: 32
@@ -80,7 +81,7 @@ ColumnLayout {
                 colBackgroundHover: on ? Appearance.colors.colPrimaryHover : Appearance.colors.colLayer3Hover
                 colRipple: on ? Appearance.colors.colPrimaryActive : Appearance.colors.colLayer3Active
                 onClicked: {
-                    const days = ModeSchema.toArray(row.trigger.days).map(Number);
+                    const days = dayButton.days.length ? Array.from(dayButton.days) : [1, 2, 3, 4, 5, 6, 7];
                     const idx = days.indexOf(dayButton.day);
                     if (idx === -1)
                         days.push(dayButton.day);

@@ -20,14 +20,18 @@ ColumnLayout {
     Layout.rightMargin: Appearance.spacing.space150
     spacing: Appearance.spacing.space100
 
+    // The header sits on the rows' own columns: its glyph is the rows' glyph
+    // size behind the rows' inner padding, and its control ends where the
+    // rows' trailing buttons end.
     RowLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: Appearance.spacing.space50
-        spacing: Appearance.spacing.space125
+        Layout.leftMargin: Appearance.spacing.space175
+        Layout.rightMargin: Appearance.spacing.space100
+        spacing: Appearance.spacing.space150
 
         MaterialSymbol {
             text: section.icon
-            iconSize: Appearance.font.pixelSize.larger
+            iconSize: Appearance.font.pixelSize.huge
             color: Appearance.colors.colPrimary
         }
 
