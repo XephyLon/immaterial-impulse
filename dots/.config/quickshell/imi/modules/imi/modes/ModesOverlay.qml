@@ -69,6 +69,8 @@ Scope {
         sourceComponent: PanelWindow {
             id: modesRoot
 
+            // One manager, on the screen the pointer is on when it is asked for.
+            screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0] ?? null
             visible: modesLoader.active
             color: "transparent"
             exclusiveZone: 0

@@ -19,6 +19,31 @@ import qs.modules.imi.modes
 ContentPage {
     id: page
     forceWidth: true
+
+    function goTo(term) {
+        const t = term.toLowerCase().trim()
+
+        function findTarget(rootItem) {
+            for (let i = 0; i < rootItem.children.length; i++) {
+                let child = rootItem.children[i]
+                if (child.title && child.title.toLowerCase().includes(t)) {
+                    return child
+                }
+            }
+
+            for (let i = 0; i < rootItem.children.length; i++) {
+                let found = findTarget(rootItem.children[i])
+                if (found) return found
+            }
+            return null
+        }
+
+        let target = findTarget(mainLayout)
+        if (target) {
+            let pos = target.mapToItem(mainLayout, 0, 0)
+            page.scrollToY(pos.y)
+        }
+    }
     readonly property var opts: Config.options.modes
     // The shortcut is bound in the Hyprland config, which the shell's own
     // update never touches - so it can be missing on an otherwise current
