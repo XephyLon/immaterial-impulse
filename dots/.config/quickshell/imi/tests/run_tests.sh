@@ -1885,6 +1885,32 @@ if ! python3 "$SCRIPT_DIR/test_modes_runtime.py"; then
     exit 1
 fi
 
+# Accounts (Google + Proton): secrets in the keyring blob and the helpers'
+# environment, the services on one account and one overridable API base, the
+# calendar into IcsCalendar, the to-do lists kept apart, Proton VPN two-staged,
+# the page and the index...
+echo "Running accounts contract tests..."
+if ! python3 "$SCRIPT_DIR/test_accounts_contract.py"; then
+    echo "Accounts contract tests failed."
+    exit 1
+fi
+
+# ...the OAuth helper against a fake token endpoint (refresh, a revoked token,
+# missing secrets, the loopback authorize round trip)...
+echo "Running Google OAuth helper tests..."
+if ! python3 "$SCRIPT_DIR/test_google_oauth.py"; then
+    echo "Google OAuth helper tests failed."
+    exit 1
+fi
+
+# ...and the Google services in a real shell against tests/fake_google_api.py,
+# with secret-tool shadowed by a file-backed stub. Brings its own headless weston.
+echo "Running accounts runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_accounts_runtime.py"; then
+    echo "Accounts runtime tests failed."
+    exit 1
+fi
+
 # OllamaCatalog against a fake daemon in a real shell: lists arrive, a pull
 # streams progress to 1 and lands installed, a removal drops it, and the
 # chat's model list follows both. Brings its own headless weston.
