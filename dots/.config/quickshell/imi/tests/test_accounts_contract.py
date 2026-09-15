@@ -101,7 +101,8 @@ class AccountsContract(unittest.TestCase):
         self.assertIn("property string selectedListId", widget, "the chosen list is an id; the tab index is derived from it")
         self.assertRegex(widget, r"tabButtonList\.findIndex\(tab => tab\.listId === root\.selectedListId\)")
         # The pages and the tabs come from one source: two local pages, then one per Google list.
-        swipe = widget[widget.index("SwipeView {"):widget.index("// + FAB")]
+        start = widget.index("SwipeView {")
+        swipe = widget[start:widget.index("StyledRectangularShadow {", start)]
         pages = re.findall(r"^            (TaskList \{|Repeater \{)", swipe, re.M)
         self.assertEqual(pages, ["TaskList {", "TaskList {", "Repeater {"], "two static pages precede the per-list Repeater, matching localTabs.concat(googleLists)")
         self.assertIn("GoogleTasks.addTask(todoInput.text)", widget)
