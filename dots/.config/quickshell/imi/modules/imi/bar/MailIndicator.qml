@@ -62,21 +62,26 @@ MouseArea {
                 anchors {
                     right: parent.right
                     top: parent.top
-                    rightMargin: root.showUnreadCount ? -Appearance.spacing.space50 : 1
-                    topMargin: root.showUnreadCount ? -Appearance.spacing.space25 : 3
+                    // Clear of the envelope: its corner is solid where the
+                    // bell's (the reference) is empty space.
+                    rightMargin: -Appearance.spacing.space100
+                    topMargin: -Appearance.spacing.space75
                 }
                 z: 1
                 Rectangle {
                     radius: Appearance.rounding.full
-                    color: Appearance.colors.colOnLayer1
-                    implicitHeight: root.showUnreadCount ? Math.max(counter.implicitWidth, counter.implicitHeight) : 8
+                    color: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+                    // A hairline of the pill's own colour keeps the dot legible over the glyph's edge.
+                    border.width: Appearance.borderWidth.standard
+                    border.color: Appearance.colors.colLayer1
+                    implicitHeight: root.showUnreadCount ? Math.max(counter.implicitWidth, counter.implicitHeight) + Appearance.spacing.space25 : 8
                     implicitWidth: implicitHeight
                     StyledText {
                         id: counter
                         visible: root.showUnreadCount
                         anchors.centerIn: parent
                         font.pixelSize: Appearance.font.pixelSize.smallest
-                        color: Appearance.colors.colLayer1
+                        color: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colPrimary : Appearance.colors.colLayer1
                         text: root.unread > 99 ? "99+" : root.unread
                     }
                 }

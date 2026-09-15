@@ -62,6 +62,7 @@ ADOPTERS = {
     "CaptureConfig.qml": "this file",
     "PhoneConfig.qml": "tests/test_phone_tab_surface_contract.py",
     "ModesConfig.qml": "tests/test_modes_contract.py",
+    "AccountsConfig.qml": "tests/test_accounts_contract.py",
 }
 
 GRAMMAR_WIDGETS = (

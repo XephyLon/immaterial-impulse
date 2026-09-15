@@ -44,30 +44,36 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // Local | <each Google list>, only while the account offers lists.
-        Flow {
+        // Local | <each Google list>, unrolled while the account offers lists
+        // (a bare `visible:` would snap the tabs down 40px in one frame).
+        Revealer {
             Layout.fillWidth: true
-            Layout.bottomMargin: Appearance.spacing.space100
-            visible: root.googleAvailable
-            spacing: Appearance.spacing.space75
+            reveal: root.googleAvailable
+            vertical: true
 
-            FilterChip {
-                label: Translation.tr("Local")
-                chipIcon: "home"
-                toggled: !root.googleSource
-                onClicked: root.source = "local"
-            }
-            Repeater {
-                model: GoogleTasks.lists
-                delegate: FilterChip {
-                    required property var modelData
-                    label: modelData.title
-                    chipIcon: "cloud"
-                    toggled: root.googleSource && GoogleTasks.currentListId === modelData.id
-                    onClicked: {
-                        root.source = "google";
-                        GoogleTasks.selectList(modelData.id);
-                        tabBar.setCurrentIndex(0);
+            Flow {
+                width: parent.width
+                spacing: Appearance.spacing.space75
+                bottomPadding: Appearance.spacing.space75
+
+                FilterChip {
+                    label: Translation.tr("Local")
+                    chipIcon: "home"
+                    toggled: !root.googleSource
+                    onClicked: root.source = "local"
+                }
+                Repeater {
+                    model: GoogleTasks.lists
+                    delegate: FilterChip {
+                        required property var modelData
+                        label: modelData.title
+                        chipIcon: "cloud"
+                        toggled: root.googleSource && GoogleTasks.currentListId === modelData.id
+                        onClicked: {
+                            root.source = "google";
+                            GoogleTasks.selectList(modelData.id);
+                            tabBar.setCurrentIndex(0);
+                        }
                     }
                 }
             }
@@ -103,14 +109,14 @@ Item {
             // list transition could ever fire. Indices are resolved at click
             // time in TaskList instead.
             TaskList {
-                listBottomPadding: root.fabSize + root.fabMargins * 2
+                listBottomPadding: root.fabSize + root.fabMargins * (root.googleAvailable ? 1 : 2)
                 emptyPlaceholderIcon: "check_circle"
                 emptyPlaceholderText: Translation.tr("Nothing here!")
                 source: root.googleSource ? "google" : "local"
                 taskList: root.googleSource ? GoogleTasks.tasks : Todo.list.filter(function(item) { return !item.done; })
             }
             TaskList {
-                listBottomPadding: root.fabSize + root.fabMargins * 2
+                listBottomPadding: root.fabSize + root.fabMargins * (root.googleAvailable ? 1 : 2)
                 emptyPlaceholderIcon: "checklist"
                 // Google keeps completed tasks itself; this shell only lists the open ones.
                 emptyPlaceholderText: root.googleSource ? Translation.tr("Completed tasks stay in Google Tasks") : Translation.tr("Finished tasks will go here")

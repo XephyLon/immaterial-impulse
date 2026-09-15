@@ -44,6 +44,11 @@ ContentPage {
     property string clientIdDraft: GoogleAccount.clientId
     property string clientSecretDraft: GoogleAccount.clientSecret
     readonly property bool clientDirty: page.clientIdDraft.trim() !== GoogleAccount.clientId || page.clientSecretDraft.trim() !== GoogleAccount.clientSecret
+    // The Proton status is read only while someone is looking; this page is
+    // a watcher while it is the one on screen.
+    readonly property bool shown: GlobalStates.currentPageInstance === page
+    onShownChanged: shown ? ProtonVpn.acquire() : ProtonVpn.release()
+    Component.onDestruction: if (page.shown) ProtonVpn.release()
 
     ContentSection {
         icon: "account_circle"
@@ -67,20 +72,23 @@ ContentPage {
         }
 
         ContentSubsection {
+            icon: "login"
             title: Translation.tr("Sign in")
 
             GroupedList {
                 ConfigTextArea {
                     buttonIcon: "badge"
+                    text: Translation.tr("OAuth client ID")
                     singleLine: true
-                    placeholderText: Translation.tr("OAuth client ID")
+                    placeholderText: Translation.tr("From the Google Cloud console")
                     value: page.clientIdDraft
                     onValueChanged: page.clientIdDraft = value
                 }
                 ConfigTextArea {
                     buttonIcon: "password"
+                    text: Translation.tr("OAuth client secret")
                     singleLine: true
-                    placeholderText: Translation.tr("OAuth client secret")
+                    placeholderText: Translation.tr("Saved to the keyring")
                     value: page.clientSecretDraft
                     onValueChanged: page.clientSecretDraft = value
                     password: true
@@ -104,7 +112,6 @@ ContentPage {
                     }
                     RippleButtonWithIcon {
                         enabled: GoogleAccount.configured && !GoogleAccount.connecting
-                        opacity: enabled ? 1 : 0.5
                         materialIcon: GoogleAccount.connected ? "logout" : "login"
                         mainText: GoogleAccount.connected ? Translation.tr("Disconnect") : Translation.tr("Connect")
                         onClicked: GoogleAccount.connected ? GoogleAccount.disconnect() : GoogleAccount.connect()
@@ -114,6 +121,7 @@ ContentPage {
         }
 
         ContentSubsection {
+            icon: "visibility"
             title: Translation.tr("What the shell reads")
 
             GroupedList {
@@ -169,6 +177,7 @@ ContentPage {
         title: Translation.tr("Proton")
 
         ContentSubsection {
+            icon: "vpn_lock"
             title: Translation.tr("VPN")
 
             GroupedList {
@@ -188,15 +197,17 @@ ContentPage {
                     icon: "av_timer"
                     text: Translation.tr("Polling interval (s)")
                     value: Config.options.accounts.proton.vpn.pollInterval / 1000
-                    from: 5
-                    to: 120
-                    stepSize: 5
+                    from: 15
+                    to: 300
+                    stepSize: 15
                     onValueModified: Config.options.accounts.proton.vpn.pollInterval = newValue * 1000
+                    infoText: Translation.tr("Each read is a Python process; it runs only while the quick panel or this page is showing")
                 }
             }
         }
 
         ContentSubsection {
+            icon: "info"
             title: Translation.tr("Calendar, Mail and Pass")
 
             GroupedList {
@@ -237,6 +248,7 @@ ContentPage {
         title: Translation.tr("Calendar feeds")
 
         ContentSubsection {
+            icon: "link"
             title: Translation.tr("ICS links")
 
             GroupedList {
