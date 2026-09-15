@@ -38,9 +38,12 @@ ContentPage {
             return null
         }
 
-        let target = findTarget(mainLayout)
+        // The page's own scrolled item: this page has no ColumnLayout of its
+        // own between it and its sections (CaptureConfig, this function's
+        // source, does).
+        let target = findTarget(page.contentItem)
         if (target) {
-            let pos = target.mapToItem(mainLayout, 0, 0)
+            let pos = target.mapToItem(page.contentItem, 0, 0)
             page.scrollToY(pos.y)
         }
     }
