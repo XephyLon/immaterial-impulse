@@ -71,7 +71,8 @@ class FrameModeContract(unittest.TestCase):
         # AUTHORITY owns that predicate - the same one Dock.qml uses - and the
         # readers ask by screen name; no caller hands in a fullscreen flag,
         # so the bands and the fillets cannot be given two answers.
-        self.assertIn("return root.dockReserves && !WM.fullscreenOnMonitor(screenName);", geo)
+        self.assertIn("map[screen.name] = root.dockReserves && !WM.fullscreenOnMonitor(screen.name);", geo)
+        self.assertIn("return root.dockReservesByScreen[screenName] ?? false;", geo, "the predicate is memoised once, not scanned per band")
         self.assertIn("fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)", dock)
         self.assertNotRegex(geo, r"function \w+\([^)]*fullscreen[^)]*\)", "no reader takes a caller's fullscreen flag")
         self.assertIn('FrameGeometry.bandMarginsForScreen(band.edge, band.screen?.name ?? "")', frame)
@@ -82,9 +83,9 @@ class FrameModeContract(unittest.TestCase):
         # The compositor's live rounding, the option as the fallback; the
         # probe spawns only while frame mode is on.
         self.assertIn('command: ["hyprctl", "getoption", "decoration:rounding", "-j"]', geo)
-        self.assertIn("running: root.enabled\n", geo)
-        self.assertIn('if (event.name === "configreloaded" && root.enabled) roundingProbe.running = true;', geo)
-        self.assertIn("onEnabledChanged: if (root.enabled) roundingProbe.running = true", geo)
+        self.assertIn("running: root.enabled && root.probeArmed\n", geo)
+        self.assertNotIn("roundingProbe.running =", geo, "re-arm through the flag; a write over the binding destroys it")
+        self.assertIn('if (event.name !== "configreloaded" || !root.enabled) return;', geo)
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())

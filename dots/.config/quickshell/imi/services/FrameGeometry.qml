@@ -47,10 +47,14 @@ Singleton {
     readonly property real innerRadius: Geo.innerRadius(root.liveRounding >= 0 ? root.liveRounding : Config.options.hyprland.decoration.rounding)
     readonly property color color: Appearance.colors.colBarBackground
 
+    // Re-armed by dropping and raising a companion flag, never by writing
+    // `running` (an imperative write over a binding destroys it: the switch
+    // that "detached from the config and then lied about it").
+    property bool probeArmed: true
     Process {
         id: roundingProbe
         command: ["hyprctl", "getoption", "decoration:rounding", "-j"]
-        running: root.enabled
+        running: root.enabled && root.probeArmed
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -65,17 +69,27 @@ Singleton {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
-            if (event.name === "configreloaded" && root.enabled) roundingProbe.running = true;
+            if (event.name !== "configreloaded" || !root.enabled) return;
+            root.probeArmed = false;
+            root.probeArmed = true;
         }
     }
-    onEnabledChanged: if (root.enabled) roundingProbe.running = true
 
     // Per-screen readers, by screen name: on a monitor with a fullscreen
     // window the dock reserves nothing, and the predicate is the one Dock.qml
     // itself uses (WM.fullscreenOnMonitor) - owned here, never handed in by
     // a caller, so the bands and the fillets cannot be given two answers.
+    // Memoised once per change of its inputs: WM.fullscreenOnMonitor scans
+    // the workspaces' toplevels, and eight bindings per screen (four bands,
+    // four fillets) would each re-run that scan on every Hyprland event.
+    readonly property var dockReservesByScreen: {
+        const map = {};
+        for (const screen of Quickshell.screens)
+            map[screen.name] = root.dockReserves && !WM.fullscreenOnMonitor(screen.name);
+        return map;
+    }
     function dockReservesOn(screenName) {
-        return root.dockReserves && !WM.fullscreenOnMonitor(screenName);
+        return root.dockReservesByScreen[screenName] ?? false;
     }
     function insetsForScreen(screenName) {
         return root.dockReservesOn(screenName) ? root.insets : Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, "", 0);
