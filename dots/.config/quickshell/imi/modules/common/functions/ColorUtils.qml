@@ -171,4 +171,45 @@ Singleton {
 
         return Qt.rgba(clamp01(r), clamp01(g), clamp01(b), overlayOpacity);
     }
+
+    // Ported with Modes & Routines (the mode chips' category colours).
+    /**
+     * Builds a per-category accent color with a FIXED hue (in degrees) and a
+     * saturation/lightness adapted to the active Material theme, so each section
+     * keeps a stable, identifiable identity while staying harmonized with the
+     * matugen palette (works in both light and dark modes).
+     *
+     * The lightness is taken from the supplied theme token, so dark mode yields
+     * a deep tinted container and light mode yields a soft pastel — matching M3
+     * container behaviour without hardcoding any hex values.
+     *
+     * @param {number} hueDegrees - Fixed hue for the category (0-360).
+     * @param {color} themeColor - A theme token to derive lightness from
+     *   (e.g. Appearance.colors.colPrimaryContainer or colLayer2).
+     * @param {number} saturation - Target saturation (0-1).
+     * @returns {color} The derived accent color.
+     */
+    function categoryContainer(hueDegrees, themeColor, saturation) {
+        var t = Qt.color(themeColor);
+        var h = ((hueDegrees % 360) + 360) % 360 / 360;
+        var s = Math.min(1, Math.max(0, saturation));
+        return Qt.hsla(h, s, t.hslLightness, 1);
+    }
+
+    /**
+     * Returns a readable "on" color for a category container, tinted with the
+     * same hue and with high contrast against the container's lightness.
+     *
+     * @param {color} containerColor - The result of categoryContainer() or
+     *   categoryAccent().
+     * @param {number} [hueDegrees] - Hue to tint with (0-360). Omit to take the
+     *   container's own hue, which is what accents derived from the theme want.
+     * @returns {color} The on-container foreground color.
+     */
+    function categoryOnColor(containerColor, hueDegrees = -1) {
+        var c = Qt.color(containerColor);
+        var h = hueDegrees < 0 ? c.hslHue : ((hueDegrees % 360) + 360) % 360 / 360;
+        var lightness = c.hslLightness < 0.5 ? 0.92 : 0.14;
+        return Qt.hsla(h, 0.35, lightness, 1);
+    }
 }

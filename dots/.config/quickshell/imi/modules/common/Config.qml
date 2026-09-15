@@ -1163,6 +1163,39 @@ Singleton {
                 }
             }
 
+            // Modes & Routines (services/Modes.qml, ported from the p3drovfx
+            // fork): definitions live here, runtime state in Persistent.
+            property JsonObject modes: JsonObject {
+                property bool enable: true
+                property bool overlayEnabled: true
+                // Presets are added once; deleting one afterwards sticks.
+                property bool presetsSeeded: false
+                // "auto" shows the start/end banner in the island or, without
+                // a notch, as a top-centre popup; "off" shows nothing.
+                property string flash: "auto"
+                // What the overlay reopens on.
+                property string lastTab: "modes"
+                property string lastModeId: ""
+                property string lastRoutineId: ""
+                // Seconds an auto-started mode's triggers must stay false
+                // before it ends, so a workspace switch does not flap it.
+                property int graceSec: 20
+                // Mode definitions, in priority order (first wins among
+                // automatic starts). Shape: see services/modes/ModeSchema.js.
+                property list<var> modes: []
+                property list<var> routines: []
+                // Game detection (services/GameDetector.qml). Signals 1–3 are
+                // instant; the GPU heuristic needs `gpuThreshold` % for `holdSec`.
+                property JsonObject game: JsonObject {
+                    property bool useLauncherClasses: true
+                    property bool useDesktopCategory: true
+                    property bool useGpuHeuristic: true
+                    property int gpuThreshold: 45
+                    property int holdSec: 20
+                    property list<string> extraClasses: []
+                }
+            }
+
             property JsonObject bar: JsonObject {
                 property JsonObject autoHide: JsonObject {
                     property bool enable: false

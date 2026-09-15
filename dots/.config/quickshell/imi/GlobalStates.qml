@@ -14,6 +14,13 @@ Singleton {
     // read by FrameGeometry, which frames the dock's edge only when the dock
     // actually reserves it.
     property bool dockPinned: false
+    // Modes & Routines (services/Modes.qml; ported from the p3drovfx fork):
+    // the overlay's open state, the start/end flash, and the OLED saver's
+    // per-monitor set an action toggles.
+    property bool modesOpen: false
+    property bool modeFlashActive: false
+    property var modeFlashPayload: null
+    property var oledSaverMonitors: []
     id: root
     property bool barOpen: true
     // Ask the region selector for an action ("screenshot", "search", "ocr",

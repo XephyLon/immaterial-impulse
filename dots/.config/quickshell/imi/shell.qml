@@ -73,6 +73,7 @@ ShellRoot {
         Hyprsunset.load()
         Idle.load() // so auto keep-awake on external monitors runs without any UI touching Idle
         AutoTheme.load()
+        Modes.ready // Touch the singleton: the modes engine watches its triggers whether or not any UI is open
         FirstRunExperience.load()
         ConflictKiller.load()
         // The tray watchdog (scripts/tray/sni_watchdog.py): keeps a
