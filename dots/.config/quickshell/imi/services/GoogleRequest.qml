@@ -19,8 +19,10 @@ Process {
     id: req
     property var queue: []
     property var current: null
-    readonly property bool busy: req.current !== null
+    readonly property bool busy: req.current !== null || req.queue.length > 0
     property int status: 0
+    property var _parsed: null
+    property string _error: ""
     signal finished(var json, string error, int status, var tag)
 
     // The one in flight; set by pump() before `running`.
@@ -43,13 +45,18 @@ Process {
         req.queue = [];
     }
 
+    // Never while the last process is still winding down: a `running = true`
+    // on a Process that has not exited yet is a no-op, and the queued call
+    // would sit there for ever.
     function pump() {
-        if (req.current !== null || req.queue.length === 0) return;
+        if (req.current !== null || req.running || req.queue.length === 0) return;
         req.current = req.queue.shift();
         req.url = req.current.url;
         req.method = req.current.method;
         req.body = req.current.body;
         req.status = 0;
+        req._parsed = null;
+        req._error = "";
         // Re-open stdin for every run: it is closed after the config is
         // written, and a Process started with it disabled inherits the
         // shell's own stdin - curl then waits on that pipe for ever.
@@ -57,8 +64,13 @@ Process {
         req.running = true;
     }
 
-    function settle(parsed, error) {
+    // Settled on exit, never on the stream's end: exit comes after stdout
+    // closes, so by then the payload is parsed and the process can be
+    // restarted for the next call.
+    function settle() {
         const done = req.current;
+        const parsed = req._parsed;
+        const error = req._error.length > 0 ? req._error : (req.status === 0 ? "no answer" : "");
         req.current = null;
         if (done) req.finished(parsed, error, req.status, done.tag);
         req.pump();
@@ -86,13 +98,11 @@ Process {
             }
             if (req.status === 0) err = "no answer";
             else if (req.status >= 400) err = (parsed && parsed.error && (parsed.error.message || parsed.error)) || `HTTP ${req.status}`;
-            req.settle(parsed, String(err));
+            req._parsed = parsed;
+            req._error = String(err);
         }
     }
     stderr: StdioCollector {}
-    onExited: (code, exitStatus) => {
-        // curl itself failed before answering (no network, bad URL): the
-        // stream never finished, so settle here.
-        if (req.current !== null && req.status === 0) req.settle(null, "no answer");
-    }
+    onExited: (code, exitStatus) => req.settle()
+    onRunningChanged: if (!req.running) req.pump()
 }
