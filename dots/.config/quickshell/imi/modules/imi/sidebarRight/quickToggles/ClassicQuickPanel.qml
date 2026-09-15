@@ -36,6 +36,7 @@ AbstractQuickPanel {
             altAction: () => root.openNightLightDialog()
         }
         QuickToggleButton { toggleModel: GameModeToggle {} }
+        QuickToggleButton { toggleModel: ModesToggle {} }
         QuickToggleButton { toggleModel: InstantReplayToggle {} }
         QuickToggleButton { toggleModel: IdleInhibitorToggle {} }
         QuickToggleButton { toggleModel: EasyEffectsToggle {} }
