@@ -57,7 +57,12 @@ ShellRoot {
     // the one on screen: a warm-up that quietly built everything would still
     // pass a jump of one.
     readonly property string farPage: "HyprlandConfig"
-    readonly property int farPageIndex: 13
+    // Looked up in the settings' own page list, never a literal index: a
+    // page added above it moves every index after it (the Modes and the
+    // Accounts pages both did), and the far jump then landed on a neighbour.
+    function farPageIndex() {
+        return loader.item.pages.findIndex(p => String(p.component).indexOf(`pages/${harness.farPage}.qml`) !== -1);
+    }
 
     // Measured on this harness: 622ms with the eager loop, 66ms without it.
     // A ceiling between them, nearer the broken side, so a machine slower than
@@ -226,7 +231,7 @@ ShellRoot {
             harness.check(`the warm-up has not reached ${harness.farPage} yet, so asking for it`
                           + ` is a real first visit (built so far: ${built.length})`,
                           !built.includes(harness.farPage));
-            loader.item.currentPage = harness.farPageIndex;
+            loader.item.currentPage = harness.farPageIndex();
             // Same turn as the write. A synchronous Loader has already
             // finished by now and hands back a whole page.
             const far = harness.pageLoader(harness.farPage);
