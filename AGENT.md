@@ -362,6 +362,25 @@ edits the layout's `modeIndicator` id). Fork UI ported into `modules/imi/modes/`
 spacing tokens and this shell's widget props - `lint_spacing.py` and the load are the gate, and the
 fork's `animatePopulate`, `popupRadius`, `stickyHover` and `tooltip`-on-`ContentSection` do not exist
 here. The engine is driven end to end in `test_modes_runtime.py`. 130cee4ec ("feat(modes): the Modes & Routines engine, ported from the p3drovfx fork").
+**Accounts (Google, Proton) are services on one credential store and one request path; the
+surfaces that already exist read them.** `services/GoogleAccount.qml` holds the user's OWN OAuth client
+and refresh token under `google` in the keyring blob (`KeyringStorage.setNestedField(["google"], …)` -
+never a second libsecret item, or the shell scripts' `secret-tool lookup` and the QML store diverge)
+and runs `scripts/accounts/google_oauth.py` for sign-in (loopback + PKCE) and refresh with the secrets
+in the helper's ENVIRONMENT, never argv. Every call is a `GoogleRequest` (`services/GoogleRequest.qml`):
+curl with the bearer header, method and JSON body on stdin as a curl config (`-K -`), and stdin
+re-opened per run - a `Process` started with `stdinEnabled` false inherits the shell's own stdin and
+curl waits on it for ever (the second request on any instance hung until that line). Parsers and URL
+builders are pure (`services/google_api.js`, `tst_google_api.qml`); the API base is overridable
+(`IMI_GOOGLE_API_BASE`) so `test_accounts_runtime.py` runs against `tests/fake_google_api.py` with
+`secret-tool` shadowed by a file-backed stub. Account calendars land in `IcsCalendar.setExternalEvents(sourceId, events)`
+- the ONE list the sidebar dots, `list_events` and the modes engine read - with `singleEvents` so Google
+expands recurrences (the ICS parser does none). Google Tasks and the local to-do file never merge (the
+file has no ids): the to-do widget shows a Local | Google source row and routes by source. Proton VPN
+goes through the official app's session (`scripts/accounts/protonvpn_ctl.py` over
+python-proton-vpn-api-core; the shell never logs in and never sees the password), two-staged like
+Tailscale; Proton Calendar is an ICS share link (Settings > Accounts > Calendar feeds), Proton Mail
+needs Bridge (stage 2), Proton Pass has no API (nothing offered). 2dbdaced6 ("feat(accounts): the Google account and its calendar, tasks and mail services").
 **`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
 through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
 `/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)

@@ -49,6 +49,17 @@ own repo; the installer pins which revision it builds.
   Not ported from the fork: screen shaders, keyboard backlight, earbuds ANC,
   sounds, workspace profiles, DNS-over-TLS, calendar triggers, the lock-screen
   pill.
+- Accounts (Settings > Accounts): sign in to Google with an OAuth client of
+  your own; the shell then shows your selected calendars' events in the sidebar
+  calendar (and to the assistant's `list_events`), your Google Tasks lists in
+  the sidebar to-do next to the local list (add, complete, delete write
+  through), and the inbox's unread count in a new bar "Mail" widget. Proton
+  VPN gets a quick-panel toggle (both panel styles) driven through the
+  official app's own session - connect to the fastest server, disconnect,
+  the server name as status. Calendar feeds (ICS links: Google's secret
+  address, Proton Calendar share links) finally have settings rows. Secrets
+  live in the keyring; nothing is sent to the shell's helpers on a command
+  line. Not built: Proton Mail (needs Proton Bridge), Proton Pass (no API).
 
 ### Changed
 - Appearance settings now live in their own file, `~/.config/immaterial-impulse/config.d/appearance.json`,
