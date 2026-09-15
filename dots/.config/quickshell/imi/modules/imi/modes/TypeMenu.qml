@@ -14,7 +14,7 @@ import QtQuick.Layouts
  *
  * `choices`: [{ key, label, icon, group, enabled, hint }]
  */
-Popup {
+EditorPopup {
     id: root
 
     property var choices: []
@@ -58,103 +58,33 @@ Popup {
     implicitHeight: contentColumn.implicitHeight + Appearance.spacing.space300
     padding: Appearance.spacing.space150
     modal: false
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-    enter: Transition {
-        NumberAnimation {
-            property: "opacity"
-            from: 0
-            to: 1
-            duration: Appearance.animation.elementMoveEnter.duration
-            easing.type: Appearance.animation.elementMoveEnter.type
-            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-        }
-        NumberAnimation {
-            property: "scale"
-            from: 0.96
-            to: 1
-            duration: Appearance.animation.elementMoveEnter.duration
-            easing.type: Appearance.animation.elementMoveEnter.type
-            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-        }
-    }
-
-    exit: Transition {
-        NumberAnimation {
-            property: "opacity"
-            to: 0
-            duration: Appearance.animation.elementMoveExit.duration
-            easing.type: Appearance.animation.elementMoveExit.type
-            easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
-        }
-    }
-
-    background: Item {
-        // The shadow is the plate's sibling, painted first; nested inside
-        // the plate it would sit over the fill and break under `clip`.
-        StyledRectangularShadow {
-            target: plate
-        }
-        Rectangle {
-            id: plate
-            anchors.fill: parent
-            radius: Appearance.rounding.normal
-            color: Appearance.colors.colLayer0
-            border.width: Appearance.borderWidth.standard
-            border.color: Appearance.colors.colLayer0Border
-        }
-    }
 
     contentItem: ColumnLayout {
         id: contentColumn
         spacing: Appearance.spacing.space100
 
-        Rectangle {
+        ToolbarTextField {
+            id: searchField
             Layout.fillWidth: true
+            Layout.fillHeight: false
             implicitHeight: 40
-            radius: Appearance.rounding.full
-            color: Appearance.colors.colLayer2
-
-            RowLayout {
-                anchors {
-                    fill: parent
-                    leftMargin: Appearance.spacing.space150
-                    rightMargin: Appearance.spacing.space150
-                }
-                spacing: Appearance.spacing.space100
-
-                MaterialSymbol {
-                    text: "search"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colSubtext
-                }
-
-                StyledTextInput {
-                    id: searchField
-                    Layout.fillWidth: true
-                    text: root.query
-                    onTextChanged: root.query = text
-                    color: Appearance.colors.colOnLayer2
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Escape) {
-                            root.close();
-                            event.accepted = true;
-                        } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
-                            const first = root.filtered.find(c => !c.header && c.enabled);
-                            if (first) {
-                                root.picked(first.key);
-                                root.close();
-                            }
-                            event.accepted = true;
-                        }
+            leadingIcon: "search"
+            placeholderText: Translation.tr("Search")
+            colBackground: Appearance.colors.colLayer2
+            color: Appearance.colors.colOnLayer2
+            text: root.query
+            onTextChanged: root.query = text
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape) {
+                    root.close();
+                    event.accepted = true;
+                } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    const first = root.filtered.find(c => !c.header && c.enabled);
+                    if (first) {
+                        root.picked(first.key);
+                        root.close();
                     }
-
-                    StyledText {
-                        anchors.fill: parent
-                        visible: !searchField.text.length
-                        text: Translation.tr("Search")
-                        color: Appearance.colors.colSubtext
-                    }
+                    event.accepted = true;
                 }
             }
         }

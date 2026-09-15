@@ -12,7 +12,7 @@ import Quickshell.Io
  * mode; typing searches the full catalogue (names and tags), which is only
  * parsed the first time it is needed.
  */
-Popup {
+EditorPopup {
     id: root
 
     property string current: ""
@@ -94,55 +94,10 @@ Popup {
     height: 480
     padding: Appearance.spacing.space200
     modal: true
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    plateRadius: Appearance.rounding.large
 
     Overlay.modal: Rectangle {
         color: Appearance.colors.colScrim
-    }
-
-    enter: Transition {
-        NumberAnimation {
-            property: "opacity"
-            from: 0
-            to: 1
-            duration: Appearance.animation.elementMoveEnter.duration
-            easing.type: Appearance.animation.elementMoveEnter.type
-            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-        }
-        NumberAnimation {
-            property: "scale"
-            from: 0.96
-            to: 1
-            duration: Appearance.animation.elementMoveEnter.duration
-            easing.type: Appearance.animation.elementMoveEnter.type
-            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-        }
-    }
-
-    exit: Transition {
-        NumberAnimation {
-            property: "opacity"
-            to: 0
-            duration: Appearance.animation.elementMoveExit.duration
-            easing.type: Appearance.animation.elementMoveExit.type
-            easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
-        }
-    }
-
-    background: Item {
-        // The shadow is the plate's sibling, painted first; nested inside
-        // the plate it would sit over the fill and break under `clip`.
-        StyledRectangularShadow {
-            target: plate
-        }
-        Rectangle {
-            id: plate
-            anchors.fill: parent
-            radius: Appearance.rounding.large
-            color: Appearance.colors.colLayer0
-            border.width: Appearance.borderWidth.standard
-            border.color: Appearance.colors.colLayer0Border
-        }
     }
 
     contentItem: ColumnLayout {
@@ -173,106 +128,92 @@ Popup {
             }
         }
 
-        Rectangle {
+        ToolbarTextField {
+            id: searchField
             Layout.fillWidth: true
+            Layout.fillHeight: false
             implicitHeight: 42
-            radius: Appearance.rounding.full
-            color: Appearance.colors.colLayer2
-
-            RowLayout {
-                anchors {
-                    fill: parent
-                    leftMargin: Appearance.spacing.space175
-                    rightMargin: Appearance.spacing.space175
-                }
-                spacing: Appearance.spacing.space100
-
-                MaterialSymbol {
-                    text: "search"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colSubtext
-                }
-
-                StyledTextInput {
-                    id: searchField
-                    Layout.fillWidth: true
-                    text: root.query
-                    color: Appearance.colors.colOnLayer2
-                    onTextChanged: root.query = text
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Escape) {
-                            root.close();
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                            if (root.results.length) {
-                                root.picked(root.results[0]);
-                                root.close();
-                            }
-                            event.accepted = true;
-                        }
+            leadingIcon: "search"
+            placeholderText: Translation.tr("Search symbols")
+            colBackground: Appearance.colors.colLayer2
+            color: Appearance.colors.colOnLayer2
+            text: root.query
+            onTextChanged: root.query = text
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape) {
+                    root.close();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    if (root.results.length) {
+                        root.picked(root.results[0]);
+                        root.close();
                     }
-
-                    StyledText {
-                        anchors.fill: parent
-                        visible: !searchField.text.length
-                        text: Translation.tr("Search symbols")
-                        color: Appearance.colors.colSubtext
-                    }
+                    event.accepted = true;
                 }
             }
         }
 
-        GridView {
-            id: grid
+        // The grid in a frame of its own so the edge fade can sit over it:
+        // a child of the GridView would scroll away with the cells.
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
-            cellWidth: 64
-            cellHeight: 64
-            model: root.results
 
-            delegate: Item {
-                id: cell
-                required property string modelData
-                readonly property bool isCurrent: cell.modelData === root.current
+            GridView {
+                id: grid
+                anchors.fill: parent
+                clip: true
+                cellWidth: 64
+                cellHeight: 64
+                model: root.results
 
-                width: grid.cellWidth
-                height: grid.cellHeight
+                delegate: Item {
+                    id: cell
+                    required property string modelData
+                    readonly property bool isCurrent: cell.modelData === root.current
 
-                RippleButton {
-                    anchors.centerIn: parent
-                    implicitWidth: 56
-                    implicitHeight: 56
-                    buttonRadius: Appearance.rounding.normal
-                    colBackground: cell.isCurrent ? Appearance.colors.colPrimaryContainer : "transparent"
-                    colBackgroundHover: cell.isCurrent ? Appearance.colors.colPrimaryContainerHover
-                        : Appearance.colors.colLayer2Hover
-                    colRipple: Appearance.colors.colLayer2Active
-                    onClicked: {
-                        root.picked(cell.modelData);
-                        root.close();
-                    }
+                    width: grid.cellWidth
+                    height: grid.cellHeight
 
-                    StyledToolTip {
-                        text: cell.modelData
-                    }
-
-                    contentItem: MaterialSymbol {
+                    RippleButton {
                         anchors.centerIn: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: cell.modelData
-                        iconSize: Appearance.font.pixelSize.small * 2
-                        color: cell.isCurrent ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnLayer1
+                        implicitWidth: 56
+                        implicitHeight: 56
+                        buttonRadius: Appearance.rounding.normal
+                        colBackground: cell.isCurrent ? Appearance.colors.colPrimaryContainer : "transparent"
+                        colBackgroundHover: cell.isCurrent ? Appearance.colors.colPrimaryContainerHover
+                            : Appearance.colors.colLayer2Hover
+                        colRipple: Appearance.colors.colLayer2Active
+                        onClicked: {
+                            root.picked(cell.modelData);
+                            root.close();
+                        }
+
+                        StyledToolTip {
+                            text: cell.modelData
+                        }
+
+                        contentItem: MaterialSymbol {
+                            anchors.centerIn: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            text: cell.modelData
+                            iconSize: Appearance.font.pixelSize.small * 2
+                            color: cell.isCurrent ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnLayer1
+                        }
                     }
+                }
+
+                StyledText {
+                    anchors.centerIn: parent
+                    visible: grid.count === 0
+                    text: Translation.tr("No symbol matches")
+                    color: Appearance.colors.colSubtext
                 }
             }
 
-            StyledText {
-                anchors.centerIn: parent
-                visible: grid.count === 0
-                text: Translation.tr("No symbol matches")
-                color: Appearance.colors.colSubtext
+            ScrollEdgeFade {
+                target: grid
             }
         }
     }

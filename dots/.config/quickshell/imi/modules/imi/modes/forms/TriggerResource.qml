@@ -40,6 +40,7 @@ ColumnLayout {
         }
 
         NumberField {
+            to: 1000
             value: row.trigger.above
             onCommitted: v => row.set({ above: v })
         }
@@ -49,6 +50,7 @@ ColumnLayout {
         }
 
         NumberField {
+            to: 1000
             value: row.trigger.below
             onCommitted: v => row.set({ below: v })
         }
@@ -60,41 +62,5 @@ ColumnLayout {
 
     FormHint {
         text: Translation.tr("Read every few seconds with 5 units of slack, so a value on the line does not flap.")
-    }
-
-    component NumberField: Rectangle {
-        id: field
-        property var value: null
-        signal committed(var value)
-
-        implicitWidth: 72
-        implicitHeight: 36
-        radius: Appearance.rounding.full
-        color: Appearance.colors.colLayer3
-        border.width: input.activeFocus ? 2 : 0
-        border.color: Appearance.colors.colPrimary
-
-        StyledTextInput {
-            id: input
-            anchors {
-                fill: parent
-                leftMargin: Appearance.spacing.space125
-                rightMargin: Appearance.spacing.space125
-            }
-            horizontalAlignment: TextInput.AlignHCenter
-            verticalAlignment: TextInput.AlignVCenter
-            text: field.value === null || field.value === undefined ? "" : String(field.value)
-            color: Appearance.colors.colOnLayer3
-            font.family: Appearance.font.family.numbers
-            validator: IntValidator {
-                bottom: 0
-                top: 1000
-            }
-            onEditingFinished: {
-                const next = input.text.trim().length ? Number(input.text) : null;
-                if (next !== field.value)
-                    field.committed(next);
-            }
-        }
     }
 }

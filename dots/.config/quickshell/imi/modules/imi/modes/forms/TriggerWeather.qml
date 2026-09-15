@@ -33,7 +33,9 @@ ColumnLayout {
             text: Translation.tr("Colder than")
         }
 
-        TempField {
+        NumberField {
+            from: -100
+            to: 150
             value: row.trigger.tempBelow
             onCommitted: v => row.set({ tempBelow: v })
         }
@@ -42,7 +44,9 @@ ColumnLayout {
             text: Translation.tr("Warmer than")
         }
 
-        TempField {
+        NumberField {
+            from: -100
+            to: 150
             value: row.trigger.tempAbove
             onCommitted: v => row.set({ tempAbove: v })
         }
@@ -56,41 +60,5 @@ ColumnLayout {
         text: (Weather.data?.wDesc ?? "").length
             ? Translation.tr("Now in %1: %2, %3").arg(Weather.data.city).arg(Weather.data.wDesc).arg(Weather.data.temp)
             : Translation.tr("Needs the weather widget's location; nothing has loaded yet.")
-    }
-
-    component TempField: Rectangle {
-        id: field
-        property var value: null
-        signal committed(var value)
-
-        implicitWidth: 72
-        implicitHeight: 36
-        radius: Appearance.rounding.full
-        color: Appearance.colors.colLayer3
-        border.width: input.activeFocus ? 2 : 0
-        border.color: Appearance.colors.colPrimary
-
-        StyledTextInput {
-            id: input
-            anchors {
-                fill: parent
-                leftMargin: Appearance.spacing.space125
-                rightMargin: Appearance.spacing.space125
-            }
-            horizontalAlignment: TextInput.AlignHCenter
-            verticalAlignment: TextInput.AlignVCenter
-            text: field.value === null || field.value === undefined ? "" : String(field.value)
-            color: Appearance.colors.colOnLayer3
-            font.family: Appearance.font.family.numbers
-            validator: IntValidator {
-                bottom: -100
-                top: 150
-            }
-            onEditingFinished: {
-                const next = input.text.trim().length ? Number(input.text) : null;
-                if (next !== field.value)
-                    field.committed(next);
-            }
-        }
     }
 }

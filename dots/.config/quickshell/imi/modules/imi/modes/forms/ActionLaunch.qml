@@ -28,6 +28,7 @@ ColumnLayout {
     readonly property bool useCommand: (row.obj.command ?? "").length > 0 && !(row.obj.app ?? "").length
 
     FormChoice {
+        text: Translation.tr("Launch")
         current: launchCol.useCommand ? "command" : "app"
         onPicked: v => row.patchValue(v === "command" ? { app: "", command: row.obj.command || "" }
                                                         : { command: "", app: row.obj.app || "" })
@@ -48,69 +49,28 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
 
-            Rectangle {
+            // The chosen entry as the shell's chip; its trailing glyph says
+            // a press clears it.
+            FilterChip {
                 visible: (row.obj.app ?? "").length > 0
-                implicitWidth: chosenRow.implicitWidth + Appearance.spacing.space250
-                implicitHeight: 32
-                radius: Appearance.rounding.full
-                color: Appearance.colors.colSecondaryContainer
-
-                RowLayout {
-                    id: chosenRow
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space75
-
-                    StyledText {
-                        text: DesktopEntries.byId(row.obj.app ?? "")?.name ?? (row.obj.app ?? "")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colOnSecondaryContainer
-                    }
-
-                    MouseArea {
-                        implicitWidth: 18
-                        implicitHeight: 18
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: row.patchValue({ app: "" })
-
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "close"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSecondaryContainer
-                        }
-                    }
-                }
+                label: DesktopEntries.byId(row.obj.app ?? "")?.name ?? (row.obj.app ?? "")
+                trailingIcon: "close"
+                onClicked: row.patchValue({ app: "" })
             }
 
-            Rectangle {
+            // A live search, so it is the shell's field directly rather than
+            // the commit-on-finish PlainField.
+            ToolbarTextField {
+                id: appSearch
                 Layout.fillWidth: true
+                Layout.fillHeight: false
                 implicitHeight: 36
-                radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer3
-                border.width: appSearch.activeFocus ? 2 : 0
-                border.color: Appearance.colors.colPrimary
-
-                StyledTextInput {
-                    id: appSearch
-                    anchors {
-                        fill: parent
-                        leftMargin: Appearance.spacing.space175
-                        rightMargin: Appearance.spacing.space175
-                    }
-                    verticalAlignment: TextInput.AlignVCenter
-                    color: Appearance.colors.colOnLayer3
-                    clip: true
-                    onTextChanged: launchCol.appQuery = text
-
-                    StyledText {
-                        anchors.fill: parent
-                        verticalAlignment: Text.AlignVCenter
-                        visible: !appSearch.text.length
-                        text: (row.obj.app ?? "").length ? Translation.tr("Search to replace")
-                                                          : Translation.tr("Search apps")
-                        color: Appearance.colors.colSubtext
-                    }
-                }
+                focusRing: true
+                colBackground: Appearance.colors.colLayer3
+                color: Appearance.colors.colOnLayer3
+                placeholderText: (row.obj.app ?? "").length ? Translation.tr("Search to replace")
+                                                            : Translation.tr("Search apps")
+                onTextChanged: launchCol.appQuery = text
             }
         }
 

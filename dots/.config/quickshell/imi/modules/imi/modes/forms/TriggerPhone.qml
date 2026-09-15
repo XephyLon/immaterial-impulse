@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Phone")
         current: row.trigger.reachable === false ? "away" : "near"
         onPicked: v => row.set({ reachable: v === "near" })
         options: [
@@ -33,7 +34,8 @@ ColumnLayout {
             text: Translation.tr("Phone battery below")
         }
 
-        PercentField {
+        NumberField {
+            suffix: "%"
             value: row.trigger.batteryBelow
             onCommitted: v => row.set({ batteryBelow: v })
         }

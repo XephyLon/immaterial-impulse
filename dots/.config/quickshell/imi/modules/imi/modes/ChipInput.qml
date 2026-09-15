@@ -52,41 +52,14 @@ ColumnLayout {
         Repeater {
             model: root.values
 
-            delegate: Rectangle {
+            // The shell's chip; its trailing glyph says what a press does.
+            delegate: FilterChip {
                 id: chip
                 required property string modelData
                 required property int index
-
-                implicitWidth: chipRow.implicitWidth + Appearance.spacing.space250
-                implicitHeight: 30
-                radius: Appearance.rounding.full
-                color: Appearance.colors.colSecondaryContainer
-
-                RowLayout {
-                    id: chipRow
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space50
-
-                    StyledText {
-                        text: root.display(chip.modelData)
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colOnSecondaryContainer
-                    }
-
-                    MouseArea {
-                        implicitWidth: 18
-                        implicitHeight: 18
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.removeAt(chip.index)
-
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "close"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSecondaryContainer
-                        }
-                    }
-                }
+                label: root.display(chip.modelData)
+                trailingIcon: "close"
+                onClicked: root.removeAt(chip.index)
             }
         }
     }
@@ -95,44 +68,26 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Appearance.spacing.space75
 
-        Rectangle {
+        ToolbarTextField {
+            id: entry
             Layout.fillWidth: true
+            Layout.fillHeight: false
             implicitHeight: 36
-            radius: Appearance.rounding.full
-            color: Appearance.colors.colLayer3
-            border.width: entry.activeFocus ? 2 : 0
-            border.color: Appearance.colors.colPrimary
-
-            StyledTextInput {
-                id: entry
-                anchors {
-                    fill: parent
-                    leftMargin: Appearance.spacing.space175
-                    rightMargin: Appearance.spacing.space175
+            focusRing: true
+            colBackground: Appearance.colors.colLayer3
+            color: Appearance.colors.colOnLayer3
+            placeholderText: root.placeholder
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    root.add(entry.text);
+                    entry.text = "";
+                    event.accepted = true;
                 }
-                verticalAlignment: TextInput.AlignVCenter
-                color: Appearance.colors.colOnLayer3
-                clip: true
-                Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        root.add(entry.text);
-                        entry.text = "";
-                        event.accepted = true;
-                    }
-                }
-                onEditingFinished: {
-                    if (entry.text.trim().length) {
-                        root.add(entry.text);
-                        entry.text = "";
-                    }
-                }
-
-                StyledText {
-                    anchors.fill: parent
-                    verticalAlignment: Text.AlignVCenter
-                    visible: !entry.text.length
-                    text: root.placeholder
-                    color: Appearance.colors.colSubtext
+            }
+            onEditingFinished: {
+                if (entry.text.trim().length) {
+                    root.add(entry.text);
+                    entry.text = "";
                 }
             }
         }
@@ -165,30 +120,13 @@ ColumnLayout {
                 }
             }
 
-            Popup {
+            EditorPopup {
                 id: suggestionMenu
                 y: parent.height + Appearance.spacing.space50
                 x: parent.width - width
                 width: 300
                 height: Math.min(320, suggestionList.contentHeight + Appearance.spacing.space200)
                 padding: Appearance.spacing.space100
-                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-                background: Item {
-                    // The shadow is the plate's sibling, painted first; nested inside
-                    // the plate it would sit over the fill and break under `clip`.
-                    StyledRectangularShadow {
-                        target: plate
-                    }
-                    Rectangle {
-                        id: plate
-                        anchors.fill: parent
-                        radius: Appearance.rounding.normal
-                        color: Appearance.colors.colLayer0
-                        border.width: Appearance.borderWidth.standard
-                        border.color: Appearance.colors.colLayer0Border
-                    }
-                }
 
                 contentItem: StyledListView {
                     id: suggestionList

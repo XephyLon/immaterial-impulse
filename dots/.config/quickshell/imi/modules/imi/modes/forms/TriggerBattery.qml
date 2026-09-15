@@ -23,7 +23,8 @@ ColumnLayout {
             text: Translation.tr("Below")
         }
 
-        PercentField {
+        NumberField {
+            suffix: "%"
             value: row.trigger.below
             onCommitted: v => row.set({ below: v })
         }
@@ -32,7 +33,8 @@ ColumnLayout {
             text: Translation.tr("Above")
         }
 
-        PercentField {
+        NumberField {
+            suffix: "%"
             value: row.trigger.above
             onCommitted: v => row.set({ above: v })
         }
@@ -43,6 +45,7 @@ ColumnLayout {
     }
 
     FormChoice {
+        text: Translation.tr("Power")
         current: row.trigger.pluggedIn === true ? "yes" : (row.trigger.pluggedIn === false ? "no" : "any")
         onPicked: v => row.set({ pluggedIn: v === "any" ? null : v === "yes" })
         options: [

@@ -1,13 +1,16 @@
 import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
+import QtQuick.Layouts
 
 /**
- * A single-line text field in the editor's pill style. The value is
- * committed on Enter or when focus leaves, never per keystroke, so a half
- * typed command is not saved (and applied) mid-way.
+ * A single-line text field for a form: the shell's pill field on the card
+ * tier. The value is committed on Enter or when focus leaves, never per
+ * keystroke, so a half typed command is not saved (and applied) mid-way.
+ * The text follows `value` from outside only while the field is not being
+ * edited, so a commit the caller rewrites (or refuses) shows its result.
  */
-Rectangle {
+ToolbarTextField {
     id: root
 
     property string value: ""
@@ -16,38 +19,18 @@ Rectangle {
 
     signal committed(string value)
 
+    Layout.fillHeight: false
     implicitHeight: 36
-    implicitWidth: 200
-    radius: Appearance.rounding.full
-    color: Appearance.colors.colLayer3
-    border.width: input.activeFocus ? 2 : 0
-    border.color: Appearance.colors.colPrimary
+    focusRing: true
+    colBackground: Appearance.colors.colLayer3
+    color: Appearance.colors.colOnLayer3
+    placeholderText: root.placeholder
+    font.family: root.monospace ? Appearance.font.family.monospace : Appearance.font.family.main
 
-    StyledTextInput {
-        id: input
-        anchors {
-            fill: parent
-            leftMargin: Appearance.spacing.space175
-            rightMargin: Appearance.spacing.space175
-        }
-        verticalAlignment: TextInput.AlignVCenter
-        text: root.value
-        color: Appearance.colors.colOnLayer3
-        clip: true
-        selectByMouse: true
-        font.family: root.monospace ? Appearance.font.family.monospace : Appearance.font.family.main
-        onEditingFinished: {
-            if (input.text !== root.value)
-                root.committed(input.text);
-        }
-
-        StyledText {
-            anchors.fill: parent
-            verticalAlignment: Text.AlignVCenter
-            visible: !input.text.length
-            text: root.placeholder
-            elide: Text.ElideRight
-            color: Appearance.colors.colSubtext
-        }
+    onValueChanged: if (!root.activeFocus) root.text = root.value
+    Component.onCompleted: root.text = root.value
+    onEditingFinished: {
+        if (root.text !== root.value)
+            root.committed(root.text);
     }
 }

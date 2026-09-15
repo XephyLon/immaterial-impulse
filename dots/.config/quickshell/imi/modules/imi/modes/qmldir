@@ -6,9 +6,10 @@ AddRowButton 1.0 AddRowButton.qml
 ChipInput 1.0 ChipInput.qml
 ColorDots 1.0 ColorDots.qml
 DurationField 1.0 DurationField.qml
+EditorPopup 1.0 EditorPopup.qml
 EditorRow 1.0 EditorRow.qml
-EditorSection 1.0 EditorSection.qml
 EditorSwitchRow 1.0 EditorSwitchRow.qml
+EditorSection 1.0 EditorSection.qml
 FooterButton 1.0 FooterButton.qml
 FormChoice 1.0 FormChoice.qml
 FormHint 1.0 FormHint.qml
@@ -23,7 +24,7 @@ ModeListRow 1.0 ModeListRow.qml
 ModesContent 1.0 ModesContent.qml
 ModesOverlay 1.0 ModesOverlay.qml
 ModesPage 1.0 ModesPage.qml
-PercentField 1.0 PercentField.qml
+NumberField 1.0 NumberField.qml
 PlainField 1.0 PlainField.qml
 RoutineEditor 1.0 RoutineEditor.qml
 RoutineTemplates 1.0 RoutineTemplates.qml
