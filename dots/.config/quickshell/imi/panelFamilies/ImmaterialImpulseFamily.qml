@@ -31,6 +31,7 @@ import qs.modules.imi.wallpaperSelector
 import qs.modules.imi.desktopMenu
 import qs.modules.imi.dropShelf
 import qs.modules.imi.frame
+import qs.modules.imi.modes
 import qs.modules.imi.recordingRegion
 import qs.modules.imi.screenshotResult
 
@@ -50,6 +51,9 @@ Scope {
     PanelLoader { component: OnScreenDisplay {} }
     PanelLoader { component: OnScreenKeyboard {} }
     PanelLoader { component: Overlay {} }
+    PanelLoader { component: ModesOverlay {} }
+    // The mode start/end banner (Settings > Modes & Routines > When a mode starts or ends).
+    PanelLoader { extraCondition: Config.options.modes.flash !== "off"; component: ModeFlashPopup {} }
     PanelLoader { component: Overview {} }
     PanelLoader { component: Polkit {} }
     PanelLoader { component: RegionSelector {} }

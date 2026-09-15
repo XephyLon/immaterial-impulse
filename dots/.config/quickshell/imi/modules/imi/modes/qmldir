@@ -1,0 +1,35 @@
+module qs.modules.imi.modes
+ActionList 1.0 ActionList.qml
+ActionRow 1.0 ActionRow.qml
+ActivityPage 1.0 ActivityPage.qml
+AddRowButton 1.0 AddRowButton.qml
+ChipInput 1.0 ChipInput.qml
+ColorDots 1.0 ColorDots.qml
+DurationField 1.0 DurationField.qml
+EditorRow 1.0 EditorRow.qml
+EditorSection 1.0 EditorSection.qml
+FooterButton 1.0 FooterButton.qml
+FormChoice 1.0 FormChoice.qml
+FormHint 1.0 FormHint.qml
+FormIconButton 1.0 FormIconButton.qml
+FormLabel 1.0 FormLabel.qml
+IconPicker 1.0 IconPicker.qml
+ModeEditor 1.0 ModeEditor.qml
+ModeFlashPopup 1.0 ModeFlashPopup.qml
+ModeFlashPopupContent 1.0 ModeFlashPopupContent.qml
+ModeList 1.0 ModeList.qml
+ModeListRow 1.0 ModeListRow.qml
+ModesContent 1.0 ModesContent.qml
+ModesOverlay 1.0 ModesOverlay.qml
+ModesPage 1.0 ModesPage.qml
+PercentField 1.0 PercentField.qml
+PlainField 1.0 PlainField.qml
+RoutineEditor 1.0 RoutineEditor.qml
+RoutineTemplates 1.0 RoutineTemplates.qml
+RoutinesPage 1.0 RoutinesPage.qml
+SmallButton 1.0 SmallButton.qml
+TemplatePreview 1.0 TemplatePreview.qml
+TimeField 1.0 TimeField.qml
+TriggerRow 1.0 TriggerRow.qml
+TypeMenu 1.0 TypeMenu.qml
+singleton ModeUi 1.0 ModeUi.qml
