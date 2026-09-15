@@ -127,7 +127,7 @@ Item {
             return true;
         }
         if (nameField.activeFocus) {
-            nameField.text = root.mode?.name ?? "";
+            nameField.text = Qt.binding(() => root.mode?.name ?? "");
             nameField.focus = false;
             return true;
         }
@@ -271,7 +271,7 @@ Item {
                             if (next.length && next !== root.mode?.name)
                                 root.patch({ name: next });
                             else
-                                nameField.text = root.mode?.name ?? "";
+                                nameField.text = Qt.binding(() => root.mode?.name ?? "");
                         }
 
                         Rectangle {

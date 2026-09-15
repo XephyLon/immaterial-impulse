@@ -125,7 +125,7 @@ Item {
             return true;
         }
         if (nameField.activeFocus) {
-            nameField.text = root.routine?.name ?? "";
+            nameField.text = Qt.binding(() => root.routine?.name ?? "");
             nameField.focus = false;
             return true;
         }
@@ -266,7 +266,7 @@ Item {
                             if (next.length && next !== root.routine?.name)
                                 root.patch({ name: next });
                             else
-                                nameField.text = root.routine?.name ?? "";
+                                nameField.text = Qt.binding(() => root.routine?.name ?? "");
                         }
 
                         Rectangle {
