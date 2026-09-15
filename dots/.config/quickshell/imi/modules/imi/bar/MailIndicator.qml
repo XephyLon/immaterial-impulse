@@ -65,7 +65,7 @@ MouseArea {
                     horizontalCenter: parent.right
                     verticalCenter: parent.top
                     horizontalCenterOffset: Appearance.spacing.space25
-                    verticalCenterOffset: Appearance.spacing.space25
+                    verticalCenterOffset: Appearance.spacing.space50
                 }
                 z: 1
                 Rectangle {
