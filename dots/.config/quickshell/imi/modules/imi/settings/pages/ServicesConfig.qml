@@ -168,8 +168,9 @@ ContentPage {
                     ConfigTextArea {
                         id: newFolderField
                         buttonIcon: "create_new_folder"
+                        text: Translation.tr("Add a folder")
                         singleLine: true
-                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents")
+                        placeholderText: "~/Documents"
                         confirmButtonVisible: value.trim().length > 0
                         confirmButtonIcon: "add"
                         onConfirmClicked: {
@@ -245,8 +246,9 @@ ContentPage {
                     ConfigTextArea {
                         id: newDocFolderField
                         buttonIcon: "create_new_folder"
+                        text: Translation.tr("Add a folder")
                         singleLine: true
-                        placeholderText: Translation.tr("Add a folder, e.g. ~/Documents")
+                        placeholderText: "~/Documents"
                         confirmButtonVisible: value.trim().length > 0
                         confirmButtonIcon: "add"
                         onConfirmClicked: {

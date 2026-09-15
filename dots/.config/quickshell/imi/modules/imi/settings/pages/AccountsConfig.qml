@@ -34,9 +34,12 @@ ContentPage {
             return null
         }
 
-        let target = findTarget(mainLayout)
+        // The page's own scrolled item: this page has no ColumnLayout of its
+        // own between it and its sections (CaptureConfig, this function's
+        // source, does).
+        let target = findTarget(page.contentItem)
         if (target) {
-            let pos = target.mapToItem(mainLayout, 0, 0)
+            let pos = target.mapToItem(page.contentItem, 0, 0)
             page.scrollToY(pos.y)
         }
     }
@@ -305,8 +308,10 @@ ContentPage {
             GroupedList {
                 ConfigTextArea {
                     buttonIcon: "add_link"
+                    text: Translation.tr("Add a feed")
+                    description: Translation.tr("Google's secret iCal address, a Proton Calendar share link, any .ics URL")
                     singleLine: true
-                    placeholderText: Translation.tr("Add an ICS link (Google's secret address, a Proton share link, …)")
+                    placeholderText: "https://…"
                     confirmButtonVisible: /^https?:\/\//.test(value.trim())
                     confirmButtonIcon: "add"
                     onConfirmClicked: {
