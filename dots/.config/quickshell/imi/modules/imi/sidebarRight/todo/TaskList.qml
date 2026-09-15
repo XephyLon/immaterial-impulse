@@ -10,6 +10,8 @@ import Quickshell
 Item {
     id: root
     required property var taskList
+    // "local" acts on Todo (index-resolved); "google" on GoogleTasks by id.
+    property string source: "local"
     property string emptyPlaceholderIcon
     property string emptyPlaceholderText
     property int todoListItemSpacing: Appearance.spacing.space50
@@ -102,6 +104,10 @@ Item {
                         TodoItemActionButton {
                             Layout.fillWidth: false
                             onClicked: {
+                                if (root.source === "google") {
+                                    GoogleTasks.completeTask(todoItem.modelData.id);
+                                    return;
+                                }
                                 const index = todoItem.resolveIndex();
                                 if (index === -1)
                                     return;
@@ -122,6 +128,10 @@ Item {
                         TodoItemActionButton {
                             Layout.fillWidth: false
                             onClicked: {
+                                if (root.source === "google") {
+                                    GoogleTasks.deleteTask(todoItem.modelData.id);
+                                    return;
+                                }
                                 const index = todoItem.resolveIndex();
                                 if (index !== -1)
                                     Todo.deleteItem(index);

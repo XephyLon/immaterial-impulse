@@ -9,6 +9,12 @@ Item {
     id: root
     property var tabButtonList: [{"icon": "checklist", "name": Translation.tr("Unfinished")}, {"name": Translation.tr("Done"), "icon": "check_circle"}]
     property bool showAddDialog: false
+    // Which list the tabs show: the local file, or one of the account's
+    // Google task lists. The two never merge (the local file has no ids).
+    readonly property bool googleAvailable: GoogleTasks.enabled && GoogleTasks.lists.length > 0
+    property string source: "local"
+    readonly property bool googleSource: root.googleAvailable && root.source === "google"
+    onGoogleAvailableChanged: if (!googleAvailable) root.source = "local"
     property int dialogMargins: Appearance.spacing.space250
     property int fabSize: 48
     property int fabMargins: Appearance.spacing.space175
@@ -37,6 +43,35 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        // Local | <each Google list>, only while the account offers lists.
+        Flow {
+            Layout.fillWidth: true
+            Layout.bottomMargin: Appearance.spacing.space100
+            visible: root.googleAvailable
+            spacing: Appearance.spacing.space75
+
+            FilterChip {
+                label: Translation.tr("Local")
+                chipIcon: "home"
+                toggled: !root.googleSource
+                onClicked: root.source = "local"
+            }
+            Repeater {
+                model: GoogleTasks.lists
+                delegate: FilterChip {
+                    required property var modelData
+                    label: modelData.title
+                    chipIcon: "cloud"
+                    toggled: root.googleSource && GoogleTasks.currentListId === modelData.id
+                    onClicked: {
+                        root.source = "google";
+                        GoogleTasks.selectList(modelData.id);
+                        tabBar.setCurrentIndex(0);
+                    }
+                }
+            }
+        }
 
         SecondaryTabBar {
             id: tabBar
@@ -71,13 +106,16 @@ Item {
                 listBottomPadding: root.fabSize + root.fabMargins * 2
                 emptyPlaceholderIcon: "check_circle"
                 emptyPlaceholderText: Translation.tr("Nothing here!")
-                taskList: Todo.list.filter(function(item) { return !item.done; })
+                source: root.googleSource ? "google" : "local"
+                taskList: root.googleSource ? GoogleTasks.tasks : Todo.list.filter(function(item) { return !item.done; })
             }
             TaskList {
                 listBottomPadding: root.fabSize + root.fabMargins * 2
                 emptyPlaceholderIcon: "checklist"
-                emptyPlaceholderText: Translation.tr("Finished tasks will go here")
-                taskList: Todo.list.filter(function(item) { return item.done; })
+                // Google keeps completed tasks itself; this shell only lists the open ones.
+                emptyPlaceholderText: root.googleSource ? Translation.tr("Completed tasks stay in Google Tasks") : Translation.tr("Finished tasks will go here")
+                source: root.googleSource ? "google" : "local"
+                taskList: root.googleSource ? [] : Todo.list.filter(function(item) { return item.done; })
             }
 
         }
@@ -146,7 +184,10 @@ Item {
 
             function addTask() {
                 if (todoInput.text.length > 0) {
-                    Todo.addTask(todoInput.text)
+                    if (root.googleSource)
+                        GoogleTasks.addTask(todoInput.text)
+                    else
+                        Todo.addTask(todoInput.text)
                     todoInput.text = ""
                     root.showAddDialog = false
                     tabBar.setCurrentIndex(0) // Show unfinished tasks

@@ -61,7 +61,9 @@ def test_the_task_list_keeps_the_views_transitions_armed():
 
 def test_the_model_is_fed_identity_stable_values():
     widget = code(TODO_WIDGET)
-    filters = re.findall(r"taskList:\s*Todo\.list\.filter", widget)
+    # The Google source row (accounts) puts a ternary in front: the local arm
+    # still hands Todo.list's own objects straight to the filter.
+    filters = re.findall(r"taskList:\s*(?:root\.googleSource \? [\w.\[\]]+ : )?Todo\.list\.filter", widget)
     assert len(filters) == 2, \
         (f"expected both tabs to pass Todo.list's own objects straight into "
          f"their filter, found {len(filters)} - a per-update wrapper makes "
