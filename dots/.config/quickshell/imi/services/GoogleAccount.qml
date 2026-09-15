@@ -39,6 +39,11 @@ Singleton {
     property bool connecting: false
     property bool refreshing: false
     property string lastError: ""
+    // A failing refresh backs off: 1, 2, 4 … minutes, capped at 30, reset by
+    // a success - never a python3 spawn every minute for the whole session.
+    property int refreshFailures: 0
+    property real nextRefreshAt: 0
+    readonly property bool refreshGaveUp: root.refreshFailures >= 6
     signal tokenRefreshed()
 
     // The tests' fake endpoints; empty for the real ones.
@@ -72,6 +77,12 @@ Singleton {
         if (!root.connected || root.refreshing) return;
         root.refreshing = true;
         refreshProc.running = true;
+    }
+
+    function backOff() {
+        root.refreshFailures += 1;
+        const minutes = Math.min(30, Math.pow(2, root.refreshFailures - 1));
+        root.nextRefreshAt = Date.now() + minutes * 60000;
     }
 
     // Secrets in the environment: the helper's argv is public.
@@ -114,10 +125,13 @@ Singleton {
             try { parsed = JSON.parse(refreshOut.text.trim().split("\n").pop()); } catch (e) { parsed = null; }
             if (code !== 0 || !parsed || !parsed.access_token) {
                 root.lastError = parsed?.error ?? "token refresh failed";
-                console.warn("[GoogleAccount] refresh:", root.lastError);
+                root.backOff();
+                console.warn(`[GoogleAccount] refresh: ${root.lastError} (attempt ${root.refreshFailures})`);
                 return;
             }
             root.lastError = "";
+            root.refreshFailures = 0;
+            root.nextRefreshAt = 0;
             root.accessToken = String(parsed.access_token);
             root.tokenExpiresAt = Date.now() + (Number(parsed.expires_in) || 3600) * 1000;
             root.tokenRefreshed();
@@ -131,9 +145,13 @@ Singleton {
         interval: 60000
         repeat: true
         triggeredOnStart: true
-        onTriggered: if (!root.tokenValid) root.refreshNow()
+        onTriggered: if (!root.tokenValid && Date.now() >= root.nextRefreshAt) root.refreshNow()
     }
-    onConnectedChanged: if (root.connected && root.anyFeatureOn) root.refreshNow()
+    onConnectedChanged: {
+        root.refreshFailures = 0;
+        root.nextRefreshAt = 0;
+        if (root.connected && root.anyFeatureOn) root.refreshNow();
+    }
 
     Component.onCompleted: if (!KeyringStorage.loaded) KeyringStorage.fetchKeyringData()
 }

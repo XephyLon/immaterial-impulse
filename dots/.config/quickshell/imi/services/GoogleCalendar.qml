@@ -12,7 +12,8 @@ import "google_api.js" as G
  * with `singleEvents` (recurrences expanded by Google - the ICS parser does
  * none) and handed to IcsCalendar as external sources, one per calendar, so
  * the sidebar dots, `list_events` and the modes engine see them like any ICS
- * feed. Refreshes every `refreshMinutes` and on every new token.
+ * feed. Refreshes every `refreshMinutes` and on every new token; one cycle
+ * at a time, one calendar at a time.
  */
 Singleton {
     id: root
@@ -26,65 +27,59 @@ Singleton {
     property int eventCount: 0
     property string lastError: ""
     property real lastSync: 0
-    property var _pending: []
+    // Events handed out per calendar id, for the count.
+    property var _counts: ({})
 
     function refresh() {
-        if (!root.enabled || !GoogleAccount.tokenValid || listReq.running) return;
-        listReq.url = G.calendarListUrl(GoogleAccount.apiBase);
-        listReq.start();
+        if (!root.enabled || !GoogleAccount.tokenValid || req.busy) return;
+        req.request(G.calendarListUrl(GoogleAccount.apiBase), "GET", "", { kind: "list" });
     }
 
     function clear() {
+        req.clear();
         for (const c of root.calendars)
             IcsCalendar.setExternalEvents("google:" + c.id, []);
         root.calendars = [];
+        root._counts = {};
         root.eventCount = 0;
     }
 
+    function recount() {
+        let n = 0;
+        for (const k in root._counts) n += root._counts[k];
+        root.eventCount = n;
+    }
+
     GoogleRequest {
-        id: listReq
-        onFinished: (json, error, status) => {
+        id: req
+        onFinished: (json, error, status, tag) => {
+            if (!root.enabled) return;
             if (error.length > 0) { root.lastError = error; return; }
-            const next = G.parseCalendarList(json);
-            // Calendars that vanished take their events with them.
-            for (const old of root.calendars)
-                if (!next.some(c => c.id === old.id))
-                    IcsCalendar.setExternalEvents("google:" + old.id, []);
-            root.calendars = next;
-            root.lastError = "";
-            root._pending = next.slice();
-            root.fetchNext();
-        }
-    }
-
-    // One calendar at a time: a dozen concurrent curls for a routine refresh
-    // is not worth the burst.
-    function fetchNext() {
-        if (root._pending.length === 0) { root.lastSync = Date.now(); return; }
-        const cal = root._pending.shift();
-        const now = new Date();
-        const end = new Date(now.getTime() + root.days * 86400000);
-        eventsReq.calendarId = cal.id;
-        eventsReq.calendarName = cal.name;
-        eventsReq.url = G.eventsUrl(GoogleAccount.apiBase, cal.id, now.toISOString(), end.toISOString());
-        eventsReq.start();
-    }
-
-    GoogleRequest {
-        id: eventsReq
-        property string calendarId: ""
-        property string calendarName: ""
-        onFinished: (json, error, status) => {
-            if (error.length > 0) {
-                root.lastError = error;
-            } else {
-                const events = G.parseEvents(json, eventsReq.calendarName);
-                IcsCalendar.setExternalEvents("google:" + eventsReq.calendarId, events);
-                root.eventCount = Object.keys(IcsCalendar._externalEvents)
-                    .filter(k => k.indexOf("google:") === 0)
-                    .reduce((n, k) => n + IcsCalendar._externalEvents[k].length, 0);
+            if (tag.kind === "list") {
+                const next = G.parseCalendarList(json);
+                // Calendars that vanished take their events with them.
+                for (const old of root.calendars)
+                    if (!next.some(c => c.id === old.id)) {
+                        IcsCalendar.setExternalEvents("google:" + old.id, []);
+                        delete root._counts[old.id];
+                    }
+                root.calendars = next;
+                root.lastError = "";
+                const now = new Date();
+                const end = new Date(now.getTime() + root.days * 86400000);
+                // One calendar at a time, each carrying its own identity.
+                for (const cal of next)
+                    req.request(G.eventsUrl(GoogleAccount.apiBase, cal.id, now.toISOString(), end.toISOString()),
+                                "GET", "", { kind: "events", calendarId: cal.id, calendarName: cal.name });
+                if (next.length === 0) root.lastSync = Date.now();
+                return;
             }
-            root.fetchNext();
+            const events = G.parseEvents(json, tag.calendarName);
+            IcsCalendar.setExternalEvents("google:" + tag.calendarId, events);
+            root._counts[tag.calendarId] = events.length;
+            root.recount();
+            root.lastError = "";
+            if (!req.busy && req.queue.length === 0) root.lastSync = Date.now();
         }
     }
 

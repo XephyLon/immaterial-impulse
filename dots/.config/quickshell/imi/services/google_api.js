@@ -78,6 +78,10 @@ function tasksUrl(base, listId) {
         + "/tasks?showCompleted=false&showHidden=false&maxResults=100";
 }
 
+function tasksCollectionUrl(base, listId) {
+    return apiBase(base) + "/tasks/v1/lists/" + encodeURIComponent(listId) + "/tasks";
+}
+
 function taskUrl(base, listId, taskId) {
     return apiBase(base) + "/tasks/v1/lists/" + encodeURIComponent(listId) + "/tasks/" + encodeURIComponent(taskId);
 }

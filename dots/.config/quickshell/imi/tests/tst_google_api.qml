@@ -14,6 +14,7 @@ TestCase {
         verify(u.indexOf("singleEvents=true") !== -1, "recurrences expand server-side");
         verify(u.indexOf("timeMin=2026-09-15T00%3A00%3A00Z") !== -1, u);
         compare(G.taskUrl("http://x", "l/1", "t 2"), "http://x/tasks/v1/lists/l%2F1/tasks/t%202");
+        compare(G.tasksCollectionUrl("http://x", "l/1"), "http://x/tasks/v1/lists/l%2F1/tasks", "the POST target, built here rather than by trimming a task URL");
         verify(G.tasksUrl("http://x", "l").indexOf("showCompleted=false") !== -1);
     }
 

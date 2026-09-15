@@ -8,7 +8,8 @@ import "google_api.js" as G
 
 /**
  * Google Tasks in the to-do widget: the task lists and their open tasks,
- * with add / complete / delete written through. Kept apart from the local
+ * with add / complete / delete written through, queued behind one another
+ * (two ticks in one round trip both land). Kept apart from the local
  * to-do file on purpose - the local list has no stable ids to merge on, so
  * the widget shows a source row instead (Local | Google).
  */
@@ -24,13 +25,12 @@ Singleton {
     readonly property var currentList: root.lists.find(l => l.id === root.currentListId) ?? null
     // [{ id, listId, content, done, due, notes }]
     property var tasks: []
-    property bool busy: listsReq.running || tasksReq.running || writeReq.running
+    readonly property bool busy: req.busy
     property string lastError: ""
 
     function refresh() {
-        if (!root.enabled || !GoogleAccount.tokenValid || listsReq.running) return;
-        listsReq.url = G.taskListsUrl(GoogleAccount.apiBase);
-        listsReq.start();
+        if (!root.enabled || !GoogleAccount.tokenValid) return;
+        req.request(G.taskListsUrl(GoogleAccount.apiBase), "GET", "", { kind: "lists" });
     }
 
     function selectList(id) {
@@ -39,15 +39,14 @@ Singleton {
     }
 
     function fetchTasks() {
-        if (!root.enabled || !GoogleAccount.tokenValid || root.currentListId.length === 0 || tasksReq.running) return;
-        tasksReq.url = G.tasksUrl(GoogleAccount.apiBase, root.currentListId);
-        tasksReq.start();
+        if (!root.enabled || !GoogleAccount.tokenValid || root.currentListId.length === 0) return;
+        req.request(G.tasksUrl(GoogleAccount.apiBase, root.currentListId), "GET", "", { kind: "tasks", listId: root.currentListId });
     }
 
     function addTask(title) {
         const text = String(title ?? "").trim();
-        if (text.length === 0 || root.currentListId.length === 0) return;
-        root.write("POST", G.taskUrl(GoogleAccount.apiBase, root.currentListId, "").replace(/\/$/, ""), JSON.stringify({ title: text }));
+        if (text.length === 0) return;
+        root.write("POST", G.tasksCollectionUrl(GoogleAccount.apiBase, root.currentListId), JSON.stringify({ title: text }));
     }
 
     function completeTask(id) {
@@ -59,43 +58,41 @@ Singleton {
     }
 
     function write(method, url, body) {
-        if (!GoogleAccount.tokenValid) return;
-        writeReq.method = method;
-        writeReq.url = url;
-        writeReq.body = body;
-        writeReq.start();
+        if (!root.enabled || !GoogleAccount.tokenValid || root.currentListId.length === 0) return;
+        req.request(url, method, body, { kind: "write", method: method, listId: root.currentListId });
     }
 
     GoogleRequest {
-        id: listsReq
-        onFinished: (json, error, status) => {
-            if (error.length > 0) { root.lastError = error; return; }
-            root.lists = G.parseTaskLists(json);
-            root.lastError = "";
-            if (root.lists.length === 0) { root.tasks = []; return; }
-            if (!root.lists.some(l => l.id === root.currentListId))
-                root.currentListId = root.lists[0].id;
-            root.fetchTasks();
-        }
-    }
-
-    GoogleRequest {
-        id: tasksReq
-        onFinished: (json, error, status) => {
-            if (error.length > 0) { root.lastError = error; return; }
-            root.tasks = G.parseTasks(json, root.currentListId);
-            root.lastError = "";
-        }
-    }
-
-    GoogleRequest {
-        id: writeReq
-        onFinished: (json, error, status) => {
+        id: req
+        onFinished: (json, error, status, tag) => {
+            if (!root.enabled) return;
             if (error.length > 0) {
                 root.lastError = error;
-                console.warn(`[GoogleTasks] ${writeReq.method} failed: ${error} (${status})`);
+                if (tag.kind === "write") {
+                    console.warn(`[GoogleTasks] ${tag.method} failed: ${error} (${status})`);
+                    root.fetchTasks();
+                }
+                return;
             }
-            root.fetchTasks();
+            root.lastError = "";
+            switch (tag.kind) {
+            case "lists":
+                root.lists = G.parseTaskLists(json);
+                if (root.lists.length === 0) { root.tasks = []; return; }
+                if (!root.lists.some(l => l.id === root.currentListId))
+                    root.currentListId = root.lists[0].id;
+                root.fetchTasks();
+                break;
+            case "tasks":
+                if (tag.listId === root.currentListId)
+                    root.tasks = G.parseTasks(json, tag.listId);
+                break;
+            case "write":
+                // Re-read after the LAST queued write, not after each.
+                if (!req.queue.some(q => q.tag && q.tag.kind === "write"))
+                    root.fetchTasks();
+                break;
+            }
         }
     }
 
@@ -110,5 +107,5 @@ Singleton {
         target: GoogleAccount
         function onTokenRefreshed() { root.refresh(); }
     }
-    onEnabledChanged: if (!root.enabled) { root.lists = []; root.tasks = []; } else root.refresh()
+    onEnabledChanged: if (!root.enabled) { req.clear(); root.lists = []; root.tasks = []; } else root.refresh()
 }

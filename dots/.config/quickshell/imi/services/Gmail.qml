@@ -21,9 +21,8 @@ Singleton {
     property string lastError: ""
 
     function refresh() {
-        if (!root.enabled || !GoogleAccount.tokenValid || req.running) return;
-        req.url = G.inboxLabelUrl(GoogleAccount.apiBase);
-        req.start();
+        if (!root.enabled || !GoogleAccount.tokenValid || req.busy) return;
+        req.request(G.inboxLabelUrl(GoogleAccount.apiBase), "GET", "", null);
     }
 
     function openInbox() {
@@ -32,7 +31,8 @@ Singleton {
 
     GoogleRequest {
         id: req
-        onFinished: (json, error, status) => {
+        onFinished: (json, error, status, tag) => {
+            if (!root.enabled) return;
             if (error.length > 0) { root.lastError = error; return; }
             root.unread = G.parseUnread(json);
             root.synced = true;
@@ -51,5 +51,5 @@ Singleton {
         target: GoogleAccount
         function onTokenRefreshed() { root.refresh(); }
     }
-    onEnabledChanged: if (!root.enabled) { root.unread = 0; root.synced = false; } else root.refresh()
+    onEnabledChanged: if (!root.enabled) { req.clear(); root.unread = 0; root.synced = false; } else root.refresh()
 }
