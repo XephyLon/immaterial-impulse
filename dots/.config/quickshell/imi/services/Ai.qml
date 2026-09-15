@@ -1058,9 +1058,18 @@ And a final paragraph after the math, so the stream does not end on a block boun
 
         function makeRequest() {
             const model = models[currentModelId];
+            // No model at all (nothing configured or discovered yet): say so
+            // and stop, instead of throwing on `model.requires_key` below.
+            // Reachable from the approve path of a reviewed tool - the tool's
+            // output is recorded, the model just cannot be asked about it.
+            if (!model) {
+                root.pendingContinuation = false;
+                root.addMessage(Translation.tr("No model selected - pick one in the model list to continue."), root.interfaceRole);
+                return;
+            }
 
             // Fetch API keys if needed
-            if (model?.requires_key && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
+            if (model.requires_key && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
             
             requester.currentStrategy = root.currentApiStrategy;
             requester.currentStrategy.reset(); // Reset strategy state
