@@ -1275,7 +1275,7 @@ Item {
                     top: parent.top
                     left: parent.left
                     right: parent.right
-                    margins: visible ? 5 : 0
+                    margins: visible ? Appearance.spacing.space50 : 0
                 }
                 visible: Ai.pendingFilePaths.length > 0
                 spacing: Appearance.spacing.space50

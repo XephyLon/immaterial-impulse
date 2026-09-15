@@ -115,8 +115,8 @@ RippleButton {
             anchors {
                 bottom: parent.bottom
                 right: parent.right
-                bottomMargin: -2
-                rightMargin: -2
+                bottomMargin: -Appearance.spacing.space25
+                rightMargin: -Appearance.spacing.space25
             }
             implicitWidth: 8
             implicitHeight: 8

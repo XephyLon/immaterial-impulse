@@ -98,7 +98,7 @@ ProgressBar {
             visible: root.showTip
             anchors {
                 left: mainRect.right
-                leftMargin: 1
+                leftMargin: Appearance.spacing.space25
                 verticalCenter: parent.verticalCenter
             }
             width: root.tipWidth

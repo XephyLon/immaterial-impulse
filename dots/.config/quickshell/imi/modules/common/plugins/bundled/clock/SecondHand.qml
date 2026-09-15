@@ -61,7 +61,7 @@ Item {
             anchors {
                 left: parent.left
                 verticalCenter: parent.verticalCenter
-                leftMargin: 40
+                leftMargin: Appearance.spacing.space500
             }
             implicitWidth: root.style === "classic" ? 14 : 0
             implicitHeight: implicitWidth

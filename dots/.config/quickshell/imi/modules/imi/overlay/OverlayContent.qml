@@ -47,7 +47,7 @@ Item {
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 top: parent.top
-                topMargin: 50
+                topMargin: Appearance.spacing.space600
             }
         }
 

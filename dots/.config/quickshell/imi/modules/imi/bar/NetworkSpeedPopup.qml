@@ -79,7 +79,7 @@ StyledPopup {
             id: cardContent
             anchors {
                 fill: parent
-                margins: 10
+                margins: Appearance.spacing.space125
             }
             spacing: Appearance.spacing.space25
 

@@ -29,8 +29,7 @@ ColumnLayout {
 
     DialogSectionListView {
         Layout.fillHeight: true
-        topMargin: 14
-
+        topMargin: Appearance.spacing.space175
         model: ScriptModel {
             values: root.appPwNodes
         }

@@ -95,7 +95,7 @@ Item {
                 anchors {
                     bottom:  parent.bottom
                     left:    parent.left
-                    margins: 24
+                    margins: Appearance.spacing.space300
                 }
                 Behavior on opacity {
                     NumberAnimation { duration: 300 }

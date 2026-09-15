@@ -18,8 +18,8 @@ MaterialSymbol {
         anchors {
             right: parent.right
             top: parent.top
-            rightMargin: root.showUnreadCount ? 0 : 1
-            topMargin: root.showUnreadCount ? 0 : 3
+            rightMargin: root.showUnreadCount ? 0 : Appearance.spacing.space25
+            topMargin: root.showUnreadCount ? 0 : Appearance.spacing.space25
         }
         z: 1
 

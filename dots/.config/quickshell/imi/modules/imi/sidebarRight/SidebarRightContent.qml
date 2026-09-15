@@ -263,7 +263,7 @@ Item {
                                 anchors {
                                     left: parent.left
                                     bottom: parent.bottom
-                                    leftMargin: 13
+                                    leftMargin: Appearance.spacing.space150
                                     bottomMargin: Appearance.spacing.space100
                                 }
                                 spacing: Appearance.spacing.space25

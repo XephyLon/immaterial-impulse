@@ -16,8 +16,8 @@ RippleButton {
         anchors {
             top: parent.top
             left: parent.left
-            topMargin: 4
-            leftMargin: 4
+            topMargin: Appearance.spacing.space50
+            leftMargin: Appearance.spacing.space50
         }
         color: ColorUtils.transparentize(Appearance.colors.colLayer2)
         radius: Appearance.rounding.full
@@ -38,8 +38,8 @@ RippleButton {
         anchors {
             top: parent.top
             right: parent.right
-            topMargin: 4
-            rightMargin: 4
+            topMargin: Appearance.spacing.space50
+            rightMargin: Appearance.spacing.space50
         }
         color: ColorUtils.transparentize(Appearance.colors.colLayer2)
         radius: Appearance.rounding.full
@@ -69,7 +69,7 @@ RippleButton {
         anchors {
             horizontalCenter: parent.horizontalCenter
             bottom: parent.bottom
-            bottomMargin: 4
+            bottomMargin: Appearance.spacing.space50
         }
         font.pixelSize: Appearance.font.pixelSize.smallest
         color: Appearance.colors.colOnLayer2

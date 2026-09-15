@@ -226,7 +226,7 @@ Rectangle {
             anchors {
                 verticalCenter: quickSlider.verticalCenter
                 right: nearFull ? quickSlider.handle.right : quickSlider.right
-                rightMargin: nearFull ? 14 : 8
+                rightMargin: nearFull ? Appearance.spacing.space175 : Appearance.spacing.space100
             }
             iconSize: 20
             color: nearFull ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
@@ -255,7 +255,7 @@ Rectangle {
             anchors {
                 verticalCenter: quickSlider.verticalCenter
                 right: nearIcon ? quickSlider.handle.right : quickSlider.right
-                rightMargin: nearIcon ? 14 : (1 - iconLocation) * quickSlider.effectiveDraggingWidth + quickSlider.rightPadding + 8
+                rightMargin: nearIcon ? Appearance.spacing.space175 : (1 - iconLocation) * quickSlider.effectiveDraggingWidth + quickSlider.rightPadding + 8
             }
             iconSize: 20
             color: quickSlider.value >= iconLocation - 0.1 ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer

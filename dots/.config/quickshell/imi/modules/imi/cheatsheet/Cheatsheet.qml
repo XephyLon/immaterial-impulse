@@ -167,8 +167,8 @@ Scope { // Scope
                     anchors {
                         top: parent.top
                         right: parent.right
-                        topMargin: 20
-                        rightMargin: 20
+                        topMargin: Appearance.spacing.space250
+                        rightMargin: Appearance.spacing.space250
                     }
 
                     onClicked: {

@@ -344,8 +344,8 @@ Item {
                                 anchors {
                                     left:   root.vertical ? pinnedIcon.right    : undefined
                                     top:    root.vertical ? undefined            : pinnedIcon.bottom
-                                    leftMargin:  root.vertical ? 1 : 0
-                                    topMargin:   root.vertical ? 0 : 1
+                                    leftMargin: root.vertical ? Appearance.spacing.space25 : 0
+                                    topMargin: root.vertical ? 0 : Appearance.spacing.space25
                                     horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
                                     verticalCenter:   root.vertical ? parent.verticalCenter : undefined
                                 }
@@ -449,8 +449,8 @@ Item {
                                 anchors {
                                     left:   root.vertical ? activeIcon.right    : undefined
                                     top:    root.vertical ? undefined            : activeIcon.bottom
-                                    leftMargin:  root.vertical ? 1 : 0
-                                    topMargin:   root.vertical ? 0 : 1
+                                    leftMargin: root.vertical ? Appearance.spacing.space25 : 0
+                                    topMargin: root.vertical ? 0 : Appearance.spacing.space25
                                     horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
                                     verticalCenter:   root.vertical ? parent.verticalCenter : undefined
                                 }
