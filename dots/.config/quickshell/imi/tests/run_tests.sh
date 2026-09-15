@@ -1865,6 +1865,26 @@ if ! python3 "$SCRIPT_DIR/test_ai_mutation_runtime.py"; then
     exit 1
 fi
 
+# Modes & Routines: the wiring pinned (state in Persistent, definitions in
+# Config, pill/toggles/overlay/settings/keybind, the pill on the record
+# indicator's grammar, schema and runner agreeing, nothing dropped by the
+# port still named)...
+echo "Running modes contract tests..."
+if ! python3 "$SCRIPT_DIR/test_modes_contract.py"; then
+    echo "Modes contract tests failed."
+    exit 1
+fi
+
+# ...and the engine in a real shell: presets seed once, a mode starts, is
+# logged and persisted, ends, comes back on toggleLast; automation off
+# refuses automatic starts only; a template becomes a routine. Brings its
+# own headless weston.
+echo "Running modes runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_modes_runtime.py"; then
+    echo "Modes runtime tests failed."
+    exit 1
+fi
+
 # OllamaCatalog against a fake daemon in a real shell: lists arrive, a pull
 # streams progress to 1 and lands installed, a removal drops it, and the
 # chat's model list follows both. Brings its own headless weston.
