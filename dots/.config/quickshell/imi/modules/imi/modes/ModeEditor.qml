@@ -500,28 +500,21 @@ Item {
                 title: Translation.tr("When it ends")
                 icon: "undo"
 
-                EditorRow {
-                    icon: "settings_backup_restore"
-                    label: Translation.tr("Put settings back")
-                    hint: Translation.tr("Restore what the mode changed")
-
-                    StyledSwitch {
-                        checked: root.mode?.end.revert ?? true
-                        onClicked: root.patchEnd({ revert: checked })
-                    }
+                EditorSwitchRow {
+                    buttonIcon: "settings_backup_restore"
+                    text: Translation.tr("Put settings back")
+                    description: Translation.tr("Restore what the mode changed")
+                    checked: root.mode?.end.revert ?? true
+                    onToggleRequested: root.patchEnd({ revert: !checked })
                 }
 
-                EditorRow {
-                    icon: "rule"
-                    label: Translation.tr("Strict restore")
-                    hint: Translation.tr("Also undo settings you changed by hand while it was on")
+                EditorSwitchRow {
+                    buttonIcon: "rule"
+                    text: Translation.tr("Strict restore")
+                    description: Translation.tr("Also undo settings you changed by hand while it was on")
                     enabled: root.mode?.end.revert ?? true
-                    opacity: enabled ? 1 : 0.5
-
-                    StyledSwitch {
-                        checked: root.mode?.end.strict ?? false
-                        onClicked: root.patchEnd({ strict: checked })
-                    }
+                    checked: root.mode?.end.strict ?? false
+                    onToggleRequested: root.patchEnd({ strict: !checked })
                 }
 
                 EditorRow {
@@ -557,28 +550,20 @@ Item {
                     ? Translation.tr("Banners are off for every mode in Settings")
                     : Translation.tr("A brief pop-up when the mode switches on or off")
 
-                EditorRow {
-                    icon: "play_arrow"
-                    label: Translation.tr("Show a banner when it starts")
+                EditorSwitchRow {
+                    buttonIcon: "play_arrow"
+                    text: Translation.tr("Show a banner when it starts")
                     enabled: Config.options.modes.flash !== "off"
-                    opacity: enabled ? 1 : 0.5
-
-                    StyledSwitch {
-                        checked: root.mode?.notify ?? true
-                        onClicked: root.patch({ notify: checked })
-                    }
+                    checked: root.mode?.notify ?? true
+                    onToggleRequested: root.patch({ notify: !checked })
                 }
 
-                EditorRow {
-                    icon: "stop_circle"
-                    label: Translation.tr("Show a banner when it ends")
+                EditorSwitchRow {
+                    buttonIcon: "stop_circle"
+                    text: Translation.tr("Show a banner when it ends")
                     enabled: Config.options.modes.flash !== "off"
-                    opacity: enabled ? 1 : 0.5
-
-                    StyledSwitch {
-                        checked: root.mode?.end.notify ?? true
-                        onClicked: root.patchEnd({ notify: checked })
-                    }
+                    checked: root.mode?.end.notify ?? true
+                    onToggleRequested: root.patchEnd({ notify: !checked })
                 }
             }
 

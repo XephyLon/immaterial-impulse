@@ -540,30 +540,23 @@ Item {
                     }
                 }
 
-                EditorRow {
+                EditorSwitchRow {
                     visible: !root.isOnce
-                    icon: "settings_backup_restore"
-                    label: Translation.tr("Put settings back when it ends")
-                    hint: Translation.tr("Each action can still opt out with its own switch")
-
-                    StyledSwitch {
-                        checked: root.routine?.end.revert ?? true
-                        onClicked: root.patchEnd({ revert: checked })
-                    }
+                    buttonIcon: "settings_backup_restore"
+                    text: Translation.tr("Put settings back when it ends")
+                    description: Translation.tr("Each action can still opt out with its own switch")
+                    checked: root.routine?.end.revert ?? true
+                    onToggleRequested: root.patchEnd({ revert: !checked })
                 }
 
-                EditorRow {
+                EditorSwitchRow {
                     visible: !root.isOnce
-                    icon: "rule"
-                    label: Translation.tr("Strict restore")
-                    hint: Translation.tr("Also undo settings you changed by hand while it was running")
+                    buttonIcon: "rule"
+                    text: Translation.tr("Strict restore")
+                    description: Translation.tr("Also undo settings you changed by hand while it was running")
                     enabled: root.routine?.end.revert ?? true
-                    opacity: enabled ? 1 : 0.5
-
-                    StyledSwitch {
-                        checked: root.routine?.end.strict ?? false
-                        onClicked: root.patchEnd({ strict: checked })
-                    }
+                    checked: root.routine?.end.strict ?? false
+                    onToggleRequested: root.patchEnd({ strict: !checked })
                 }
             }
 
@@ -578,30 +571,22 @@ Item {
                         : Translation.tr("A brief pop-up when the routine starts or ends");
                 }
 
-                EditorRow {
-                    icon: "play_arrow"
-                    label: root.isOnce ? Translation.tr("Show a banner when it fires")
+                EditorSwitchRow {
+                    buttonIcon: "play_arrow"
+                    text: root.isOnce ? Translation.tr("Show a banner when it fires")
                         : Translation.tr("Show a banner when it starts")
                     enabled: Config.options.modes.flash !== "off"
-                    opacity: enabled ? 1 : 0.5
-
-                    StyledSwitch {
-                        checked: root.routine?.notify ?? true
-                        onClicked: root.patch({ notify: checked })
-                    }
+                    checked: root.routine?.notify ?? true
+                    onToggleRequested: root.patch({ notify: !checked })
                 }
 
-                EditorRow {
+                EditorSwitchRow {
                     visible: !root.isOnce
-                    icon: "stop_circle"
-                    label: Translation.tr("Show a banner when it ends")
+                    buttonIcon: "stop_circle"
+                    text: Translation.tr("Show a banner when it ends")
                     enabled: Config.options.modes.flash !== "off"
-                    opacity: enabled ? 1 : 0.5
-
-                    StyledSwitch {
-                        checked: root.routine?.end.notify ?? true
-                        onClicked: root.patchEnd({ notify: checked })
-                    }
+                    checked: root.routine?.end.notify ?? true
+                    onToggleRequested: root.patchEnd({ notify: !checked })
                 }
             }
 

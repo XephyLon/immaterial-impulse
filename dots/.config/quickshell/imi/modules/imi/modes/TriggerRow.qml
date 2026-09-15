@@ -202,69 +202,45 @@ Rectangle {
         }
 
         // Every condition can be read the other way round: "Zoom is not
-        // running" is how "when Zoom closes" is said.
-        RowLayout {
+        // running" is how "when Zoom closes" is said. The shell's switch row
+        // (icon, label, description, trailing switch; the whole row flips
+        // it), on the header's columns: glyph under glyph, switch under the
+        // trailing buttons - the Button's own side padding is what pushed
+        // them off.
+        ConfigSwitch {
             Layout.fillWidth: true
-            Layout.leftMargin: Appearance.spacing.space400
-            Layout.rightMargin: Appearance.spacing.space75
             Layout.bottomMargin: Appearance.spacing.space50
+            leftPadding: 0
+            rightPadding: 0
             visible: root.expanded
-            spacing: Appearance.spacing.space125
-
-            StyledSwitch {
-                checked: root.negated
-                onClicked: root.set({ not: checked })
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                FormLabel {
-                    text: Translation.tr("Invert")
-                }
-
-                FormHint {
-                    text: root.negated ? Translation.tr("Holds while the above is not the case")
-                        : Translation.tr("Hold when the above is not the case instead")
-                }
-            }
+            buttonIcon: "flip"
+            text: Translation.tr("Invert")
+            description: root.negated ? Translation.tr("Holds while the above is not the case")
+                : Translation.tr("Hold when the above is not the case instead")
+            checked: root.negated
+            onToggleRequested: root.set({ not: !root.negated })
         }
 
         // "Idle for 10 minutes", "in a game for 5 minutes": the verdict has
         // to last this long before it counts. Zero means at once. A moment
         // (an event) cannot be held.
-        RowLayout {
+        ConfigSwitch {
             Layout.fillWidth: true
-            Layout.leftMargin: Appearance.spacing.space400
-            Layout.rightMargin: Appearance.spacing.space75
             Layout.bottomMargin: Appearance.spacing.space50
+            leftPadding: 0
+            rightPadding: 0
             visible: root.expanded && !ModeSchema.isEventTrigger(root.type)
-            spacing: Appearance.spacing.space125
-
-            StyledSwitch {
-                checked: root.forSec > 0
-                onClicked: root.set({ forSec: checked ? 300 : 0 })
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                FormLabel {
-                    text: Translation.tr("For at least")
-                }
-
-                FormHint {
-                    text: root.forSec > 0
-                        ? Translation.tr("Counts only once it has held for %1 without a break").arg(ModeUi.durationText(root.forSec))
-                        : Translation.tr("Counts the moment it holds")
-                }
-            }
+            buttonIcon: "hourglass_top"
+            text: Translation.tr("For at least")
+            description: root.forSec > 0
+                ? Translation.tr("Counts only once it has held for %1 without a break").arg(ModeUi.durationText(root.forSec))
+                : Translation.tr("Counts the moment it holds")
+            checked: root.forSec > 0
+            onToggleRequested: root.set({ forSec: root.forSec > 0 ? 0 : 300 })
 
             // Created on demand: a field built while hidden measures its
             // unit strip at zero width and keeps it.
-            Loader {
+            trailingContent: Loader {
                 active: root.forSec > 0
                 visible: active
 

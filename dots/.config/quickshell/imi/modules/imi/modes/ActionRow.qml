@@ -433,38 +433,28 @@ Rectangle {
         }
 
         // "Screens off ten minutes after Sleep starts": the list pauses here
-        // before this action, so anything below waits too.
-        RowLayout {
+        // before this action, so anything below waits too. The shell's switch
+        // row on the header's columns (see TriggerRow's).
+        ConfigSwitch {
             Layout.fillWidth: true
-            Layout.leftMargin: root.formIndent
-            Layout.rightMargin: Appearance.spacing.space75
+            // The form indent lands text on the title column; the glyph goes
+            // one glyph-and-gap back from it, centred under the header's.
+            Layout.leftMargin: root.formIndent - Appearance.spacing.space400
             Layout.bottomMargin: Appearance.spacing.space50
+            leftPadding: 0
+            rightPadding: 0
             visible: root.expanded && !root.isWait
-            spacing: Appearance.spacing.space125
-
-            StyledSwitch {
-                checked: root.delaySec > 0
-                onClicked: root.setDelay(checked ? 300 : 0)
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                FormLabel {
-                    text: Translation.tr("Delay")
-                }
-
-                FormHint {
-                    text: root.delaySec > 0
-                        ? Translation.tr("Runs %1 after the step above; the rest of the list waits with it").arg(ModeUi.durationText(root.delaySec))
-                        : Translation.tr("Runs as soon as its turn comes")
-                }
-            }
+            buttonIcon: "more_time"
+            text: Translation.tr("Delay")
+            description: root.delaySec > 0
+                ? Translation.tr("Runs %1 after the step above; the rest of the list waits with it").arg(ModeUi.durationText(root.delaySec))
+                : Translation.tr("Runs as soon as its turn comes")
+            checked: root.delaySec > 0
+            onToggleRequested: root.setDelay(root.delaySec > 0 ? 0 : 300)
 
             // Created on demand: a field built while hidden measures its
             // unit strip at zero width and keeps it.
-            Loader {
+            trailingContent: Loader {
                 active: root.delaySec > 0
                 visible: active
 

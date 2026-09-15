@@ -23,6 +23,7 @@ ColumnLayout {
     readonly property var quick: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
     FormChoice {
+        text: Translation.tr("Do")
         current: wsCol.moving ? "move" : "go"
         onPicked: v => row.patchValue({ action: v })
         options: [
@@ -91,27 +92,13 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    ConfigSwitch {
         Layout.fillWidth: true
         visible: !wsCol.moving
-        spacing: Appearance.spacing.space125
-
-        StyledSwitch {
-            checked: row.obj.back === true
-            onClicked: row.patchValue({ back: checked })
-        }
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 0
-
-            FormLabel {
-                text: Translation.tr("Go back when it ends")
-            }
-
-            FormHint {
-                text: Translation.tr("Returns to the workspace that was focused when this ran")
-            }
-        }
+        buttonIcon: "undo"
+        text: Translation.tr("Go back when it ends")
+        description: Translation.tr("Returns to the workspace that was focused when this ran")
+        checked: row.obj.back === true
+        onToggleRequested: row.patchValue({ back: !checked })
     }
 }

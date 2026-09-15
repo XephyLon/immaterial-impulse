@@ -30,25 +30,12 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
-        spacing: Appearance.spacing.space125
-
-        StyledSwitch {
-            checked: row.trigger.ignoreInhibitors === true
-            onClicked: row.set({ ignoreInhibitors: checked })
-        }
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 0
-
-            FormLabel {
-                text: Translation.tr("Even while Keep Awake is on")
-            }
-
-            FormHint {
-                text: Translation.tr("Off: an idle inhibitor (a movie, Keep Awake) counts as activity")
-            }
-        }
+    ConfigSwitch {
+        Layout.fillWidth: true
+        buttonIcon: "coffee"
+        text: Translation.tr("Even while Keep Awake is on")
+        description: Translation.tr("Off: an idle inhibitor (a movie, Keep Awake) counts as activity")
+        checked: row.trigger.ignoreInhibitors === true
+        onToggleRequested: row.set({ ignoreInhibitors: !checked })
     }
 }
