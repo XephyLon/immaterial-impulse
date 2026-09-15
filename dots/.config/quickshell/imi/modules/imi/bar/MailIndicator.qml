@@ -14,47 +14,71 @@ MouseArea {
     readonly property bool shown: Gmail.enabled && Gmail.synced
     readonly property int unread: Gmail.unread
     readonly property bool showUnreadCount: Config.options.bar.indicators.notifications.showUnreadCount
-    readonly property color glyphColor: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
 
     visible: implicitWidth > 0
     enabled: shown
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    implicitWidth: shown ? (vertical ? Appearance.sizes.verticalBarWidth : glyph.implicitWidth + Appearance.spacing.space100) : 0
-    implicitHeight: vertical ? glyph.implicitHeight + Appearance.spacing.space100 : Appearance.sizes.barHeight
+    implicitWidth: shown ? (vertical ? Appearance.sizes.verticalBarWidth : pill.implicitWidth) : 0
+    implicitHeight: vertical ? pill.implicitHeight : Appearance.sizes.barHeight
     Behavior on implicitWidth {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
     onClicked: Gmail.openInbox()
 
-    MaterialSymbol {
-        id: glyph
+    // A standalone widget draws its own pill (the record and privacy pills'
+    // grammar) on the neutral layer pair: the bar's group behind it is the
+    // dark ground, and a bare glyph in the layer's on-colour vanished there.
+    Rectangle {
+        id: pill
         anchors.centerIn: parent
-        text: root.unread > 0 ? "mark_email_unread" : "mail"
-        iconSize: Appearance.font.pixelSize.larger
-        color: root.glyphColor
+        anchors.verticalCenterOffset: root.vertical ? 0 : Appearance.sizes.barStandalonePillOffset
+        anchors.horizontalCenterOffset: root.vertical ? Appearance.sizes.barStandalonePillOffset : 0
+        radius: Appearance.rounding.full
+        color: root.containsMouse ? Appearance.colors.colLayer1Hover : Appearance.colors.colLayer1
+        opacity: root.shown ? 1 : 0
+        scale: root.shown ? 1 : 0.7
+        transformOrigin: Item.Center
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+        Behavior on scale {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+        implicitWidth: glyph.implicitWidth + Appearance.spacing.space150 * 2
+        implicitHeight: root.vertical
+            ? glyph.implicitHeight + Appearance.spacing.space100
+            : Appearance.sizes.barStandalonePillHeight
 
-        Presence {
-            shown: root.unread > 0
-            anchors {
-                right: parent.right
-                top: parent.top
-                rightMargin: root.showUnreadCount ? -Appearance.spacing.space50 : 1
-                topMargin: root.showUnreadCount ? -Appearance.spacing.space25 : 3
-            }
-            z: 1
-            Rectangle {
-                radius: Appearance.rounding.full
-                color: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
-                implicitHeight: root.showUnreadCount ? Math.max(counter.implicitWidth, counter.implicitHeight) : 8
-                implicitWidth: implicitHeight
-                StyledText {
-                    id: counter
-                    visible: root.showUnreadCount
-                    anchors.centerIn: parent
-                    font.pixelSize: Appearance.font.pixelSize.smallest
-                    color: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colPrimary : Appearance.colors.colLayer0
-                    text: root.unread > 99 ? "99+" : root.unread
+        MaterialSymbol {
+            id: glyph
+            anchors.centerIn: parent
+            text: "mail"
+            iconSize: Appearance.font.pixelSize.larger
+            color: Appearance.colors.colOnLayer1
+
+            Presence {
+                shown: root.unread > 0
+                anchors {
+                    right: parent.right
+                    top: parent.top
+                    rightMargin: root.showUnreadCount ? -Appearance.spacing.space50 : 1
+                    topMargin: root.showUnreadCount ? -Appearance.spacing.space25 : 3
+                }
+                z: 1
+                Rectangle {
+                    radius: Appearance.rounding.full
+                    color: Appearance.colors.colOnLayer1
+                    implicitHeight: root.showUnreadCount ? Math.max(counter.implicitWidth, counter.implicitHeight) : 8
+                    implicitWidth: implicitHeight
+                    StyledText {
+                        id: counter
+                        visible: root.showUnreadCount
+                        anchors.centerIn: parent
+                        font.pixelSize: Appearance.font.pixelSize.smallest
+                        color: Appearance.colors.colLayer1
+                        text: root.unread > 99 ? "99+" : root.unread
+                    }
                 }
             }
         }
