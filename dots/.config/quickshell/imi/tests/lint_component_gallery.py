@@ -69,6 +69,11 @@ EXCLUDED = {
         "an icon-only RippleButton for the editor's per-row controls (remove, "
         "move); it is the same control as the gallery's icon button tile in "
         "the editor row's size",
+    "modules/imi/modes/EditorSwitchRow.qml":
+        "the editor's switch row: the shell's ConfigSwitch (icon, label, "
+        "description, trailing switch, the whole row flips it) drawn as one "
+        "of the editor's rounded colLayer2 cards. ConfigSwitch is a tile; this "
+        "adds only the card tier's fill, padding and radius",
     "modules/imi/modes/SmallButton.qml":
         "the editor forms' tonal pill ('Add', 'Use current'): RippleButton "
         "with a text label at the form's height. The same shape as the "

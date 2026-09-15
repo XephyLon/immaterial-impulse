@@ -62,6 +62,18 @@ own repo; the installer pins which revision it builds.
   line. Not built: Proton Mail (needs Proton Bridge), Proton Pass (no API).
 
 ### Changed
+- **The Modes & Routines editor is drawn with the shell's own controls.**
+  Its text fields are the shell's pill field (`ToolbarTextField`, which grew
+  an opt-in focus ring and a leading glyph), its removable chips are
+  `FilterChip`, its kind menu, icon picker and suggestion menu share one
+  popup plate, and every switch row (Invert, For at least, Delay, the
+  editors' options) is the shell's `ConfigSwitch`: icon, label, description,
+  trailing switch, the whole row flips it. Segmented choices in the forms
+  carry a label and sit at the form's width like a settings row. Section
+  headers sit on the rows' own columns; "overnight" no longer runs past the
+  card's edge; an every-day schedule shows every day selected; the icon
+  picker's grid fades at its edge; the Activity header keeps its shape when
+  the first entry arrives.
 - Appearance settings now live in their own file, `~/.config/immaterial-impulse/config.d/appearance.json`,
   instead of inside `config.json` (the first step of splitting the config by domain: a
   slider on the Appearance page no longer rewrites and re-reads the whole 40 KB file). The
