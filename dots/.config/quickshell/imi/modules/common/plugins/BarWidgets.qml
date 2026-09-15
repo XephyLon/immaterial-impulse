@@ -39,6 +39,7 @@ Singleton {
         { id: "timerPill",         name: Translation.tr("Timer"),                icon: "timer" },
         { id: "recordIndicator",   name: Translation.tr("Recording"),            icon: "screen_record" },
         { id: "modeIndicator",     name: Translation.tr("Mode"),                 icon: "tune" },
+        { id: "mailIndicator",     name: Translation.tr("Mail"),                 icon: "mail" },
         { id: "privacyIndicator",  name: Translation.tr("Privacy"),              icon: "privacy_tip" },
         { id: "submapIndicator",   name: Translation.tr("Submap"),               icon: "keyboard" },
         { id: "clockWidget",       name: Translation.tr("Clock"),                icon: "schedule" },
