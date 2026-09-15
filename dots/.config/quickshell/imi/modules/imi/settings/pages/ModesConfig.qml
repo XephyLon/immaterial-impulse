@@ -52,9 +52,12 @@ ContentPage {
         return out;
     }
 
+    // Asked only while this page is the one on screen: every page is built
+    // at Config.ready whether or not Settings ever opens, and a recursive
+    // grep over ~/.config/hypr is not a shell-start cost.
     Process {
         id: keybindProbe
-        running: true
+        running: GlobalStates.currentPageInstance === page && !page.keybindChecked
         // `hyprctl binds` shows "__lua" for every bind under the Lua config,
         // so the config text is read instead; -s keeps a missing dir quiet.
         command: ["grep", "-rqsF", "quickshell:modesToggle", `${FileUtils.trimFileProtocol(Directories.config)}/hypr`]
@@ -69,7 +72,7 @@ ContentPage {
         visible: page.opts.overlayEnabled && page.keybindChecked && !page.keybindFound
         materialIcon: "keyboard_off"
         colBackground: Appearance.colors.colErrorContainer
-        colOnBackground: Appearance.m3colors.m3onErrorContainer
+        colOnBackground: Appearance.colors.colOnErrorContainer
         text: Translation.tr("Hyprland has no binding for the manager, so Super + Y does nothing. Update the Hyprland config (Settings > Update Dots) or bind quickshell:modesToggle yourself.")
     }
 
@@ -92,7 +95,6 @@ ContentPage {
             colBackgroundHover: Appearance.colors.colPrimaryHover
             colRipple: Appearance.colors.colPrimaryActive
             enabled: page.opts.overlayEnabled
-            opacity: enabled ? 1 : 0.5
             onClicked: GlobalStates.modesOpen = true
             contentItem: StyledText {
                 text: Translation.tr("Open the manager")
@@ -125,6 +127,7 @@ ContentPage {
         }
 
         ContentSubsection {
+            icon: "restore"
             title: Translation.tr("Presets")
 
             GroupedList {
@@ -176,6 +179,7 @@ ContentPage {
         }
 
         ContentSubsection {
+            icon: "campaign"
             title: Translation.tr("When a mode starts or ends")
 
             GroupedList {
@@ -267,6 +271,7 @@ ContentPage {
         }
 
         ContentSubsection {
+            icon: "sports_esports"
             title: Translation.tr("Always a game")
 
             GroupedList {
@@ -308,6 +313,7 @@ ContentPage {
         title: Translation.tr("Data")
 
         ContentSubsection {
+            icon: "history"
             title: Translation.tr("Activity")
 
             GroupedList {
@@ -331,8 +337,7 @@ ContentPage {
                         colBackground: Appearance.colors.colSecondaryContainer
                         colRipple: Appearance.colors.colSecondaryContainerActive
                         enabled: Modes.history.length > 0
-                        opacity: enabled ? 1 : 0.5
-                        // Two presses, the second within three seconds: the log is
+                                    // Two presses, the second within three seconds: the log is
                         // history, and a confirmation dialog does not belong on a page.
                         property bool armed: false
                         Timer { id: disarm; interval: 3000; onTriggered: parent.armed = false }
@@ -353,6 +358,7 @@ ContentPage {
         }
 
         ContentSubsection {
+            icon: "folder_open"
             title: Translation.tr("Where it lives")
 
             GroupedList {
