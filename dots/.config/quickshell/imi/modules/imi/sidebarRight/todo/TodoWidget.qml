@@ -7,14 +7,20 @@ import QtQuick.Layouts
 
 Item {
     id: root
-    property var tabButtonList: [{"icon": "checklist", "name": Translation.tr("Unfinished")}, {"name": Translation.tr("Done"), "icon": "check_circle"}]
-    property bool showAddDialog: false
-    // Which list the tabs show: the local file, or one of the account's
-    // Google task lists. The two never merge (the local file has no ids).
+    // The local file's two tabs, then one tab per Google task list while the
+    // account offers them: the source picker rides the tab bar it already
+    // has (BottomWidgetGroup's height is a fixed budget; a row of its own
+    // took 40px out of the list). The lists never merge (the local file has
+    // no ids).
+    readonly property var localTabs: [{"icon": "checklist", "name": Translation.tr("Unfinished")}, {"name": Translation.tr("Done"), "icon": "check_circle"}]
     readonly property bool googleAvailable: GoogleTasks.enabled && GoogleTasks.lists.length > 0
-    property string source: "local"
-    readonly property bool googleSource: root.googleAvailable && root.source === "google"
-    onGoogleAvailableChanged: if (!googleAvailable) root.source = "local"
+    readonly property var googleLists: root.googleAvailable ? GoogleTasks.lists : []
+    readonly property var tabButtonList: root.localTabs.concat(root.googleLists.map(l => ({ "icon": "cloud", "name": l.title, "listId": l.id })))
+    readonly property bool googleSource: tabBar.currentIndex >= root.localTabs.length
+    readonly property string currentGoogleListId: root.googleSource ? (root.tabButtonList[tabBar.currentIndex]?.listId ?? "") : ""
+    onCurrentGoogleListIdChanged: if (root.currentGoogleListId.length > 0) GoogleTasks.selectList(root.currentGoogleListId)
+    onGoogleAvailableChanged: if (!googleAvailable && root.googleSource) tabBar.setCurrentIndex(0)
+    property bool showAddDialog: false
     property int dialogMargins: Appearance.spacing.space250
     property int fabSize: 48
     property int fabMargins: Appearance.spacing.space175
@@ -43,41 +49,6 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
-
-        // Local | <each Google list>, unrolled while the account offers lists
-        // (a bare `visible:` would snap the tabs down 40px in one frame).
-        Revealer {
-            Layout.fillWidth: true
-            reveal: root.googleAvailable
-            vertical: true
-
-            Flow {
-                width: parent.width
-                spacing: Appearance.spacing.space75
-                bottomPadding: Appearance.spacing.space75
-
-                FilterChip {
-                    label: Translation.tr("Local")
-                    chipIcon: "home"
-                    toggled: !root.googleSource
-                    onClicked: root.source = "local"
-                }
-                Repeater {
-                    model: GoogleTasks.lists
-                    delegate: FilterChip {
-                        required property var modelData
-                        label: modelData.title
-                        chipIcon: "cloud"
-                        toggled: root.googleSource && GoogleTasks.currentListId === modelData.id
-                        onClicked: {
-                            root.source = "google";
-                            GoogleTasks.selectList(modelData.id);
-                            tabBar.setCurrentIndex(0);
-                        }
-                    }
-                }
-            }
-        }
 
         SecondaryTabBar {
             id: tabBar
@@ -109,19 +80,29 @@ Item {
             // list transition could ever fire. Indices are resolved at click
             // time in TaskList instead.
             TaskList {
-                listBottomPadding: root.fabSize + root.fabMargins * (root.googleAvailable ? 1 : 2)
+                listBottomPadding: root.fabSize + root.fabMargins * 2
                 emptyPlaceholderIcon: "check_circle"
                 emptyPlaceholderText: Translation.tr("Nothing here!")
-                source: root.googleSource ? "google" : "local"
-                taskList: root.googleSource ? GoogleTasks.tasks : Todo.list.filter(function(item) { return !item.done; })
+                taskList: Todo.list.filter(function(item) { return !item.done; })
             }
             TaskList {
-                listBottomPadding: root.fabSize + root.fabMargins * (root.googleAvailable ? 1 : 2)
+                listBottomPadding: root.fabSize + root.fabMargins * 2
                 emptyPlaceholderIcon: "checklist"
-                // Google keeps completed tasks itself; this shell only lists the open ones.
-                emptyPlaceholderText: root.googleSource ? Translation.tr("Completed tasks stay in Google Tasks") : Translation.tr("Finished tasks will go here")
-                source: root.googleSource ? "google" : "local"
-                taskList: root.googleSource ? [] : Todo.list.filter(function(item) { return item.done; })
+                emptyPlaceholderText: Translation.tr("Finished tasks will go here")
+                taskList: Todo.list.filter(function(item) { return item.done; })
+            }
+            // One page per Google list: its open tasks (Google keeps the
+            // completed ones itself).
+            Repeater {
+                model: root.googleLists
+                TaskList {
+                    required property var modelData
+                    listBottomPadding: root.fabSize + root.fabMargins * 2
+                    emptyPlaceholderIcon: "cloud_done"
+                    emptyPlaceholderText: Translation.tr("Nothing open in %1").arg(modelData.title)
+                    source: "google"
+                    taskList: GoogleTasks.currentListId === modelData.id ? GoogleTasks.tasks : []
+                }
             }
 
         }
@@ -196,7 +177,8 @@ Item {
                         Todo.addTask(todoInput.text)
                     todoInput.text = ""
                     root.showAddDialog = false
-                    tabBar.setCurrentIndex(0) // Show unfinished tasks
+                    if (!root.googleSource)
+                        tabBar.setCurrentIndex(0) // Show unfinished tasks
                 }
             }
 

@@ -76,6 +76,8 @@ class AccountsContract(unittest.TestCase):
         self.assertIn("root.currentListId.length === 0) return;", tasks, "writes need a list")
         acc = _strip(ACCOUNT.read_text())
         self.assertIn("function backOff()", acc, "a failing refresh backs off with a ceiling")
+        self.assertIn("GoogleAccount.refreshGaveUp", _strip(PAGE.read_text()), "a refresh that gave up is shown, not only logged")
+        self.assertIn("req.queue = req.queue.concat(", _strip(REQUEST.read_text()), "the queue is reassigned so busy re-evaluates")
         self.assertIn("singleEvents", (ROOT / "services/google_api.js").read_text(), "recurrences expand server-side")
         ics = _strip(ICS.read_text())
         self.assertIn("function setExternalEvents(sourceId, events)", ics)
@@ -90,9 +92,12 @@ class AccountsContract(unittest.TestCase):
     def test_the_todo_widget_keeps_the_lists_apart(self):
         widget = _strip(TODO_WIDGET.read_text())
         self.assertIn("readonly property bool googleAvailable: GoogleTasks.enabled && GoogleTasks.lists.length > 0", widget)
-        self.assertIn("FilterChip {", widget)
-        self.assertIn("Revealer {\n            Layout.fillWidth: true\n            reveal: root.googleAvailable", widget, "the row unrolls; no bare visible")
-        self.assertIn('source: root.googleSource ? "google" : "local"', widget)
+        # The Google lists ride the tab bar the widget already has - no row of
+        # their own inside BottomWidgetGroup's fixed height budget.
+        self.assertRegex(widget, r"tabButtonList:\s*root\.localTabs\.concat\(root\.googleLists")
+        self.assertNotIn("FilterChip", widget)
+        self.assertRegex(widget, r'source:\s*"google"')
+        self.assertIn("readonly property bool googleSource: tabBar.currentIndex >= root.localTabs.length", widget)
         self.assertIn("GoogleTasks.addTask(todoInput.text)", widget)
         tl = _strip(TASK_LIST.read_text())
         self.assertIn('property string source: "local"', tl)
@@ -106,18 +111,25 @@ class AccountsContract(unittest.TestCase):
         # Presence is a file check that starts on its own; the Python read runs
         # only while someone is looking, started imperatively (never a
         # `running:` binding beside an assignment).
-        self.assertIn("id: presenceProc\n        running: root.enableService", proton)
+        self.assertRegex(proton, r"id: presenceProc\s+running: root\.enableService")
+        self.assertIn("importlib.util.find_spec('proton.vpn.core.api')", proton, "presence asks the interpreter, whatever the distro's layout")
+        self.assertIn("if (root.watched && root.installed && root.everRead) nmDebounce.restart();", proton)
         self.assertIn("running: root.enableService && root.installed && root.watched", proton)
         self.assertNotRegex(proton, r"id: statusProc\n\s*running:", "the status process has no running binding")
         self.assertIn("readonly property bool watched: root.watchers > 0 || GlobalStates.sidebarRightOpen", proton)
         self.assertIn("function onMonitorEvent()", proton, "reconciles on NetworkManager's events like Vpn.qml")
         self.assertNotIn("onOpenMenu: root.openTailscaleDialog()", CHOOSER.read_text().split('roleValue: "protonVpn"')[1].split("DelegateChoice")[0])
         self.assertIn("ProtonVpn.acquire()", _strip(PAGE.read_text()), "the page is a watcher while shown")
+        self.assertIn("GlobalStates.currentPageInstance === page && GlobalStates.settingsOpen", _strip(PAGE.read_text()), "shown means the window is open, not merely the last page visited")
         self.assertIn("proton-vpn-gtk-app", (ROOT.parents[3] / "sdata/deps-info.md").read_text(), "the optional dependency is documented")
-        self.assertNotIn("password", proton.lower(), "the shell never sees the Proton password")
-        ctl = PROTON_CTL.read_text()
+        # The shell's side of the helper never carries a credential: the
+        # argv verbs are status/connect/disconnect and nothing is written to
+        # the process's stdin or environment.
+        self.assertRegex(proton, r'cmdProc\.command = \["python3", root\.helperPath, \.\.\.args\]')
+        self.assertNotRegex(proton, r"environment:|\.write\(", "nothing secret reaches the Proton helper from the shell")
+        ctl = re.sub(r'"""[\s\S]*?"""', "", PROTON_CTL.read_text(), count=1)  # the code, not its docstring
         self.assertIn("api.is_user_logged_in()", ctl)
-        self.assertNotIn("login(", ctl.replace("is_user_logged_in(", ""), "the helper never logs in; the app's session is the session")
+        self.assertNotRegex(ctl, r"\.login\(|submit_2fa|password", "the helper never logs in; the app's session is the session")
         self.assertIn("QuickToggleButton { toggleModel: ProtonVpnToggle {} }", _strip(CLASSIC.read_text()))
         self.assertIn('"protonVpn"', ANDROID.read_text())
         self.assertIn('roleValue: "protonVpn"', CHOOSER.read_text())

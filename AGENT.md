@@ -370,7 +370,21 @@ and runs `scripts/accounts/google_oauth.py` for sign-in (loopback + PKCE) and re
 in the helper's ENVIRONMENT, never argv. Every call is a `GoogleRequest` (`services/GoogleRequest.qml`):
 curl with the bearer header, method and JSON body on stdin as a curl config (`-K -`), and stdin
 re-opened per run - a `Process` started with `stdinEnabled` false inherits the shell's own stdin and
-curl waits on it for ever (the second request on any instance hung until that line). Parsers and URL
+curl waits on it for ever (the second request on any instance hung until that line). Calls QUEUE on
+the instance (`request(url, method, body, tag)`, PhoneConnect's action-queue shape) and each carries
+its own tag - the calendar's id and name ride with its events request - so a second write inside one
+round trip is never dropped and an overlapping cycle cannot re-point the one in flight. The queue is
+pumped from `exited`, never from the stream's end, and refuses while `running`: `running = true` on a
+Process that has not exited yet is a NO-OP, so a call queued from inside a result was started never
+and then settled as "no answer" by the previous exit - the calendar's events request failed silently
+every cycle, and only the settings page's live count in a screenshot showed it (b788dce90 ("fix(accounts):
+a request queued from a result waits for the process to exit")). The Proton status read is a Python
+process (~0.5 s, ~47 MB), so it is never a background poll: presence is `importlib.util.find_spec`
+(imports nothing), the read runs on a 60 s reconcile only while `watched` (the right sidebar open,
+or the Accounts page holding `acquire()` - `shown` is `currentPageInstance === page &&
+settingsOpen`, the window and not the host, or a visit holds the watcher for the session) and once,
+debounced, after a NetworkManager event while watched (7020f3a6a ("perf(accounts): the Proton status is
+read only while someone is looking")). Parsers and URL
 builders are pure (`services/google_api.js`, `tst_google_api.qml`); the API base is overridable
 (`IMI_GOOGLE_API_BASE`) so `test_accounts_runtime.py` runs against `tests/fake_google_api.py` with
 `secret-tool` shadowed by a file-backed stub. Account calendars land in `IcsCalendar.setExternalEvents(sourceId, events)`

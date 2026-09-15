@@ -37,7 +37,9 @@ Process {
     }
 
     function request(url, method, body, tag) {
-        req.queue.push({ url: String(url), method: String(method ?? "GET"), body: String(body ?? ""), tag: tag ?? null });
+        // Reassigned, not pushed: `busy` reads the length and a mutation in
+        // place would not re-evaluate it.
+        req.queue = req.queue.concat([{ url: String(url), method: String(method ?? "GET"), body: String(body ?? ""), tag: tag ?? null }]);
         req.pump();
     }
 
@@ -50,7 +52,8 @@ Process {
     // would sit there for ever.
     function pump() {
         if (req.current !== null || req.running || req.queue.length === 0) return;
-        req.current = req.queue.shift();
+        req.current = req.queue[0];
+        req.queue = req.queue.slice(1);
         req.url = req.current.url;
         req.method = req.current.method;
         req.body = req.current.body;

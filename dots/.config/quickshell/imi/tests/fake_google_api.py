@@ -10,6 +10,7 @@ and userinfo. State is in memory; a bearer token other than "at-fake" is a
 """
 import http.server
 import json
+import os
 import sys
 import urllib.parse
 
@@ -111,7 +112,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             items = [t for t in STATE["tasks"].get(list_id, []) if t["status"] != "completed"]
             return self._send(200, {"items": items})
         if path == "/gmail/v1/users/me/labels/INBOX":
-            return self._send(200, {"id": "INBOX", "messagesUnread": 4, "threadsUnread": 3})
+            unread = int(os.environ.get("FAKE_GOOGLE_UNREAD", "4"))
+            return self._send(200, {"id": "INBOX", "messagesUnread": unread, "threadsUnread": max(1, unread - 1)})
         return self._send(404, {"error": {"code": 404, "message": "not found"}})
 
     def log_message(self, fmt, *args):

@@ -71,7 +71,7 @@ Singleton {
                 for (const cal of next)
                     req.request(G.eventsUrl(GoogleAccount.apiBase, cal.id, now.toISOString(), end.toISOString()),
                                 "GET", "", { kind: "events", calendarId: cal.id, calendarName: cal.name });
-                if (next.length === 0) root.lastSync = Date.now();
+                if (next.length === 0) { root.recount(); root.lastSync = Date.now(); }
                 return;
             }
             const events = G.parseEvents(json, tag.calendarName);

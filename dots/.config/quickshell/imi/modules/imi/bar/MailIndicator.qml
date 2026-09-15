@@ -59,13 +59,13 @@ MouseArea {
 
             Presence {
                 shown: root.unread > 0
+                // Centred on the envelope's top-right corner, so a wider count
+                // grows out in every direction instead of back over the glyph.
                 anchors {
-                    right: parent.right
-                    top: parent.top
-                    // Clear of the envelope: its corner is solid where the
-                    // bell's (the reference) is empty space.
-                    rightMargin: -Appearance.spacing.space100
-                    topMargin: -Appearance.spacing.space75
+                    horizontalCenter: parent.right
+                    verticalCenter: parent.top
+                    horizontalCenterOffset: Appearance.spacing.space25
+                    verticalCenterOffset: Appearance.spacing.space25
                 }
                 z: 1
                 Rectangle {

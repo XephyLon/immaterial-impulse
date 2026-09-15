@@ -46,7 +46,10 @@ ContentPage {
     readonly property bool clientDirty: page.clientIdDraft.trim() !== GoogleAccount.clientId || page.clientSecretDraft.trim() !== GoogleAccount.clientSecret
     // The Proton status is read only while someone is looking; this page is
     // a watcher while it is the one on screen.
-    readonly property bool shown: GlobalStates.currentPageInstance === page
+    // The window, not the host: currentPageInstance is only rewritten on a
+    // page switch, so without the settingsOpen conjunct a visit here would
+    // hold the Proton watcher for the rest of the session.
+    readonly property bool shown: GlobalStates.currentPageInstance === page && GlobalStates.settingsOpen
     onShownChanged: shown ? ProtonVpn.acquire() : ProtonVpn.release()
     Component.onDestruction: if (page.shown) ProtonVpn.release()
 
@@ -104,7 +107,9 @@ ContentPage {
                     }
                     StyledText {
                         Layout.fillWidth: true
-                        text: GoogleAccount.connected
+                        text: GoogleAccount.connected && GoogleAccount.refreshGaveUp
+                            ? Translation.tr("The sign-in no longer works (%1) - disconnect and connect again").arg(GoogleAccount.lastError)
+                            : GoogleAccount.connected
                             ? (GoogleAccount.email.length > 0 ? Translation.tr("Signed in as %1").arg(GoogleAccount.email) : Translation.tr("Signed in"))
                             : GoogleAccount.connecting ? Translation.tr("Finish the sign-in in your browser…")
                             : Translation.tr("Not signed in")
@@ -131,7 +136,7 @@ ContentPage {
                     checked: page.google.calendar
                     onToggleRequested: Config.options.accounts.google.calendar = !Config.options.accounts.google.calendar
                     description: GoogleCalendar.enabled && GoogleCalendar.calendars.length > 0
-                        ? Translation.tr("%1 calendar(s), %2 event(s) in the next %3 days - in the sidebar calendar and for the assistant").arg(GoogleCalendar.calendars.length).arg(GoogleCalendar.eventCount).arg(GoogleCalendar.days)
+                        ? Translation.tr("Calendars: %1 · events in the next %2 days: %3 - in the sidebar calendar and for the assistant").arg(GoogleCalendar.calendars.length).arg(GoogleCalendar.days).arg(GoogleCalendar.eventCount)
                         : Translation.tr("Your selected calendars' events, in the sidebar calendar and for the assistant")
                 }
                 ConfigSwitch {
@@ -188,6 +193,7 @@ ContentPage {
                     onToggleRequested: Config.options.accounts.proton.vpn.enable = !Config.options.accounts.proton.vpn.enable
                     description: !ProtonVpn.probed ? Translation.tr("Checking…")
                         : !ProtonVpn.installed ? Translation.tr("Needs the official app (proton-vpn-gtk-app) and its Python API")
+                        : !ProtonVpn.everRead ? Translation.tr("Checking the app's session…")
                         : !ProtonVpn.loggedIn ? Translation.tr("Sign in once in the Proton VPN app; the shell uses that session")
                         : ProtonVpn.connected ? Translation.tr("Connected to %1 as %2").arg(ProtonVpn.server).arg(ProtonVpn.account)
                         : Translation.tr("Signed in as %1 - the toggle connects to the fastest server").arg(ProtonVpn.account)

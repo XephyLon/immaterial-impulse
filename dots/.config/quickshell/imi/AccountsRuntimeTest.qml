@@ -79,12 +79,15 @@ ShellRoot {
             case 4:
                 if (GoogleTasks.tasks.length !== 3) return;
                 harness.check("an added task round-trips", GoogleTasks.tasks[2].content === "Water the plants");
+                // Two writes in one turn: the queue, not a dropped second click.
                 GoogleTasks.completeTask("t1");
+                GoogleTasks.completeTask("t2");
                 harness.step = 5;
                 break;
             case 5:
-                if (GoogleTasks.tasks.length !== 2) return;
-                harness.check("a completed task leaves the open list", !GoogleTasks.tasks.some(t => t.id === "t1"));
+                if (GoogleTasks.tasks.length !== 1) return;
+                harness.check("two tasks completed in one turn both leave the open list",
+                    !GoogleTasks.tasks.some(t => t.id === "t1" || t.id === "t2") && GoogleTasks.tasks[0].content === "Water the plants");
                 GoogleAccount.disconnect();
                 harness.step = 6;
                 break;

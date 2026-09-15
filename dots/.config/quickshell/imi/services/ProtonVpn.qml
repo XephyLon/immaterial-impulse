@@ -12,8 +12,8 @@ import qs.modules.common.functions
  * Proton VPN through the official app's session
  * (scripts/accounts/protonvpn_ctl.py over python-proton-vpn-api-core).
  *
- * Detection is two-staged like Tailscale: `installed` is a file check for
- * the Python package (no interpreter spawned for a user without it), and
+ * Detection is two-staged like Tailscale: `installed` asks whether the
+ * Python package is importable (find_spec, importing nothing), and
  * `loggedIn` (the app has a session in the keyring) gates the controls.
  * The shell never sees the Proton password.
  *
@@ -123,12 +123,14 @@ Singleton {
         }
     }
 
-    // Presence: the package's own file, no interpreter. Starts on its own
-    // (capability probe gating); ~1 ms.
+    // Presence: whether the package is importable, wherever this distro
+    // puts it (dist-packages, a user site, a venv) - find_spec imports
+    // nothing, ~40 ms once per session against the 470 ms read it gates.
+    // Starts on its own (capability probe gating).
     Process {
         id: presenceProc
         running: root.enableService
-        command: ["sh", "-c", "ls /usr/lib/python3*/site-packages/proton/vpn/core/api.py /usr/lib64/python3*/site-packages/proton/vpn/core/api.py >/dev/null 2>&1"]
+        command: ["python3", "-c", "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('proton.vpn.core.api') else 1)"]
         onExited: (code, exitStatus) => {
             root.installed = (code === 0);
             root.probed = true;
@@ -154,7 +156,10 @@ Singleton {
         onTriggered: root.refresh()
     }
 
-    // A NetworkManager event is the transition itself; one debounced read.
+    // A NetworkManager event is the transition itself; one debounced read,
+    // only while someone is looking (the tile is not on screen to show the
+    // result otherwise; the reconcile tick's triggeredOnStart reads fresh
+    // state the moment someone looks again).
     Timer {
         id: nmDebounce
         interval: 2000
@@ -163,6 +168,6 @@ Singleton {
     }
     Connections {
         target: Network
-        function onMonitorEvent() { if (root.installed && root.everRead) nmDebounce.restart(); }
+        function onMonitorEvent() { if (root.watched && root.installed && root.everRead) nmDebounce.restart(); }
     }
 }
