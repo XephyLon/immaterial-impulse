@@ -36,7 +36,16 @@ KEYBINDS = ROOT.parents[1] / "hypr/hyprland/keybinds.lua"
 MODES_UI = ROOT / "modules/imi/modes"
 
 DROPPED = ["screenShader", "keyboardBacklight", "earbudsAnc", "playSound", "workspaceProfile",
-           "dnsOverTls", "CalendarCondition", "TriggerCalendar", "ActionSound"]
+           "dnsOverTls", "CalendarCondition", "TriggerCalendar", "ActionSound",
+           # the bare type strings and section headers too - a normaliser has no
+           # whitelist, so a `case "calendar":` keeps a trigger the engine cannot run
+           '"calendar"', "earbuds:", "lock pill"]
+RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
+RESOURCE_USAGE = ROOT / "services/ResourceUsage.qml"
+GAME_DETECTOR = ROOT / "services/GameDetector.qml"
+LID = ROOT / "services/modes/conditions/LidCondition.qml"
+CONTENT = MODES_UI / "ModesContent.qml"
+OVERLAY = MODES_UI / "ModesOverlay.qml"
 
 
 def _strip(text):
@@ -114,7 +123,9 @@ class ModesContract(unittest.TestCase):
         trigger_types = set(re.findall(r"^    (\w+): \{", schema[schema.index("var TRIGGER_TYPES = {"):], re.M))
         unknown = sorted(t for t in preset_types if t not in runner_ids and t not in trigger_types)
         self.assertEqual(unknown, [], f"presets/templates name types neither the runner nor the triggers know: {unknown}")
-        everything = schema + actions + "".join(p.read_text() for p in MODES_UI.rglob("*.qml")) + MODES.read_text()
+        # Un-stripped on purpose: a leftover section header or docstring line
+        # is a leftover too.
+        everything = SCHEMA.read_text() + ACTIONS.read_text() + "".join(p.read_text() for p in MODES_UI.rglob("*.qml")) + MODES.read_text()
         for name in DROPPED:
             self.assertNotIn(name, everything, f"dropped in the port but still named: {name}")
         self.assertFalse((ROOT / "services/modes/conditions/CalendarCondition.qml").exists())
@@ -128,6 +139,43 @@ class ModesContract(unittest.TestCase):
         self.assertIn('Config.options.modes.enable = !Config.options.modes.enable', page)
         self.assertIn('"modeIndicator"', page, "the bar switch edits the layout's widget id")
         self.assertNotIn("WindowDialog", page)
+
+
+    def test_idle_cost_and_the_documented_traps(self):
+        # The GPU heuristic's demand signal has a producer.
+        ru = _strip(RESOURCE_USAGE.read_text())
+        self.assertIn("function requestGpuMonitoring(on)", ru)
+        self.assertIn("if (gpuMonitoringRequests > 0) return true;", ru)
+        self.assertIn("ResourceUsage.requestGpuMonitoring(root.gpuRequested)", _strip(GAME_DETECTOR.read_text()))
+        # A kernel file is read through a FileView, on the slow tier, only while armed.
+        lid = _strip(LID.read_text())
+        self.assertIn("FileView {", lid)
+        self.assertIn("running: root.armed && root.statePath.length > 0", lid)
+        self.assertNotRegex(lid, r"interval: [1-9]\d{0,3}\s*$", "a lid poll faster than a minute")
+        # Automation off tears the watcher tree down.
+        modes = _strip(MODES.read_text())
+        self.assertEqual(modes.count("model: root.ready && root.enabled ? root."), 2)
+        # The page loaders keep themselves through a written flag, never `item !== null`.
+        content = _strip(CONTENT.read_text())
+        self.assertNotIn("item !== null", content)
+        self.assertEqual(content.count("onLoaded: built = true"), 3)
+        # The manager's surface is exit-owned; no Timer holds it.
+        overlay = _strip(OVERLAY.read_text())
+        self.assertIn("active: root.reallyOpen", overlay)
+        self.assertIn("onFinished: root.reallyOpen = false", overlay)
+        self.assertNotRegex(overlay, r"interval: 400")
+        self.assertNotIn("isHovered", overlay)
+        self.assertNotRegex(overlay, r"Easing\.Out|duration: \d", "raw motion in the overlay")
+        # Both minted namespaces carry their compositor rules.
+        rules = RULES.read_text()
+        for ns in ("quickshell:modes", "quickshell:modeFlashPopup"):
+            self.assertIn(f'namespace = "{ns}" }}, no_anim = true', rules, ns)
+            self.assertIn(f'namespace = "{ns}" }}, blur = false', rules, ns)
+        self.assertIn("WindowBlurRegion {", overlay)
+        # Role tokens, never the raw palette, in the ported UI.
+        for path in list(MODES_UI.rglob("*.qml")) + [PILL, PILL_CARD, PAGE]:
+            self.assertNotIn("m3colors.", _strip(path.read_text()), f"{path.name} reads the raw palette")
+        self.assertNotIn("colErrorContainer", _strip(PILL_CARD.read_text()), "ending a mode is not an error")
 
 
 if __name__ == "__main__":

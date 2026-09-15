@@ -80,9 +80,41 @@ def dimming(sources):
     }
 
 
+# A CALL SITE writing `opacity: enabled ? …` onto an instance of a self-dimming
+# type - `RippleButton { …; opacity: enabled ? 1 : 0.5 }` on a settings page.
+# The assignment destroys the type's own `opacity: dimOpacity * appear`
+# binding (#158's shape), takes the control out of its StaggerWave channel,
+# and states a dim that is not the shell's 0.4. Found twice on one page in the
+# modes port (PR #380); the nested-dim rule above only looks inside the
+# self-dimming type's own file, so this is the other half of it.
+CALL_SITE_TYPE = re.compile(r"^(\s*)([A-Z]\w*)\s*\{")
+CALL_SITE_DIM = re.compile(r"^(\s*)opacity:.*\benabled\b.*\?")
+
+
+def call_site_violations(path, lines, self_dimming):
+    found = []
+    openers = []  # (indent, type) of every block opener seen, innermost last
+    for number, line in enumerate(lines, 1):
+        opener = CALL_SITE_TYPE.match(line)
+        if opener:
+            indent = len(opener.group(1))
+            openers = [o for o in openers if o[0] < indent]
+            openers.append((indent, opener.group(2)))
+            continue
+        dim = CALL_SITE_DIM.match(line)
+        if not dim:
+            continue
+        indent = len(dim.group(1))
+        enclosing = [o for o in openers if o[0] < indent]
+        if enclosing and enclosing[-1][1] in self_dimming and enclosing[-1][0] > 0:
+            found.append((path, number, f"call-site opacity on a self-dimming {enclosing[-1][1]}: {line.strip()}"))
+    return found
+
+
 def scan(sources, self_dimming):
     violations = []
     for path, lines in sources.items():
+        violations.extend(call_site_violations(path, lines, self_dimming))
         if root_type(lines) not in self_dimming:
             continue
         for number, line in enumerate(lines, 1):

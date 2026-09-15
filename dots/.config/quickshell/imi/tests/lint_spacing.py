@@ -23,7 +23,10 @@ PROP = re.compile(
     r'|padding|topPadding|bottomPadding|leftPadding|rightPadding'
     r'|horizontalPadding|verticalPadding'
     r'|Layout\.(?:margins|leftMargin|rightMargin|topMargin|bottomMargin)'
-    r'|anchors\.(?:margins|leftMargin|rightMargin|topMargin|bottomMargin))'
+    r'|anchors\.(?:margins|leftMargin|rightMargin|topMargin|bottomMargin)'
+    # The same margins spelled bare inside an `anchors { }` block - the
+    # second spelling of this rule, found by the modes port (PR #380).
+    r'|margins|leftMargin|rightMargin|topMargin|bottomMargin)'
     r'\s*:\s*(.+)$'
 )
 
