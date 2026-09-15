@@ -56,16 +56,39 @@ Singleton {
     property var pendingModes: null
     property var pendingRoutines: null
 
+    // The raw lists as last normalised, so a Config change that is not a
+    // change (the write-back of our own save, a reload of the same file) does
+    // not re-normalise and re-compare seven presets' worth of clones.
+    property string _modesRawKey: ""
+    property string _routinesRawKey: ""
+
     function refreshDefinitions() {
         if (!root.storesReady)
             return;
-        const nextModes = root.pendingModes ?? ModeSchema.normalizeModes(Config.options.modes.modes);
-        if (!ModeSchema.valuesEqual(nextModes, root.modes))
-            root.modes = nextModes;
-        const nextRoutines = root.pendingRoutines
-            ?? ModeSchema.normalizeRoutines(Config.options.modes.routines);
-        if (!ModeSchema.valuesEqual(nextRoutines, root.routines))
-            root.routines = nextRoutines;
+        if (root.pendingModes) {
+            root.modes = root.pendingModes;
+            root._modesRawKey = "";
+        } else {
+            const rawKey = JSON.stringify(Config.options.modes.modes ?? []);
+            if (rawKey !== root._modesRawKey) {
+                root._modesRawKey = rawKey;
+                const nextModes = ModeSchema.normalizeModes(Config.options.modes.modes);
+                if (!ModeSchema.valuesEqual(nextModes, root.modes))
+                    root.modes = nextModes;
+            }
+        }
+        if (root.pendingRoutines) {
+            root.routines = root.pendingRoutines;
+            root._routinesRawKey = "";
+        } else {
+            const rawKey = JSON.stringify(Config.options.modes.routines ?? []);
+            if (rawKey !== root._routinesRawKey) {
+                root._routinesRawKey = rawKey;
+                const nextRoutines = ModeSchema.normalizeRoutines(Config.options.modes.routines);
+                if (!ModeSchema.valuesEqual(nextRoutines, root.routines))
+                    root.routines = nextRoutines;
+            }
+        }
     }
 
     function flushSaves() {
@@ -532,7 +555,7 @@ Singleton {
             ? Translation.tr("Ends %1").arg(root.clockText(root.state.activeEndsAt, "hh:mm")) + " · "
             : "";
         if (def.notify)
-            root.flash("mode", def, Translation.tr("%1 mode on").arg(def.name), ends + root.sourceText(source));
+            root.flash("mode", def, Translation.tr("%1 mode on").arg(def.name), ends + Translation.tr("Started %1").arg(root.sourceText(source)));
         root.modeStarted(id, source);
         return true;
     }
@@ -1050,11 +1073,12 @@ Singleton {
         if (!Config.options.modes.presetsSeeded) {
             root.seedPresets();
             Config.options.modes.presetsSeeded = true;
+            root.refreshDefinitions();
         }
-        // Read the definitions straight from Config: the `modes` / `routines`
-        // bindings are not guaranteed to have re-evaluated before this runs.
-        const defs = ModeSchema.normalizeModes(Config.options.modes.modes);
-        const routineDefs = ModeSchema.normalizeRoutines(Config.options.modes.routines);
+        // refreshDefinitions above read Config directly, so these are current
+        // whatever the bindings have re-evaluated.
+        const defs = root.modes;
+        const routineDefs = root.routines;
         const id = root.state.activeId;
         if (id) {
             const def = defs.find(m => m.id === id) ?? null;
@@ -1110,9 +1134,12 @@ Singleton {
     // watcher can look it up again instead of keeping a destroyed one.
     property int watchersRevision: 0
 
+    // Automation off tears the whole watcher tree down (every condition, every
+    // poll a condition owns) - "conditions are ignored everywhere" means no
+    // condition exists, not conditions that evaluate into a void.
     Instantiator {
         id: watchers
-        model: root.ready ? root.modes : []
+        model: root.ready && root.enabled ? root.modes : []
         delegate: ModeWatcher {
             required property var modelData
             modeDef: modelData
@@ -1130,7 +1157,7 @@ Singleton {
 
     Instantiator {
         id: routineWatchers
-        model: root.ready ? root.routines : []
+        model: root.ready && root.enabled ? root.routines : []
         delegate: ModeWatcher {
             id: routineWatcher
             required property var modelData

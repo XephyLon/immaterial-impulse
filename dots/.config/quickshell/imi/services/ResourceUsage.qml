@@ -418,7 +418,17 @@ Singleton {
     // an idle card autosuspend (see the backoff note). Advances the counter as
     // a side effect. Only meaningful once nvidiaShouldPoll() said the card is
     // awake; a suspended card is handled by the gate, not here.
+    // Consumers that need every tick sampled while they watch (GameDetector's
+    // GPU heuristic) hold a request; while any is held the idle backoff below
+    // is bypassed. The runtime-status gate still wins: a suspended card is
+    // never woken for a request.
+    property int gpuMonitoringRequests: 0
+    function requestGpuMonitoring(on) {
+        gpuMonitoringRequests = Math.max(0, gpuMonitoringRequests + (on ? 1 : -1));
+    }
+
     function nvidiaDueForPoll() {
+        if (gpuMonitoringRequests > 0) return true;
         if (nvidiaZeroStreak < _nvidiaZeroThreshold) return true;
         if (nvidiaBackoffCounter >= _nvidiaBackoffTicks - 1) {
             nvidiaBackoffCounter = 0;

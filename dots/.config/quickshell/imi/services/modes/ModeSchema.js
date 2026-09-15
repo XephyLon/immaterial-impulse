@@ -301,9 +301,6 @@ function normalizeTrigger(raw) {
     case "pomodoro":
         t.phase = ["focus", "break", "any"].indexOf(t.phase) !== -1 ? t.phase : "any";
         break;
-    case "calendar":
-        t.match = typeof t.match === "string" ? t.match.trim() : "";
-        break;
     case "resource":
         t.metric = RESOURCE_METRICS.indexOf(t.metric) !== -1 ? t.metric : "cpuUsage";
         t.above = optionalInt(t.above, 0, 1000);

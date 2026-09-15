@@ -273,10 +273,6 @@ QtObject {
         return Array.from(Audio.outputAppNodes).find(n => n && String(n.id) === String(id)) ?? null;
     }
 
-    // ---- earbuds: whichever supported headset is connected right now.
-
-
-
 
     // ---- workspaces: a plain number, a relative step, "empty", "name:x",
     // or "special[:x]"; anything else is refused before it reaches Hyprland.

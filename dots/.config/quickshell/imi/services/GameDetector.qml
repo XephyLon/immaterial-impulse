@@ -25,8 +25,10 @@ import "modes/ModeSchema.js" as ModeSchema
  * 30 s after the last matching window is gone, `gameFocused` 5 s after focus
  * left it, so alt-tabbing to a chat does not end a gaming mode.
  *
- * GPU polling costs a process per sample on NVIDIA/Intel, so it runs only
- * while someone holds `acquire()` and the heuristic is enabled.
+ * GPU sampling is ResourceUsage's own tick; while someone holds `acquire()`
+ * and the heuristic is enabled this asks it (requestGpuMonitoring) to skip
+ * its idle backoff so every tick is sampled. A runtime-suspended card is
+ * never woken for it.
  */
 Singleton {
     id: root
