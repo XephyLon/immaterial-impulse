@@ -105,11 +105,18 @@ class DockPositionContractTest(unittest.TestCase):
     def test_the_dock_reads_its_geometry_rather_than_spelling_it(self):
         source = DOCK.read_text(encoding="utf-8")
         self.assertIn("dock_geometry.js", source)
-        for derived in ("DockGeometry.thickness(", "DockGeometry.exclusiveZone(",
+        for derived in ("DockGeometry.thickness(",
                         "DockGeometry.anchors(", "DockGeometry.margins(",
                         "DockGeometry.revealOffsets(", "DockGeometry.hideDirection(",
                         "DockGeometry.contentBox("):
             self.assertIn(derived, source, f"{derived} is spelled out again")
+        # The reserved zone is read through DockReservation (one value for the
+        # dock and frame mode's authority), which is where the derivation is
+        # spelled - once.
+        self.assertIn("DockReservation.zone", source)
+        reservation = (ROOT / "modules/imi/dock/DockReservation.qml").read_text(encoding="utf-8")
+        self.assertIn("DockGeometry.exclusiveZone(", reservation)
+        self.assertNotIn("DockGeometry.exclusiveZone(", source, "the zone is derived in DockReservation, not again in the dock")
         # The arithmetic itself may not reappear in the QML.
         self.assertNotIn("anchors { bottom: true; left: true; right: true }", source,
                          "the anchors are literal again")
