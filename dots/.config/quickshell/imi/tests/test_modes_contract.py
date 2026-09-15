@@ -93,6 +93,7 @@ class ModesContract(unittest.TestCase):
         self.assertIn("ModeIndicatorPopup {\n        hoverTarget: root\n    }", pill)
         card = _strip(PILL_CARD.read_text())
         self.assertIn("StyledPopup {", card)
+        self.assertNotRegex(card, r"^\s*pinnedOpen: true\s*$", "a card pinned open at birth (a capture aid that leaked into a commit once)")
         self.assertIn("MaterialShapeWrappedMaterialSymbol {", card, "the card's hero is the bar popups' shaped glyph")
         self.assertNotRegex(card, r"^\s*(spacing|implicitHeight|Layout\.preferredHeight): \d+\s*$", "no raw pixel sizes on the card")
         self.assertIn("Modes.deactivate(\"manual\")", pill)

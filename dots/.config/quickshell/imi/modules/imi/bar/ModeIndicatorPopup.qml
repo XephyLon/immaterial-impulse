@@ -13,7 +13,6 @@ import qs.modules.imi.modes
  */
 StyledPopup {
     id: root
-    pinnedOpen: true
 
     readonly property var mode: Modes.activeMode
     readonly property string colorKey: root.mode?.color ?? ""
