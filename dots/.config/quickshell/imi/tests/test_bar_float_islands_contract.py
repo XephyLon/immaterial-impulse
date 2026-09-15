@@ -56,7 +56,11 @@ class FloatIslandsContractTests(unittest.TestCase):
         appearance = source("modules/common/Appearance.qml")
         self.assertRegex(appearance, r"property real barHeight: \(" + re.escape(FLOATS) + r"\)")
         self.assertRegex(appearance, r"property real verticalBarWidth: \(" + re.escape(FLOATS) + r"\)")
-        self.assertIn("(" + FLOATS + ") ? Appearance.sizes.hyprlandGapsOut : 0", source("modules/imi/bar/Bar.qml"))
+        # The horizontal bar's zone is ONE token (Appearance.sizes.barReservedHeight,
+        # read by Bar.qml's reserver and by frame mode's authority); the float
+        # term lives in that token.
+        self.assertRegex(appearance, r"property real barReservedHeight: root\.sizes\.baseBarHeight\s*\n?\s*\+ \(\(Config\?\.options\.bar\.cornerStyle === 1 \|\| Config\?\.options\.bar\.cornerStyle === 4\) \? root\.sizes\.hyprlandGapsOut : 0\)")
+        self.assertIn("? 0 : Appearance.sizes.barReservedHeight", source("modules/imi/bar/Bar.qml"))
         self.assertIn("(" + FLOATS + ") ? Appearance.sizes.hyprlandGapsOut : 0", source("modules/imi/verticalBar/VerticalBar.qml"))
 
     def test_the_surfaces_that_key_on_float_know_the_fifth_value(self):
