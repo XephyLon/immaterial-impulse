@@ -37,6 +37,11 @@ Singleton {
     // reloading does not clobber another's events.
     property var _localEvents: ({})
     property var _remoteEvents: ({})
+    // Account-backed calendars (GoogleCalendar) hand their events in here by
+    // source id, already in parseIcs's shape (plus `calendar` and `uid`), so
+    // every consumer - the sidebar dots, list_events, the modes engine - sees
+    // one list. An empty array removes the source.
+    property var _externalEvents: ({})
 
     function eventsForDay(year, month, day) {
         return root.events.filter(e => e.year === year && e.month === month && e.day === day);
@@ -52,6 +57,8 @@ Singleton {
             all = all.concat(root._localEvents[k]);
         for (const k in root._remoteEvents)
             all = all.concat(root._remoteEvents[k]);
+        for (const k in root._externalEvents)
+            all = all.concat(root._externalEvents[k]);
         all.sort((a, b) => a.start - b.start);
         const days = {};
         for (const e of all)
@@ -64,6 +71,16 @@ Singleton {
         let m = root._localEvents;
         m[index] = parsed;
         root._localEvents = m;
+        root._rebuild();
+    }
+
+    function setExternalEvents(sourceId, events) {
+        let m = root._externalEvents;
+        if (!events || events.length === 0)
+            delete m[sourceId];
+        else
+            m[sourceId] = events;
+        root._externalEvents = m;
         root._rebuild();
     }
 

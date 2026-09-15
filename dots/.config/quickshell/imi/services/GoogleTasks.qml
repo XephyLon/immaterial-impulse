@@ -1,0 +1,114 @@
+pragma Singleton
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import qs.modules.common
+import "google_api.js" as G
+
+/**
+ * Google Tasks in the to-do widget: the task lists and their open tasks,
+ * with add / complete / delete written through. Kept apart from the local
+ * to-do file on purpose - the local list has no stable ids to merge on, so
+ * the widget shows a source row instead (Local | Google).
+ */
+Singleton {
+    id: root
+
+    readonly property bool enabled: (Config.options.accounts?.google?.tasks ?? false) && GoogleAccount.connected
+    readonly property int refreshInterval: Math.max(1, Config.options.accounts?.google?.refreshMinutes ?? 5) * 60000
+
+    // [{ id, title }]
+    property var lists: []
+    property string currentListId: ""
+    readonly property var currentList: root.lists.find(l => l.id === root.currentListId) ?? null
+    // [{ id, listId, content, done, due, notes }]
+    property var tasks: []
+    property bool busy: listsReq.running || tasksReq.running || writeReq.running
+    property string lastError: ""
+
+    function refresh() {
+        if (!root.enabled || !GoogleAccount.tokenValid || listsReq.running) return;
+        listsReq.url = G.taskListsUrl(GoogleAccount.apiBase);
+        listsReq.start();
+    }
+
+    function selectList(id) {
+        root.currentListId = String(id ?? "");
+        root.fetchTasks();
+    }
+
+    function fetchTasks() {
+        if (!root.enabled || !GoogleAccount.tokenValid || root.currentListId.length === 0 || tasksReq.running) return;
+        tasksReq.url = G.tasksUrl(GoogleAccount.apiBase, root.currentListId);
+        tasksReq.start();
+    }
+
+    function addTask(title) {
+        const text = String(title ?? "").trim();
+        if (text.length === 0 || root.currentListId.length === 0) return;
+        root.write("POST", G.taskUrl(GoogleAccount.apiBase, root.currentListId, "").replace(/\/$/, ""), JSON.stringify({ title: text }));
+    }
+
+    function completeTask(id) {
+        root.write("PATCH", G.taskUrl(GoogleAccount.apiBase, root.currentListId, id), JSON.stringify({ status: "completed" }));
+    }
+
+    function deleteTask(id) {
+        root.write("DELETE", G.taskUrl(GoogleAccount.apiBase, root.currentListId, id), "");
+    }
+
+    function write(method, url, body) {
+        if (!GoogleAccount.tokenValid) return;
+        writeReq.method = method;
+        writeReq.url = url;
+        writeReq.body = body;
+        writeReq.start();
+    }
+
+    GoogleRequest {
+        id: listsReq
+        onFinished: (json, error, status) => {
+            if (error.length > 0) { root.lastError = error; return; }
+            root.lists = G.parseTaskLists(json);
+            root.lastError = "";
+            if (root.lists.length === 0) { root.tasks = []; return; }
+            if (!root.lists.some(l => l.id === root.currentListId))
+                root.currentListId = root.lists[0].id;
+            root.fetchTasks();
+        }
+    }
+
+    GoogleRequest {
+        id: tasksReq
+        onFinished: (json, error, status) => {
+            if (error.length > 0) { root.lastError = error; return; }
+            root.tasks = G.parseTasks(json, root.currentListId);
+            root.lastError = "";
+        }
+    }
+
+    GoogleRequest {
+        id: writeReq
+        onFinished: (json, error, status) => {
+            if (error.length > 0) {
+                root.lastError = error;
+                console.warn(`[GoogleTasks] ${writeReq.method} failed: ${error} (${status})`);
+            }
+            root.fetchTasks();
+        }
+    }
+
+    Timer {
+        running: root.enabled
+        interval: root.refreshInterval
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.refresh()
+    }
+    Connections {
+        target: GoogleAccount
+        function onTokenRefreshed() { root.refresh(); }
+    }
+    onEnabledChanged: if (!root.enabled) { root.lists = []; root.tasks = []; } else root.refresh()
+}

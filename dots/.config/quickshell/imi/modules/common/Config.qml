@@ -1476,6 +1476,23 @@ Singleton {
                 property bool filterDuplicatePlayers: true
             }
 
+            // Accounts (docs/proposals/accounts-integration.md). Credentials
+            // live in the keyring (KeyringStorage, key `google`), never here.
+            property JsonObject accounts: JsonObject {
+                property JsonObject google: JsonObject {
+                    property bool calendar: true
+                    property bool tasks: true
+                    property bool mail: true
+                    property int refreshMinutes: 5 // calendar, tasks and the inbox count
+                    property int calendarDays: 14 // how far ahead events are fetched
+                }
+                property JsonObject proton: JsonObject {
+                    property JsonObject vpn: JsonObject {
+                        property bool enable: true
+                        property int pollInterval: 10000 // ms; each poll is a Python process
+                    }
+                }
+            }
             property JsonObject networking: JsonObject {
                 property string userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
                 property JsonObject vpn: JsonObject {
