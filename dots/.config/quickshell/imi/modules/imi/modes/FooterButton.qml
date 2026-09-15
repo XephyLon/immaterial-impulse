@@ -17,7 +17,7 @@ RippleButton {
         : Appearance.colors.colOnLayer2
 
     implicitHeight: 38
-    implicitWidth: footerRow.implicitWidth + 28
+    implicitWidth: footerRow.implicitWidth + Appearance.spacing.space300
     buttonRadius: Appearance.rounding.full
     colBackground: filled ? Appearance.colors.colError : Appearance.colors.colLayer2
     colBackgroundHover: filled ? Appearance.colors.colErrorHover : Appearance.colors.colLayer2Hover
@@ -31,7 +31,7 @@ RippleButton {
         MaterialSymbol {
             visible: footerButton.buttonIcon.length > 0
             text: footerButton.buttonIcon
-            iconSize: 18
+            iconSize: Appearance.font.pixelSize.large
             color: footerButton.fg
         }
 

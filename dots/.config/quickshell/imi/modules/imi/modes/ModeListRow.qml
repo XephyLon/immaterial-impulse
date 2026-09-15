@@ -76,8 +76,8 @@ Item {
         RowLayout {
             anchors {
                 fill: parent
-                leftMargin: 10
-                rightMargin: 4
+                leftMargin: Appearance.spacing.space125
+                rightMargin: Appearance.spacing.space50
             }
             spacing: Appearance.spacing.space125
 
@@ -94,7 +94,7 @@ Item {
                 MaterialSymbol {
                     anchors.centerIn: parent
                     text: root.mode.icon
-                    iconSize: 22
+                    iconSize: Appearance.font.pixelSize.huge
                     fill: root.isActive ? 1 : 0
                     color: root.isActive && root.selected
                         ? ModeUi.onAccent(root.colorKey) : ModeUi.onContainer(root.colorKey)
@@ -122,14 +122,14 @@ Item {
                     MaterialSymbol {
                         visible: !root.routine && root.mode.auto && root.mode.triggers.length > 0
                         text: "autoplay"
-                        iconSize: 16
+                        iconSize: Appearance.font.pixelSize.normal
                         color: ColorUtils.transparentize(card.colText, 0.3)
                     }
 
                     MaterialSymbol {
                         visible: root.routine && root.mode.kind === "once"
                         text: "bolt"
-                        iconSize: 16
+                        iconSize: Appearance.font.pixelSize.normal
                         color: ColorUtils.transparentize(card.colText, 0.3)
                     }
                 }
@@ -178,7 +178,7 @@ Item {
                 MaterialSymbol {
                     anchors.centerIn: parent
                     text: "drag_indicator"
-                    iconSize: 20
+                    iconSize: Appearance.font.pixelSize.larger
                     color: ColorUtils.transparentize(card.colText, 0.3)
                 }
             }

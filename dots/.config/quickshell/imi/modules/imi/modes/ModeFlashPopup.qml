@@ -48,6 +48,12 @@ Scope {
                 item: popupContent.staticMaskTarget
             }
 
+            WindowBlurRegion {
+                targetWindow: popupWindow
+                regionItem: popupContent.background
+                regionRadius: popupContent.background.radius
+            }
+
             ModeFlashPopupContent {
                 id: popupContent
                 isOpen: root.isOpen

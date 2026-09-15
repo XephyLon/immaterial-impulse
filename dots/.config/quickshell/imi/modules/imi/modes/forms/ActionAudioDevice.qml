@@ -41,7 +41,7 @@ ColumnLayout {
                 readonly property bool on: chip.modelData.name === deviceCol.pickedName
 
                 implicitHeight: 32
-                implicitWidth: chipRow.implicitWidth + 22
+                implicitWidth: chipRow.implicitWidth + Appearance.spacing.space250
                 buttonRadius: Appearance.rounding.full
                 colBackground: on ? Appearance.colors.colPrimary : Appearance.colors.colLayer3
                 colBackgroundHover: on ? Appearance.colors.colPrimaryHover : Appearance.colors.colLayer3Hover
@@ -60,7 +60,7 @@ ColumnLayout {
                     MaterialSymbol {
                         visible: chip.on || chip.modelData === deviceCol.defaultNode
                         text: chip.on ? "check" : "radio_button_checked"
-                        iconSize: 16
+                        iconSize: Appearance.font.pixelSize.normal
                         color: chip.on ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer3
                     }
 

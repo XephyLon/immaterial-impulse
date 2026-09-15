@@ -55,7 +55,7 @@ Popup {
 
     width: 360
     height: Math.min(440, implicitHeight)
-    implicitHeight: contentColumn.implicitHeight + 24
+    implicitHeight: contentColumn.implicitHeight + Appearance.spacing.space300
     padding: Appearance.spacing.space150
     modal: false
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -65,14 +65,17 @@ Popup {
             property: "opacity"
             from: 0
             to: 1
-            duration: 150
+            duration: Appearance.animation.elementMoveEnter.duration
+            easing.type: Appearance.animation.elementMoveEnter.type
+            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
         }
         NumberAnimation {
             property: "scale"
             from: 0.96
             to: 1
-            duration: 200
-            easing.type: Easing.OutCubic
+            duration: Appearance.animation.elementMoveEnter.duration
+            easing.type: Appearance.animation.elementMoveEnter.type
+            easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
         }
     }
 
@@ -80,13 +83,15 @@ Popup {
         NumberAnimation {
             property: "opacity"
             to: 0
-            duration: 120
+            duration: Appearance.animation.elementMoveExit.duration
+            easing.type: Appearance.animation.elementMoveExit.type
+            easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
         }
     }
 
     background: Rectangle {
         radius: Appearance.rounding.normal
-        color: Appearance.m3colors.m3surfaceContainerHigh
+        color: Appearance.colors.colLayer0
         border.width: 1
         border.color: Appearance.colors.colLayer0Border
 
@@ -108,14 +113,14 @@ Popup {
             RowLayout {
                 anchors {
                     fill: parent
-                    leftMargin: 12
-                    rightMargin: 12
+                    leftMargin: Appearance.spacing.space150
+                    rightMargin: Appearance.spacing.space150
                 }
                 spacing: Appearance.spacing.space100
 
                 MaterialSymbol {
                     text: "search"
-                    iconSize: 20
+                    iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colSubtext
                 }
 
@@ -171,7 +176,7 @@ Popup {
                     visible: row.modelData.header
                     anchors {
                         left: parent.left
-                        leftMargin: 10
+                        leftMargin: Appearance.spacing.space125
                         verticalCenter: parent.verticalCenter
                     }
                     text: row.modelData.label
@@ -184,7 +189,6 @@ Popup {
                     visible: !row.modelData.header
                     anchors.fill: parent
                     enabled: row.modelData.enabled !== false
-                    opacity: enabled ? 1 : 0.5
                     buttonRadius: Appearance.rounding.small
                     colBackground: "transparent"
                     colBackgroundHover: Appearance.colors.colLayer2Hover
@@ -197,14 +201,14 @@ Popup {
                     contentItem: RowLayout {
                         anchors {
                             fill: parent
-                            leftMargin: 10
-                            rightMargin: 10
+                            leftMargin: Appearance.spacing.space125
+                            rightMargin: Appearance.spacing.space125
                         }
                         spacing: Appearance.spacing.space125
 
                         MaterialSymbol {
                             text: row.modelData.icon ?? "bolt"
-                            iconSize: 20
+                            iconSize: Appearance.font.pixelSize.larger
                             color: Appearance.colors.colOnLayer2
                         }
 

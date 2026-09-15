@@ -213,7 +213,7 @@ Item {
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: root.mode?.icon ?? "tune"
-                            iconSize: 32
+                            iconSize: Appearance.font.pixelSize.normal * 2
                             fill: root.isActive ? 1 : 0
                             color: ModeUi.onContainer(root.colorKey)
                         }
@@ -233,7 +233,7 @@ Item {
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: "edit"
-                                iconSize: 12
+                                iconSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnLayer2
                             }
                         }
@@ -268,7 +268,7 @@ Item {
                                 left: parent.left
                                 right: parent.right
                                 bottom: parent.bottom
-                                bottomMargin: -3
+                                bottomMargin: -Appearance.spacing.space25
                             }
                             height: nameField.activeFocus ? 2 : 1
                             color: nameField.activeFocus ? Appearance.colors.colPrimary
@@ -297,7 +297,7 @@ Item {
                     Layout.alignment: Qt.AlignTop
                     Layout.topMargin: Appearance.spacing.space50
                     implicitHeight: 48
-                    implicitWidth: startRow.implicitWidth + 40
+                    implicitWidth: startRow.implicitWidth + Appearance.spacing.space300
                     buttonRadius: Appearance.rounding.full
                     colBackground: root.isActive ? Appearance.colors.colSecondaryContainer : ModeUi.accent(root.colorKey)
                     colBackgroundHover: root.isActive ? Appearance.colors.colSecondaryContainerHover
@@ -313,7 +313,7 @@ Item {
 
                         MaterialSymbol {
                             text: root.isActive ? "stop" : "play_arrow"
-                            iconSize: 22
+                            iconSize: Appearance.font.pixelSize.huge
                             fill: 1
                             color: root.isActive ? Appearance.colors.colOnSecondaryContainer : ModeUi.onAccent(root.colorKey)
                         }
@@ -342,14 +342,14 @@ Item {
                 RowLayout {
                     anchors {
                         fill: parent
-                        leftMargin: 14
-                        rightMargin: 8
+                        leftMargin: Appearance.spacing.space175
+                        rightMargin: Appearance.spacing.space100
                     }
                     spacing: Appearance.spacing.space125
 
                     MaterialSymbol {
                         text: "published_with_changes"
-                        iconSize: 20
+                        iconSize: Appearance.font.pixelSize.larger
                         color: Appearance.colors.colOnTertiaryContainer
                     }
 
@@ -362,7 +362,7 @@ Item {
 
                     RippleButton {
                         implicitHeight: 32
-                        implicitWidth: applyNowText.implicitWidth + 24
+                        implicitWidth: applyNowText.implicitWidth + Appearance.spacing.space300
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colTertiary
                         colBackgroundHover: Appearance.colors.colTertiaryHover

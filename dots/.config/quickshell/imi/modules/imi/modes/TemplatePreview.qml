@@ -74,7 +74,7 @@ Item {
                     MaterialSymbol {
                         anchors.centerIn: parent
                         text: root.template?.icon ?? "bolt"
-                        iconSize: 32
+                        iconSize: Appearance.font.pixelSize.normal * 2
                         color: ModeUi.onContainer(root.colorKey)
                     }
                 }
@@ -106,7 +106,7 @@ Item {
                         spacing: Appearance.spacing.space75
 
                         Rectangle {
-                            implicitWidth: kindRow.implicitWidth + 16
+                            implicitWidth: kindRow.implicitWidth + Appearance.spacing.space200
                             implicitHeight: 24
                             radius: Appearance.rounding.full
                             color: Appearance.colors.colLayer2
@@ -118,7 +118,7 @@ Item {
 
                                 MaterialSymbol {
                                     text: "auto_awesome"
-                                    iconSize: 14
+                                    iconSize: Appearance.font.pixelSize.small
                                     color: Appearance.colors.colOnLayer2
                                 }
 
@@ -132,7 +132,7 @@ Item {
 
                         Rectangle {
                             visible: root.copies > 0
-                            implicitWidth: copiesRow.implicitWidth + 16
+                            implicitWidth: copiesRow.implicitWidth + Appearance.spacing.space200
                             implicitHeight: 24
                             radius: Appearance.rounding.full
                             color: Appearance.colors.colSecondaryContainer
@@ -144,7 +144,7 @@ Item {
 
                                 MaterialSymbol {
                                     text: "check"
-                                    iconSize: 14
+                                    iconSize: Appearance.font.pixelSize.small
                                     color: Appearance.colors.colOnSecondaryContainer
                                 }
 
@@ -163,7 +163,7 @@ Item {
                     Layout.alignment: Qt.AlignTop
                     Layout.topMargin: Appearance.spacing.space50
                     implicitHeight: 48
-                    implicitWidth: addRow.implicitWidth + 40
+                    implicitWidth: addRow.implicitWidth + Appearance.spacing.space300
                     buttonRadius: Appearance.rounding.full
                     colBackground: ModeUi.accent(root.colorKey)
                     colBackgroundHover: ColorUtils.mix(colBackground, ModeUi.onAccent(root.colorKey), 0.9)
@@ -182,7 +182,7 @@ Item {
 
                         MaterialSymbol {
                             text: "add"
-                            iconSize: 22
+                            iconSize: Appearance.font.pixelSize.huge
                             color: ModeUi.onAccent(root.colorKey)
                         }
 
@@ -223,7 +223,7 @@ Item {
 
                         Rectangle {
                             visible: triggerRow.modelData.not === true
-                            implicitWidth: invertText.implicitWidth + 14
+                            implicitWidth: invertText.implicitWidth + Appearance.spacing.space175
                             implicitHeight: 22
                             radius: Appearance.rounding.full
                             color: Appearance.colors.colSecondaryContainer

@@ -21,7 +21,9 @@ import Quickshell.Wayland
 Scope {
     id: root
 
-    property bool activeState: false
+    // The surface's lifetime: raised when the manager is asked for, dropped
+    // by the exit animation's own onFinished - never by a Timer.
+    property bool reallyOpen: false
     // Written back by the content as it is used, read once per opening.
     property string pendingTab: "modes"
 
@@ -33,31 +35,23 @@ Scope {
         target: GlobalStates
 
         function onModesOpenChanged() {
-            if (GlobalStates.modesOpen && !root.activeState) {
+            if (GlobalStates.modesOpen && !root.reallyOpen) {
                 root.requestOpen();
-            } else if (!GlobalStates.modesOpen && root.activeState) {
+            } else if (!GlobalStates.modesOpen && root.reallyOpen) {
                 root.requestClose();
             }
         }
     }
 
-    // Outlives the close animation, so the surface is not destroyed mid-fade.
-    Timer {
-        id: closeTimer
-        interval: 400
-        onTriggered: root.activeState = false
-    }
-
     function requestOpen() {
-        closeTimer.stop();
         root.resolveView();
-        root.activeState = true;
+        root.reallyOpen = true;
         GlobalStates.modesOpen = true;
     }
 
+    // The window stays until dialogWrap's exit animation finishes.
     function requestClose() {
         GlobalStates.modesOpen = false;
-        closeTimer.start();
     }
 
     function requestToggle() {
@@ -70,7 +64,7 @@ Scope {
 
     Loader {
         id: modesLoader
-        active: root.activeState
+        active: root.reallyOpen
 
         sourceComponent: PanelWindow {
             id: modesRoot
@@ -95,6 +89,14 @@ Scope {
             // Clicks outside the panel belong to whatever is underneath.
             mask: Region {
                 item: modesInputMask
+            }
+
+            // Blur only the card; the surface is screen-sized and transparent
+            // everywhere else (rules.lua: blur = false for this namespace).
+            WindowBlurRegion {
+                targetWindow: modesRoot
+                regionItem: modesBackground
+                regionRadius: modesBackground.radius
             }
 
             function hide() {
@@ -146,21 +148,43 @@ Scope {
                 id: dialogWrap
                 anchors.fill: parent
                 transformOrigin: Item.Center
-                scale: modesBackground.animateIn && GlobalStates.modesOpen ? 1.0 : 0.94
-                opacity: modesBackground.animateIn && GlobalStates.modesOpen ? 1.0 : 0.0
+                // One scalar, one tier per direction: scale and opacity both
+                // derive from `appear`, the enter tier brings it up when the
+                // window is built, the exit tier takes it down and owns the
+                // window's lifetime (M3_GUIDELINES, "Component Entrance and Exit").
+                property real appear: 0
+                scale: 0.94 + 0.06 * appear
+                opacity: appear
 
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: 250
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: Appearance.animationCurves.emphasized
-                    }
+                NumberAnimation {
+                    id: enterAnim
+                    target: dialogWrap
+                    property: "appear"
+                    to: 1
+                    duration: Appearance.animation.elementMoveEnter.duration
+                    easing.type: Appearance.animation.elementMoveEnter.type
+                    easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
                 }
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: 220
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: Appearance.animationCurves.emphasized
+                NumberAnimation {
+                    id: exitAnim
+                    target: dialogWrap
+                    property: "appear"
+                    to: 0
+                    // The fast tier, not elementMoveExit: an opacity transition
+                    // with a scale nudge, not a departure across the screen
+                    // (the overview's exit says why).
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Appearance.animation.elementMoveFast.type
+                    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                    // The window's lifetime IS this animation's.
+                    onFinished: root.reallyOpen = false
+                }
+                Component.onCompleted: enterAnim.start()
+                Connections {
+                    target: GlobalStates
+                    function onModesOpenChanged() {
+                        if (GlobalStates.modesOpen) { exitAnim.stop(); enterAnim.start(); }
+                        else { enterAnim.stop(); exitAnim.start(); }
                     }
                 }
 
@@ -172,7 +196,6 @@ Scope {
                     id: modesBackground
 
                     property real padding: Appearance.spacing.space250
-                    property bool animateIn: false
                     readonly property real maxBgWidth: modesRoot.screen ? modesRoot.screen.width * 0.95 : 1900
                     readonly property real maxBgHeight: modesRoot.screen ? modesRoot.screen.height * 0.80 : 1000
 
@@ -183,14 +206,6 @@ Scope {
                     radius: Appearance.rounding.windowRounding
                     implicitWidth: Math.min(maxBgWidth, modesContent.implicitWidth + padding * 2)
                     implicitHeight: Math.min(maxBgHeight, modesContent.implicitHeight + padding * 2)
-
-                    // Held back one frame so the panel is laid out before it moves.
-                    Timer {
-                        id: animDelayTimer
-                        interval: 80
-                        running: true
-                        onTriggered: modesBackground.animateIn = true
-                    }
 
                     // Escape belongs to the window unless a picker is open and
                     // wants it first; everything else is the content's.
@@ -213,23 +228,14 @@ Scope {
                         implicitWidth: 40
                         implicitHeight: 40
                         buttonRadius: Appearance.rounding.full
-                        scale: modesBackground.animateIn ? 1.0 : 0.0
                         z: 2
                         onClicked: modesRoot.hide()
 
                         anchors {
                             top: parent.top
                             right: parent.right
-                            topMargin: 20
-                            rightMargin: 20
-                        }
-
-                        Behavior on scale {
-                            NumberAnimation {
-                                duration: 300
-                                easing.type: Easing.OutBack
-                                easing.overshoot: 1.5
-                            }
+                            topMargin: Appearance.spacing.space250
+                            rightMargin: Appearance.spacing.space250
                         }
 
                         contentItem: MaterialSymbol {
@@ -238,14 +244,10 @@ Scope {
                             verticalAlignment: Text.AlignVCenter
                             font.pixelSize: Appearance.font.pixelSize.title
                             text: "close"
-                            rotation: closeButton.isHovered ? 90 : 0
+                            rotation: closeButton.hovered ? 90 : 0
 
                             Behavior on rotation {
-                                NumberAnimation {
-                                    duration: 200
-                                    easing.type: Easing.OutBack
-                                    easing.overshoot: 1.5
-                                }
+                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                             }
                         }
                     }

@@ -172,9 +172,9 @@ Item {
                             visible: row.header
                             anchors {
                                 left: parent.left
-                                leftMargin: 12
+                                leftMargin: Appearance.spacing.space150
                                 bottom: parent.bottom
-                                bottomMargin: 6
+                                bottomMargin: Appearance.spacing.space75
                             }
                             text: row.modelData.label ?? ""
                             font.pixelSize: Appearance.font.pixelSize.smaller
@@ -190,7 +190,7 @@ Item {
                                 right: parent.right
                                 top: parent.top
                             }
-                            implicitHeight: cardColumn.implicitHeight + 16
+                            implicitHeight: cardColumn.implicitHeight + Appearance.spacing.space200
                             radius: Appearance.rounding.normal
                             color: cardArea.containsMouse && row.hasFailed ? Appearance.colors.colLayer2Hover : "transparent"
 
@@ -213,9 +213,9 @@ Item {
                                     left: parent.left
                                     right: parent.right
                                     top: parent.top
-                                    topMargin: 8
-                                    leftMargin: 10
-                                    rightMargin: 10
+                                    topMargin: Appearance.spacing.space100
+                                    leftMargin: Appearance.spacing.space125
+                                    rightMargin: Appearance.spacing.space125
                                 }
                                 spacing: Appearance.spacing.space75
 
@@ -232,7 +232,7 @@ Item {
                                         MaterialSymbol {
                                             anchors.centerIn: parent
                                             text: row.def?.icon ?? "history"
-                                            iconSize: 20
+                                            iconSize: Appearance.font.pixelSize.larger
                                             fill: row.entry?.event === "start" ? 1 : 0
                                             color: row.def ? ModeUi.onContainer(row.colorKey) : Appearance.colors.colSubtext
                                         }
@@ -260,7 +260,7 @@ Item {
 
                                             Rectangle {
                                                 visible: row.entry?.kind === "routine"
-                                                implicitWidth: kindText.implicitWidth + 12
+                                                implicitWidth: kindText.implicitWidth + Appearance.spacing.space150
                                                 implicitHeight: 18
                                                 radius: Appearance.rounding.full
                                                 color: Appearance.colors.colLayer2
@@ -290,7 +290,7 @@ Item {
 
                                     Rectangle {
                                         visible: row.hasFailed
-                                        implicitWidth: failedRow.implicitWidth + 14
+                                        implicitWidth: failedRow.implicitWidth + Appearance.spacing.space175
                                         implicitHeight: 22
                                         radius: Appearance.rounding.full
                                         color: Appearance.colors.colErrorContainer
@@ -302,7 +302,7 @@ Item {
 
                                             MaterialSymbol {
                                                 text: "warning"
-                                                iconSize: 14
+                                                iconSize: Appearance.font.pixelSize.small
                                                 color: Appearance.colors.colOnErrorContainer
                                             }
 
@@ -315,7 +315,7 @@ Item {
 
                                             MaterialSymbol {
                                                 text: row.expanded ? "expand_less" : "expand_more"
-                                                iconSize: 14
+                                                iconSize: Appearance.font.pixelSize.small
                                                 color: Appearance.colors.colOnErrorContainer
                                             }
                                         }
@@ -353,7 +353,7 @@ Item {
 
                                             MaterialSymbol {
                                                 text: ModeUi.actionIcon(failedLine.type)
-                                                iconSize: 16
+                                                iconSize: Appearance.font.pixelSize.normal
                                                 color: Appearance.colors.colError
                                             }
 
@@ -387,7 +387,7 @@ Item {
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignHCenter
                         text: Modes.history.length === 0 ? "history" : "filter_alt_off"
-                        iconSize: 48
+                        iconSize: Appearance.font.pixelSize.hugeass * 2
                         color: Appearance.colors.colSubtext
                     }
 
@@ -427,7 +427,7 @@ Item {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: Appearance.spacing.space50
                         implicitHeight: 40
-                        implicitWidth: allText.implicitWidth + 32
+                        implicitWidth: allText.implicitWidth + Appearance.spacing.space300
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover

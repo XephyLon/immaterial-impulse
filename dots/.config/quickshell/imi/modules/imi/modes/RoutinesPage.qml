@@ -149,7 +149,7 @@ Item {
                 MaterialSymbol {
                     Layout.alignment: Qt.AlignHCenter
                     text: "bolt"
-                    iconSize: 48
+                    iconSize: Appearance.font.pixelSize.hugeass * 2
                     color: Appearance.colors.colSubtext
                 }
 
@@ -167,7 +167,7 @@ Item {
 
                     RippleButton {
                         implicitHeight: 40
-                        implicitWidth: templateText.implicitWidth + 32
+                        implicitWidth: templateText.implicitWidth + Appearance.spacing.space300
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colPrimary
                         colBackgroundHover: Appearance.colors.colPrimaryHover
@@ -185,7 +185,7 @@ Item {
 
                     RippleButton {
                         implicitHeight: 40
-                        implicitWidth: newText.implicitWidth + 32
+                        implicitWidth: newText.implicitWidth + Appearance.spacing.space300
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover

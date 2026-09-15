@@ -92,10 +92,10 @@ Item {
                     left: parent.left
                     verticalCenter: parent.verticalCenter
                 }
-                implicitWidth: disabledRow.implicitWidth + 20
+                implicitWidth: disabledRow.implicitWidth + Appearance.spacing.space250
                 implicitHeight: 30
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colErrorContainer
+                color: Appearance.colors.colSecondaryContainer
 
                 RowLayout {
                     id: disabledRow
@@ -104,14 +104,14 @@ Item {
 
                     MaterialSymbol {
                         text: "motion_photos_paused"
-                        iconSize: 16
-                        color: Appearance.colors.colOnErrorContainer
+                        iconSize: Appearance.font.pixelSize.normal
+                        color: Appearance.colors.colOnSecondaryContainer
                     }
 
                     StyledText {
                         text: Translation.tr("Automatic starts are off")
                         font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colOnErrorContainer
+                        color: Appearance.colors.colOnSecondaryContainer
                     }
                 }
             }
@@ -124,7 +124,12 @@ Item {
             Loader {
                 id: modesLoader
                 anchors.fill: parent
-                active: root.tab === "modes" || item !== null
+                // Kept once built: a flag written on load, never `item !== null`
+                // (a keep-alive term that reads what `active` produces is a
+                // binding loop Qt drops, and the page is quietly not kept).
+                property bool built: false
+                active: root.tab === "modes" || built
+                onLoaded: built = true
                 visible: root.tab === "modes"
                 sourceComponent: ModesPage {
                     onRequestClose: root.requestClose()
@@ -134,7 +139,12 @@ Item {
             Loader {
                 id: routinesLoader
                 anchors.fill: parent
-                active: root.tab === "routines" || item !== null
+                // Kept once built: a flag written on load, never `item !== null`
+                // (a keep-alive term that reads what `active` produces is a
+                // binding loop Qt drops, and the page is quietly not kept).
+                property bool built: false
+                active: root.tab === "routines" || built
+                onLoaded: built = true
                 visible: root.tab === "routines"
                 sourceComponent: RoutinesPage {
                     onRequestClose: root.requestClose()
@@ -144,7 +154,12 @@ Item {
             Loader {
                 id: activityLoader
                 anchors.fill: parent
-                active: root.tab === "activity" || item !== null
+                // Kept once built: a flag written on load, never `item !== null`
+                // (a keep-alive term that reads what `active` produces is a
+                // binding loop Qt drops, and the page is quietly not kept).
+                property bool built: false
+                active: root.tab === "activity" || built
+                onLoaded: built = true
                 visible: root.tab === "activity"
                 sourceComponent: ActivityPage {
                     onRequestClose: root.requestClose()

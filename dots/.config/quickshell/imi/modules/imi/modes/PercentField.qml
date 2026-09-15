@@ -19,8 +19,8 @@ Rectangle {
     RowLayout {
         anchors {
             fill: parent
-            leftMargin: 10
-            rightMargin: 10
+            leftMargin: Appearance.spacing.space125
+            rightMargin: Appearance.spacing.space125
         }
         spacing: Appearance.spacing.space25
 

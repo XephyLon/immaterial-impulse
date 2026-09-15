@@ -45,7 +45,7 @@ Rectangle {
         root.changed(Object.assign({}, ModeSchema.clone(root.trigger), changes));
     }
 
-    implicitHeight: column.implicitHeight + 16
+    implicitHeight: column.implicitHeight + Appearance.spacing.space200
     radius: Appearance.rounding.normal
     color: headerArea.containsMouse ? Appearance.colors.colLayer2Hover : Appearance.colors.colLayer2
     clip: true
@@ -67,7 +67,7 @@ Rectangle {
             right: parent.right
             top: parent.top
         }
-        height: header.height + 16
+        height: header.height + Appearance.spacing.space200
         hoverEnabled: true
         onClicked: root.expanded = !root.expanded
     }
@@ -78,9 +78,9 @@ Rectangle {
             left: parent.left
             right: parent.right
             top: parent.top
-            topMargin: 8
-            leftMargin: 14
-            rightMargin: 8
+            topMargin: Appearance.spacing.space100
+            leftMargin: Appearance.spacing.space175
+            rightMargin: Appearance.spacing.space100
         }
         spacing: Appearance.spacing.space100
 
@@ -91,7 +91,7 @@ Rectangle {
 
             MaterialSymbol {
                 text: ModeUi.triggerTypeIcon(root.type)
-                iconSize: 22
+                iconSize: Appearance.font.pixelSize.huge
                 color: Appearance.colors.colOnLayer2
             }
 
@@ -118,7 +118,7 @@ Rectangle {
             // diagnosable from its own row.
             Rectangle {
                 visible: root.watcher !== null
-                implicitWidth: verdictRow.implicitWidth + 16
+                implicitWidth: verdictRow.implicitWidth + Appearance.spacing.space200
                 implicitHeight: 24
                 radius: Appearance.rounding.full
                 color: !root.supported ? Appearance.colors.colErrorContainer
@@ -153,7 +153,7 @@ Rectangle {
 
                     MaterialSymbol {
                         text: !root.supported ? "error" : (root.holds ? "check" : (root.counting ? "timer" : "remove"))
-                        iconSize: 14
+                        iconSize: Appearance.font.pixelSize.small
                         color: verdictRow.fg
                     }
 

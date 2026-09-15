@@ -121,7 +121,7 @@ Item {
                 MaterialSymbol {
                     Layout.alignment: Qt.AlignHCenter
                     text: "tune"
-                    iconSize: 48
+                    iconSize: Appearance.font.pixelSize.hugeass * 2
                     color: Appearance.colors.colSubtext
                 }
 
@@ -139,7 +139,7 @@ Item {
 
                     RippleButton {
                         implicitHeight: 40
-                        implicitWidth: newText.implicitWidth + 32
+                        implicitWidth: newText.implicitWidth + Appearance.spacing.space300
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colPrimary
                         colBackgroundHover: Appearance.colors.colPrimaryHover
@@ -157,7 +157,7 @@ Item {
 
                     RippleButton {
                         implicitHeight: 40
-                        implicitWidth: presetText.implicitWidth + 32
+                        implicitWidth: presetText.implicitWidth + Appearance.spacing.space300
                         buttonRadius: Appearance.rounding.full
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover

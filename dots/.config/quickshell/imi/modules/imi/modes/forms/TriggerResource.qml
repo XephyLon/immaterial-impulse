@@ -78,8 +78,8 @@ ColumnLayout {
             id: input
             anchors {
                 fill: parent
-                leftMargin: 10
-                rightMargin: 10
+                leftMargin: Appearance.spacing.space125
+                rightMargin: Appearance.spacing.space125
             }
             horizontalAlignment: TextInput.AlignHCenter
             verticalAlignment: TextInput.AlignVCenter

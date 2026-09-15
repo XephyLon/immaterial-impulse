@@ -27,7 +27,7 @@ ColumnLayout {
 
         MaterialSymbol {
             text: section.icon
-            iconSize: 20
+            iconSize: Appearance.font.pixelSize.larger
             color: Appearance.colors.colPrimary
         }
 

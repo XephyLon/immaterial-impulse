@@ -28,7 +28,7 @@ RippleButton {
 
         MaterialSymbol {
             text: "add"
-            iconSize: 20
+            iconSize: Appearance.font.pixelSize.larger
             color: Appearance.colors.colPrimary
         }
 

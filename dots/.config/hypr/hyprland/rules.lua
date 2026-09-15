@@ -155,6 +155,14 @@ hl.layer_rule({ match = { namespace = "quickshell:.*" }, blur = true})
 hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.05})
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:actionCenter" }, no_anim = true})
+-- The Modes & Routines manager and its start/end banner: the shell animates
+-- both itself (a scale/opacity entrance on the card), so the compositor's
+-- map animation stays out; blur is scoped to the card through a
+-- WindowBlurRegion, so the catch-all blur above must not frost the shadow.
+hl.layer_rule({ match = { namespace = "quickshell:modes" }, no_anim = true})
+hl.layer_rule({ match = { namespace = "quickshell:modes" }, blur = false})
+hl.layer_rule({ match = { namespace = "quickshell:modeFlashPopup" }, no_anim = true})
+hl.layer_rule({ match = { namespace = "quickshell:modeFlashPopup" }, blur = false})
 -- The subject selector: a full-screen surface that is transparent everywhere
 -- except one toolbar, because the wallpaper and the widgets it is judging are
 -- the real ones underneath it. Under the catch-all above that is the worst

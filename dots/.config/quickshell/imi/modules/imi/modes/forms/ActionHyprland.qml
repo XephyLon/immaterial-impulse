@@ -35,7 +35,7 @@ ColumnLayout {
                 readonly property bool on: hyprlandCol.presets.indexOf(presetChip.modelData) !== -1
 
                 implicitHeight: 32
-                implicitWidth: presetRow.implicitWidth + 22
+                implicitWidth: presetRow.implicitWidth + Appearance.spacing.space250
                 buttonRadius: Appearance.rounding.full
                 colBackground: on ? Appearance.colors.colPrimary : Appearance.colors.colLayer3
                 colBackgroundHover: on ? Appearance.colors.colPrimaryHover : Appearance.colors.colLayer3Hover
@@ -58,7 +58,7 @@ ColumnLayout {
                     MaterialSymbol {
                         visible: presetChip.on
                         text: "check"
-                        iconSize: 16
+                        iconSize: Appearance.font.pixelSize.normal
                         color: Appearance.colors.colOnPrimary
                     }
 

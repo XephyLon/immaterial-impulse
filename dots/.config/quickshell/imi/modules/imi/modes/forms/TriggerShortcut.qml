@@ -48,7 +48,7 @@ ColumnLayout {
 
     Rectangle {
         Layout.fillWidth: true
-        implicitHeight: bindText.implicitHeight + 16
+        implicitHeight: bindText.implicitHeight + Appearance.spacing.space200
         radius: Appearance.rounding.small
         color: Appearance.colors.colLayer3
 
@@ -56,9 +56,9 @@ ColumnLayout {
             id: bindText
             anchors {
                 fill: parent
-                leftMargin: 12
-                rightMargin: 12
-                topMargin: 8
+                leftMargin: Appearance.spacing.space150
+                rightMargin: Appearance.spacing.space150
+                topMargin: Appearance.spacing.space100
             }
             text: `hl.bind("SUPER + SHIFT + R", hl.dsp.global("${form.globalName}"))\n`
                 + `bind = SUPER SHIFT, R, global, ${form.globalName}`

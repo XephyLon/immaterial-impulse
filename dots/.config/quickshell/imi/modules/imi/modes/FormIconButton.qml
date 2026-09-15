@@ -19,7 +19,7 @@ RippleButton {
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: root.buttonIcon
-        iconSize: 20
+        iconSize: Appearance.font.pixelSize.larger
         color: Appearance.colors.colOnLayer2
     }
 }

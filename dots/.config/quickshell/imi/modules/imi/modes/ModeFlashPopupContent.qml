@@ -47,6 +47,7 @@ Item {
     implicitHeight: bannerHeight + 2 * Appearance.sizes.elevationMargin
 
     property alias staticMaskTarget: staticMaskTarget
+    property alias background: contentBackground
     Item {
         id: staticMaskTarget
         anchors {
@@ -75,7 +76,7 @@ Item {
         width: parent.width - 2 * Appearance.sizes.elevationMargin
         height: root.bannerHeight
         radius: Appearance.rounding.full
-        color: Config.options.appearance.transparency.popups ? Appearance.colors.colLayer0 : Appearance.m3colors.m3surfaceContainer
+        color: Appearance.colors.colLayer0
 
         readonly property real slideOffset: -(root.topMarginValue + Appearance.sizes.elevationMargin + height + Appearance.spacing.space500)
         opacity: 0

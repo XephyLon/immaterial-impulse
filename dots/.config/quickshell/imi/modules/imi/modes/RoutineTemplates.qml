@@ -48,14 +48,14 @@ ColumnLayout {
         contentItem: RowLayout {
             anchors {
                 fill: parent
-                leftMargin: 10
-                rightMargin: 6
+                leftMargin: Appearance.spacing.space125
+                rightMargin: Appearance.spacing.space75
             }
             spacing: Appearance.spacing.space100
 
             MaterialSymbol {
                 text: "auto_awesome"
-                iconSize: 20
+                iconSize: Appearance.font.pixelSize.larger
                 color: Appearance.colors.colPrimary
             }
 
@@ -74,7 +74,7 @@ ColumnLayout {
 
             MaterialSymbol {
                 text: root.expanded ? "expand_less" : "expand_more"
-                iconSize: 20
+                iconSize: Appearance.font.pixelSize.larger
                 color: Appearance.colors.colSubtext
             }
         }
@@ -136,8 +136,8 @@ ColumnLayout {
                     RowLayout {
                         anchors {
                             fill: parent
-                            leftMargin: 10
-                            rightMargin: 8
+                            leftMargin: Appearance.spacing.space125
+                            rightMargin: Appearance.spacing.space100
                         }
                         spacing: Appearance.spacing.space125
 
@@ -150,7 +150,7 @@ ColumnLayout {
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: row.modelData.icon
-                                iconSize: 20
+                                iconSize: Appearance.font.pixelSize.larger
                                 color: ModeUi.onContainer(row.modelData.color ?? "")
                             }
                         }
@@ -182,7 +182,7 @@ ColumnLayout {
 
                         RippleButton {
                             implicitHeight: 30
-                            implicitWidth: addRow.implicitWidth + 20
+                            implicitWidth: addRow.implicitWidth + Appearance.spacing.space250
                             buttonRadius: Appearance.rounding.full
                             colBackground: row.copied ? Appearance.colors.colLayer2 : Appearance.colors.colSecondaryContainer
                             colBackgroundHover: row.copied ? Appearance.colors.colLayer2Hover : Appearance.colors.colSecondaryContainerHover
@@ -200,7 +200,7 @@ ColumnLayout {
 
                                 MaterialSymbol {
                                     text: row.copied ? "check" : "add"
-                                    iconSize: 16
+                                    iconSize: Appearance.font.pixelSize.normal
                                     color: row.copied ? Appearance.colors.colOnLayer2 : Appearance.colors.colOnSecondaryContainer
                                 }
 

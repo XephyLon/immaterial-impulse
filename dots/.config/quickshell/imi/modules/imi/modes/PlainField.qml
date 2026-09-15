@@ -27,8 +27,8 @@ Rectangle {
         id: input
         anchors {
             fill: parent
-            leftMargin: 14
-            rightMargin: 14
+            leftMargin: Appearance.spacing.space175
+            rightMargin: Appearance.spacing.space175
         }
         verticalAlignment: TextInput.AlignVCenter
         text: root.value

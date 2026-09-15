@@ -7,7 +7,7 @@ RippleButton {
     id: root
 
     implicitHeight: 36
-    implicitWidth: label.implicitWidth + 28
+    implicitWidth: label.implicitWidth + Appearance.spacing.space300
     buttonRadius: Appearance.rounding.full
     colBackground: Appearance.colors.colSecondaryContainer
     colBackgroundHover: Appearance.colors.colSecondaryContainerHover

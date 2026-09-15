@@ -50,7 +50,7 @@ ColumnLayout {
 
             Rectangle {
                 visible: (row.obj.app ?? "").length > 0
-                implicitWidth: chosenRow.implicitWidth + 20
+                implicitWidth: chosenRow.implicitWidth + Appearance.spacing.space250
                 implicitHeight: 32
                 radius: Appearance.rounding.full
                 color: Appearance.colors.colSecondaryContainer
@@ -75,7 +75,7 @@ ColumnLayout {
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "close"
-                            iconSize: 16
+                            iconSize: Appearance.font.pixelSize.normal
                             color: Appearance.colors.colOnSecondaryContainer
                         }
                     }
@@ -94,8 +94,8 @@ ColumnLayout {
                     id: appSearch
                     anchors {
                         fill: parent
-                        leftMargin: 14
-                        rightMargin: 14
+                        leftMargin: Appearance.spacing.space175
+                        rightMargin: Appearance.spacing.space175
                     }
                     verticalAlignment: TextInput.AlignVCenter
                     color: Appearance.colors.colOnLayer3
@@ -135,8 +135,8 @@ ColumnLayout {
                 contentItem: RowLayout {
                     anchors {
                         fill: parent
-                        leftMargin: 10
-                        rightMargin: 10
+                        leftMargin: Appearance.spacing.space125
+                        rightMargin: Appearance.spacing.space125
                     }
                     spacing: Appearance.spacing.space100
 

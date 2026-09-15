@@ -23,14 +23,14 @@ Rectangle {
         id: rowLayout
         anchors {
             fill: parent
-            leftMargin: 14
-            rightMargin: 14
+            leftMargin: Appearance.spacing.space175
+            rightMargin: Appearance.spacing.space175
         }
         spacing: Appearance.spacing.space150
 
         MaterialSymbol {
             text: row.icon
-            iconSize: 22
+            iconSize: Appearance.font.pixelSize.huge
             color: Appearance.colors.colOnLayer2
         }
 

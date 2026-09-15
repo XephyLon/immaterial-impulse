@@ -57,7 +57,7 @@ ColumnLayout {
                 required property string modelData
                 required property int index
 
-                implicitWidth: chipRow.implicitWidth + 20
+                implicitWidth: chipRow.implicitWidth + Appearance.spacing.space250
                 implicitHeight: 30
                 radius: Appearance.rounding.full
                 color: Appearance.colors.colSecondaryContainer
@@ -82,7 +82,7 @@ ColumnLayout {
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "close"
-                            iconSize: 16
+                            iconSize: Appearance.font.pixelSize.normal
                             color: Appearance.colors.colOnSecondaryContainer
                         }
                     }
@@ -107,8 +107,8 @@ ColumnLayout {
                 id: entry
                 anchors {
                     fill: parent
-                    leftMargin: 14
-                    rightMargin: 14
+                    leftMargin: Appearance.spacing.space175
+                    rightMargin: Appearance.spacing.space175
                 }
                 verticalAlignment: TextInput.AlignVCenter
                 color: Appearance.colors.colOnLayer3
@@ -140,7 +140,7 @@ ColumnLayout {
         RippleButton {
             visible: root.suggestions.length > 0
             implicitHeight: 36
-            implicitWidth: pickRow.implicitWidth + 24
+            implicitWidth: pickRow.implicitWidth + Appearance.spacing.space300
             buttonRadius: Appearance.rounding.full
             colBackground: Appearance.colors.colLayer3
             colBackgroundHover: Appearance.colors.colLayer3Hover
@@ -160,25 +160,29 @@ ColumnLayout {
 
                 MaterialSymbol {
                     text: "expand_more"
-                    iconSize: 18
+                    iconSize: Appearance.font.pixelSize.large
                     color: Appearance.colors.colOnLayer3
                 }
             }
 
             Popup {
                 id: suggestionMenu
-                y: parent.height + 4
+                y: parent.height + Appearance.spacing.space50
                 x: parent.width - width
                 width: 300
-                height: Math.min(320, suggestionList.contentHeight + 16)
+                height: Math.min(320, suggestionList.contentHeight + Appearance.spacing.space200)
                 padding: Appearance.spacing.space100
                 closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
                 background: Rectangle {
                     radius: Appearance.rounding.normal
-                    color: Appearance.m3colors.m3surfaceContainerHigh
+                    color: Appearance.colors.colLayer0
                     border.width: 1
                     border.color: Appearance.colors.colLayer0Border
+
+                    StyledRectangularShadow {
+                        target: parent
+                    }
                 }
 
                 contentItem: StyledListView {
@@ -207,8 +211,8 @@ ColumnLayout {
                         contentItem: RowLayout {
                             anchors {
                                 fill: parent
-                                leftMargin: 10
-                                rightMargin: 10
+                                leftMargin: Appearance.spacing.space125
+                                rightMargin: Appearance.spacing.space125
                             }
                             spacing: Appearance.spacing.space100
 

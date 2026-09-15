@@ -54,7 +54,7 @@ RowLayout {
                     anchors.centerIn: parent
                     visible: dot.isCurrent
                     text: "check"
-                    iconSize: 14
+                    iconSize: Appearance.font.pixelSize.small
                     color: ModeUi.onAccent(dot.modelData)
                 }
             }

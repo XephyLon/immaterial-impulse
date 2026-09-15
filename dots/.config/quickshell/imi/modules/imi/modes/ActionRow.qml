@@ -102,7 +102,7 @@ Rectangle {
         return list.map(c => ({ displayName: ModeUi.choiceLabel(root.entry, c), value: c }));
     }
 
-    implicitHeight: column.implicitHeight + 16
+    implicitHeight: column.implicitHeight + Appearance.spacing.space200
     radius: Appearance.rounding.normal
     color: headerArea.containsMouse ? Appearance.colors.colLayer2Hover : Appearance.colors.colLayer2
     clip: true
@@ -133,7 +133,7 @@ Rectangle {
             right: parent.right
             top: parent.top
         }
-        height: header.height + 16
+        height: header.height + Appearance.spacing.space200
         enabled: !root.isWait
         hoverEnabled: true
         onClicked: root.expanded = !root.expanded
@@ -145,9 +145,9 @@ Rectangle {
             left: parent.left
             right: parent.right
             top: parent.top
-            topMargin: 8
-            leftMargin: root.draggable ? 4 : 14
-            rightMargin: 8
+            topMargin: Appearance.spacing.space100
+            leftMargin: root.draggable ? Appearance.spacing.space50 : Appearance.spacing.space175
+            rightMargin: Appearance.spacing.space100
         }
         spacing: Appearance.spacing.space100
 
@@ -184,14 +184,14 @@ Rectangle {
                 MaterialSymbol {
                     anchors.centerIn: parent
                     text: "drag_indicator"
-                    iconSize: 20
+                    iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colSubtext
                 }
             }
 
             MaterialSymbol {
                 text: root.entry?.icon ?? "bolt"
-                iconSize: 22
+                iconSize: Appearance.font.pixelSize.huge
                 color: root.available ? Appearance.colors.colOnLayer2 : Appearance.colors.colSubtext
             }
 
@@ -217,7 +217,7 @@ Rectangle {
 
                     Rectangle {
                         visible: !root.available
-                        implicitWidth: unavailableText.implicitWidth + 14
+                        implicitWidth: unavailableText.implicitWidth + Appearance.spacing.space175
                         implicitHeight: 20
                         radius: Appearance.rounding.full
                         color: Appearance.colors.colErrorContainer
@@ -234,7 +234,7 @@ Rectangle {
                     // Delayed: the sequence pauses here before this action.
                     Rectangle {
                         visible: root.delaySec > 0
-                        implicitWidth: delayRow.implicitWidth + 14
+                        implicitWidth: delayRow.implicitWidth + Appearance.spacing.space175
                         implicitHeight: 20
                         radius: Appearance.rounding.full
                         color: Appearance.colors.colTertiaryContainer
@@ -246,7 +246,7 @@ Rectangle {
 
                             MaterialSymbol {
                                 text: "timer"
-                                iconSize: 12
+                                iconSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnTertiaryContainer
                             }
 
@@ -262,7 +262,7 @@ Rectangle {
                     // would cut it after a few hops, but it should not exist.
                     Rectangle {
                         visible: root.loop !== null
-                        implicitWidth: loopRow.implicitWidth + 14
+                        implicitWidth: loopRow.implicitWidth + Appearance.spacing.space175
                         implicitHeight: 20
                         radius: Appearance.rounding.full
                         color: Appearance.colors.colErrorContainer
@@ -290,7 +290,7 @@ Rectangle {
 
                             MaterialSymbol {
                                 text: "sync_problem"
-                                iconSize: 12
+                                iconSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnErrorContainer
                             }
 
