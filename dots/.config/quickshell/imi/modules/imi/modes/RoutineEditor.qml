@@ -244,6 +244,17 @@ Item {
                     StyledTextInput {
                         id: nameField
                         Layout.fillWidth: true
+                        // An empty name is otherwise an invisible row above the
+                        // glyph; the placeholder keeps the header's shape.
+                        StyledText {
+                            anchors.fill: parent
+                            verticalAlignment: Text.AlignVCenter
+                            visible: !nameField.text.length && !nameField.activeFocus
+                            text: Translation.tr("Name this routine")
+                            font.pixelSize: nameField.font.pixelSize
+                            font.weight: nameField.font.weight
+                            color: Appearance.colors.colSubtext
+                        }
                         text: root.routine?.name ?? ""
                         font.pixelSize: Appearance.font.pixelSize.huge
                         font.weight: Font.Medium
