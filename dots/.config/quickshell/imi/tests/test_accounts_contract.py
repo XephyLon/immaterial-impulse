@@ -50,6 +50,9 @@ class AccountsContract(unittest.TestCase):
         req = _strip(REQUEST.read_text())
         self.assertIn('"-K", "-"', req, "the bearer header travels to curl on stdin, not argv")
         self.assertNotIn('"-H"', req)
+        self.assertIn("function request(url, method, body, tag)", req, "calls queue; a second one is never dropped")
+        self.assertIn("req.stdinEnabled = true;", req)
+        self.assertIn("signal finished(var json, string error, int status, var tag)", req)
         oauth = OAUTH.read_text()
         self.assertIn('os.environ.get("GOOGLE_CLIENT_SECRET"', oauth)
         self.assertIn('"code_challenge_method": "S256"', oauth, "PKCE")
@@ -61,10 +64,18 @@ class AccountsContract(unittest.TestCase):
             src = _strip(path.read_text())
             self.assertIn(f"(Config.options.accounts?.google?.{flag} ?? false) && GoogleAccount.connected", src, path.name)
             self.assertIn("GoogleRequest {", src, path.name)
+            self.assertIn("if (!root.enabled) return;", src, f"{path.name}: a result after disconnect is dropped")
+            self.assertIn("req.clear()", src, f"{path.name}: disconnect empties the queue")
             self.assertIn("function onTokenRefreshed() { root.refresh(); }", src, path.name)
             self.assertIn("GoogleAccount.apiBase", src, f"{path.name} takes the overridable base")
         cal = _strip(CALENDAR.read_text())
-        self.assertIn('IcsCalendar.setExternalEvents("google:" + eventsReq.calendarId, events)', cal)
+        self.assertIn('IcsCalendar.setExternalEvents("google:" + tag.calendarId, events)', cal, "the calendar's identity rides in the request's tag")
+        self.assertNotIn("IcsCalendar._externalEvents", cal, "no reach into another singleton's private map")
+        tasks = _strip(TASKS.read_text())
+        self.assertIn("G.tasksCollectionUrl(GoogleAccount.apiBase, root.currentListId)", tasks)
+        self.assertIn("root.currentListId.length === 0) return;", tasks, "writes need a list")
+        acc = _strip(ACCOUNT.read_text())
+        self.assertIn("function backOff()", acc, "a failing refresh backs off with a ceiling")
         self.assertIn("singleEvents", (ROOT / "services/google_api.js").read_text(), "recurrences expand server-side")
         ics = _strip(ICS.read_text())
         self.assertIn("function setExternalEvents(sourceId, events)", ics)
@@ -73,13 +84,14 @@ class AccountsContract(unittest.TestCase):
         block = cfg[cfg.index("property JsonObject accounts: JsonObject {"):]
         for key in ("property bool calendar: true", "property bool tasks: true", "property bool mail: true",
                     "property int refreshMinutes: 5", "property int calendarDays: 14",
-                    "property JsonObject proton: JsonObject {", "property int pollInterval: 10000"):
+                    "property JsonObject proton: JsonObject {", "property int pollInterval: 60000"):
             self.assertIn(key, block[:1200], key)
 
     def test_the_todo_widget_keeps_the_lists_apart(self):
         widget = _strip(TODO_WIDGET.read_text())
         self.assertIn("readonly property bool googleAvailable: GoogleTasks.enabled && GoogleTasks.lists.length > 0", widget)
         self.assertIn("FilterChip {", widget)
+        self.assertIn("Revealer {\n            Layout.fillWidth: true\n            reveal: root.googleAvailable", widget, "the row unrolls; no bare visible")
         self.assertIn('source: root.googleSource ? "google" : "local"', widget)
         self.assertIn("GoogleTasks.addTask(todoInput.text)", widget)
         tl = _strip(TASK_LIST.read_text())
@@ -91,8 +103,17 @@ class AccountsContract(unittest.TestCase):
         proton = _strip(PROTON.read_text())
         self.assertIn("readonly property bool available: root.installed && root.loggedIn", proton)
         self.assertIn('command: ["python3", root.helperPath, "status"]', proton)
-        self.assertIn("running: root.enableService", proton, "the status probe starts on its own (capability probe gating)")
+        # Presence is a file check that starts on its own; the Python read runs
+        # only while someone is looking, started imperatively (never a
+        # `running:` binding beside an assignment).
+        self.assertIn("id: presenceProc\n        running: root.enableService", proton)
+        self.assertIn("running: root.enableService && root.installed && root.watched", proton)
+        self.assertNotRegex(proton, r"id: statusProc\n\s*running:", "the status process has no running binding")
+        self.assertIn("readonly property bool watched: root.watchers > 0 || GlobalStates.sidebarRightOpen", proton)
         self.assertIn("function onMonitorEvent()", proton, "reconciles on NetworkManager's events like Vpn.qml")
+        self.assertNotIn("onOpenMenu: root.openTailscaleDialog()", CHOOSER.read_text().split('roleValue: "protonVpn"')[1].split("DelegateChoice")[0])
+        self.assertIn("ProtonVpn.acquire()", _strip(PAGE.read_text()), "the page is a watcher while shown")
+        self.assertIn("proton-vpn-gtk-app", (ROOT.parents[3] / "sdata/deps-info.md").read_text(), "the optional dependency is documented")
         self.assertNotIn("password", proton.lower(), "the shell never sees the Proton password")
         ctl = PROTON_CTL.read_text()
         self.assertIn("api.is_user_logged_in()", ctl)
@@ -106,6 +127,8 @@ class AccountsContract(unittest.TestCase):
         self.assertIn("forceWidth: true", page)
         self.assertIn("GoogleAccount.setClient(page.clientIdDraft, page.clientSecretDraft)", page)
         self.assertIn("password: true", page, "the secret field is masked")
+        self.assertIn('text: Translation.tr("OAuth client ID")', page, "the credential fields carry labels")
+        self.assertNotRegex(page, r"opacity: enabled \?", "no opacity written over a self-dimming control")
         self.assertIn("GoogleAccount.connected ? GoogleAccount.disconnect() : GoogleAccount.connect()", page)
         self.assertIn("Config.options.calendar.ics.urls", page, "the ICS feeds finally have rows")
         self.assertNotIn("StyledToolTip { text: Translation.tr(\"Off:", page)

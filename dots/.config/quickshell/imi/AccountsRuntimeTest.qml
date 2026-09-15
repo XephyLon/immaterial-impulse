@@ -10,9 +10,9 @@ import qs.services
  * selected calendar's events land in IcsCalendar as an external source, the
  * task list and its open tasks arrive, an added task and a completed one
  * round-trip, the inbox unread count lands, and disconnecting clears the
- * lot. Launched by tests/test_accounts_runtime.py with the keyring replaced
- * by IMI_ACCOUNTS_KEYRING_JSON (KeyringStorage is not touched: the harness
- * seeds GoogleAccount's credentials through its own setter path).
+ * lot. Launched by tests/test_accounts_runtime.py with `secret-tool`
+ * shadowed by a file-backed stub (IMI_FAKE_SECRET_FILE), so KeyringStorage
+ * runs its real path against a throwaway blob and no real item is touched.
  */
 ShellRoot {
     id: harness

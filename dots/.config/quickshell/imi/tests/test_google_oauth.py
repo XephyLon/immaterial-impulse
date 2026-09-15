@@ -6,9 +6,12 @@ access token through a POST form, and reports failures as one JSON line with
 a non-zero exit. The interactive `authorize` flow is driven end to end with
 the browser replaced by a thread that follows the printed URL's redirect.
 """
+import base64
+import hashlib
 import http.server
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -23,6 +26,9 @@ HELPER = ROOT / "scripts/accounts/google_oauth.py"
 
 class FakeGoogle(http.server.BaseHTTPRequestHandler):
     tokens_seen = []
+    # The S256 challenge the consent URL advertised; the code exchange must
+    # carry the verifier that hashes to it, as Google's endpoint checks.
+    expected_challenge = None
 
     def do_POST(self):  # noqa: N802
         length = int(self.headers.get("Content-Length", "0"))
@@ -36,8 +42,11 @@ class FakeGoogle(http.server.BaseHTTPRequestHandler):
                 body = {"error": "invalid_grant", "error_description": "Token has been revoked."}
                 code = 400
         else:
-            body = {"access_token": "at-first", "refresh_token": "rt-new"} if form.get("code_verifier") else {"error": "no pkce"}
-            code = 200 if form.get("code_verifier") else 400
+            verifier = (form.get("code_verifier") or [""])[0]
+            digest = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+            ok = bool(verifier) and digest == FakeGoogle.expected_challenge
+            body = {"access_token": "at-first", "refresh_token": "rt-new"} if ok else {"error": "invalid_grant", "error_description": "PKCE mismatch"}
+            code = 200 if ok else 400
         data = json.dumps(body).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
@@ -93,9 +102,26 @@ class GoogleOauthHelper(unittest.TestCase):
 
     def test_no_secret_ever_appears_in_argv(self):
         source = HELPER.read_text()
-        self.assertNotIn("--client-secret", source)
-        self.assertNotIn("--refresh-token", source)
         self.assertIn('os.environ.get("GOOGLE_CLIENT_SECRET"', source)
+        self.assertIn('os.environ.get("GOOGLE_REFRESH_TOKEN"', source)
+        # The shell's side: the helper's command arrays hold the two verbs and nothing else.
+        account = (ROOT / "services/GoogleAccount.qml").read_text()
+        self.assertEqual(re.findall(r'command: \[[^\]]*helperPath[^\]]*\]', account),
+                         ['command: ["python3", root.helperPath, "authorize"]', 'command: ["python3", root.helperPath, "refresh"]'])
+        self.assertIn("environment: root.helperEnv", account)
+
+    def test_a_redirect_with_the_wrong_state_is_refused(self):
+        env = {"PATH": os.environ["PATH"], "IMI_GOOGLE_OAUTH_BASE": self.base, "IMI_GOOGLE_AUTH_URL": self.base + "/auth",
+               "IMI_NO_BROWSER": "1", "IMI_OAUTH_TIMEOUT": "15", "GOOGLE_CLIENT_ID": "cid", "GOOGLE_CLIENT_SECRET": "sec"}
+        proc = subprocess.Popen([sys.executable, str(HELPER), "authorize"], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        url = json.loads(proc.stderr.readline())["open"]
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        before = len(FakeGoogle.tokens_seen)
+        urllib.request.urlopen(query["redirect_uri"][0] + "?" + urllib.parse.urlencode({"code": "abc", "state": "forged"}), timeout=10).read()
+        out, err = proc.communicate(timeout=20)
+        self.assertEqual(proc.returncode, 4, out)
+        self.assertIn("state", json.loads(out)["error"])
+        self.assertEqual(len(FakeGoogle.tokens_seen), before, "no code exchange after a forged state")
 
     def test_authorize_round_trips_through_the_loopback_redirect(self):
         env = {"PATH": os.environ["PATH"], "IMI_GOOGLE_OAUTH_BASE": self.base, "IMI_GOOGLE_USERINFO_URL": self.base + "/userinfo",
@@ -112,6 +138,7 @@ class GoogleOauthHelper(unittest.TestCase):
         self.assertIn("calendar.readonly", query["scope"][0])
         redirect = query["redirect_uri"][0]
         self.assertTrue(redirect.startswith("http://127.0.0.1:"))
+        FakeGoogle.expected_challenge = query["code_challenge"][0]
         urllib.request.urlopen(redirect + "?" + urllib.parse.urlencode({"code": "abc", "state": query["state"][0]}), timeout=10).read()
         out, err = proc.communicate(timeout=20)
         self.assertEqual(proc.returncode, 0, err)
