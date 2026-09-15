@@ -196,6 +196,17 @@ Tips:
   - Note that `qalc` is the needed executable. In Arch Linux [libqalculate](https://archlinux.org/packages/extra/x86_64/libqalculate) provides it, but in Fedora [qalculate](https://packages.fedoraproject.org/pkgs/libqalculate/qalculate/fedora-43.html#files) does and [libqalculate](https://packages.fedoraproject.org/pkgs/libqalculate/libqalculate/fedora-43.html#files) does not.
 
 
+## Accounts (optional)
+Nothing here is installed by the installer. The Accounts page (`quickshell/imi/services/ProtonVpn.qml`
+and friends) probes for what is present and says what is missing.
+- `proton-vpn-gtk-app` with `python-proton-vpn-api-core` (Arch: both in the official repos) — the
+  Proton VPN toggle. The shell drives the API with the session the official app keeps in the keyring
+  (`scripts/accounts/protonvpn_ctl.py`); it never logs in itself. Presence is a file check for the
+  Python package; a status read is a Python process, so it runs only while the quick panel or the
+  Accounts page is showing.
+- `curl` and `python3` (already required) — the Google services; the OAuth helper is standard
+  library only.
+
 ## Phone (optional)
 None of these is in any `PKGBUILD` or install list, on purpose: the Phone tab probes each one
 at shell start (`quickshell/imi/services/PhoneDeps.qml`, a constant `command -v` per tool) and

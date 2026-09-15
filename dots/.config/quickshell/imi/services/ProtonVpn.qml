@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs
 import qs.modules.common
 import qs.modules.common.functions
 
@@ -11,18 +12,23 @@ import qs.modules.common.functions
  * Proton VPN through the official app's session
  * (scripts/accounts/protonvpn_ctl.py over python-proton-vpn-api-core).
  *
- * Detection is two-staged like Tailscale: `installed` (the Python package
- * imports) gates everything, `loggedIn` (the app has a session in the
- * keyring) gates the controls. The shell never sees the Proton password.
- * Every poll is a Python process, so the default cadence is gentler than
- * nmcli's; a NetworkManager event reconciles sooner. The connection the app
- * makes is still a NetworkManager profile, so Vpn.qml lists it as well.
+ * Detection is two-staged like Tailscale: `installed` is a file check for
+ * the Python package (no interpreter spawned for a user without it), and
+ * `loggedIn` (the app has a session in the keyring) gates the controls.
+ * The shell never sees the Proton password.
+ *
+ * Every status read is a Python process (~0.5 s, ~47 MB), so it is not a
+ * background poll: it runs only while something is looking - the quick
+ * panel (the right sidebar open) or a page that acquired it - on a slow
+ * reconcile tick, and once more, debounced, after a NetworkManager event
+ * (the app's connection is a NetworkManager profile, so that event IS the
+ * transition). The profile is also listed by Vpn.qml, so nothing regresses.
  */
 Singleton {
     id: root
 
     readonly property bool enableService: Config.options.accounts?.proton?.vpn?.enable ?? true
-    readonly property int pollInterval: Config.options.accounts?.proton?.vpn?.pollInterval ?? 10000
+    readonly property int pollInterval: Config.options.accounts?.proton?.vpn?.pollInterval ?? 60000
     readonly property string helperPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/accounts/protonvpn_ctl.py`)
 
     property bool probed: false
@@ -34,6 +40,14 @@ Singleton {
     property string account: ""
     property bool busy: false
     property string lastError: ""
+    property bool everRead: false
+
+    // Who is looking: the right sidebar (the quick-panel tile) and pages
+    // that call acquire()/release() while shown.
+    property int watchers: 0
+    readonly property bool watched: root.watchers > 0 || GlobalStates.sidebarRightOpen
+    function acquire() { root.watchers += 1; }
+    function release() { root.watchers = Math.max(0, root.watchers - 1); }
 
     readonly property bool available: root.installed && root.loggedIn
     readonly property bool connected: root.state === "Connected"
@@ -58,7 +72,7 @@ Singleton {
 
     function applyStatus(text) {
         const s = root.parseStatus(text);
-        root.probed = true;
+        root.everRead = true;
         if (!s) return;
         root.installed = s.installed;
         root.loggedIn = s.loggedIn;
@@ -69,7 +83,7 @@ Singleton {
     }
 
     function refresh() {
-        if (!root.enableService || statusProc.running) return;
+        if (!root.enableService || !root.installed || statusProc.running) return;
         statusProc.running = true;
     }
 
@@ -97,7 +111,7 @@ Singleton {
     Process {
         id: cmdProc
         stdout: StdioCollector { id: cmdOut }
-        onExited: (code, status) => {
+        onExited: (code, exitStatus) => {
             root.busy = false;
             let parsed = null;
             try { parsed = JSON.parse(cmdOut.text.trim().split("\n").pop()); } catch (e) { parsed = null; }
@@ -109,27 +123,46 @@ Singleton {
         }
     }
 
-    // The status probe doubles as the presence check: the helper answers
-    // {"installed": false} without the package, so it starts on its own.
+    // Presence: the package's own file, no interpreter. Starts on its own
+    // (capability probe gating); ~1 ms.
+    Process {
+        id: presenceProc
+        running: root.enableService
+        command: ["sh", "-c", "ls /usr/lib/python3*/site-packages/proton/vpn/core/api.py /usr/lib64/python3*/site-packages/proton/vpn/core/api.py >/dev/null 2>&1"]
+        onExited: (code, exitStatus) => {
+            root.installed = (code === 0);
+            root.probed = true;
+        }
+    }
+
+    // The status read. Started only by refresh(); never a `running:` binding
+    // beside an assignment (the assignment would destroy the binding).
     Process {
         id: statusProc
-        running: root.enableService
         command: ["python3", root.helperPath, "status"]
         stdout: StdioCollector {
             onStreamFinished: root.applyStatus(text)
         }
     }
 
+    // The slow reconcile, only while someone is looking.
     Timer {
         interval: root.pollInterval
-        running: root.enableService && root.installed
+        running: root.enableService && root.installed && root.watched
         repeat: true
+        triggeredOnStart: true
         onTriggered: root.refresh()
     }
 
-    // Reconcile on NetworkManager's events (Vpn.qml piggybacks the same way).
+    // A NetworkManager event is the transition itself; one debounced read.
+    Timer {
+        id: nmDebounce
+        interval: 2000
+        repeat: false
+        onTriggered: root.refresh()
+    }
     Connections {
         target: Network
-        function onMonitorEvent() { if (root.available) root.refresh(); }
+        function onMonitorEvent() { if (root.installed && root.everRead) nmDebounce.restart(); }
     }
 }

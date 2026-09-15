@@ -215,7 +215,6 @@ DelegateChooser {
         onAddRequested: type => root.addToggle(type)
         onRemoveRequested: index => root.removeToggle(index)
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
-        onOpenMenu: root.openTailscaleDialog()
     } }
 
     DelegateChoice { roleValue: "phoneConnect"; AndroidPhoneConnectToggle {

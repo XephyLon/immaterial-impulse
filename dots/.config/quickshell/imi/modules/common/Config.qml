@@ -1489,7 +1489,9 @@ Singleton {
                 property JsonObject proton: JsonObject {
                     property JsonObject vpn: JsonObject {
                         property bool enable: true
-                        property int pollInterval: 10000 // ms; each poll is a Python process
+                        // ms; each read is a Python process, and it runs only
+                        // while the quick panel or the Accounts page is showing.
+                        property int pollInterval: 60000
                     }
                 }
             }
