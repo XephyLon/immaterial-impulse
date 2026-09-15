@@ -20,6 +20,7 @@ ColumnLayout {
     readonly property bool ringing: (row.obj.kind ?? "ping") === "ring"
 
     FormChoice {
+        text: Translation.tr("Do")
         current: phoneCol.ringing ? "ring" : "ping"
         onPicked: v => row.patchValue({ kind: v })
         options: [

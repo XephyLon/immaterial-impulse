@@ -18,6 +18,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Playback")
         current: row.trigger.playing === false ? "silent" : "playing"
         onPicked: v => row.set({ playing: v === "playing" })
         options: [

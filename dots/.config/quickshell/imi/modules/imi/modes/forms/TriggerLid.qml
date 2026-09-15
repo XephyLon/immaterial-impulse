@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Lid")
         current: row.trigger.closed === false ? "open" : "closed"
         onPicked: v => row.set({ closed: v === "closed" })
         options: [

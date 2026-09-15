@@ -18,6 +18,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Matches")
         current: row.trigger.special === true ? "special" : "named"
         onPicked: v => row.set({ special: v === "special" })
         options: [

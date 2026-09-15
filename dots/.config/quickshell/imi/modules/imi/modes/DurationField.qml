@@ -57,6 +57,7 @@ RowLayout {
     }
 
     FormChoice {
+        Layout.fillWidth: false
         current: root.unit
         onPicked: u => {
             const number = Math.round(root.seconds / root.factor);

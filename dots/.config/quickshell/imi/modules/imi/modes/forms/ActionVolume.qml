@@ -56,6 +56,7 @@ ColumnLayout {
     }
 
     FormChoice {
+        text: Translation.tr("Mute")
         current: row.obj.muted === true ? "mute" : (row.obj.muted === false ? "unmute" : "keep")
         onPicked: v => row.patchValue({ muted: v === "keep" ? null : v === "mute" })
         options: [

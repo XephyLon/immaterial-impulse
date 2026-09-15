@@ -27,6 +27,7 @@ ColumnLayout {
         spacing: Appearance.spacing.space125
 
         FormChoice {
+            Layout.fillWidth: false
             current: row.obj.action ?? "run"
             onPicked: v => row.patchValue({ action: v })
             options: [

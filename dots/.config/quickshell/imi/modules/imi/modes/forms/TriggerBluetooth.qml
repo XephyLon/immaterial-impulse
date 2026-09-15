@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("State")
         current: row.trigger.connected === false ? "off" : "on"
         onPicked: v => row.set({ connected: v === "on" })
         options: [

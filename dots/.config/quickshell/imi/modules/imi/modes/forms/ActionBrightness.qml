@@ -45,6 +45,7 @@ ColumnLayout {
     }
 
     FormChoice {
+        text: Translation.tr("Applies to")
         current: row.obj.scope ?? "all"
         onPicked: v => row.patchValue({ level: brightnessCol.level, scope: v })
         options: [

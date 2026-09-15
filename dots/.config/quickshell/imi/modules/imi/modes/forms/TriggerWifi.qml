@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Wi-Fi")
         current: row.trigger.connected === false ? "off" : "on"
         onPicked: v => row.set({ connected: v === "on" })
         options: [
@@ -38,6 +39,7 @@ ColumnLayout {
     }
 
     FormChoice {
+        text: Translation.tr("Ethernet")
         current: row.trigger.ethernet === true ? "yes" : (row.trigger.ethernet === false ? "no" : "any")
         onPicked: v => row.set({ ethernet: v === "any" ? null : v === "yes" })
         options: [

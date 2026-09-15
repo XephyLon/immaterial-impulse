@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Service")
         current: row.trigger.kind === "tailscale" ? "tailscale" : "vpn"
         onPicked: v => row.set({ kind: v })
         options: [
@@ -26,6 +27,7 @@ ColumnLayout {
     }
 
     FormChoice {
+        text: Translation.tr("State")
         current: row.trigger.connected === false ? "down" : "up"
         onPicked: v => row.set({ connected: v === "up" })
         options: [

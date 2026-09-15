@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Device")
         current: row.trigger.kind
         onPicked: v => row.set({ kind: v })
         options: [

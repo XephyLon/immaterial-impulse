@@ -17,6 +17,7 @@ ColumnLayout {
     spacing: Appearance.spacing.space125
 
     FormChoice {
+        text: Translation.tr("Counts when")
         current: row.trigger.when
         onPicked: v => row.set({ when: v })
         options: [

@@ -12,6 +12,7 @@ import QtQuick.Layouts
  * unfolds from; every change goes back through it.
  */
 FormChoice {
+    text: Translation.tr("Timer")
     required property var row
 
     current: row.trigger.phase
