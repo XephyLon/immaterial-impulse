@@ -37,6 +37,7 @@ Singleton {
         property alias cheatsheet: configOptionsJsonAdapter.cheatsheet
         property alias background: configOptionsJsonAdapter.background
         property alias modes: configOptionsJsonAdapter.modes
+        property alias accounts: configOptionsJsonAdapter.accounts
         property alias bar: configOptionsJsonAdapter.bar
         property alias battery: configOptionsJsonAdapter.battery
         property alias calendar: configOptionsJsonAdapter.calendar
