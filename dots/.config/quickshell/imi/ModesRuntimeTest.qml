@@ -42,13 +42,14 @@ ShellRoot {
             if (!Config.ready || !Modes.ready) return;
             switch (harness.step) {
             case 0: {
-                const before = Modes.modes.length;
+                // A fresh config: reconcile() seeded the seven presets before
+                // `ready`, so they are already here; seeding is idempotent.
                 Modes.seedPresets();
                 harness.check("the presets seed into the config once",
-                    Modes.modes.length === before + 7 && Config.options.modes.presetsSeeded === true
+                    Modes.modes.length === 7 && Config.options.modes.presetsSeeded === true
                     && Modes.modes.some(m => m.id === "focus" && m.preset));
                 Modes.seedPresets();
-                harness.check("seeding again adds nothing", Modes.modes.length === before + 7);
+                harness.check("seeding again adds nothing", Modes.modes.length === 7);
                 harness.check("nothing is on at start", !Modes.active && Modes.activeMode === null);
                 harness.check("an unknown mode does not start", Modes.activate("no-such-mode") === false && !Modes.active);
                 harness.check("a manual start turns the mode on",
