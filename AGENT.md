@@ -320,16 +320,25 @@ the radii are equal; the LIVE value, `hyprctl getoption decoration:rounding` at 
 fillet's margins. The occupants are the bar, whose zone is
 `Appearance.sizes.barExclusiveZone` (the settled zone `Bar.qml`'s reserver asks for; `Bar.qml` reads
 `barReservedHeight` from the same place, so there is no second copy to drift), and a PINNED dock
-(`GlobalStates.dockPinned`, written by `Dock.qml`; its zone is `Appearance.sizes.dockExclusiveZone`,
-the token `Dock.qml`'s own exclusiveZone reads) - an unpinned dock reserves nothing and is no
-occupant, and on a monitor with a fullscreen window the dock drops its zone, so the bands and fillets
-read the authority per screen (`insetsFor`, `bandOffsetFor`, `cornerMarginsFor`). `FrameGeometry`
-names `GlobalStates`, so it imports `qs`; `lint_globalstates_import.py` now refuses a QML file that
-names it without a way to resolve it (a throwing binding is a warning, not a load failure: the dock
-occupant was inert for a whole review round). `modules/imi/frame/Frame.qml` draws four bands per screen,
-each starting under its edge's occupants, Top layer, `ExclusionMode.Ignore`, an empty mask; they stay
-mapped and paint transparent for a fullscreen window (`visible` on a layer surface destroys it;
-`rules.lua` gives `quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen
+(`GlobalStates.dockPinned`, written by `Dock.qml`; its zone is `DockReservation.zone`, a singleton on
+the dock's own side that `Dock.qml`'s exclusiveZone reads too - not an `Appearance` token, because the
+design-token singleton is the layer everything builds on and names no feature) - an unpinned dock
+reserves nothing and is no occupant, and on a monitor with a fullscreen window the dock drops its
+zone. That per-screen rule is the AUTHORITY's (`dockReservesOn(screenName)`, the same
+`WM.fullscreenOnMonitor` predicate `Dock.qml` uses), and the readers ask by screen name
+(`insetsForScreen`, `bandMarginsForScreen`, `cornerMarginsForScreen`); an earlier cut took a
+`fullscreen` flag from each caller and `Frame` and `ScreenCorners` handed in two different booleans,
+putting the fillets 65px off the band in the fullscreen-plus-special case. The rounding probe runs only
+while the mode is on (`running: root.enabled`, re-armed on `configreloaded` while on): the shell
+rewrites hypr files itself, so an ungated probe spawned `hyprctl` on every self-inflicted reload for
+every user. `FrameGeometry` names `GlobalStates`, so it imports `qs`; `lint_globalstates_import.py`
+now refuses a QML file that names it without a way to resolve it (a throwing binding is a warning, not
+a load failure: the dock occupant was inert for a whole review round). `modules/imi/frame/Frame.qml`
+draws four bands per screen, each inset at BOTH ends (`bandMargins`: under its own edge's occupants,
+and stopping where the adjacent bands start - side bands anchored top+bottom ran the full screen
+height and dropped two band-wide tails through a pinned dock's strip), Top layer,
+`ExclusionMode.Ignore`, an empty mask; they stay mapped and paint transparent for a fullscreen window
+(`visible` on a layer surface destroys it; `rules.lua` gives `quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen
 corners (the sidebar corner-open hit rect lives there) and moves the fillet shape inward through
 `RoundCorner`'s visual margins; `BarContent` squares the centre-only pill. All gated on
 `FrameGeometry.enabled` (the option AND not the vertical bar), the family included. Known stage-1
