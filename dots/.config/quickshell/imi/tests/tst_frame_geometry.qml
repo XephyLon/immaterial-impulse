@@ -54,4 +54,18 @@ TestCase {
         compare(Geo.bandOffset("bottom", "top", 40, "bottom", 66), 66);
         compare(Geo.bandOffset("top", "top", 40, "top", 66), 106);
     }
+
+    function test_a_band_ends_where_the_adjacent_bands_start() {
+        // Bar on top, dock pinned at the bottom: the side bands start under
+        // the bar and stop above the dock's strip; no tail past either.
+        compare(Geo.bandMargins("left", "top", 40, "bottom", 66), { top: 40, bottom: 66, left: 0, right: 0 });
+        compare(Geo.bandMargins("right", "top", 40, "bottom", 66), { top: 40, bottom: 66, left: 0, right: 0 });
+        // The top band sits under the bar and spans the width; the bottom
+        // one under the dock.
+        compare(Geo.bandMargins("top", "top", 40, "bottom", 66), { top: 40, bottom: 0, left: 0, right: 0 });
+        compare(Geo.bandMargins("bottom", "top", 40, "bottom", 66), { top: 0, bottom: 66, left: 0, right: 0 });
+        // A dock on a side edge insets the top and bottom bands' end there.
+        compare(Geo.bandMargins("top", "top", 40, "left", 66), { top: 40, bottom: 0, left: 66, right: 0 });
+        compare(Geo.bandMargins("left", "top", 40, "left", 66), { top: 40, bottom: 0, left: 66, right: 0 });
+    }
 }

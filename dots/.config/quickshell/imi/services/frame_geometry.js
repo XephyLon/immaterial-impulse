@@ -45,6 +45,20 @@ function bandOffset(edge, barEdge, barThickness, dockEdge, dockThickness) {
     return offset;
 }
 
+// A band's four margins: on its own edge it starts under that edge's
+// occupant(s); at its two ENDS it stops where the adjacent edges' bands
+// start, so every band ends at the frame's corner instead of running the
+// full screen length (measured: side bands anchored top+bottom dropped two
+// band-wide tails through a pinned dock's strip to the screen edge).
+function bandMargins(edge, barEdge, barThickness, dockEdge, dockThickness) {
+    var m = { top: 0, bottom: 0, left: 0, right: 0 };
+    var ends = (edge === "left" || edge === "right") ? ["top", "bottom"] : ["left", "right"];
+    m[edge] = bandOffset(edge, barEdge, barThickness, dockEdge, dockThickness);
+    for (var i = 0; i < ends.length; i++)
+        m[ends[i]] = bandOffset(ends[i], barEdge, barThickness, dockEdge, dockThickness);
+    return m;
+}
+
 // A fillet's offset from its screen corner: it sits at the inner corner,
 // where the two occupied strips meet.
 function cornerMargins(corner, insets) {
