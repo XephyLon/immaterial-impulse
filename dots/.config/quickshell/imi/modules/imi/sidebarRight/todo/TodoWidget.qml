@@ -17,8 +17,26 @@ Item {
     readonly property var googleLists: root.googleAvailable ? GoogleTasks.lists : []
     readonly property var tabButtonList: root.localTabs.concat(root.googleLists.map(l => ({ "icon": "cloud", "name": l.title, "listId": l.id })))
     readonly property bool googleSource: tabBar.currentIndex >= root.localTabs.length
+    // The chosen Google list is an ID, never the tab's index: the lists are
+    // refetched and can be added, removed or reordered under a standing
+    // index, which would silently show a different list. The index is
+    // derived from the id and falls back to the local tabs when it is gone.
+    property string selectedListId: ""
     readonly property string currentGoogleListId: root.googleSource ? (root.tabButtonList[tabBar.currentIndex]?.listId ?? "") : ""
-    onCurrentGoogleListIdChanged: if (root.currentGoogleListId.length > 0) GoogleTasks.selectList(root.currentGoogleListId)
+    onCurrentGoogleListIdChanged: {
+        if (root.currentGoogleListId.length > 0) {
+            root.selectedListId = root.currentGoogleListId;
+            GoogleTasks.selectList(root.currentGoogleListId);
+        } else if (root.googleSource === false) {
+            root.selectedListId = "";
+        }
+    }
+    onTabButtonListChanged: {
+        if (root.selectedListId.length === 0) return;
+        const at = root.tabButtonList.findIndex(tab => tab.listId === root.selectedListId);
+        if (at === -1) { root.selectedListId = ""; tabBar.setCurrentIndex(0); }
+        else if (tabBar.currentIndex !== at) tabBar.setCurrentIndex(at);
+    }
     onGoogleAvailableChanged: if (!googleAvailable && root.googleSource) tabBar.setCurrentIndex(0)
     property bool showAddDialog: false
     property int dialogMargins: Appearance.spacing.space250

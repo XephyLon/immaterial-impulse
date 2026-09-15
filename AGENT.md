@@ -382,7 +382,8 @@ a request queued from a result waits for the process to exit")). The Proton stat
 process (~0.5 s, ~47 MB), so it is never a background poll: presence is `importlib.util.find_spec`
 (imports nothing), the read runs on a 60 s reconcile only while `watched` (the right sidebar open,
 or the Accounts page holding `acquire()` - `shown` is `currentPageInstance === page &&
-settingsOpen`, the window and not the host, or a visit holds the watcher for the session) and once,
+settingsOpen`, the window and not the host: without that conjunct a single visit holds the watcher for
+the rest of the session) and once,
 debounced, after a NetworkManager event while watched (7020f3a6a ("perf(accounts): the Proton status is
 read only while someone is looking")). Parsers and URL
 builders are pure (`services/google_api.js`, `tst_google_api.qml`); the API base is overridable
