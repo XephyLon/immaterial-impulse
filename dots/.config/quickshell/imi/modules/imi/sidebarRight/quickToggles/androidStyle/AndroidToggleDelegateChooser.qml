@@ -193,6 +193,30 @@ DelegateChooser {
         onResizeRequested: (index, size) => root.resizeToggle(index, size)
         onOpenMenu: root.openTailscaleDialog()
     } }
+    DelegateChoice { roleValue: "protonVpn"; AndroidProtonVpnToggle {
+        required property int index
+        required property var modelData
+        buttonIndex: modelData.sourceIndex
+        buttonData: modelData
+        editMode: root.editMode
+        gridRef: root.gridRef
+        expandedSize: modelData.size > 1
+        baseCellWidth: root.baseCellWidth
+        baseCellHeight: root.baseCellHeight
+        cellSpacing: root.spacing
+        cellSize: modelData.size
+        dropIndicatorRef: root.dropIndicatorRef
+        pagerRef: root.pagerRef
+        pageIndex: root.pageIndex
+        isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onMoveAcrossRequested: (fromIndex, toPage, toIndex) => root.moveToggleAcross(fromIndex, toPage, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
+        onOpenMenu: root.openTailscaleDialog()
+    } }
 
     DelegateChoice { roleValue: "phoneConnect"; AndroidPhoneConnectToggle {
         required property int index

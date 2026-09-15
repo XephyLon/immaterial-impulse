@@ -44,6 +44,7 @@ AbstractQuickPanel {
             toggleModel: TailscaleToggle {}
             altAction: () => root.openTailscaleDialog()
         }
+        QuickToggleButton { toggleModel: ProtonVpnToggle {} }
         QuickToggleButton {
             toggleModel: PhoneConnectToggle {}
             altAction: () => root.openPhoneTab()
