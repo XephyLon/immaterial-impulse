@@ -34,6 +34,21 @@ own repo; the installer pins which revision it builds.
   no input and reserves nothing; a pinned dock's edge is framed under the dock like the
   bar's edge is under the bar. Best with the Hug bar style. Not yet framed in this first
   slice: the vertical bar, a bar hidden by auto-hide or absent from a screen's list.
+- Modes & Routines (ported from the p3drovfx fork): named modes (Sleep, Work,
+  Focus, Gaming, Theater, Presentation, Relax ship as presets) that apply a set
+  of actions - do not disturb, night light, keep awake, power profile, media,
+  brightness, audio devices, Hyprland presets, launching apps and more - and
+  revert them when the mode ends; routines that fire once or hold while a
+  trigger lasts (schedule, an app or game in front, battery, Wi-Fi, idle,
+  headphones, the phone's reach, resources, weather, updates, a shortcut). A
+  manager overlay (Super + Y; `qs -c imi ipc call modes ...`) edits both; the
+  active mode shows as a bar pill (the "Mode" widget in the layout editor), a
+  quick-panel toggle in both panel styles, and a brief banner on start and end.
+  Settings > Modes & Routines holds automation on/off, where the mode shows,
+  automatic ends, game detection and the data. State survives a config reset.
+  Not ported from the fork: screen shaders, keyboard backlight, earbuds ANC,
+  sounds, workspace profiles, DNS-over-TLS, calendar triggers, the lock-screen
+  pill.
 
 ### Changed
 - Appearance settings now live in their own file, `~/.config/immaterial-impulse/config.d/appearance.json`,

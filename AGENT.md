@@ -344,6 +344,24 @@ corners (the sidebar corner-open hit rect lives there) and moves the fillet shap
 `FrameGeometry.enabled` (the option AND not the vertical bar), the family included. Known stage-1
 limits, stated in the proposal: one frame for every screen; the bar's screen list and auto-hide are
 not modelled. A further slice adds its geometry to the authority first. 220780dfb ("feat(frame): frame mode, stage 1").
+**Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
+(modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
+its revert snapshot, the activity log, routine runs, paused action steps) lives in
+`Persistent.states.modes`, so a config reset never strands an applied mode. `services/modes/` holds the
+schema (presets, routine templates, normalisers), the action runner and the trigger watchers; the
+port from the p3drovfx fork dropped what this shell has no home for (screen shaders, keyboard
+backlight, earbuds ANC, sounds, workspace profiles, DNS-over-TLS, calendar, the lock-screen pill), and
+`test_modes_contract.py` refuses those names anywhere under `services/modes` or `modules/imi/modes`
+and checks every type a preset or template names is one the runner or the triggers know. The
+surfaces: the manager overlay (`modules/imi/modes/ModesOverlay.qml`, GlobalShortcut `modesToggle`,
+Super + Y in `keybinds.lua`); the bar pill `ModeIndicator` - the record indicator's pill grammar on
+the mode's container colour, with a `StyledPopup` card, never the fork's shared cards; the shared
+`ModesToggle` model in both quick-panel styles; the start/end banner `ModeFlashPopup` (family-loaded
+while `modes.flash` is not "off"); Settings > Modes & Routines in the page grammar (the bar switch
+edits the layout's `modeIndicator` id). Fork UI ported into `modules/imi/modes/` must take the M3
+spacing tokens and this shell's widget props - `lint_spacing.py` and the load are the gate, and the
+fork's `animatePopulate`, `popupRadius`, `stickyHover` and `tooltip`-on-`ContentSection` do not exist
+here. The engine is driven end to end in `test_modes_runtime.py`. 130cee4ec ("feat(modes): the Modes & Routines engine, ported from the p3drovfx fork").
 **`services/OllamaCatalog.qml` is the shell's only Ollama client; it speaks the daemon's HTTP API
 through curl and starts nothing on its own.** `/api/tags` (installed), `/api/ps` (loaded),
 `/api/pull` (NDJSON, one status line per event, streamed through `curl -sN` into a `SplitParser`)
