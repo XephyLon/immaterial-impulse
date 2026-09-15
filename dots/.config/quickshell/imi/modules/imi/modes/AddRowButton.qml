@@ -17,25 +17,32 @@ RippleButton {
     colBackgroundHover: Appearance.colors.colLayer2Hover
     colRipple: Appearance.colors.colLayer2Active
 
+    // The outline traces the button's own rounded shape.
     DashedBorder {
         anchors.fill: parent
+        radius: addButton.buttonRadius
         color: ColorUtils.transparentize(Appearance.colors.colOutline, 0.4)
     }
 
-    contentItem: RowLayout {
-        anchors.centerIn: parent
-        spacing: Appearance.spacing.space100
+    // A Control positions its content item itself; the row centres inside
+    // a stretched Item rather than anchoring itself (which left it packed
+    // to the leading edge).
+    contentItem: Item {
+        RowLayout {
+            anchors.centerIn: parent
+            spacing: Appearance.spacing.space100
 
-        MaterialSymbol {
-            text: "add"
-            iconSize: Appearance.font.pixelSize.larger
-            color: Appearance.colors.colPrimary
-        }
+            MaterialSymbol {
+                text: "add"
+                iconSize: Appearance.font.pixelSize.larger
+                color: Appearance.colors.colPrimary
+            }
 
-        StyledText {
-            text: addButton.buttonText
-            font.weight: Font.Medium
-            color: Appearance.colors.colPrimary
+            StyledText {
+                text: addButton.buttonText
+                font.weight: Font.Medium
+                color: Appearance.colors.colPrimary
+            }
         }
     }
 }
