@@ -39,22 +39,38 @@ Item {
         target: card
     }
 
-    Rectangle {
+    // The row is a RippleButton, not a Rectangle with a MouseArea: a pressed
+    // row ripples like every other pressable row in the shell.
+    RippleButton {
         id: card
         anchors.fill: parent
-        radius: Appearance.rounding.normal
-        color: {
+        buttonRadius: Appearance.rounding.normal
+        enabled: !root.ghost
+        onClicked: root.clicked()
+
+        readonly property bool accentFill: root.isActive && root.selected
+        colBackground: {
             if (root.isActive)
                 return root.selected ? ModeUi.accent(root.colorKey) : ModeUi.container(root.colorKey);
             if (root.selected)
                 return Appearance.colors.colSecondaryContainer;
             if (root.ghost)
                 return Appearance.colors.colLayer2;
-            return rowArea.containsMouse ? Appearance.colors.colLayer2Hover : "transparent";
+            return "transparent";
         }
-
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        colBackgroundHover: {
+            if (root.isActive)
+                return ColorUtils.mix(card.colBackground, card.colText, 0.92);
+            if (root.selected)
+                return Appearance.colors.colSecondaryContainerHover;
+            return Appearance.colors.colLayer2Hover;
+        }
+        colRipple: {
+            if (root.isActive)
+                return ColorUtils.mix(card.colBackground, card.colText, 0.8);
+            if (root.selected)
+                return Appearance.colors.colSecondaryContainerActive;
+            return Appearance.colors.colLayer2Active;
         }
 
         readonly property color colText: {
@@ -65,121 +81,115 @@ Item {
             return Appearance.colors.colOnLayer1;
         }
 
-        MouseArea {
-            id: rowArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.clicked()
-        }
-
-        RowLayout {
-            anchors {
-                fill: parent
-                leftMargin: Appearance.spacing.space125
-                rightMargin: Appearance.spacing.space50
-            }
-            spacing: Appearance.spacing.space125
-
-            Rectangle {
-                Layout.alignment: Qt.AlignVCenter
-                implicitWidth: 40
-                implicitHeight: 40
-                radius: Appearance.rounding.full
-                opacity: root.dimmed ? 0.55 : 1
-                color: root.isActive && root.selected
-                    ? ColorUtils.transparentize(ModeUi.onAccent(root.colorKey), 0.85)
-                    : ModeUi.container(root.colorKey)
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: root.mode.icon
-                    iconSize: Appearance.font.pixelSize.huge
-                    fill: root.isActive ? 1 : 0
-                    color: root.isActive && root.selected
-                        ? ModeUi.onAccent(root.colorKey) : ModeUi.onContainer(root.colorKey)
+        contentItem: Item {
+            RowLayout {
+                anchors {
+                    fill: parent
+                    leftMargin: Appearance.spacing.space125
+                    rightMargin: Appearance.spacing.space50
                 }
-            }
+                spacing: Appearance.spacing.space125
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.space0
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: 40
+                    implicitHeight: 40
+                    radius: Appearance.rounding.full
+                    opacity: root.dimmed ? 0.55 : 1
+                    color: root.isActive && root.selected
+                        ? ColorUtils.transparentize(ModeUi.onAccent(root.colorKey), 0.85)
+                        : ModeUi.container(root.colorKey)
 
-                RowLayout {
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        text: root.mode.icon
+                        iconSize: Appearance.font.pixelSize.huge
+                        fill: root.isActive ? 1 : 0
+                        color: root.isActive && root.selected
+                            ? ModeUi.onAccent(root.colorKey) : ModeUi.onContainer(root.colorKey)
+                    }
+                }
+
+                ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.space75
+                    spacing: Appearance.spacing.space0
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Appearance.spacing.space75
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: root.mode.name
+                            elide: Text.ElideRight
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Medium
+                            color: card.colText
+                        }
+
+                        // Says the mode may start on its own; a bare trigger does not.
+                        MaterialSymbol {
+                            visible: !root.routine && root.mode.auto && root.mode.triggers.length > 0
+                            text: "autoplay"
+                            iconSize: Appearance.font.pixelSize.normal
+                            color: ColorUtils.transparentize(card.colText, 0.3)
+                        }
+
+                        MaterialSymbol {
+                            visible: root.routine && root.mode.kind === "once"
+                            text: "bolt"
+                            iconSize: Appearance.font.pixelSize.normal
+                            color: ColorUtils.transparentize(card.colText, 0.3)
+                        }
+                    }
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: root.mode.name
+                        text: root.routine ? ModeUi.routineStatus(root.mode) : ModeUi.modeStatus(root.mode)
                         elide: Text.ElideRight
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.Medium
-                        color: card.colText
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: ColorUtils.transparentize(card.colText, 0.25)
+                    }
+                }
+
+                // Routines: whether it may run on its own. Sits before the handle
+                // so the row keeps the same right edge as a mode row.
+                StyledSwitch {
+                    visible: root.routine && root.mode.triggers.length > 0
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.rightMargin: Appearance.spacing.space25
+                    checked: root.mode.enabled ?? true
+                    onClicked: Modes.upsertRoutine(Object.assign({}, root.mode, { enabled: checked }))
+                }
+
+                MouseArea {
+                    id: handle
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: 28
+                    implicitHeight: 40
+                    hoverEnabled: true
+                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    preventStealing: true
+                    opacity: card.hovered || handle.containsMouse || root.ghost || root.selected ? 1 : 0.35
+
+                    Behavior on opacity {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                     }
 
-                    // Says the mode may start on its own; a bare trigger does not.
+                    onPressed: mouse => root.dragStarted(handle.mapToItem(root, mouse.x, mouse.y).y)
+                    onPositionChanged: mouse => {
+                        if (handle.pressed)
+                            root.dragMoved(handle.mapToItem(root, mouse.x, mouse.y).y);
+                    }
+                    onReleased: root.dragEnded()
+                    onCanceled: root.dragEnded()
+
                     MaterialSymbol {
-                        visible: !root.routine && root.mode.auto && root.mode.triggers.length > 0
-                        text: "autoplay"
-                        iconSize: Appearance.font.pixelSize.normal
+                        anchors.centerIn: parent
+                        text: "drag_indicator"
+                        iconSize: Appearance.font.pixelSize.larger
                         color: ColorUtils.transparentize(card.colText, 0.3)
                     }
-
-                    MaterialSymbol {
-                        visible: root.routine && root.mode.kind === "once"
-                        text: "bolt"
-                        iconSize: Appearance.font.pixelSize.normal
-                        color: ColorUtils.transparentize(card.colText, 0.3)
-                    }
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: root.routine ? ModeUi.routineStatus(root.mode) : ModeUi.modeStatus(root.mode)
-                    elide: Text.ElideRight
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: ColorUtils.transparentize(card.colText, 0.25)
-                }
-            }
-
-            // Routines: whether it may run on its own. Sits before the handle
-            // so the row keeps the same right edge as a mode row.
-            StyledSwitch {
-                visible: root.routine && root.mode.triggers.length > 0
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Appearance.spacing.space25
-                checked: root.mode.enabled ?? true
-                onClicked: Modes.upsertRoutine(Object.assign({}, root.mode, { enabled: checked }))
-            }
-
-            MouseArea {
-                id: handle
-                Layout.alignment: Qt.AlignVCenter
-                implicitWidth: 28
-                implicitHeight: 40
-                hoverEnabled: true
-                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                preventStealing: true
-                opacity: rowArea.containsMouse || handle.containsMouse || root.ghost || root.selected ? 1 : 0.35
-
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                }
-
-                onPressed: mouse => root.dragStarted(handle.mapToItem(root, mouse.x, mouse.y).y)
-                onPositionChanged: mouse => {
-                    if (handle.pressed)
-                        root.dragMoved(handle.mapToItem(root, mouse.x, mouse.y).y);
-                }
-                onReleased: root.dragEnded()
-                onCanceled: root.dragEnded()
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: "drag_indicator"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: ColorUtils.transparentize(card.colText, 0.3)
                 }
             }
         }
