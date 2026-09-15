@@ -81,10 +81,24 @@ ColumnLayout {
     }
 
     StyledFlickable {
+        id: strip
         Layout.fillWidth: true
         Layout.fillHeight: true
-        visible: root.expanded
-        implicitHeight: contentHeight
+        // Unrolls on the move tier instead of appearing in one frame: the
+        // strip's height ceiling travels between 0 and the rows' height,
+        // the layout hands it what fits under that ceiling.
+        property real reveal: root.expanded ? 1 : 0
+        Behavior on reveal {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        // The block's own implicit height carries the strip (the list's
+        // footer sizes from it), the ceiling is what the layout may grant.
+        implicitHeight: rows.implicitHeight * strip.reveal
+        Layout.minimumHeight: 0
+        Layout.preferredHeight: implicitHeight
+        Layout.maximumHeight: rows.implicitHeight * strip.reveal
+        visible: strip.reveal > 0
+        opacity: strip.reveal
         contentHeight: rows.implicitHeight
         contentWidth: width
         clip: true
