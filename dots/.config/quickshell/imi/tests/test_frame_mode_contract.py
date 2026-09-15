@@ -54,26 +54,41 @@ class FrameModeContract(unittest.TestCase):
         # the dock's own zone arithmetic.
         self.assertIn("readonly property bool dockReserves: (Config.options.dock.enable ?? false) && GlobalStates.dockPinned", geo)
         self.assertIn("\nimport qs\n", GEOMETRY.read_text(), "GlobalStates resolves only through the root module - the dock occupant was inert without it")
-        # The dock's zone is one token too, read by Dock.qml and the authority.
-        self.assertIn("readonly property real dockThickness: root.dockReserves ? Appearance.sizes.dockExclusiveZone : 0", geo)
-        self.assertNotIn("DockGeo.", geo, "no second copy of the dock's zone arithmetic here")
-        self.assertIn("property real dockExclusiveZone: DockGeo.exclusiveZone(", appearance)
+        # The dock's zone is one value too, published from the dock's own side
+        # (DockReservation) and read by Dock.qml and the authority; the
+        # design-token singleton knows nothing of the dock.
+        self.assertIn("readonly property real dockThickness: root.dockReserves ? DockReservation.zone : 0", geo)
+        self.assertIn("\nimport qs.modules.imi.dock\n", GEOMETRY.read_text())
+        self.assertNotRegex(geo, r"DockGeo|dock_geometry", "no second copy of the dock's zone arithmetic here")
+        self.assertNotRegex(appearance, r"dockExclusiveZone|dock_geometry", "Appearance is the layer everything builds on; it names no feature")
+        reservation = _strip((ROOT / "modules/imi/dock/DockReservation.qml").read_text())
+        self.assertIn("readonly property real zone: DockGeometry.exclusiveZone(", reservation)
         dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
-        self.assertIn("exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? Appearance.sizes.dockExclusiveZone : 0", dock)
+        self.assertIn("exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? DockReservation.zone : 0", dock)
         self.assertIn("onPinnedChanged: GlobalStates.dockPinned = root.pinned", dock)
         self.assertIn("Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge, root.dockThickness)", geo)
-        # Per screen: the dock drops its zone on a fullscreen monitor, so the
-        # bands and fillets read the authority through the screen's flag.
-        self.assertIn("function insetsFor(fullscreen)", geo)
-        self.assertIn('FrameGeometry.bandOffsetFor("top", band.fullscreen)', frame)
-        self.assertIn("FrameGeometry.cornerMarginsFor(", corners)
-        # The compositor's live rounding, the option as the fallback.
+        # Per screen: the dock drops its zone on a fullscreen monitor. The
+        # AUTHORITY owns that predicate - the same one Dock.qml uses - and the
+        # readers ask by screen name; no caller hands in a fullscreen flag,
+        # so the bands and the fillets cannot be given two answers.
+        self.assertIn("return root.dockReserves && !WM.fullscreenOnMonitor(screenName);", geo)
+        self.assertIn("fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)", dock)
+        self.assertNotRegex(geo, r"function \w+\([^)]*fullscreen[^)]*\)", "no reader takes a caller's fullscreen flag")
+        self.assertIn('FrameGeometry.bandMarginsForScreen(band.edge, band.screen?.name ?? "")', frame)
+        self.assertNotIn("fullscreen: screenScope.fullscreen", frame)
+        self.assertIn('FrameGeometry.cornerMarginsForScreen(', corners)
+        self.assertIn('cornerPanelWindow.screen?.name ?? ""', corners)
+        self.assertNotRegex(corners, r"cornerMarginsForScreen\([^\n]*fullscreen", "the fillet passes its screen, not its own fullscreen flag")
+        # The compositor's live rounding, the option as the fallback; the
+        # probe spawns only while frame mode is on.
         self.assertIn('command: ["hyprctl", "getoption", "decoration:rounding", "-j"]', geo)
-        self.assertIn('if (event.name === "configreloaded") roundingProbe.running = true;', geo)
+        self.assertIn("running: root.enabled\n", geo)
+        self.assertIn('if (event.name === "configreloaded" && root.enabled) roundingProbe.running = true;', geo)
+        self.assertIn("onEnabledChanged: if (root.enabled) roundingProbe.running = true", geo)
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
-        self.assertIn("FrameGeometry.cornerMarginsFor(", corners)
+        self.assertIn("FrameGeometry.cornerMarginsForScreen(", corners)
         self.assertIn('color: FrameGeometry.enabled ? FrameGeometry.color : "#000000"', corners)
         # The window stays at the screen corner (the corner-open hit rect
         # lives there); only the fillet SHAPE moves inward.
@@ -91,7 +106,12 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("exclusionMode: ExclusionMode.Ignore", frame, "the band lives in the gap; it reserves nothing")
         self.assertIn("mask: Region {}", frame, "the band takes no input")
         self.assertEqual(frame.count("            Band {\n                screen: screenScope.modelData"), 4, "four bands, one per edge, each naming its screen")
-        self.assertIn('FrameGeometry.bandOffsetFor("top", band.fullscreen)', frame, "the bar-edge band starts under the bar's zone, per screen")
+        # Every band is inset at BOTH ends (the library's bandMargins), so the
+        # side bands end at the frame's corners instead of running the full
+        # screen height past a pinned dock.
+        self.assertIn("top: band.bandMargins.top", frame)
+        self.assertIn("bottom: band.bandMargins.bottom", frame)
+        self.assertNotIn("bandOffsetFor", frame, "a band takes all four margins from the authority, not its own edge's offset alone")
         self.assertIn("HyprlandData.specialWorkspaceByMonitorName[", frame)
         rules = (ROOT.parents[1] / "hypr/hyprland/rules.lua").read_text()
         self.assertIn('namespace = "quickshell:frame" }, no_anim = true', rules)

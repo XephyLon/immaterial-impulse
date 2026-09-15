@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import qs
 import qs.modules.common
+import qs.modules.imi.dock
 import "frame_geometry.js" as Geo
 
 /**
@@ -28,20 +29,20 @@ Singleton {
     readonly property real barThickness: Appearance.sizes.barExclusiveZone
     readonly property real thickness: Geo.bandThickness(Config.options.appearance.frame.thickness, Config.options.hyprland.general.gapsOut)
     // A pinned dock reserves its edge like the bar does; an unpinned or
-    // disabled dock reserves nothing and the edge is a plain band edge.
-    // A pinned dock reserves its edge like the bar does; an unpinned or
     // disabled dock reserves nothing and the edge is a plain band edge. The
-    // zone is Appearance.sizes.dockExclusiveZone, the token Dock.qml's own
-    // exclusiveZone reads. Dock.qml also drops its zone on a monitor with a
-    // fullscreen window, which is why the per-screen readers below take a
-    // `fullscreen` flag.
+    // zone is DockReservation.zone, the value Dock.qml's own exclusiveZone
+    // reads. Dock.qml also drops its zone on a monitor with a fullscreen
+    // window (WM.fullscreenOnMonitor), which is why the per-screen readers
+    // below ask the same predicate by screen name.
     readonly property bool dockReserves: (Config.options.dock.enable ?? false) && GlobalStates.dockPinned
     readonly property string dockEdge: root.dockReserves ? String(Config.options.dock.edge ?? "bottom") : ""
-    readonly property real dockThickness: root.dockReserves ? Appearance.sizes.dockExclusiveZone : 0
+    readonly property real dockThickness: root.dockReserves ? DockReservation.zone : 0
     readonly property var insets: Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, root.dockEdge, root.dockThickness)
-    // The window rounding the COMPOSITOR runs, asked once at start and again
-    // on every config reload, so a hypr/custom override is honoured; the
-    // shell's own option is the fallback until the answer arrives.
+    // The window rounding the COMPOSITOR runs, asked when frame mode is on
+    // (at start, when it is switched on, and on every config reload while
+    // on), so a hypr/custom override is honoured; the shell's own option is
+    // the fallback until the answer arrives. Nothing is spawned while the
+    // mode is off.
     property int liveRounding: -1
     readonly property real innerRadius: Geo.innerRadius(root.liveRounding >= 0 ? root.liveRounding : Config.options.hyprland.decoration.rounding)
     readonly property color color: Appearance.colors.colBarBackground
@@ -49,7 +50,7 @@ Singleton {
     Process {
         id: roundingProbe
         command: ["hyprctl", "getoption", "decoration:rounding", "-j"]
-        running: true
+        running: root.enabled
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -64,20 +65,26 @@ Singleton {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
-            if (event.name === "configreloaded") roundingProbe.running = true;
+            if (event.name === "configreloaded" && root.enabled) roundingProbe.running = true;
         }
     }
+    onEnabledChanged: if (root.enabled) roundingProbe.running = true
 
-    // Per-screen readers: on a monitor with a fullscreen window the dock
-    // reserves nothing (Dock.qml's own rule), so that edge is a band edge there.
-    function insetsFor(fullscreen) {
-        return fullscreen ? Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, "", 0) : root.insets;
+    // Per-screen readers, by screen name: on a monitor with a fullscreen
+    // window the dock reserves nothing, and the predicate is the one Dock.qml
+    // itself uses (WM.fullscreenOnMonitor) - owned here, never handed in by
+    // a caller, so the bands and the fillets cannot be given two answers.
+    function dockReservesOn(screenName) {
+        return root.dockReserves && !WM.fullscreenOnMonitor(screenName);
     }
-    function cornerMarginsFor(corner, fullscreen) { return Geo.cornerMargins(corner, root.insetsFor(fullscreen)); }
-    function bandOffsetFor(edge, fullscreen) {
-        return Geo.bandOffset(edge, root.barEdge, root.barThickness, fullscreen ? "" : root.dockEdge, fullscreen ? 0 : root.dockThickness);
+    function insetsForScreen(screenName) {
+        return root.dockReservesOn(screenName) ? root.insets : Geo.edgeInsets(root.barEdge, root.barThickness, root.thickness, "", 0);
     }
-
-    function cornerMargins(corner) { return root.cornerMarginsFor(corner, false); }
-    function bandOffset(edge) { return root.bandOffsetFor(edge, false); }
+    function cornerMarginsForScreen(corner, screenName) {
+        return Geo.cornerMargins(corner, root.insetsForScreen(screenName));
+    }
+    function bandMarginsForScreen(edge, screenName) {
+        const reserves = root.dockReservesOn(screenName);
+        return Geo.bandMargins(edge, root.barEdge, root.barThickness, reserves ? root.dockEdge : "", reserves ? root.dockThickness : 0);
+    }
 }

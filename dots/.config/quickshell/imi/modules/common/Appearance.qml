@@ -3,7 +3,6 @@ import Quickshell
 import qs
 import qs.modules.common.functions
 import "interaction_motion.js" as InteractionMotion
-import "../imi/dock/dock_geometry.js" as DockGeo
 import "motion_policy.js" as MotionPolicy
 pragma Singleton
 pragma ComponentBehavior: Bound
@@ -892,9 +891,6 @@ Singleton {
             + ((Config?.options.bar.cornerStyle === 1 || Config?.options.bar.cornerStyle === 4) ? root.sizes.hyprlandGapsOut : 0)
         property real barExclusiveZone: root.sizes.barReservedHeight
             + ((Config?.options.bar.bottom ?? false) ? root.sizes.barBottomMargin : root.sizes.barDetachMargin)
-        // What a pinned dock reserves on its edge (dock_geometry.js's own
-        // arithmetic); Dock.qml's exclusiveZone and FrameGeometry both read it.
-        property real dockExclusiveZone: DockGeo.exclusiveZone(Config?.options.dock.height ?? 60, root.sizes.elevationMargin, root.sizes.hyprlandGapsOut)
         property real barSurfaceHeight: root.sizes.barHeight
             + root.rounding.screenRounding + root.sizes.barDetachInset
         property real barSurfaceMargin: Config?.options.bar.bottom
