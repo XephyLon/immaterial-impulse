@@ -30,7 +30,7 @@ class SettingsNavigationTests(unittest.TestCase):
         self.assertEqual(
             [name for name, _ in page_entries],
             ["Quick", "Appearance", "Cursor", "Wallpaper & Desktop", "Bar & Dock",
-             "Sidebars & Panels", "Modes & Routines", "Notifications", "Lock & Idle", "Capture", "General",
+             "Sidebars & Panels", "Modes & Routines", "Accounts", "Notifications", "Lock & Idle", "Capture", "General",
              "Devices & Phone", "Services", "Widgets", "Hyprland", "About"],
         )
         self.assertTrue(all(sections.strip() for name, sections in page_entries if name != "About"))
