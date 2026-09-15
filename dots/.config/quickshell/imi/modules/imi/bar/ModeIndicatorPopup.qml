@@ -130,19 +130,23 @@ StyledPopup {
                     root.pinnedOpen = false;
                     GlobalStates.modesOpen = true;
                 }
-                contentItem: RowLayout {
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space50
-                    MaterialSymbol {
-                        text: "tune"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnSecondaryContainer
-                    }
-                    StyledText {
-                        text: Translation.tr("Manage")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnSecondaryContainer
+                // A Control positions its own content item, so the row centres
+                // inside a stretched Item rather than anchoring itself.
+                contentItem: Item {
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space50
+                        MaterialSymbol {
+                            text: "tune"
+                            iconSize: Appearance.font.pixelSize.large
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
+                        StyledText {
+                            text: Translation.tr("Manage")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            font.weight: Font.DemiBold
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
                     }
                 }
             }
@@ -150,25 +154,31 @@ StyledPopup {
             RippleButton {
                 Layout.fillWidth: true
                 buttonRadius: Appearance.rounding.full
-                colBackground: Appearance.colors.colErrorContainer
-                colBackgroundHover: Appearance.colors.colErrorContainerHover
+                // Ending a mode you started is the ordinary way out, not an
+                // error: the tertiary pair, beside Manage's secondary one.
+                colBackground: Appearance.colors.colTertiaryContainer
+                colBackgroundHover: Appearance.colors.colTertiaryContainerHover
                 onClicked: {
                     root.pinnedOpen = false;
                     Modes.deactivate("manual");
                 }
-                contentItem: RowLayout {
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space50
-                    MaterialSymbol {
-                        text: "stop"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnErrorContainer
-                    }
-                    StyledText {
-                        text: Translation.tr("End")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnErrorContainer
+                // A Control positions its own content item, so the row centres
+                // inside a stretched Item rather than anchoring itself.
+                contentItem: Item {
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space50
+                        MaterialSymbol {
+                            text: "stop"
+                            iconSize: Appearance.font.pixelSize.large
+                            color: Appearance.colors.colOnTertiaryContainer
+                        }
+                        StyledText {
+                            text: Translation.tr("End")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            font.weight: Font.DemiBold
+                            color: Appearance.colors.colOnTertiaryContainer
+                        }
                     }
                 }
             }
