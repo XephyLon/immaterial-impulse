@@ -70,7 +70,10 @@ MouseArea {
                 z: 1
                 Rectangle {
                     radius: Appearance.rounding.full
-                    color: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+                    // This widget draws its own layer-1 pill whatever the bar style,
+                    // so the dot is always the layer pair (the bell branches on the
+                    // third style because it sits on that style's primary plate).
+                    color: Appearance.colors.colOnLayer1
                     // A hairline of the pill's own colour keeps the dot legible over the glyph's edge.
                     border.width: Appearance.borderWidth.standard
                     border.color: Appearance.colors.colLayer1
@@ -81,7 +84,7 @@ MouseArea {
                         visible: root.showUnreadCount
                         anchors.centerIn: parent
                         font.pixelSize: Appearance.font.pixelSize.smallest
-                        color: Config.options.bar.cornerStyle === 3 ? Appearance.colors.colPrimary : Appearance.colors.colLayer1
+                        color: Appearance.colors.colLayer1
                         text: root.unread > 99 ? "99+" : root.unread
                     }
                 }
