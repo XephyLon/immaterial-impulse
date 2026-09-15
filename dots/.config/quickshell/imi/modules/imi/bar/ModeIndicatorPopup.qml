@@ -155,9 +155,11 @@ StyledPopup {
                 Layout.fillWidth: true
                 buttonRadius: Appearance.rounding.full
                 // Ending a mode you started is the ordinary way out, not an
-                // error: the tertiary pair, beside Manage's secondary one.
-                colBackground: Appearance.colors.colTertiaryContainer
-                colBackgroundHover: Appearance.colors.colTertiaryContainerHover
+                // error - and not a second tonal chip either: one weighted
+                // action (Manage) and one flat exit, the dialog rule's shape.
+                colBackground: "transparent"
+                colBackgroundHover: Appearance.colors.colLayer1Hover
+                colRipple: Appearance.colors.colLayer1Active
                 onClicked: {
                     root.pinnedOpen = false;
                     Modes.deactivate("manual");
@@ -171,13 +173,13 @@ StyledPopup {
                         MaterialSymbol {
                             text: "stop"
                             iconSize: Appearance.font.pixelSize.large
-                            color: Appearance.colors.colOnTertiaryContainer
+                            color: Appearance.colors.colOnLayer0
                         }
                         StyledText {
                             text: Translation.tr("End")
                             font.pixelSize: Appearance.font.pixelSize.small
                             font.weight: Font.DemiBold
-                            color: Appearance.colors.colOnTertiaryContainer
+                            color: Appearance.colors.colOnLayer0
                         }
                     }
                 }

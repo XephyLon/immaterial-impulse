@@ -154,7 +154,7 @@ Item {
         height: root.ghostHeight
         radius: Appearance.rounding.normal
         color: Appearance.colors.colLayer2
-        border.width: 1
+        border.width: Appearance.borderWidth.standard
         border.color: Appearance.colors.colOutlineVariant
 
         Behavior on y {

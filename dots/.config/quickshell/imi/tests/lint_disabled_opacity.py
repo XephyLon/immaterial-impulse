@@ -164,6 +164,21 @@ Dimmer {
     }
 }
 """,
+    # The call-site rule: a page writing `opacity: enabled ? …` onto an
+    # instance of the dimming type must redden; the same line under a plain
+    # Item must not. (A one-line `Dimmer { opacity: enabled ? 1 : 0.5 }` is
+    # a known miss of the indentation walk.)
+    "CallSite.qml": """
+Item {
+    Dimmer {
+        enabled: false
+        opacity: enabled ? 1 : 0.5
+    }
+    Item {
+        opacity: enabled ? 1 : 0.5
+    }
+}
+""",
     "FreeHost.qml": """
 Item {
     Column {
@@ -182,10 +197,11 @@ def self_check():
     if self_dimming != {"Dimmer"}:
         return f"the fixture's dimming root resolved to {self_dimming or 'nothing'}"
     found = {(path.name, number) for path, number, _ in scan(sources, self_dimming)}
-    if found != {("DimmedHost.qml", 4), ("DimmedDirect.qml", 3)}:
-        return (f"the dresser scan resolved {sorted(found) or 'nothing'} on a "
-                "fixture holding a nested and a direct-child StaggerEntrance "
-                "inside dimming roots and one under a plain one")
+    if found != {("DimmedHost.qml", 4), ("DimmedDirect.qml", 3), ("CallSite.qml", 5)}:
+        return (f"the scan resolved {sorted(found) or 'nothing'} on a fixture "
+                "holding a nested and a direct-child StaggerEntrance inside "
+                "dimming roots, one under a plain one, and a call-site "
+                "opacity on a Dimmer instance beside the same line on an Item")
     return None
 
 

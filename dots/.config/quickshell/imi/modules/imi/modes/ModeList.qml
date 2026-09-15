@@ -44,7 +44,10 @@ Rectangle {
 
             StyledText {
                 Layout.fillWidth: true
-                text: root.routines ? Translation.tr("Routines") : Translation.tr("Modes")
+                // The tab above already says "Modes"; this says how many.
+                text: root.routines
+                    ? Translation.tr("%1 routine(s)").arg(Modes.routines.length)
+                    : Translation.tr("%1 mode(s)").arg(Modes.modes.length)
                 font.pixelSize: Appearance.font.pixelSize.larger
                 font.weight: Font.Medium
                 color: Appearance.colors.colOnLayer1
@@ -180,7 +183,7 @@ Rectangle {
                 height: list.rowHeight
                 radius: Appearance.rounding.normal
                 color: Appearance.colors.colLayer2
-                border.width: 1
+                border.width: Appearance.borderWidth.standard
                 border.color: Appearance.colors.colOutlineVariant
 
                 Behavior on y {

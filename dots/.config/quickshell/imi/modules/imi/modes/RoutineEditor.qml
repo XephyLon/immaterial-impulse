@@ -176,7 +176,7 @@ Item {
     StyledFlickable {
         id: flick
         anchors.fill: parent
-        contentHeight: column.implicitHeight + 24
+        contentHeight: column.implicitHeight + Appearance.spacing.space300
         clip: true
 
         ColumnLayout {
@@ -224,7 +224,7 @@ Item {
                             height: 22
                             radius: Appearance.rounding.full
                             color: Appearance.colors.colLayer2
-                            border.width: 2
+                            border.width: Appearance.borderWidth.emphasis
                             border.color: Appearance.colors.colLayer1
 
                             MaterialSymbol {

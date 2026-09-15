@@ -165,7 +165,15 @@ class ModesContract(unittest.TestCase):
         self.assertIn("onFinished: root.reallyOpen = false", overlay)
         self.assertNotRegex(overlay, r"interval: 400")
         self.assertNotIn("isHovered", overlay)
-        self.assertNotRegex(overlay, r"Easing\.Out|duration: \d", "raw motion in the overlay")
+        for path in MODES_UI.rglob("*.qml"):
+            self.assertNotRegex(_strip(path.read_text()), r"Easing\.(Out|In)\w*|duration: \d", f"raw motion in {path.name}")
+        # The input regions agree with what is painted: the manager's mask
+        # follows the flag (a leaving surface never eats a click), the
+        # banner's mask is the banner's own box.
+        self.assertIn("item: GlobalStates.modesOpen ? modesInputMask : null", overlay)
+        flash = _strip((MODES_UI / "ModeFlashPopupContent.qml").read_text())
+        self.assertIn("id: staticMaskTarget\n        anchors.fill: contentBackground", flash)
+        self.assertNotRegex("".join(_strip(p.read_text()) for p in MODES_UI.rglob("*.qml")), r"border\.width: \d", "raw border widths")
         # Both minted namespaces carry their compositor rules.
         rules = RULES.read_text()
         for ns in ("quickshell:modes", "quickshell:modeFlashPopup"):

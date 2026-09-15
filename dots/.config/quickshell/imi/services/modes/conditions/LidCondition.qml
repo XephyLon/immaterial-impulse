@@ -19,7 +19,7 @@ ModeCondition {
     // One `sh -c` at construction to resolve the glob; everything after is
     // the FileView.
     readonly property Process locate: Process {
-        running: true
+        running: root.armed && root.statePath.length === 0
         command: ["sh", "-c", "for f in /proc/acpi/button/lid/*/state; do [ -e \"$f\" ] && { echo \"$f\"; break; }; done"]
         stdout: StdioCollector {
             onStreamFinished: root.statePath = this.text.trim()

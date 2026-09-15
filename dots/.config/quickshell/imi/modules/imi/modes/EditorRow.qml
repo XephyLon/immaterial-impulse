@@ -15,7 +15,7 @@ Rectangle {
     default property alias control: controlSlot.data
 
     Layout.fillWidth: true
-    implicitHeight: Math.max(56, rowLayout.implicitHeight + 16)
+    implicitHeight: Math.max(56, rowLayout.implicitHeight + Appearance.spacing.space200)
     radius: Appearance.rounding.normal
     color: Appearance.colors.colLayer2
 

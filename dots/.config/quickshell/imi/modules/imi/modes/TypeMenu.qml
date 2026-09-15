@@ -45,9 +45,9 @@ Popup {
         const pos = item.mapToItem(root.parent, 0, item.height);
         const width = 360;
         const height = Math.min(440, root.implicitHeight);
-        root.x = Math.max(8, Math.min(root.parent.width - width - 8, pos.x));
+        root.x = Math.max(Appearance.spacing.space100, Math.min(root.parent.width - width - Appearance.spacing.space100, pos.x));
         // Below the button if it fits, else above it.
-        root.y = pos.y + height + 8 <= root.parent.height ? pos.y + 4 : Math.max(8, pos.y - item.height - height - 4);
+        root.y = pos.y + height + Appearance.spacing.space100 <= root.parent.height ? pos.y + Appearance.spacing.space50 : Math.max(Appearance.spacing.space100, pos.y - item.height - height - Appearance.spacing.space50);
         root.query = "";
         root.open();
         Qt.callLater(() => searchField.forceActiveFocus());
@@ -89,14 +89,19 @@ Popup {
         }
     }
 
-    background: Rectangle {
-        radius: Appearance.rounding.normal
-        color: Appearance.colors.colLayer0
-        border.width: 1
-        border.color: Appearance.colors.colLayer0Border
-
+    background: Item {
+        // The shadow is the plate's sibling, painted first; nested inside
+        // the plate it would sit over the fill and break under `clip`.
         StyledRectangularShadow {
-            target: parent
+            target: plate
+        }
+        Rectangle {
+            id: plate
+            anchors.fill: parent
+            radius: Appearance.rounding.normal
+            color: Appearance.colors.colLayer0
+            border.width: Appearance.borderWidth.standard
+            border.color: Appearance.colors.colLayer0Border
         }
     }
 

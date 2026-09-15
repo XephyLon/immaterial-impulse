@@ -86,9 +86,12 @@ Scope {
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.keyboardFocus: GlobalStates.modesOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
-            // Clicks outside the panel belong to whatever is underneath.
+            // Clicks outside the panel belong to whatever is underneath, and
+            // once the manager is dismissed the whole surface passes input
+            // through while it fades (OverlayLifecycle: the mask follows the
+            // FLAG, so a leaving surface never eats a click).
             mask: Region {
-                item: modesInputMask
+                item: GlobalStates.modesOpen ? modesInputMask : null
             }
 
             // Blur only the card; the surface is screen-sized and transparent
@@ -201,7 +204,7 @@ Scope {
 
                     anchors.centerIn: parent
                     color: Appearance.colors.colLayer0
-                    border.width: 1
+                    border.width: Appearance.borderWidth.standard
                     border.color: Appearance.colors.colLayer0Border
                     radius: Appearance.rounding.windowRounding
                     implicitWidth: Math.min(maxBgWidth, modesContent.implicitWidth + padding * 2)

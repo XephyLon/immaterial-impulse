@@ -48,12 +48,12 @@ Item {
 
     property alias staticMaskTarget: staticMaskTarget
     property alias background: contentBackground
+    // The input region is the banner's own box, not the surface's: the
+    // banner sits topMarginValue below the origin, and a mask filling the
+    // whole content item landed on the bar for the three seconds it showed.
     Item {
         id: staticMaskTarget
-        anchors {
-            fill: parent
-            margins: Appearance.sizes.elevationMargin
-        }
+        anchors.fill: contentBackground
     }
 
     StyledRectangularShadow {

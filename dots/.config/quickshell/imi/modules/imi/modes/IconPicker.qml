@@ -129,14 +129,19 @@ Popup {
         }
     }
 
-    background: Rectangle {
-        radius: Appearance.rounding.large
-        color: Appearance.colors.colLayer0
-        border.width: 1
-        border.color: Appearance.colors.colLayer0Border
-
+    background: Item {
+        // The shadow is the plate's sibling, painted first; nested inside
+        // the plate it would sit over the fill and break under `clip`.
         StyledRectangularShadow {
-            target: parent
+            target: plate
+        }
+        Rectangle {
+            id: plate
+            anchors.fill: parent
+            radius: Appearance.rounding.large
+            color: Appearance.colors.colLayer0
+            border.width: Appearance.borderWidth.standard
+            border.color: Appearance.colors.colLayer0Border
         }
     }
 

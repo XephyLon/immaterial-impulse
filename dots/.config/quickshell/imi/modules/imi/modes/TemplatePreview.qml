@@ -48,7 +48,7 @@ Item {
     StyledFlickable {
         id: flick
         anchors.fill: parent
-        contentHeight: column.implicitHeight + 24
+        contentHeight: column.implicitHeight + Appearance.spacing.space300
         clip: true
 
         ColumnLayout {

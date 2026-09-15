@@ -44,7 +44,7 @@ ColumnLayout {
                 readonly property bool on: chip.modelData === wsCol.target
 
                 implicitHeight: 32
-                implicitWidth: Math.max(32, chipText.implicitWidth + 20)
+                implicitWidth: Math.max(32, chipText.implicitWidth + Appearance.spacing.space250)
                 buttonRadius: Appearance.rounding.full
                 colBackground: on ? Appearance.colors.colPrimary : Appearance.colors.colLayer3
                 colBackgroundHover: on ? Appearance.colors.colPrimaryHover : Appearance.colors.colLayer3Hover
