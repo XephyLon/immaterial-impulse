@@ -12,6 +12,22 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The assistant can change things, after you approve.** Eight reviewed
+  tools: `write_file` / `append_file` (inside the folders you allowed, the
+  previous contents kept as `.bak`), `set_clipboard`, `set_wallpaper` (a path
+  or random), `set_accent`, `set_palette_source`, `set_color_scheme` and
+  `add_todo`. Each raises the same approve/reject card as a shell command,
+  with a one-line summary of the change; nothing runs before you approve, and
+  `set_shell_config` now goes through that card too.
+- The launcher can answer short questions inline. With Settings > Services >
+  Search > "Answer short questions inline" on, a `@question` of three or
+  more words gets a one-sentence answer under the Ask row after a pause in
+  typing, streamed from the selected model; Enter carries the answer into
+  the chat so the conversation continues from it. Off by default, and even
+  on, only a model on this machine answers unless "Inline answers may use
+  my cloud key" is on as well, because keystroke-driven cloud calls cost
+  money and send what you type.
+
 ### Fixed
 - **Update Dots no longer leaves a `hyprlock.conf.new` / `hypridle.conf.new`
   identical to your file.** The legacy files step wrote the backup copy
