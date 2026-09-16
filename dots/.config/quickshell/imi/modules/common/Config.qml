@@ -2102,7 +2102,6 @@ Singleton {
                     // sits on it as a tab, "floating" keeps a gap above it.
                     property string dock: "attached"
                 }
-
                 property bool extraBackgroundTint: true
                 property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
                 // Automatic dark/light switching. "off" = manual only.

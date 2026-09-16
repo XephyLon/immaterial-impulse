@@ -202,7 +202,6 @@ function cornerRadii(edge, radius, attached) {
 }
 
 // The direction a dock icon lifts on hover and bounces on launch: inward, so
-
 // the icon rises out of the dock rather than into the screen edge. One vector
 // instead of four call sites each choosing an axis and a sign.
 function inwardVector(edge) {

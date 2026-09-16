@@ -132,7 +132,7 @@ ContentPage {
                 ConfigSelectionArray {
                     property bool rowVisible: Config.options.appearance.frame.enable && (Config.options.dock.enable ?? false)
                     icon: "call_to_action"
-                    text: Translation.tr("Pinned dock")
+                    text: Translation.tr("Dock")
                     currentValue: Config.options.appearance.frame.dock
                     onSelected: newValue => { Config.options.appearance.frame.dock = newValue; }
                     options: [
@@ -144,12 +144,11 @@ ContentPage {
                         wrapMode: Text.WordWrap
                         font.pixelSize: Appearance.font.pixelSize.smaller
                         color: Appearance.colors.colSubtext
-                        text: Translation.tr("Attached, the dock sits on the band as a tab in the frame's colour. Floating, it keeps a gap above the band. An unpinned dock keeps hiding and revealing from the screen edge; attached, it comes out of the band.")
+                        text: Translation.tr("Sits on the frame's band as a tab, or floats a gap above it.")
                     }
                 }
             }
         }
-
 
         ContentSection {
             icon: "animation"

@@ -258,7 +258,6 @@ TestCase {
     }
 
     function test_the_bars_overloaded_pair_reads_as_an_edge() {
-
         // `bottom` stops meaning bottom once `vertical` is set. The dock only
         // needs this to notice it is being sent where an auto-hiding bar
         // already lives, and a comparison across two vocabularies means

@@ -13,7 +13,7 @@
 // dock floating under it), and then made the band its whole strip (a border
 // as tall as the dock, mostly empty on both sides of the pill). Now the band
 // stays thin and the dock meets it on the dock's own terms (dock_geometry.js
-// `outwardMargin`): sitting on the band as a tab, or floating a gap above it.
+// `frameOffset`): sitting on the band as a tab, or floating a gap above it.
 
 // The band's thickness: the configured pixels, or the compositor's outer
 // gap when 0 - the band then fills exactly the space windows already leave.

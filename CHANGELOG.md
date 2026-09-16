@@ -35,7 +35,7 @@ own repo; the installer pins which revision it builds.
   colour, so the shell reads as a frame around your windows instead of floating islands.
   The band is as thick as the compositor's outer gap (or a set number of pixels), takes
   no input and reserves nothing; a pinned dock sits on the band as a tab in the frame's
-  colour, or floats a gap above it (Settings > Appearance > Frame > Pinned dock). Best
+  colour, or floats a gap above it (Settings > Appearance > Frame > Dock). Best
   with the Hug bar style. Not yet framed in this first
   slice: the vertical bar, a bar hidden by auto-hide or absent from a screen's list.
 - Modes & Routines (ported from the p3drovfx fork): named modes (Sleep, Work,
