@@ -11,6 +11,11 @@ DialogListItem {
     // True while the shell is trying to join THIS network - the dialog knows
     // which one it asked the service for; the row draws the in-between icon.
     property bool connecting: false
+    // Whether the password prompt masks with the shell's Material shape
+    // characters. Handed in rather than read: this row is a dumb widget
+    // (tests/lint_dumb_widgets.py) and the switch lives in the lock's config,
+    // which the dialog building the row is the one holding.
+    property bool materialShapeChars: false
 
     // Everything a row can ask for, as intent. The dialog holds the network
     // service and the sidebar; a row that called them itself could not be
@@ -66,14 +71,22 @@ DialogListItem {
             Layout.topMargin: Appearance.spacing.space100
             visible: root.wifiNetwork?.askingPassword ?? false
 
-            MaterialTextField {
+            // The shell's masked prompt, the same control the lock screen and
+            // the polkit dialog are. This was a `MaterialTextField` carrying an
+            // `echoMode` of its own, so a third password prompt drew the
+            // system's flat bullets beside two that draw a Material shape per
+            // character. `PasswordField` owns that masking.
+            //
+            // The fill is `colLayer4` for the reason the polkit prompt records:
+            // the row's own container is `DialogListItem`'s layer 3, and a
+            // field nested in it is the tier above.
+            PasswordField {
                 id: passwordField
+                materialShapeChars: passwordField.masked && root.materialShapeChars
                 Layout.fillWidth: true
                 placeholderText: Translation.tr("Password")
-
-                // Password
-                echoMode: TextInput.Password
-                inputMethodHints: Qt.ImhSensitiveData
+                colBackground: Appearance.colors.colLayer4
+                colText: Appearance.colors.colOnLayer4
 
                 onAccepted: {
                     root.passwordSubmitted(passwordField.text);

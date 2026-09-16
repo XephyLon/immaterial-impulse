@@ -187,9 +187,18 @@ ApplicationWindow {
                         title: Translation.tr("Generate translation with Gemini")
                         
                         ConfigRow {
-                            MaterialTextArea {
+                            // A locale code is one line, so this is the shell's
+                            // pill field rather than an area. `focusRing`
+                            // because it stands beside the Generate button in a
+                            // form, not alone in a toolbar; it keeps its own
+                            // height there instead of stretching to the
+                            // two-line button next to it.
+                            ToolbarTextField {
                                 id: localeInput
                                 Layout.fillWidth: true
+                                Layout.fillHeight: false
+                                Layout.alignment: Qt.AlignVCenter
+                                focusRing: true
                                 placeholderText: Translation.tr("Locale code, e.g. fr_FR, de_DE, zh_CN...")
                                 text: Config.options.language.ui === "auto" ? Qt.locale().name : Config.options.language.ui
                             }

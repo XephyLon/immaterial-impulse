@@ -55,14 +55,18 @@ ContentPage {
             shape: MaterialShape.Shape.Ghostish
             title: Translation.tr("AI")
 
-            MaterialTextArea {
+            ConfigTextArea {
                 Layout.fillWidth: true
+                buttonIcon: "psychology"
+                text: Translation.tr("System prompt")
                 placeholderText: Translation.tr("System prompt")
-                text: Config.options.ai.systemPrompt
-                wrapMode: TextEdit.Wrap
-                onTextChanged: {
+                value: Config.options.ai.systemPrompt
+                // Deferred, because the write feeds back into the binding that
+                // set `value`: committing on the keystroke itself reassigns the
+                // field's text while it is being typed into.
+                onValueChanged: {
                     Qt.callLater(() => {
-                        Config.options.ai.systemPrompt = text;
+                        Config.options.ai.systemPrompt = value;
                     });
                 }
             }
@@ -337,13 +341,15 @@ ContentPage {
             shape: MaterialShape.Shape.PixelCircle
             title: Translation.tr("Networking")
 
-            MaterialTextArea {
+            ConfigTextArea {
                 Layout.fillWidth: true
+                buttonIcon: "http"
+                text: Translation.tr("User agent")
                 placeholderText: Translation.tr("User agent (for services that require it)")
-                text: Config.options.networking.userAgent
-                wrapMode: TextEdit.Wrap
-                onTextChanged: {
-                    Config.options.networking.userAgent = text;
+                singleLine: true
+                value: Config.options.networking.userAgent
+                onValueChanged: {
+                    Config.options.networking.userAgent = value;
                 }
             }
 

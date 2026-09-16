@@ -194,9 +194,10 @@ Item {
                                 text: knob.modelData.name
                             }
 
-                            MaterialTextField {
+                            ToolbarTextField {
                                 visible: knob.modelData.kind === "text"
                                 Layout.fillWidth: true
+                                focusRing: true
                                 text: `${knob.modelData.initial}`
                                 onTextEdited: root.setOverride(knob.modelData.name, text)
                             }

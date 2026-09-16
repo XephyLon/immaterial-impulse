@@ -169,20 +169,25 @@ ColumnLayout {
                 }
             }
 
-            MaterialTextArea {
+            // The settings row grammar's form control, with no label of its
+            // own: this row is a hand-laid table and the column header above
+            // already says "App or Command", so the field takes the whole
+            // width left of `rightGroup` and the placeholder carries the hint.
+            // `singleLine` because a command is one line - wrapped into a
+            // stack it reads as broken.
+            ConfigTextArea {
                 id: cmdArea
                 anchors.left: parent.left
                 anchors.right: rightGroup.left
                 anchors.rightMargin: Appearance.spacing.space100
                 placeholderText: Translation.tr("App (e.g. firefox)")
-                text: entryRow.modelData.cmd ?? ""
-                wrapMode: TextEdit.Wrap
-                font.pixelSize: Appearance.font.pixelSize.normal
+                value: entryRow.modelData.cmd ?? ""
+                singleLine: true
 
                 property bool ready: false
                 Component.onCompleted: ready = true
 
-                onTextChanged: {
+                onValueChanged: {
                     if (!ready) return
                     debounceTimer.restart()
                 }
@@ -192,7 +197,7 @@ ColumnLayout {
                     interval: 3000
                     repeat: false
                     onTriggered: {
-                        root.updateEntry(entryRow.index, "cmd", cmdArea.text)
+                        root.updateEntry(entryRow.index, "cmd", cmdArea.value)
                     }
                 }
             }

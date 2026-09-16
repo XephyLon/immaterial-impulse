@@ -87,6 +87,10 @@ WindowDialog {
             wifiNetwork: modelData
             width: ListView.view.width
             connecting: Network.wifiConnectTarget === modelData
+            // The row draws the shell's masked prompt; the switch that decides
+            // whether it masks with Material shapes is the lock's, and the row
+            // is not allowed to read a config of its own.
+            materialShapeChars: Config.options.lock.materialShapeChars
             onConnectRequested: Network.connectToWifiNetwork(modelData)
             onPasswordSubmitted: password => Network.changePassword(modelData, password)
             onPasswordCancelled: modelData.askingPassword = false
