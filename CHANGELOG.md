@@ -31,8 +31,9 @@ own repo; the installer pins which revision it builds.
   screen edge and rounded inner corners are drawn as one connected surface in the bar's
   colour, so the shell reads as a frame around your windows instead of floating islands.
   The band is as thick as the compositor's outer gap (or a set number of pixels), takes
-  no input and reserves nothing; a pinned dock's edge is framed under the dock like the
-  bar's edge is under the bar. Best with the Hug bar style. Not yet framed in this first
+  no input and reserves nothing; a pinned dock sits on the band as a tab in the frame's
+  colour, or floats a gap above it (Settings > Appearance > Frame > Pinned dock). Best
+  with the Hug bar style. Not yet framed in this first
   slice: the vertical bar, a bar hidden by auto-hide or absent from a screen's list.
 - Modes & Routines (ported from the p3drovfx fork): named modes (Sleep, Work,
   Focus, Gaming, Theater, Presentation, Relax ship as presets) that apply a set
@@ -120,10 +121,12 @@ own repo; the installer pins which revision it builds.
 - Settings > Services: the AI system prompt has a field made for long text
   (label above, full width, grows to ten lines, then scrolls inside with the
   caret kept in view) instead of a one-line value field it could not fit in.
-- Frame mode with a pinned dock: the bottom band no longer floats as a thin
-  line above the dock with wallpaper under it; the dock's strip is the frame
-  and the dock sits on it. The bands also sit under windows now (Bottom
-  layer) instead of over a floating window's edge.
+- Frame mode with a pinned dock: the band no longer floats as a thin line
+  above the dock with wallpaper under it, nor swells to the dock's whole
+  height; it stays thin and the dock sits on it as a tab (or floats a gap
+  above it, by choice). The bands also sit under windows now (Bottom layer)
+  instead of over a floating window's edge, and no longer overlap at the
+  corners, where the translucent colour painted twice read darker.
 - Settings: the Modes overview and the Google client instructions are rows
   with their action, not banners; notices carry a little more padding.
 - Modes manager: choosing another mode, routine or template, or switching tab,

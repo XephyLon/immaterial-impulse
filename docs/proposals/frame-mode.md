@@ -5,9 +5,12 @@
 > (`modules/imi/frame/Frame.qml`), the inner fillets (ScreenCorners) and the
 > square centre-only pill, behind `appearance.frame.enable` (off). An occupied edge's
 > inset is the occupant's reserved zone plus the outer gap (measured); the bar and
-> a pinned dock are the occupants. **2026-09-16**: on the dock's edge the band is the
-> dock's whole strip with the dock drawn over it (a band above the zone read as a line
-> across the wallpaper; the dock is a pill, not a plate), and the bands sit on the Bottom layer. Not modelled yet, and the next slices: modals
+> a pinned dock are the occupants. **2026-09-16**: the dock is no occupant after all - a
+> band above its zone read as a line across the wallpaper, a band that was its whole strip
+> read as a border as tall as the dock - so the band stays thin on the dock's edge and a
+> pinned dock meets it from its own side: on it as a tab (`appearance.frame.dock`
+> "attached", the default) or a gap above it ("floating"). The bands sit on the Bottom
+> layer and never overlap. Not modelled yet, and the next slices: modals
 > docking into the frame; the vertical bar; a bar hidden by auto-hide or absent
 > from a screen's list; per-screen frames.
 
