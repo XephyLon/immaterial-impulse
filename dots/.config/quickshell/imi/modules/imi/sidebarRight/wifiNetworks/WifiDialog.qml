@@ -65,7 +65,7 @@ WindowDialog {
         Layout.leftMargin: -root.contentPadding
         Layout.rightMargin: -root.contentPadding
     }
-    ListView {
+    StyledListView {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.topMargin: -Appearance.spacing.space200
@@ -75,6 +75,9 @@ WindowDialog {
 
         clip: true
         spacing: 0
+        // Every rescan rewrites the whole list; rows popping in one by one
+        // would read as churn rather than as arrival.
+        animateAppearance: false
 
         model: ScriptModel {
             values: Network.friendlyWifiNetworks

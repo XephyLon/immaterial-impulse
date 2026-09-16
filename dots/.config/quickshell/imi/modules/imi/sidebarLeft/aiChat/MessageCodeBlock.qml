@@ -190,28 +190,32 @@ ColumnLayout {
                     // wheel at all; the horizontal bar below drags.
                     interactive: false
                     
-                    ScrollBar.horizontal: ScrollBar {
+                    ScrollBar.horizontal: StyledScrollBar {
                         anchors.bottom: parent.bottom
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        padding: Appearance.spacing.space100
                         policy: ScrollBar.AsNeeded
-                        opacity: visualSize == 1 ? 0 : 1
-                        visible: opacity > 0
-
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration: Appearance.animation.elementMoveFast.duration
-                                easing.type: Appearance.animation.elementMoveFast.type
-                                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
-                            }
-                        }
-                        
-                        contentItem: Rectangle {
-                            implicitHeight: 6
-                            radius: Appearance.rounding.small
-                            color: Appearance.colors.colLayer2Active
-                        }
+                        // StyledScrollBar is shaped for a vertical rail: the
+                        // handle's thickness is its contentItem's implicitWidth
+                        // and the rail's end padding is top/bottom. Lying
+                        // horizontal both axes swap, so the thickness has to
+                        // come back as this control's own height (otherwise the
+                        // handle gets availableHeight ~= 0 and never draws) and
+                        // the padding has to move to the ends.
+                        topPadding: Appearance.spacing.space100
+                        bottomPadding: Appearance.spacing.space100
+                        leftPadding: Appearance.spacing.space100
+                        rightPadding: Appearance.spacing.space100
+                        implicitHeight: 4 + topPadding + bottomPadding
+                        // The plate's Flickable is non-interactive, so this bar
+                        // is the only way to bring a long line into view: it
+                        // stays shown whenever the code overflows instead of
+                        // waiting for the shared widget's hover.
+                        active: true
+                        // AsNeeded only fades the handle out; the control keeps
+                        // its band across the bottom of the plate and would take
+                        // presses off the last line of code that fits.
+                        visible: visualSize < 1
                     }
 
                     TextArea { // Code

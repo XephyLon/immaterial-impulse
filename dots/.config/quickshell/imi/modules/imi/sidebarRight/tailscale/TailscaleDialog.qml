@@ -41,7 +41,7 @@ WindowDialog {
         }
     }
     WindowDialogSeparator {}
-    ListView {
+    StyledListView {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.topMargin: -Appearance.spacing.space200
@@ -51,6 +51,9 @@ WindowDialog {
 
         clip: true
         spacing: 0
+        // A refresh rewrites the whole peer list; rows popping in one by one
+        // would read as churn rather than as arrival.
+        animateAppearance: false
 
         // First row clears the exit node; the rest are the advertised peers.
         header: TailscaleExitNodeItem {

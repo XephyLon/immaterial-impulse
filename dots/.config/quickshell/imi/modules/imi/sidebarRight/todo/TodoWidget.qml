@@ -215,28 +215,23 @@ Item {
                     text: Translation.tr("Add task")
                 }
 
-                TextField {
+                ToolbarTextField {
                     id: todoInput
                     Layout.fillWidth: true
+                    // The widget fills its row's height by default, which would
+                    // let the one field eat this column.
+                    Layout.fillHeight: false
                     Layout.leftMargin: Appearance.spacing.space200
                     Layout.rightMargin: Appearance.spacing.space200
-                    padding: Appearance.spacing.space150
-                    color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
-                    renderType: Text.NativeRendering
-                    selectedTextColor: Appearance.m3colors.m3onSecondaryContainer
-                    selectionColor: Appearance.colors.colSecondaryContainer
+                    // The dialog's body is m3surfaceContainerHigh, i.e. layer 3
+                    // - a field nested in it is the tier above, and colLayer4 is
+                    // that tier already composited over layer 3.
+                    focusRing: true
+                    colBackground: Appearance.colors.colLayer4
+                    color: activeFocus ? Appearance.colors.colOnLayer4 : Appearance.colors.colOnLayer1
                     placeholderText: Translation.tr("Task description")
-                    placeholderTextColor: Appearance.m3colors.m3outline
                     focus: root.showAddDialog
                     onAccepted: dialog.addTask()
-
-                    background: Rectangle {
-                        anchors.fill: parent
-                        radius: Appearance.rounding.verysmall
-                        border.width: Appearance.borderWidth.emphasis
-                        border.color: todoInput.activeFocus ? Appearance.colors.colPrimary : Appearance.m3colors.m3outline
-                        color: "transparent"
-                    }
 
                     cursorDelegate: Rectangle {
                         width: 1
