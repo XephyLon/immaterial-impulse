@@ -103,13 +103,24 @@ Scope {
         // Open on a page, optionally at a section: "appearance", or
         // "appearance:Frame" - the same "<page id>[:<section>]" the launcher's
         // settings results and the desktop menu hand GlobalStates.settingsPage.
+        // The id is resolved against the catalogue first (test_settings_page_ids
+        // wants every link built from a page's `id`), so a typo is a log line
+        // here rather than the window silently opening on whatever page was
+        // last shown.
         //   qs -c imi ipc call settings page "appearance:Frame"
         function page(target: string): void {
+            const parts = String(target).split(":");
+            const entry = settingsContent.pages.find(p => p.id === parts[0]);
+            if (!entry) {
+                console.warn(`[Settings] ipc page: no page with id "${parts[0]}" (ids: ${settingsContent.pages.map(p => p.id).join(", ")})`);
+                return;
+            }
+            const section = parts.length > 1 ? ":" + parts.slice(1).join(":") : "";
             // Open first, then the page on the next tick - the launcher's
             // order: the content consumes settingsPage once it is up, and a
             // section jump needs the page laid out to have somewhere to go.
             GlobalStates.settingsOpen = true;
-            Qt.callLater(() => { GlobalStates.settingsPage = target; });
+            Qt.callLater(() => { GlobalStates.settingsPage = entry.id + section; });
         }
     }
 
