@@ -14,6 +14,7 @@ Item {
 
     property string selectedId: ""
     readonly property var selectedMode: Modes.modeById(root.selectedId)
+    onSelectedIdChanged: editorReveal.restart()
 
     signal requestClose()
 
@@ -104,6 +105,22 @@ Item {
                 asynchronous: true
                 active: root.selectedMode !== null
                 visible: active
+
+                // The editor is one instance re-bound to the new selection, so the
+                // change would otherwise be instant: it comes in the way a settings
+                // page does, fading and settling from a few px above.
+                property real reveal: 1
+                opacity: reveal
+                anchors.topMargin: Appearance.spacing.space50 + (1 - reveal) * Appearance.spacing.space150
+                NumberAnimation on reveal {
+                    id: editorReveal
+                    running: false
+                    from: 0
+                    to: 1
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Appearance.animation.elementMoveFast.type
+                    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                }
                 sourceComponent: ModeEditor {
                     modeId: root.selectedId
                     onRequestClose: root.requestClose()

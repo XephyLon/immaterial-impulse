@@ -117,6 +117,8 @@ Item {
             }
         }
 
+        // A tab comes in the way a settings page does: it fades and settles
+        // from a few px above; the one it replaces goes at once.
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -130,7 +132,17 @@ Item {
                 property bool built: false
                 active: root.tab === "modes" || built
                 onLoaded: built = true
-                visible: root.tab === "modes"
+                readonly property bool isActive: root.tab === "modes"
+                visible: isActive
+                enabled: isActive
+                opacity: isActive ? 1 : 0
+                anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on anchors.topMargin {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
                 sourceComponent: ModesPage {
                     onRequestClose: root.requestClose()
                 }
@@ -145,7 +157,17 @@ Item {
                 property bool built: false
                 active: root.tab === "routines" || built
                 onLoaded: built = true
-                visible: root.tab === "routines"
+                readonly property bool isActive: root.tab === "routines"
+                visible: isActive
+                enabled: isActive
+                opacity: isActive ? 1 : 0
+                anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on anchors.topMargin {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
                 sourceComponent: RoutinesPage {
                     onRequestClose: root.requestClose()
                 }
@@ -160,7 +182,17 @@ Item {
                 property bool built: false
                 active: root.tab === "activity" || built
                 onLoaded: built = true
-                visible: root.tab === "activity"
+                readonly property bool isActive: root.tab === "activity"
+                visible: isActive
+                enabled: isActive
+                opacity: isActive ? 1 : 0
+                anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
+                Behavior on opacity {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on anchors.topMargin {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
                 sourceComponent: ActivityPage {
                     onRequestClose: root.requestClose()
                 }
