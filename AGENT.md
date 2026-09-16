@@ -372,7 +372,7 @@ hot-apply of overrides (the appearance domain is split into `config.d/appearance
 layout-based crops (the nested output resizes with the parent's tiling) and the nested
 compositor's Lua dispatch syntax (`hl.dsp.cursor.move`; the classic `movecursor` is inert there)
 written down where the next machine finds them - the tooling lived in one machine's home dir for
-a week and a laptop session had none of it. 8f3c4a1b2 ("test(sandbox): the review sandbox tooling lives in the repo").
+a week and a laptop session had none of it. 062486551 ("test(sandbox): the review sandbox tooling lives in the repo").
 **Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
 (modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
 its revert snapshot, the activity log, routine runs, paused action steps) lives in
