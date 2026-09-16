@@ -17,25 +17,29 @@ TestCase {
     function test_the_bar_edge_is_its_zone_plus_the_band_and_the_rest_is_the_band() {
         // The compositor reserves the bar's zone and then its outer gap:
         // windows start at zone + gap, so that is where the frame ends.
-        compare(Geo.edgeInsets("top", 40, 5, "", 0), { top: 45, left: 5, right: 5, bottom: 5 });
-        compare(Geo.edgeInsets("bottom", 40, 5, "", 0), { top: 5, left: 5, right: 5, bottom: 45 });
+        compare(Geo.edgeInsets("top", 40, 5), { top: 45, left: 5, right: 5, bottom: 5 });
+        compare(Geo.edgeInsets("bottom", 40, 5), { top: 5, left: 5, right: 5, bottom: 45 });
+        compare(Geo.edgeInsets("top", "40", 5), { top: 45, left: 5, right: 5, bottom: 5 });
     }
 
-    function test_a_pinned_dock_is_an_occupant_like_the_bar() {
-        compare(Geo.edgeInsets("top", 40, 5, "bottom", 66), { top: 45, left: 5, right: 5, bottom: 71 });
-        compare(Geo.edgeInsets("top", 40, 5, "left", 66), { top: 45, left: 71, right: 5, bottom: 5 });
-        // Both on one edge add up: windows start after both zones.
-        compare(Geo.edgeInsets("top", 40, 5, "top", 66), { top: 111, left: 5, right: 5, bottom: 5 });
-        // An unpinned dock is no occupant (the caller passes no edge).
-        compare(Geo.edgeInsets("top", 40, 5, "", 66), { top: 45, left: 5, right: 5, bottom: 5 });
+    function test_the_dock_is_no_occupant_of_the_frame() {
+        // The bar is the frame's only occupant. The dock meets the band on
+        // its own terms (dock_geometry.js: on it, or a gap above it), so the
+        // frame's inner corner on the dock's edge is at the band - a fillet
+        // at the dock's inset arced into wallpaper, and a band as tall as
+        // the dock's strip was a border with a pill lost in it.
+        compare(Geo.edgeInsets.length, 3, "no dock parameters to pass");
+        compare(Geo.bandMargins.length, 4);
+        verify(Geo.bandExtent === undefined, "the band's extent is its thickness, nothing else");
+        verify(Geo.bandOffset === undefined);
     }
 
     function test_each_fillet_sits_at_its_inner_corner() {
-        const insets = Geo.edgeInsets("top", 40, 5, "bottom", 66);
+        const insets = Geo.edgeInsets("top", 40, 5);
         compare(Geo.cornerMargins("topLeft", insets), { left: 5, top: 45, right: 0, bottom: 0 });
         compare(Geo.cornerMargins("topRight", insets), { left: 0, top: 45, right: 5, bottom: 0 });
-        compare(Geo.cornerMargins("bottomLeft", insets), { left: 5, top: 0, right: 0, bottom: 71 });
-        compare(Geo.cornerMargins("bottomRight", insets), { left: 0, top: 0, right: 5, bottom: 71 });
+        compare(Geo.cornerMargins("bottomLeft", insets), { left: 5, top: 0, right: 0, bottom: 5 });
+        compare(Geo.cornerMargins("bottomRight", insets), { left: 0, top: 0, right: 5, bottom: 5 });
         compare(Geo.cornerMargins("nowhere", insets), { left: 0, top: 0, right: 0, bottom: 0 });
     }
 
@@ -48,40 +52,52 @@ TestCase {
         compare(Geo.innerRadius(-3), 0);
     }
 
-    function test_a_band_starts_under_its_edges_occupants() {
-        compare(Geo.bandOffset("top", "top", 40, "", 0), 40);
-        compare(Geo.bandOffset("bottom", "top", 40, "", 0), 0);
-        compare(Geo.bandOffset("bottom", "top", 40, "bottom", 66), 66);
-        compare(Geo.bandOffset("top", "top", 40, "top", 66), 106);
-    }
-
-    function test_a_pinned_docks_band_is_its_whole_strip() {
-        // The dock is a pill, not a plate: a band above its zone was a line
-        // across the wallpaper. On the dock's edge the band covers zone + gap
-        // and the dock is drawn over it; every other edge keeps the band.
-        compare(Geo.bandExtent("bottom", 5, "bottom", 66), 71);
-        compare(Geo.bandExtent("top", 5, "bottom", 66), 5);
-        compare(Geo.bandExtent("left", 5, "bottom", 66), 5);
-        compare(Geo.bandExtent("bottom", 5, "", 66), 5);
+    function test_a_band_starts_under_the_bars_plate_and_at_the_screen_edge_elsewhere() {
         compare(Geo.bandStart("top", "top", 40), 40);
         compare(Geo.bandStart("bottom", "top", 40), 0);
+        compare(Geo.bandStart("bottom", "bottom", 40), 40);
+        compare(Geo.bandStart("left", "top", 40), 0);
     }
 
-    function test_a_band_ends_where_the_adjacent_bands_start() {
-        // Bar on top, dock pinned at the bottom: the side bands start under
-        // the bar and stop above the dock's strip; no tail past either.
-        compare(Geo.bandMargins("left", "top", 40, "bottom", 66), { top: 40, bottom: 66, left: 0, right: 0 });
-        compare(Geo.bandMargins("right", "top", 40, "bottom", 66), { top: 40, bottom: 66, left: 0, right: 0 });
-        // The top band sits under the bar and spans the width; the bottom
-        // one starts at the screen edge - the dock's strip is the band's.
-        compare(Geo.bandMargins("top", "top", 40, "bottom", 66), { top: 40, bottom: 0, left: 0, right: 0 });
-        compare(Geo.bandMargins("bottom", "top", 40, "bottom", 66), { top: 0, bottom: 0, left: 0, right: 0 });
-        // Bar and dock on one edge: the band starts under the bar's plate only.
-        compare(Geo.bandMargins("top", "top", 40, "top", 66), { top: 40, bottom: 0, left: 0, right: 0 });
-        // A dock on a side edge insets the top and bottom bands' end there;
-        // the band on that edge itself starts at the screen edge (its extent
-        // is the dock's whole strip).
-        compare(Geo.bandMargins("top", "top", 40, "left", 66), { top: 40, bottom: 0, left: 66, right: 0 });
-        compare(Geo.bandMargins("left", "top", 40, "left", 66), { top: 40, bottom: 0, left: 0, right: 0 });
+    function test_the_horizontal_bands_span_the_width_and_the_side_bands_run_between_them() {
+        // Bar on top: the top band sits under the bar's plate, the bottom
+        // band at the screen edge, both the full width; the side bands start
+        // where the top band ends and stop where the bottom band starts.
+        compare(Geo.bandMargins("top", "top", 40, 5), { top: 40, bottom: 0, left: 0, right: 0 });
+        compare(Geo.bandMargins("bottom", "top", 40, 5), { top: 0, bottom: 0, left: 0, right: 0 });
+        compare(Geo.bandMargins("left", "top", 40, 5), { top: 45, bottom: 5, left: 0, right: 0 });
+        compare(Geo.bandMargins("right", "top", 40, 5), { top: 45, bottom: 5, left: 0, right: 0 });
+        // Bar at the bottom: mirrored.
+        compare(Geo.bandMargins("bottom", "bottom", 40, 5), { top: 0, bottom: 40, left: 0, right: 0 });
+        compare(Geo.bandMargins("top", "bottom", 40, 5), { top: 0, bottom: 0, left: 0, right: 0 });
+        compare(Geo.bandMargins("left", "bottom", 40, 5), { top: 5, bottom: 45, left: 0, right: 0 });
+    }
+
+    function test_no_two_bands_overlap() {
+        // The frame's colour is translucent: a corner painted by two bands
+        // is darker than the frame. Lay the four bands out on a 100x80
+        // screen, bar on top, band 5, and check every pair.
+        const band = 5, W = 100, H = 80;
+        const rects = ["top", "bottom", "left", "right"].map(edge => {
+            const m = Geo.bandMargins(edge, "top", 40, band);
+            const horizontal = edge === "top" || edge === "bottom";
+            return {
+                edge,
+                x: horizontal ? m.left : (edge === "left" ? 0 : W - band),
+                y: horizontal ? (edge === "top" ? m.top : H - m.bottom - band) : m.top,
+                w: horizontal ? W - m.left - m.right : band,
+                h: horizontal ? band : H - m.top - m.bottom,
+            };
+        });
+        for (let i = 0; i < rects.length; i++)
+            for (let j = i + 1; j < rects.length; j++) {
+                const a = rects[i], b = rects[j];
+                const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+                verify(!overlap, a.edge + " and " + b.edge + " overlap");
+            }
+        // ...and they still meet: the left band runs from the top band's
+        // bottom to the bottom band's top.
+        compare(rects[2].y, rects[0].y + rects[0].h);
+        compare(rects[2].y + rects[2].h, rects[1].y);
     }
 }
