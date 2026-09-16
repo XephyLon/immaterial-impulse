@@ -26,8 +26,8 @@ Rectangle {
     RowLayout {
         id: mainRowLayout
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.space100
-        spacing: Appearance.spacing.space100
+        anchors.margins: Appearance.spacing.space150
+        spacing: Appearance.spacing.space150
 
         MaterialSymbol {
             id: icon

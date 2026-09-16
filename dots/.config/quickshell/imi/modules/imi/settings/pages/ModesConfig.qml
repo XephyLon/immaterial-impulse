@@ -104,40 +104,42 @@ ContentPage {
         text: Translation.tr("Hyprland has no binding for the manager, so Super + Y does nothing. Update the Hyprland config (Settings > Update Dots) or bind quickshell:modesToggle yourself.")
     }
 
-    NoticeBox {
-        Layout.fillWidth: true
-        materialIcon: "tune"
-        text: {
-            const modes = Modes.modes.length;
-            const routines = Modes.routines.length;
-            const line = Translation.tr("%1 mode(s) and %2 routine(s) set up.").arg(modes).arg(routines);
-            if (Modes.active)
-                return line + " " + Translation.tr("%1 is on right now.").arg(Modes.activeMode?.name ?? "");
-            return line + " " + Translation.tr("Nothing is on right now. Super + Y opens the manager.");
-        }
-        RippleButton {
-            implicitHeight: 34
-            horizontalPadding: Appearance.spacing.space200
-            buttonRadius: Appearance.rounding.full
-            colBackground: Appearance.colors.colPrimary
-            colBackgroundHover: Appearance.colors.colPrimaryHover
-            colRipple: Appearance.colors.colPrimaryActive
-            enabled: page.opts.overlayEnabled
-            onClicked: GlobalStates.modesOpen = true
-            contentItem: StyledText {
-                text: Translation.tr("Open the manager")
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                color: Appearance.colors.colOnPrimary
-            }
-        }
-    }
-
     ContentSection {
         icon: "tune"
         title: Translation.tr("General")
 
         GroupedList {
+            // What is set up and what is on, with the way in: a row like the
+            // others, not a banner (a notice is for something wrong).
+            ConfigRow {
+                spacing: Appearance.spacing.space200
+                MaterialSymbol {
+                    Layout.leftMargin: Appearance.spacing.space100
+                    text: Modes.active ? "play_circle" : "tune"
+                    iconSize: Appearance.font.pixelSize.larger
+                    color: Appearance.colors.colOnLayer1
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    color: Appearance.colors.colOnLayer1
+                    text: {
+                        const modes = Modes.modes.length;
+                        const routines = Modes.routines.length;
+                        const line = Translation.tr("%1 mode(s) and %2 routine(s) set up.").arg(modes).arg(routines);
+                        if (Modes.active)
+                            return line + " " + Translation.tr("%1 is on right now.").arg(Modes.activeMode?.name ?? "");
+                        return line + " " + Translation.tr("Nothing is on right now.");
+                    }
+                }
+                RippleButtonWithIcon {
+                    Layout.rightMargin: Appearance.spacing.space100
+                    enabled: page.opts.overlayEnabled
+                    materialIcon: "open_in_new"
+                    mainText: Translation.tr("Open the manager")
+                    onClicked: GlobalStates.modesOpen = true
+                }
+            }
             ConfigSwitch {
                 buttonIcon: "autoplay"
                 text: Translation.tr("Start and end things automatically")
