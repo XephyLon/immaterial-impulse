@@ -36,7 +36,6 @@ Scope {
             ? FrameGeometry.cornerMargins(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight")
             : ({ left: 0, top: 0, right: 0, bottom: 0 })
 
-
         exclusionMode: ExclusionMode.Ignore
         mask: Region {
             item: sidebarCornerOpenInteractionLoader.active ? sidebarCornerOpenInteractionLoader : null

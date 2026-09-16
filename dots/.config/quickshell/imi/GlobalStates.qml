@@ -10,8 +10,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 Singleton {
-    // Modes & Routines
- (services/Modes.qml; ported from the p3drovfx fork):
+    // Modes & Routines (services/Modes.qml; ported from the p3drovfx fork):
     // the overlay's open state, the start/end flash, and the OLED saver's
     // per-monitor set an action toggles.
     property bool modesOpen: false

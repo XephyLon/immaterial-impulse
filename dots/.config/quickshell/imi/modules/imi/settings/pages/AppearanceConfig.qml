@@ -67,7 +67,6 @@ ContentPage {
         }
     }
 
-
     function goTo(term) {
         const t = term.toLowerCase().trim()
 
