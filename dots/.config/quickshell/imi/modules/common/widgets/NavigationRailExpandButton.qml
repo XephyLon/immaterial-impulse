@@ -7,7 +7,7 @@ IconButton {
     id: root
     Layout.alignment: Qt.AlignLeft
     Layout.leftMargin: Appearance.spacing.space100
-    iconSize: Appearance.font.pixelSize.huge
+    iconSize: Appearance.font.pixelSize.hugeass
     buttonIcon: root.parent.expanded ? "menu_open" : "menu"
     downAction: () => {
         parent.expanded = !parent.expanded;
