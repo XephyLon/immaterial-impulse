@@ -43,23 +43,18 @@ ColumnLayout {
     }
 
     // ---- bool: a switch row --------------------------------------------
+    // The shell's own toggle row rather than a label beside a switch: it
+    // already draws the label, takes the click as an INTENT and leaves
+    // `checked` a pure binding on the value the wallpaper holds. A project
+    // property has no glyph of its own, so the row's icon stays empty.
     Loader {
         Layout.fillWidth: true
         active: root.kind === "bool"
         visible: active
-        sourceComponent: RowLayout {
-            spacing: Appearance.spacing.space100
-            StyledText {
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-                text: root.definition.text
-                font.pixelSize: Appearance.font.pixelSize.small
-            }
-            StyledSwitch {
-                checkable: false
-                checked: root.currentValue === "1"
-                onClicked: root.committed(root.currentValue === "1" ? "0" : "1")
-            }
+        sourceComponent: ConfigSwitch {
+            text: root.definition.text
+            checked: root.currentValue === "1"
+            onToggleRequested: root.committed(root.currentValue === "1" ? "0" : "1")
         }
     }
 

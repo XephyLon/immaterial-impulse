@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
@@ -12,459 +11,330 @@ import qs.services
  *
  * The launcher is keyboard-first and modal: sending someone to the Settings
  * window to change a caret style would end their session. These write the same
- * Config keys the Settings window would, so the two never diverge.
+ * Config keys the Settings window would, so the two never diverge - and they
+ * are drawn by the same row widgets, so the two do not diverge in shape
+ * either: subsection headers lead with an icon, every option row carries a
+ * plain leading glyph, and GroupedList paints the plates.
  */
 Item {
     id: root
 
     readonly property var options: Config.options.cheatsheet.typingTest
 
-    /** QML's JS engine has no Object.fromEntries, so build the map by hand. */
-    function packLabels(packs) {
-        const labels = {};
-        for (const pack of packs)
-            labels[pack.id] = pack.label;
-        return labels;
-    }
-
-    function packIds(packs) {
-        return Array.from(packs).map(pack => pack.id);
+    /**
+     * A choice row takes {displayName, value} pairs; a language and a sound
+     * pack are both {id, label}. QML's JS engine has no Object.fromEntries,
+     * but it does have Array.prototype.map, which is all this needs.
+     */
+    function chipOptions(entries) {
+        return Array.from(entries).map(entry => ({
+            displayName: entry.label ?? entry.id,
+            value: entry.id
+        }));
     }
 
     signal requestClose
 
-    component SectionTitle: StyledText {
-        Layout.topMargin: Appearance.sizes.elevationMargin / 2
-        font.pixelSize: Appearance.font.pixelSize.small
-        font.weight: Font.DemiBold
-        color: Appearance.colors.colPrimary
-    }
-
-    component OptionRow: Rectangle {
-        id: optionRow
-        property string label: ""
-        property string description: ""
-        default property alias controlSlot: controlHolder.data
-
-        Layout.fillWidth: true
-        implicitHeight: Math.max(44, rowLayout.implicitHeight + 16)
-        radius: Appearance.rounding.small
-        color: Appearance.colors.colSurfaceContainerLow
-
-        RowLayout {
-            id: rowLayout
-            anchors.fill: parent
-            anchors.leftMargin: Appearance.spacing.space175
-            anchors.rightMargin: Appearance.spacing.space150
-            spacing: Appearance.spacing.space150
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: optionRow.label
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    color: Appearance.colors.colOnSurface
-                    elide: Text.ElideRight
-                }
-                StyledText {
-                    Layout.fillWidth: true
-                    visible: optionRow.description.length > 0
-                    text: optionRow.description
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colSubtext
-                    elide: Text.ElideRight
-                }
-            }
-
-            Item {
-                id: controlHolder
-                Layout.alignment: Qt.AlignVCenter
-                implicitWidth: childrenRect.width
-                implicitHeight: childrenRect.height
-            }
-        }
-    }
-
-    component ChoiceChips: RowLayout {
-        id: choiceChips
-        property var values: []
-        property var labels: null
-        property string current: ""
-        signal picked(string value)
-
-        spacing: Appearance.spacing.space50
-
-        Repeater {
-            model: choiceChips.values
-
-            delegate: RippleButton {
-                id: chip
-                required property var modelData
-                readonly property bool active: String(chip.modelData) === choiceChips.current
-
-                implicitWidth: chipLabel.implicitWidth + 22
-                implicitHeight: 30
-                buttonRadius: Appearance.rounding.full
-                colBackground: chip.active ? Appearance.colors.colPrimaryContainer : Appearance.colors.colSurfaceContainerHigh
-                colBackgroundHover: chip.active ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colSurfaceContainerHighestHover
-                colRipple: chip.active ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colSurfaceContainerHighestActive
-                onClicked: choiceChips.picked(String(chip.modelData))
-
-                StyledText {
-                    id: chipLabel
-                    anchors.centerIn: parent
-                    text: choiceChips.labels ? (choiceChips.labels[chip.modelData] ?? chip.modelData) : chip.modelData
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    font.weight: chip.active ? Font.DemiBold : Font.Normal
-                    color: chip.active ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnSurfaceVariant
-                }
-            }
-        }
-    }
-
     StyledFlickable {
         id: scroller
         anchors.fill: parent
-        contentHeight: settingsGrid.implicitHeight
+        contentHeight: settingsColumn.implicitHeight
         clip: true
 
-        GridLayout {
-            id: settingsGrid
+        // One column, not the two this page used to pair rows in: a
+        // GroupedList row is a full-width plate with its control on the right
+        // edge, and two of them side by side put two right edges on one line.
+        ColumnLayout {
+            id: settingsColumn
             width: scroller.width
-            columns: 2
-            columnSpacing: Appearance.sizes.elevationMargin * 2
-            rowSpacing: Appearance.spacing.space75
+            spacing: Appearance.spacing.space150
 
             // ── Language ──────────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Language")
-            }
+            ContentSubsection {
+                icon: "language"
+                title: Translation.tr("Language")
 
-            Flow {
-                Layout.columnSpan: 2
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.space75
-
-                Repeater {
-                    model: TypingLanguages.languages
-
-                    delegate: RippleButton {
-                        id: languageChip
-                        required property var modelData
-                        readonly property bool active: root.options.language === languageChip.modelData.id
-
-                        implicitWidth: languageLabel.implicitWidth + 24
-                        implicitHeight: 32
-                        buttonRadius: Appearance.rounding.full
-                        colBackground: languageChip.active ? Appearance.colors.colPrimaryContainer : Appearance.colors.colSurfaceContainerHigh
-                        colBackgroundHover: languageChip.active ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colSurfaceContainerHighestHover
-                        colRipple: languageChip.active ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colSurfaceContainerHighestActive
-                        onClicked: {
-                            root.options.language = languageChip.modelData.id;
-                            TypingLanguages.request(languageChip.modelData.id);
-                        }
-
-                        StyledText {
-                            id: languageLabel
-                            anchors.centerIn: parent
-                            text: languageChip.modelData.label ?? languageChip.modelData.id
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            font.weight: languageChip.active ? Font.DemiBold : Font.Normal
-                            color: languageChip.active ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnSurfaceVariant
+                GroupedList {
+                    // Unlabelled: the subsection header above already says
+                    // "Language", and the chips wrap across the panel's width
+                    // rather than starting after a label that repeats it.
+                    ConfigSelectionArray {
+                        currentValue: root.options.language
+                        options: root.chipOptions(TypingLanguages.languages)
+                        onSelected: value => {
+                            root.options.language = value;
+                            TypingLanguages.request(value);
                         }
                     }
                 }
             }
 
             // ── Test length ───────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Test length")
-            }
+            ContentSubsection {
+                icon: "timer"
+                title: Translation.tr("Test length")
 
-            // The toolbar carries the four presets; anything else belongs
-            // here rather than as a text field wedged into that row.
-            OptionRow {
-                label: Translation.tr("Time")
-                description: Translation.tr("%1 seconds").arg(String(root.options.time))
+                // The toolbar carries the four presets; anything else belongs
+                // here rather than as a text field wedged into that row.
+                GroupedList {
+                    // ConfigSlider has no `stepSize` - the granularity lives
+                    // in the write-back, which is the only place it ever
+                    // reached the config from anyway.
+                    ConfigSlider {
+                        text: Translation.tr("Time")
+                        buttonIcon: "timer"
+                        usePercentTooltip: false
+                        from: 5
+                        to: 300
+                        value: root.options.time
+                        onValueModified: newValue => {
+                            root.options.time = Math.round(newValue / 5) * 5;
+                        }
+                    }
 
-                StyledSlider {
-                    implicitWidth: 170
-                    from: 5
-                    to: 300
-                    stepSize: 5
-                    value: root.options.time
-                    onMoved: root.options.time = Math.round(value)
-                }
-            }
+                    ConfigSlider {
+                        text: Translation.tr("Words")
+                        buttonIcon: "article"
+                        usePercentTooltip: false
+                        from: 5
+                        to: 200
+                        value: root.options.words
+                        onValueModified: newValue => {
+                            root.options.words = Math.round(newValue / 5) * 5;
+                        }
+                    }
 
-            OptionRow {
-                label: Translation.tr("Words")
-                description: Translation.tr("%1 words").arg(String(root.options.words))
-
-                StyledSlider {
-                    implicitWidth: 170
-                    from: 5
-                    to: 200
-                    stepSize: 5
-                    value: root.options.words
-                    onMoved: root.options.words = Math.round(value)
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Guided zen")
-                description: Translation.tr("Zen types generated words instead of your own, with no limit")
-
-                StyledSwitch {
-                    checked: root.options.zenGuided
-                    onToggled: root.options.zenGuided = checked
+                    ConfigSwitch {
+                        buttonIcon: "self_improvement"
+                        text: Translation.tr("Guided zen")
+                        description: Translation.tr("Zen types generated words instead of your own, with no limit")
+                        checked: root.options.zenGuided
+                        onToggleRequested: root.options.zenGuided = !root.options.zenGuided
+                    }
                 }
             }
 
             // ── Typing surface ────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Typing surface")
-            }
+            ContentSubsection {
+                icon: "text_fields"
+                title: Translation.tr("Typing surface")
 
-            OptionRow {
-                label: Translation.tr("Text size")
-                description: Translation.tr("%1 px").arg(String(root.options.fontSize))
+                GroupedList {
+                    ConfigSlider {
+                        text: Translation.tr("Text size")
+                        buttonIcon: "format_size"
+                        usePercentTooltip: false
+                        from: 16
+                        to: 44
+                        value: root.options.fontSize
+                        onValueModified: newValue => {
+                            root.options.fontSize = Math.round(newValue);
+                        }
+                    }
 
-                StyledSlider {
-                    implicitWidth: 170
-                    from: 16
-                    to: 44
-                    stepSize: 1
-                    value: root.options.fontSize
-                    onMoved: root.options.fontSize = Math.round(value)
-                }
-            }
+                    ConfigSelectionArray {
+                        text: Translation.tr("Visible lines")
+                        icon: "table_rows"
+                        infoText: Translation.tr("How much of the test stays on screen")
+                        currentValue: root.options.visibleLines
+                        options: [
+                            { displayName: "2", value: 2 },
+                            { displayName: "3", value: 3 },
+                            { displayName: "4", value: 4 },
+                            { displayName: "5", value: 5 }
+                        ]
+                        onSelected: value => {
+                            root.options.visibleLines = value;
+                        }
+                    }
 
-            OptionRow {
-                label: Translation.tr("Visible lines")
-                description: Translation.tr("How much of the test stays on screen")
+                    ConfigSelectionArray {
+                        text: Translation.tr("Caret")
+                        icon: "text_select_start"
+                        currentValue: root.options.caretStyle
+                        options: [
+                            { displayName: Translation.tr("line"), value: "line" },
+                            { displayName: Translation.tr("block"), value: "block" },
+                            { displayName: Translation.tr("underline"), value: "underline" },
+                            { displayName: Translation.tr("off"), value: "off" }
+                        ]
+                        onSelected: value => {
+                            root.options.caretStyle = value;
+                        }
+                    }
 
-                ChoiceChips {
-                    values: [2, 3, 4, 5]
-                    current: String(root.options.visibleLines)
-                    onPicked: value => root.options.visibleLines = Number(value)
-                }
-            }
+                    ConfigSwitch {
+                        buttonIcon: "animation"
+                        text: Translation.tr("Smooth caret and line motion")
+                        checked: root.options.smoothCaret
+                        onToggleRequested: root.options.smoothCaret = !root.options.smoothCaret
+                    }
 
-            OptionRow {
-                label: Translation.tr("Caret")
+                    ConfigSwitch {
+                        buttonIcon: "highlight"
+                        text: Translation.tr("Highlight the current word")
+                        description: Translation.tr("Dims every other word while you type")
+                        checked: root.options.highlightCurrentWord
+                        onToggleRequested: root.options.highlightCurrentWord = !root.options.highlightCurrentWord
+                    }
 
-                ChoiceChips {
-                    values: ["line", "block", "underline", "off"]
-                    labels: ({
-                        line: Translation.tr("line"),
-                        block: Translation.tr("block"),
-                        underline: Translation.tr("underline"),
-                        off: Translation.tr("off")
-                    })
-                    current: root.options.caretStyle
-                    onPicked: value => root.options.caretStyle = value
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Smooth caret and line motion")
-
-                StyledSwitch {
-                    checked: root.options.smoothCaret
-                    onToggled: root.options.smoothCaret = checked
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Highlight the current word")
-                description: Translation.tr("Dims every other word while you type")
-
-                StyledSwitch {
-                    checked: root.options.highlightCurrentWord
-                    onToggled: root.options.highlightCurrentWord = checked
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Blind mode")
-                description: Translation.tr("Hides mistakes until the result")
-
-                StyledSwitch {
-                    checked: root.options.blindMode
-                    onToggled: root.options.blindMode = checked
+                    ConfigSwitch {
+                        buttonIcon: "visibility_off"
+                        text: Translation.tr("Blind mode")
+                        description: Translation.tr("Hides mistakes until the result")
+                        checked: root.options.blindMode
+                        onToggleRequested: root.options.blindMode = !root.options.blindMode
+                    }
                 }
             }
 
             // ── Live stats ────────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("While typing")
-            }
+            ContentSubsection {
+                icon: "speed"
+                title: Translation.tr("While typing")
 
-            OptionRow {
-                label: Translation.tr("Live speed")
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "speed"
+                        text: Translation.tr("Live speed")
+                        checked: root.options.showLiveWpm
+                        onToggleRequested: root.options.showLiveWpm = !root.options.showLiveWpm
+                    }
 
-                StyledSwitch {
-                    checked: root.options.showLiveWpm
-                    onToggled: root.options.showLiveWpm = checked
-                }
-            }
+                    ConfigSwitch {
+                        buttonIcon: "percent"
+                        text: Translation.tr("Live accuracy")
+                        checked: root.options.showLiveAccuracy
+                        onToggleRequested: root.options.showLiveAccuracy = !root.options.showLiveAccuracy
+                    }
 
-            OptionRow {
-                label: Translation.tr("Live accuracy")
+                    ConfigSwitch {
+                        buttonIcon: "done_all"
+                        text: Translation.tr("Finish on the last word")
+                        description: Translation.tr("No trailing space needed to end a words test")
+                        checked: root.options.finishOnLastWord
+                        onToggleRequested: root.options.finishOnLastWord = !root.options.finishOnLastWord
+                    }
 
-                StyledSwitch {
-                    checked: root.options.showLiveAccuracy
-                    onToggled: root.options.showLiveAccuracy = checked
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Finish on the last word")
-                description: Translation.tr("No trailing space needed to end a words test")
-
-                StyledSwitch {
-                    checked: root.options.finishOnLastWord
-                    onToggled: root.options.finishOnLastWord = checked
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Tab restarts immediately")
-                description: Translation.tr("Otherwise Tab points at restart and Enter presses it")
-
-                StyledSwitch {
-                    checked: root.options.quickRestart
-                    onToggled: root.options.quickRestart = checked
+                    ConfigSwitch {
+                        buttonIcon: "restart_alt"
+                        text: Translation.tr("Tab restarts immediately")
+                        description: Translation.tr("Otherwise Tab points at restart and Enter presses it")
+                        checked: root.options.quickRestart
+                        onToggleRequested: root.options.quickRestart = !root.options.quickRestart
+                    }
                 }
             }
 
             // ── Keyboard ──────────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Keyboard preview")
-            }
+            ContentSubsection {
+                icon: "keyboard"
+                title: Translation.tr("Keyboard preview")
 
-            OptionRow {
-                label: Translation.tr("Show the keyboard")
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "keyboard"
+                        text: Translation.tr("Show the keyboard")
+                        checked: root.options.keyboard.enable
+                        onToggleRequested: root.options.keyboard.enable = !root.options.keyboard.enable
+                    }
 
-                StyledSwitch {
-                    checked: root.options.keyboard.enable
-                    onToggled: root.options.keyboard.enable = checked
-                }
-            }
+                    ConfigSwitch {
+                        buttonIcon: "ads_click"
+                        text: Translation.tr("Point at the next key")
+                        checked: root.options.keyboard.highlightNextKey
+                        onToggleRequested: root.options.keyboard.highlightNextKey = !root.options.keyboard.highlightNextKey
+                    }
 
-            OptionRow {
-                label: Translation.tr("Point at the next key")
-
-                StyledSwitch {
-                    checked: root.options.keyboard.highlightNextKey
-                    onToggled: root.options.keyboard.highlightNextKey = checked
-                }
-            }
-
-            OptionRow {
-                Layout.columnSpan: 2
-                label: Translation.tr("Layout")
-
-                ChoiceChips {
-                    values: ["qwerty", "qwertz", "azerty", "dvorak", "colemak"]
-                    current: root.options.keyboard.layout
-                    onPicked: value => root.options.keyboard.layout = value
+                    ConfigSelectionArray {
+                        text: Translation.tr("Layout")
+                        icon: "keyboard_alt"
+                        currentValue: root.options.keyboard.layout
+                        options: [
+                            { displayName: "qwerty", value: "qwerty" },
+                            { displayName: "qwertz", value: "qwertz" },
+                            { displayName: "azerty", value: "azerty" },
+                            { displayName: "dvorak", value: "dvorak" },
+                            { displayName: "colemak", value: "colemak" }
+                        ]
+                        onSelected: value => {
+                            root.options.keyboard.layout = value;
+                        }
+                    }
                 }
             }
 
             // ── Sound ─────────────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Sound")
-            }
+            ContentSubsection {
+                icon: "volume_up"
+                title: Translation.tr("Sound")
 
-            OptionRow {
-                label: Translation.tr("Key sounds")
+                // Every row below the first is gated on it. The dim is the
+                // widgets' own - a second `opacity` here would multiply with
+                // theirs (lint_disabled_opacity).
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "volume_up"
+                        text: Translation.tr("Key sounds")
+                        checked: root.options.sounds.enable
+                        onToggleRequested: root.options.sounds.enable = !root.options.sounds.enable
+                    }
 
-                StyledSwitch {
-                    checked: root.options.sounds.enable
-                    onToggled: root.options.sounds.enable = checked
-                }
-            }
+                    ConfigSwitch {
+                        buttonIcon: "error"
+                        text: Translation.tr("Sound on mistakes")
+                        enabled: root.options.sounds.enable
+                        checked: root.options.sounds.errorSound
+                        onToggleRequested: root.options.sounds.errorSound = !root.options.sounds.errorSound
+                    }
 
-            OptionRow {
-                label: Translation.tr("Sound on mistakes")
-                enabled: root.options.sounds.enable
-                opacity: enabled ? 1 : 0.5
+                    ConfigSelectionArray {
+                        text: Translation.tr("Key sound")
+                        icon: "music_note"
+                        enabled: root.options.sounds.enable
+                        currentValue: root.options.sounds.theme
+                        options: root.chipOptions(TypingSoundPacks.clickPacks)
+                        onSelected: value => {
+                            root.options.sounds.theme = value;
+                        }
+                    }
 
-                StyledSwitch {
-                    checked: root.options.sounds.errorSound
-                    onToggled: root.options.sounds.errorSound = checked
-                }
-            }
+                    ConfigSelectionArray {
+                        text: Translation.tr("Mistake sound")
+                        icon: "notification_important"
+                        enabled: root.options.sounds.enable && root.options.sounds.errorSound
+                        currentValue: root.options.sounds.errorTheme
+                        options: root.chipOptions(TypingSoundPacks.errorPacks)
+                        onSelected: value => {
+                            root.options.sounds.errorTheme = value;
+                        }
+                    }
 
-            OptionRow {
-                Layout.columnSpan: 2
-                label: Translation.tr("Key sound")
-                enabled: root.options.sounds.enable
-                opacity: enabled ? 1 : 0.5
-
-                ChoiceChips {
-                    values: root.packIds(TypingSoundPacks.clickPacks)
-                    labels: root.packLabels(TypingSoundPacks.clickPacks)
-                    current: root.options.sounds.theme
-                    onPicked: value => root.options.sounds.theme = value
-                }
-            }
-
-            OptionRow {
-                Layout.columnSpan: 2
-                label: Translation.tr("Mistake sound")
-                enabled: root.options.sounds.enable && root.options.sounds.errorSound
-                opacity: enabled ? 1 : 0.5
-
-                ChoiceChips {
-                    values: root.packIds(TypingSoundPacks.errorPacks)
-                    labels: root.packLabels(TypingSoundPacks.errorPacks)
-                    current: root.options.sounds.errorTheme
-                    onPicked: value => root.options.sounds.errorTheme = value
-                }
-            }
-
-            OptionRow {
-                label: Translation.tr("Volume")
-                description: Translation.tr("%1%").arg(String(root.options.sounds.volume))
-                enabled: root.options.sounds.enable
-                opacity: enabled ? 1 : 0.5
-
-                StyledSlider {
-                    implicitWidth: 170
-                    from: 0
-                    to: 100
-                    stepSize: 5
-                    value: root.options.sounds.volume
-                    onMoved: root.options.sounds.volume = Math.round(value)
+                    ConfigSlider {
+                        text: Translation.tr("Volume")
+                        buttonIcon: "tune"
+                        enabled: root.options.sounds.enable
+                        from: 0
+                        to: 100
+                        value: root.options.sounds.volume
+                        onValueModified: newValue => {
+                            root.options.sounds.volume = Math.round(newValue / 5) * 5;
+                        }
+                    }
                 }
             }
 
             // ── Shortcuts ─────────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Keyboard shortcuts")
-            }
+            ContentSubsection {
+                icon: "shortcut"
+                title: Translation.tr("Keyboard shortcuts")
 
-            // The bottom bar only has room for the common ones; the full set
-            // lives here so nothing is discoverable by accident alone.
-            Flow {
-                Layout.columnSpan: 2
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.space75
-
-                Repeater {
+                // The bottom bar only has room for the common ones; the full
+                // set lives here so nothing is discoverable by accident alone.
+                // A group whose rows come from a list uses GroupedList's own
+                // model/rowDelegate rather than a surface of its own
+                // (M3_GUIDELINES.md, "Grouped Settings").
+                GroupedList {
                     model: [
                         { keys: ["Esc"], label: Translation.tr("Back, or leave this page") },
                         { keys: ["Ctrl", "R"], label: Translation.tr("Restart") },
@@ -482,91 +352,77 @@ Item {
                         { keys: ["Ctrl", "H"], label: Translation.tr("Score history") },
                         { keys: ["Ctrl", "S"], label: Translation.tr("Statistics") }
                     ]
+                    rowDelegate: Component {
+                        CatalogueRow {
+                            id: shortcutRow
+                            property var modelData: null
 
-                    delegate: Rectangle {
-                        id: shortcutRow
-                        required property var modelData
-
-                        implicitWidth: shortcutContent.implicitWidth + 24
-                        implicitHeight: 34
-                        radius: Appearance.rounding.small
-                        color: Appearance.colors.colSurfaceContainerLow
-
-                        RowLayout {
-                            id: shortcutContent
-                            anchors.centerIn: parent
-                            spacing: Appearance.spacing.space100
-
-                            KeyHint {
-                                keys: shortcutRow.modelData.keys
-                                surface: Appearance.colors.colSurfaceContainerHigh
-                                onSurface: Appearance.colors.colOnSurface
-                            }
-
-                            StyledText {
-                                text: shortcutRow.modelData.label
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colOnSurfaceVariant
-                            }
+                            title: shortcutRow.modelData?.label ?? ""
+                            titleFillsWidth: true
+                            titleElides: true
+                            affordance: [
+                                KeyHint {
+                                    keys: shortcutRow.modelData?.keys ?? []
+                                    // The plate under the row, so the key
+                                    // faces are mixed off what is behind them.
+                                    surface: Appearance.colors.colLayer1
+                                    onSurface: Appearance.colors.colOnLayer1
+                                }
+                            ]
                         }
                     }
                 }
             }
 
             // ── History ───────────────────────────────────────────────
-            SectionTitle {
-                Layout.columnSpan: 2
-                text: Translation.tr("Score history")
-            }
+            ContentSubsection {
+                icon: "history"
+                title: Translation.tr("Score history")
 
-            OptionRow {
-                label: Translation.tr("Keep results on this machine")
-                description: Translation.tr("Aggregate scores only — never the words or the keys")
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "save"
+                        text: Translation.tr("Keep results on this machine")
+                        description: Translation.tr("Aggregate scores only — never the words or the keys")
+                        checked: root.options.history.enable
+                        onToggleRequested: root.options.history.enable = !root.options.history.enable
+                    }
 
-                StyledSwitch {
-                    checked: root.options.history.enable
-                    onToggled: root.options.history.enable = checked
-                }
-            }
+                    ConfigSlider {
+                        text: Translation.tr("Results kept")
+                        buttonIcon: "format_list_numbered"
+                        usePercentTooltip: false
+                        enabled: root.options.history.enable
+                        from: 10
+                        to: 500
+                        value: root.options.history.maxEntries
+                        onValueModified: newValue => {
+                            root.options.history.maxEntries = Math.round(newValue / 10) * 10;
+                        }
+                    }
 
-            OptionRow {
-                label: Translation.tr("Results kept")
-                description: Translation.tr("%1 most recent").arg(String(root.options.history.maxEntries))
-                enabled: root.options.history.enable
-                opacity: enabled ? 1 : 0.5
-
-                StyledSlider {
-                    implicitWidth: 170
-                    from: 10
-                    to: 500
-                    stepSize: 10
-                    value: root.options.history.maxEntries
-                    onMoved: root.options.history.maxEntries = Math.round(value)
-                }
-            }
-
-            OptionRow {
-                Layout.columnSpan: 2
-                label: Translation.tr("Clear every stored result")
-                description: Translation.tr("%1 results, %2 personal bests and every lifetime total")
-                    .arg(String(TypingHistory.results.length))
-                    .arg(String(TypingHistory.personalBests.length))
-
-                RippleButton {
-                    implicitWidth: clearLabel.implicitWidth + 26
-                    implicitHeight: 32
-                    buttonRadius: Appearance.rounding.full
-                    colBackground: Appearance.colors.colSurfaceContainerHigh
-                    colBackgroundHover: Appearance.colors.colErrorContainer
-                    colRipple: Appearance.colors.colErrorContainer
-                    onClicked: TypingHistory.clear()
-
-                    StyledText {
-                        id: clearLabel
-                        anchors.centerIn: parent
-                        text: Translation.tr("Clear")
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colOnSurface
+                    // No ConfigSwitch shape fits a row whose affordance is an
+                    // action rather than a state, so this is the catalogue row
+                    // with a dialog button in its affordance slot - the same
+                    // pairing Settings > Services uses for "Index now".
+                    CatalogueRow {
+                        rowIcon: "delete_sweep"
+                        title: Translation.tr("Clear every stored result")
+                        titleFillsWidth: true
+                        titleElides: true
+                        description: Translation.tr("%1 results, %2 personal bests and every lifetime total")
+                            .arg(String(TypingHistory.results.length))
+                            .arg(String(TypingHistory.personalBests.length))
+                        affordance: [
+                            DialogButton {
+                                buttonText: Translation.tr("Clear")
+                                colBackground: Appearance.colors.colErrorContainer
+                                colBackgroundHover: Appearance.colors.colErrorContainerHover
+                                colRipple: Appearance.colors.colErrorContainerActive
+                                colText: Appearance.colors.colOnErrorContainer
+                                onClicked: TypingHistory.clear()
+                            }
+                        ]
                     }
                 }
             }
