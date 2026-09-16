@@ -78,8 +78,10 @@ Scope {
             // the screen edge to meet the frame's band - on it as a tab, or a
             // gap above it (DockReservation.frameOffset) - and the compositor
             // adds that anchored-edge margin to the zone by itself, so nothing
-            // inside the surface moves. An unpinned dock hides and reveals
-            // from the screen edge and stays there.
+            // inside the surface moves. Only while pinned: an unpinned dock
+            // hides and reveals from the screen edge, and its hover sliver
+            // has to stay AT the edge - moved in, the pointer slammed to the
+            // edge would land on the band, which takes no input.
             exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? DockReservation.zone : 0
             readonly property bool meetsFrame: root.pinned && !fullscreenOnThisMonitor
             readonly property var frameMargins: DockGeometry.directedSides(
@@ -92,8 +94,11 @@ Scope {
             }
             // Attached, the pill is a tab of the band: the band's colour, no
             // border, no blur (the band has none), its outward corners squared
-            // at the seam.
-            readonly property bool attached: dockRoot.meetsFrame && DockReservation.attached
+            // at the seam. Pinned or not: an unpinned dock sits a gap from the
+            // edge, which is the default band, so a rounded, bordered pill
+            // there rested on the band like a pill on a line; as a tab it
+            // comes out of the band and slides back into it.
+            readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor
 
             anchors {
                 top: DockGeometry.anchors(root.edge).top

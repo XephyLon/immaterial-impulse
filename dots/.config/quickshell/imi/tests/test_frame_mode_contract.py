@@ -87,7 +87,9 @@ class FrameModeContract(unittest.TestCase):
         self.assertNotRegex(dock, r"dockThickness: DockGeometry\.thickness\([^)]*frame", "the dock's inner geometry knows nothing of the frame")
         # Attached, the pill is a tab of the band: its colour, no border, no
         # blur (the band has none), the outward corners squared at the seam.
-        self.assertIn("readonly property bool attached: dockRoot.meetsFrame && DockReservation.attached", dock)
+        # ...pinned or not (an unpinned dock rests on the default band; a
+        # rounded, bordered pill there was a pill on a line).
+        self.assertIn("readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor", dock)
         self.assertIn("dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0", dock)
         self.assertIn("border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0", dock)
         self.assertIn("regionItem: Config.options.dock.showBackground && !dockRoot.attached ? dockVisualBackground : null", dock)

@@ -329,7 +329,10 @@ from ITS side: `modules/imi/dock/DockReservation.qml` reads `FrameGeometry` (nev
 import cycle) and publishes `attached` and `frameOffset`, and `Dock.qml` applies the offset as its
 surface's outward layer-shell margin while pinned - the compositor adds an anchored-edge margin to
 the exclusive zone by itself, so nothing inside the surface moves and the zone needs no second
-number; an unpinned dock hides and reveals from the screen edge and stays there.
+number; an unpinned dock hides and reveals from the screen edge and stays there - moved in, its hover
+sliver would sit above the band, which takes no input, and the pointer slammed to the edge would miss
+it. The attached LOOK is not pinned-only: an unpinned dock sits a gap from the edge, which is the
+default band, and a rounded, bordered pill there rested on the band like a pill on a line.
 `appearance.frame.dock`: "attached" (the default) puts the pill ON the band as a tab - the band's
 colour, no border, no blur region (the band has none), its outward corners squared
 (`dock_geometry.js` `cornerRadii`), the surface moved in by band minus gap (nothing at the default

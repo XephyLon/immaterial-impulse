@@ -144,7 +144,7 @@ ContentPage {
                         wrapMode: Text.WordWrap
                         font.pixelSize: Appearance.font.pixelSize.smaller
                         color: Appearance.colors.colSubtext
-                        text: Translation.tr("Attached, the dock sits on the band as a tab in the frame's colour. Floating, it keeps a gap above the band. An unpinned dock always floats: it hides and reveals from the screen edge.")
+                        text: Translation.tr("Attached, the dock sits on the band as a tab in the frame's colour. Floating, it keeps a gap above the band. An unpinned dock keeps hiding and revealing from the screen edge; attached, it comes out of the band.")
                     }
                 }
             }
