@@ -130,8 +130,27 @@ ContentPage {
                     stepSize: 1
                     onValueModified: Config.options.appearance.frame.thickness = newValue
                 }
+                ConfigSelectionArray {
+                    property bool rowVisible: Config.options.appearance.frame.enable && (Config.options.dock.enable ?? false)
+                    icon: "call_to_action"
+                    text: Translation.tr("Pinned dock")
+                    currentValue: Config.options.appearance.frame.dock
+                    onSelected: newValue => { Config.options.appearance.frame.dock = newValue; }
+                    options: [
+                        { "displayName": Translation.tr("Attached"), "value": "attached" },
+                        { "displayName": Translation.tr("Floating"), "value": "floating" }
+                    ]
+                    detailContent: StyledText {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                        text: Translation.tr("Attached, the dock sits on the band as a tab in the frame's colour. Floating, it keeps a gap above the band. An unpinned dock always floats: it hides and reveals from the screen edge.")
+                    }
+                }
             }
         }
+
 
         ContentSection {
             icon: "animation"
