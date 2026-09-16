@@ -496,8 +496,8 @@ Item {
                 title: Translation.tr("Type")
                 icon: "sync_alt"
                 subtitle: root.isOnce
-                    ? Translation.tr("Acts once when its conditions turn true and leaves things as they are")
-                    : Translation.tr("Keeps its actions applied while its conditions hold, then puts them back")
+                    ? Translation.tr("Acts once when conditions turn true; nothing to restore")
+                    : Translation.tr("Applies its actions while conditions hold, then restores")
 
                 // The header's control, where the sections above keep their
                 // switch - not a choice floating on the page between two

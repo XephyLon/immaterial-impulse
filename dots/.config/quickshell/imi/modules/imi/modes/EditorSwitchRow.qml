@@ -14,7 +14,9 @@ ConfigSwitch {
     Layout.fillWidth: true
     implicitHeight: Math.max(56, contentItem.implicitHeight + Appearance.spacing.space200)
     leftPadding: Appearance.spacing.space175
-    rightPadding: Appearance.spacing.space175
+    // The trigger and action rows end their trailing buttons 8px in; the
+    // switch ends on the same edge.
+    rightPadding: Appearance.spacing.space100
     buttonRadius: Appearance.rounding.normal
     iconSize: Appearance.font.pixelSize.huge
     colBackground: Appearance.colors.colLayer2

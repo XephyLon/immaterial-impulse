@@ -25,7 +25,8 @@ Rectangle {
         anchors {
             fill: parent
             leftMargin: Appearance.spacing.space175
-            rightMargin: Appearance.spacing.space175
+            // The trigger and action rows end their trailing buttons 8px in.
+            rightMargin: Appearance.spacing.space100
         }
         rowIcon: row.icon
         rowIconSize: Appearance.font.pixelSize.huge

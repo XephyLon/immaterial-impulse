@@ -88,6 +88,7 @@ ColumnLayout {
         }
 
         RippleButton {
+            id: pickButton
             visible: root.suggestions.length > 0
             implicitHeight: 36
             implicitWidth: pickRow.implicitWidth + Appearance.spacing.space300
@@ -123,7 +124,9 @@ ColumnLayout {
 
                 sourceComponent: EditorPopup {
                 id: suggestionMenu
-                parent: suggestionLoader.parent
+                // Anchored to the button itself, whatever the Loader ends up
+                // a child of.
+                parent: pickButton
                 y: parent.height + Appearance.spacing.space50
                 x: parent.width - width
                 width: 300

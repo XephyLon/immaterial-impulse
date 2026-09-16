@@ -30,6 +30,8 @@ EditorField {
     // An emptied field is "intermediate" to the validator, which then holds
     // editingFinished back - so the commit also runs when focus leaves.
     function commit() {
+        if (root.text.trim().length && !root.acceptableInput)
+            return;
         const next = root.text.trim().length ? Number(root.text) : null;
         if (next !== root.value)
             root.committed(next);
