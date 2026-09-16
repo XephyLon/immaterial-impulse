@@ -380,73 +380,67 @@ PhoneSubPage {
                         // there is no second copy of that decision here.
                         onClicked: PhoneScrcpy.launchApp(appRow.modelData.package)
 
-                        contentItem: RowLayout {
-                            spacing: Appearance.spacing.space125
+                        // The shell's catalogue row shape. The leading visual
+                        // is a shaped glyph rather than a bare symbol, so it
+                        // goes through `iconComponent`; the ink is stated
+                        // because the row's plate changes tone while the app
+                        // is running.
+                        contentItem: CatalogueRow {
+                            rowSpacing: Appearance.spacing.space125
 
-                            MaterialShapeWrappedMaterialSymbol {
-                                Layout.alignment: Qt.AlignVCenter
-                                // The generic glyph, deliberately: pulling
-                                // launcher icons off the phone is a follow-up
-                                // (spec, "Non-goals").
-                                text: "android"
-                                wrappedShape: MaterialShape.Shape.Cookie9Sided
-                                iconSize: Appearance.font.pixelSize.small
-                                padding: Appearance.spacing.space75
-                                color: appRow.running
-                                    ? Appearance.colors.colPrimary
-                                    : Appearance.colors.colSecondaryContainer
-                                colSymbol: appRow.running
-                                    ? Appearance.colors.colOnPrimary
-                                    : Appearance.colors.colOnSecondaryContainer
-                            }
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignVCenter
-                                spacing: 0
-
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    textFormat: Text.PlainText
-                                    text: PhoneCards.appLabel(appRow.modelData)
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                    font.weight: Font.DemiBold
+                            iconComponent: Component {
+                                MaterialShapeWrappedMaterialSymbol {
+                                    // The generic glyph, deliberately: pulling
+                                    // launcher icons off the phone is a follow-up
+                                    // (spec, "Non-goals").
+                                    text: "android"
+                                    wrappedShape: MaterialShape.Shape.Cookie9Sided
+                                    iconSize: Appearance.font.pixelSize.small
+                                    padding: Appearance.spacing.space75
                                     color: appRow.running
-                                        ? Appearance.colors.colOnPrimaryContainer
-                                        : Appearance.colors.colOnLayer2
-                                    elide: Text.ElideRight
-                                }
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    textFormat: Text.PlainText
-                                    text: appRow.modelData.package
-                                    font.pixelSize: Appearance.font.pixelSize.smallest
-                                    color: Appearance.colors.colSubtext
-                                    elide: Text.ElideRight
+                                        ? Appearance.colors.colPrimary
+                                        : Appearance.colors.colSecondaryContainer
+                                    colSymbol: appRow.running
+                                        ? Appearance.colors.colOnPrimary
+                                        : Appearance.colors.colOnSecondaryContainer
                                 }
                             }
 
-                            IconButton {
-                                id: starButton
-                                readonly property bool favourite: PhoneScrcpy.isFavorite(appRow.modelData.package)
+                            title: PhoneCards.appLabel(appRow.modelData)
+                            titleFont.pixelSize: Appearance.font.pixelSize.small
+                            titleFont.weight: Font.DemiBold
+                            titleColor: appRow.running
+                                ? Appearance.colors.colOnPrimaryContainer
+                                : Appearance.colors.colOnLayer2
+                            titleFillsWidth: true
+                            titleElides: true
+                            description: appRow.modelData.package
+                            descriptionWraps: false
 
-                                buttonIcon: starButton.favourite ? "star" : "star_outline"
-                                animateChange: true
-                                buttonSize: 32
-                                iconFill: starButton.favourite ? 1 : 0
-                                colText: starButton.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                                tooltip: starButton.favourite
-                                    ? Translation.tr("Remove from favourites")
-                                    : Translation.tr("Add to favourites")
-                                onClicked: PhoneScrcpy.toggleFavorite(appRow.modelData.package)
-                            }
+                            trailingContent: [
+                                IconButton {
+                                    id: starButton
+                                    readonly property bool favourite: PhoneScrcpy.isFavorite(appRow.modelData.package)
 
-                            MaterialSymbol {
-                                Layout.alignment: Qt.AlignVCenter
-                                text: appRow.running ? "open_in_new" : "play_arrow"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: appRow.running ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                            }
+                                    buttonIcon: starButton.favourite ? "star" : "star_outline"
+                                    animateChange: true
+                                    buttonSize: 32
+                                    iconFill: starButton.favourite ? 1 : 0
+                                    colText: starButton.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                    tooltip: starButton.favourite
+                                        ? Translation.tr("Remove from favourites")
+                                        : Translation.tr("Add to favourites")
+                                    onClicked: PhoneScrcpy.toggleFavorite(appRow.modelData.package)
+                                }
+                            ]
+
+                            affordance: [
+                                MaterialSymbol {
+                                    text: appRow.running ? "open_in_new" : "play_arrow"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: appRow.running ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                }
+                            ]
                         }
                     }
                 }

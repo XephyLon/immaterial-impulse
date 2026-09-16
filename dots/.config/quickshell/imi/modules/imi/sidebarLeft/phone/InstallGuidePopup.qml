@@ -126,27 +126,16 @@ Item {
                 Repeater {
                     model: PhoneCards.distroPills()
 
-                    delegate: RippleButton {
+                    // The shell's filter chip: one choice of many, drawn the
+                    // way every other single-choice chip row in the shell is.
+                    delegate: FilterChip {
                         id: pill
                         required property var modelData
 
-                        readonly property bool picked: root.selectedDistro === pill.modelData.key
-                        Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space100
-                        buttonRadius: Appearance.rounding.full
-                        colBackground: pill.picked ? Appearance.colors.colPrimaryContainer : Appearance.colors.colLayer3
-                        colBackgroundHover: pill.picked ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colLayer3Hover
-                        colRipple: pill.picked ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colLayer3Active
+                        // A distro's name is its own; nothing to translate.
+                        label: pill.modelData.label
+                        toggled: root.selectedDistro === pill.modelData.key
                         onClicked: root.selectedDistro = pill.modelData.key
-
-                        contentItem: StyledText {
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            // A distro's name is its own; nothing to translate.
-                            text: pill.modelData.label
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            font.weight: pill.picked ? Font.DemiBold : Font.Normal
-                            color: pill.picked ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnLayer3
-                        }
                     }
                 }
 

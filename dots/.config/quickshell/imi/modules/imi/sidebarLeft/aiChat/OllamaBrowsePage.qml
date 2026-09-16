@@ -228,70 +228,68 @@ ColumnLayout {
             }
             Repeater {
                 model: root.filteredInstalled
-                delegate: RowLayout {
+                // The shell's catalogue row shape, drawn bare: this list is
+                // not a control, the row's two actions are. The ink is
+                // stated because the list sits on layer 1 rather than on a
+                // tonal container.
+                delegate: CatalogueRow {
                     id: installedRow
                     required property var modelData
                     readonly property bool loaded: OllamaCatalog.running.indexOf(installedRow.modelData.name) !== -1
                     readonly property bool current: Ai.currentModelId === Ai.safeModelName(installedRow.modelData.name)
                     readonly property bool armedForRemoval: root.armed === "remove:" + installedRow.modelData.name
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        StyledText {
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                            text: installedRow.modelData.name
-                            color: Appearance.colors.colOnLayer1
-                            font.pixelSize: Appearance.font.pixelSize.small
-                        }
-                        StyledText {
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                            text: [Library.sizeLabel(installedRow.modelData.size), installedRow.modelData.parameterSize,
-                                installedRow.modelData.quantization, installedRow.loaded ? Translation.tr("loaded") : ""]
-                                .filter(s => s && s.length > 0).join(" · ")
-                            color: installedRow.loaded ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                        }
-                    }
-                    DialogButton {
-                        toggled: installedRow.current
-                        buttonText: installedRow.current ? Translation.tr("In use") : Translation.tr("Use")
-                        colBackground: installedRow.current ? Appearance.colors.colPrimary : Appearance.colors.colSecondaryContainer
-                        colBackgroundHover: installedRow.current ? Appearance.colors.colPrimaryHover : Appearance.colors.colSecondaryContainerHover
-                        colRipple: installedRow.current ? Appearance.colors.colPrimaryActive : Appearance.colors.colSecondaryContainerActive
-                        colText: installedRow.current ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
-                        onClicked: root.useModel(installedRow.modelData.name)
-                    }
-                    RippleButton {
-                        implicitHeight: 28
-                        padding: Appearance.spacing.space150
-                        buttonRadius: Appearance.rounding.full
-                        colBackground: installedRow.armedForRemoval ? Appearance.m3colors.m3error : "transparent"
-                        colRipple: Appearance.colors.colErrorActive
-                        onClicked: {
-                            if (!installedRow.armedForRemoval) { root.armed = "remove:" + installedRow.modelData.name; return; }
-                            root.armed = "";
-                            OllamaCatalog.remove(installedRow.modelData.name);
-                        }
-                        contentItem: RowLayout {
-                            spacing: Appearance.spacing.space50
-                            MaterialSymbol {
-                                text: "delete"
-                                iconSize: Appearance.font.pixelSize.normal
-                                color: installedRow.armedForRemoval ? Appearance.m3colors.m3onError : Appearance.colors.colError
+                    rowSpacing: Appearance.spacing.space100
+
+                    title: installedRow.modelData.name
+                    titleFont.pixelSize: Appearance.font.pixelSize.small
+                    titleColor: Appearance.colors.colOnLayer1
+                    titleFillsWidth: true
+                    titleElides: true
+                    description: [Library.sizeLabel(installedRow.modelData.size), installedRow.modelData.parameterSize,
+                        installedRow.modelData.quantization, installedRow.loaded ? Translation.tr("loaded") : ""]
+                        .filter(s => s && s.length > 0).join(" · ")
+                    descriptionColor: installedRow.loaded ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                    descriptionWraps: false
+
+                    trailingContent: [
+                        DialogButton {
+                            toggled: installedRow.current
+                            buttonText: installedRow.current ? Translation.tr("In use") : Translation.tr("Use")
+                            colBackground: installedRow.current ? Appearance.colors.colPrimary : Appearance.colors.colSecondaryContainer
+                            colBackgroundHover: installedRow.current ? Appearance.colors.colPrimaryHover : Appearance.colors.colSecondaryContainerHover
+                            colRipple: installedRow.current ? Appearance.colors.colPrimaryActive : Appearance.colors.colSecondaryContainerActive
+                            colText: installedRow.current ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
+                            onClicked: root.useModel(installedRow.modelData.name)
+                        },
+                        RippleButton {
+                            implicitHeight: 28
+                            padding: Appearance.spacing.space150
+                            buttonRadius: Appearance.rounding.full
+                            colBackground: installedRow.armedForRemoval ? Appearance.m3colors.m3error : "transparent"
+                            colRipple: Appearance.colors.colErrorActive
+                            onClicked: {
+                                if (!installedRow.armedForRemoval) { root.armed = "remove:" + installedRow.modelData.name; return; }
+                                root.armed = "";
+                                OllamaCatalog.remove(installedRow.modelData.name);
                             }
-                            StyledText {
-                                visible: installedRow.armedForRemoval
-                                text: Translation.tr("Remove %1?").arg(Library.sizeLabel(installedRow.modelData.size))
-                                color: Appearance.m3colors.m3onError
-                                font.pixelSize: Appearance.font.pixelSize.smaller
+                            contentItem: RowLayout {
+                                spacing: Appearance.spacing.space50
+                                MaterialSymbol {
+                                    text: "delete"
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    color: installedRow.armedForRemoval ? Appearance.m3colors.m3onError : Appearance.colors.colError
+                                }
+                                StyledText {
+                                    visible: installedRow.armedForRemoval
+                                    text: Translation.tr("Remove %1?").arg(Library.sizeLabel(installedRow.modelData.size))
+                                    color: Appearance.m3colors.m3onError
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                }
                             }
+                            StyledToolTip { text: installedRow.armedForRemoval ? Translation.tr("Click again to remove") : Translation.tr("Remove") }
                         }
-                        StyledToolTip { text: installedRow.armedForRemoval ? Translation.tr("Click again to remove") : Translation.tr("Remove") }
-                    }
+                    ]
                 }
             }
 

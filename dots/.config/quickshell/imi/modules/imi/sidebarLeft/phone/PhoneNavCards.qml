@@ -39,51 +39,49 @@ Item {
         colBackgroundHover: Appearance.colors.colLayer3Hover
         colRipple: Appearance.colors.colLayer3Active
 
-        contentItem: RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: Appearance.spacing.space150
-            anchors.rightMargin: Appearance.spacing.space100
-            spacing: Appearance.spacing.space125
+        // The shell's catalogue row shape. The leading visual is a glyph on
+        // a tonal disc rather than a bare symbol, so it goes through
+        // `iconComponent`; the title's ink is stated because these cards sit
+        // on layer 3.
+        contentItem: CatalogueRow {
+            anchors {
+                fill: parent
+                leftMargin: Appearance.spacing.space150
+                rightMargin: Appearance.spacing.space100
+            }
+            rowSpacing: Appearance.spacing.space125
 
-            Rectangle {
-                implicitWidth: 34
-                implicitHeight: 34
-                radius: Appearance.rounding.full
-                color: card.colGlyphBackground
+            iconComponent: Component {
+                Rectangle {
+                    implicitWidth: 34
+                    implicitHeight: 34
+                    radius: Appearance.rounding.full
+                    color: card.colGlyphBackground
 
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: card.glyph
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: card.colGlyph
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        text: card.glyph
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: card.colGlyph
+                    }
                 }
             }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
+            title: card.title
+            titleFont.pixelSize: Appearance.font.pixelSize.small
+            titleColor: Appearance.colors.colOnLayer3
+            titleFillsWidth: true
+            titleElides: true
+            description: card.subtitle
+            descriptionWraps: false
 
-                StyledText {
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                    text: card.title
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    color: Appearance.colors.colOnLayer3
-                }
-                StyledText {
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                    text: card.subtitle
-                    font.pixelSize: Appearance.font.pixelSize.smaller
+            affordance: [
+                MaterialSymbol {
+                    text: "chevron_right"
+                    iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colSubtext
                 }
-            }
-
-            MaterialSymbol {
-                text: "chevron_right"
-                iconSize: Appearance.font.pixelSize.larger
-                color: Appearance.colors.colSubtext
-            }
+            ]
         }
     }
 

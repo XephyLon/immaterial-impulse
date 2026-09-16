@@ -62,6 +62,11 @@ own repo; the installer pins which revision it builds.
   line. Not built: Proton Mail (needs Proton Bridge), Proton Pass (no API).
 
 ### Changed
+- The typing test's settings page is drawn in the settings grammar (sections,
+  grouped rows, the shell's switch, slider and choice rows) instead of its own
+  row kit; the phone tab's navigation cards, app rows and the Intelligence
+  panel's model and session rows draw with the shell's catalogue row; persona
+  and distro choices are the shell's chips.
 - One icon button and one text button across the shell. Forty-odd
   hand-drawn icon buttons (eight different sizes) are the new `IconButton`;
   the settings pages', sidebars' and dialogs' text pills are `DialogButton`;

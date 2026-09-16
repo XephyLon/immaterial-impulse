@@ -974,36 +974,17 @@ Item {
                                     Repeater {
                                         model: [{ "id": "", "name": Translation.tr("Custom"), "icon": "edit_note", "description": Translation.tr("The free-text prompt below") }]
                                             .concat(AiPersonas.all)
-                                        delegate: RippleButton {
+                                        // The shell's filter chip: one choice
+                                        // of many, drawn the way the model
+                                        // filters above and the plugin
+                                        // surfaces draw theirs.
+                                        delegate: FilterChip {
                                             id: personaChip
                                             required property var modelData
-                                            readonly property bool current: AiPersonas.activeId === modelData.id
-                                            implicitHeight: 30
-                                            implicitWidth: chipRow.implicitWidth + Appearance.spacing.space200 * 2
-                                            buttonRadius: Appearance.rounding.full
-                                            colBackground: current ? Appearance.colors.colPrimaryContainer : Appearance.colors.colLayer2
-                                            colBackgroundHover: current ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colLayer2Hover
-                                            colRipple: current ? Appearance.colors.colPrimaryContainerActive : Appearance.colors.colLayer2Active
-                                            onClicked: AiPersonas.pick(modelData.id)
-                                            contentItem: Item {
-                                                implicitWidth: chipRow.implicitWidth
-                                                implicitHeight: chipRow.implicitHeight
-                                                RowLayout {
-                                                    id: chipRow
-                                                    anchors.centerIn: parent
-                                                    spacing: Appearance.spacing.space50
-                                                    MaterialSymbol {
-                                                        text: personaChip.modelData.icon ?? "person"
-                                                        iconSize: Appearance.font.pixelSize.normal
-                                                        color: personaChip.current ? Appearance.m3colors.m3onPrimaryContainer : Appearance.colors.colOnLayer2
-                                                    }
-                                                    StyledText {
-                                                        text: personaChip.modelData.name
-                                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                                        color: personaChip.current ? Appearance.m3colors.m3onPrimaryContainer : Appearance.colors.colOnLayer2
-                                                    }
-                                                }
-                                            }
+                                            chipIcon: personaChip.modelData.icon ?? "person"
+                                            label: personaChip.modelData.name
+                                            toggled: AiPersonas.activeId === personaChip.modelData.id
+                                            onClicked: AiPersonas.pick(personaChip.modelData.id)
                                             StyledToolTip { text: personaChip.modelData.description ?? "" }
                                         }
                                     }
@@ -1086,23 +1067,24 @@ Item {
                                     colBackgroundHover: Appearance.colors.colLayer2Hover
                                     colRipple: Appearance.colors.colLayer2Active
                                     onClicked: root.openView("browse", "keys")
-                                    contentItem: RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: Appearance.spacing.space100
-                                        spacing: Appearance.spacing.space100
-                                        MaterialSymbol {
-                                            text: "travel_explore"
-                                            iconSize: Appearance.font.pixelSize.larger
-                                            color: Appearance.colors.colPrimary
+                                    // The shell's catalogue row shape. The ink
+                                    // is stated: this row sits on layer 1,
+                                    // not on a tonal container.
+                                    contentItem: CatalogueRow {
+                                        anchors {
+                                            fill: parent
+                                            leftMargin: Appearance.spacing.space100
                                         }
-                                        StyledText {
-                                            Layout.fillWidth: true
-                                            text: (Config.options.ai.customProviders ?? []).length > 0
-                                                ? Translation.tr("Browse models")
-                                                : Translation.tr("Browse OpenRouter models")
-                                            color: Appearance.colors.colOnLayer1
-                                            font.pixelSize: Appearance.font.pixelSize.small
-                                        }
+                                        rowSpacing: Appearance.spacing.space100
+
+                                        rowIcon: "travel_explore"
+                                        rowIconColor: Appearance.colors.colPrimary
+                                        title: (Config.options.ai.customProviders ?? []).length > 0
+                                            ? Translation.tr("Browse models")
+                                            : Translation.tr("Browse OpenRouter models")
+                                        titleFont.pixelSize: Appearance.font.pixelSize.small
+                                        titleColor: Appearance.colors.colOnLayer1
+                                        titleFillsWidth: true
                                     }
                                 }
                             }

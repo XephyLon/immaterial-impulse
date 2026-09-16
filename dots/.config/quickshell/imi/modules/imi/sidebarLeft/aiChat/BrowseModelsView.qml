@@ -228,55 +228,54 @@ Rectangle {
                         onClicked: modelRow.modelData.kind === "provider"
                             ? root.toggleSurfaced(modelRow.modelData)
                             : root.importRow(modelRow.modelData)
-                        contentItem: RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: Appearance.spacing.space150
-                            anchors.rightMargin: Appearance.spacing.space150
-                            spacing: Appearance.spacing.space100
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    elide: Text.ElideRight
-                                    text: modelRow.modelData.name
-                                    color: Appearance.colors.colOnLayer1
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                }
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    elide: Text.ElideRight
-                                    text: modelRow.modelData.kind === "provider"
-                                        ? Translation.tr("%1 · your provider · click to %2").arg(modelRow.modelData.provider)
-                                              .arg(root.surfaced(modelRow.modelData) ? Translation.tr("hide") : Translation.tr("show"))
-                                        : `${modelRow.modelData.provider} · ${Math.round(modelRow.modelData.contextWindow / 1000)}k · ${OR.priceLabel(modelRow.modelData.promptPrice, modelRow.modelData.completionPrice)}`
-                                    color: Appearance.colors.colSubtext
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
-                                }
+                        // The shell's catalogue row shape. No leading glyph
+                        // here - the name is the row - and the ink is stated
+                        // because this list sits on layer 1 rather than on a
+                        // tonal container.
+                        contentItem: CatalogueRow {
+                            anchors {
+                                fill: parent
+                                leftMargin: Appearance.spacing.space150
+                                rightMargin: Appearance.spacing.space150
                             }
+                            rowSpacing: Appearance.spacing.space100
+
+                            title: modelRow.modelData.name
+                            titleFont.pixelSize: Appearance.font.pixelSize.small
+                            titleColor: Appearance.colors.colOnLayer1
+                            titleFillsWidth: true
+                            titleElides: true
+                            description: modelRow.modelData.kind === "provider"
+                                ? Translation.tr("%1 · your provider · click to %2").arg(modelRow.modelData.provider)
+                                      .arg(root.surfaced(modelRow.modelData) ? Translation.tr("hide") : Translation.tr("show"))
+                                : `${modelRow.modelData.provider} · ${Math.round(modelRow.modelData.contextWindow / 1000)}k · ${OR.priceLabel(modelRow.modelData.promptPrice, modelRow.modelData.completionPrice)}`
+                            descriptionWraps: false
+
                             // Bare glyphs, no tooltips: a StyledToolTip
                             // needs a host with `hovered` (a Text has none),
                             // so these showed unconditionally and leaked
                             // popup windows past the view's close.
-                            MaterialSymbol {
-                                visible: modelRow.modelData.kind === "provider"
-                                text: root.surfaced(modelRow.modelData) ? "check_circle" : "radio_button_unchecked"
-                                fill: root.surfaced(modelRow.modelData) ? 1 : 0
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: root.surfaced(modelRow.modelData) ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                            }
-                            MaterialSymbol {
-                                visible: modelRow.modelData.reasoning
-                                text: "star_shine"
-                                iconSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colPrimary
-                            }
-                            MaterialSymbol {
-                                visible: modelRow.modelData.vision
-                                text: "visibility"
-                                iconSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colSubtext
-                            }
+                            trailingContent: [
+                                MaterialSymbol {
+                                    visible: modelRow.modelData.kind === "provider"
+                                    text: root.surfaced(modelRow.modelData) ? "check_circle" : "radio_button_unchecked"
+                                    fill: root.surfaced(modelRow.modelData) ? 1 : 0
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: root.surfaced(modelRow.modelData) ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                },
+                                MaterialSymbol {
+                                    visible: modelRow.modelData.reasoning
+                                    text: "star_shine"
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    color: Appearance.colors.colPrimary
+                                },
+                                MaterialSymbol {
+                                    visible: modelRow.modelData.vision
+                                    text: "visibility"
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    color: Appearance.colors.colSubtext
+                                }
+                            ]
                         }
                     }
                 }
