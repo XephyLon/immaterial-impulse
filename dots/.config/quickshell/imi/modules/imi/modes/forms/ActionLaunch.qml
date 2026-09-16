@@ -31,10 +31,10 @@ ColumnLayout {
         text: Translation.tr("Launch")
         current: launchCol.useCommand ? "command" : "app"
         onPicked: v => row.patchValue(v === "command" ? { app: "", command: row.obj.command || "" }
-                                                        : { command: "", app: row.obj.app || "" })
+                                                    : { command: "", app: row.obj.app || "" })
         options: [
-            { displayName: Translation.tr("An app"), value: "app" },
-            { displayName: Translation.tr("A command"), value: "command" }
+        { displayName: Translation.tr("An app"), value: "app" },
+        { displayName: Translation.tr("A command"), value: "command" }
         ]
     }
 
@@ -60,14 +60,9 @@ ColumnLayout {
 
             // A live search, so it is the shell's field directly rather than
             // the commit-on-finish PlainField.
-            ToolbarTextField {
+            EditorField {
                 id: appSearch
                 Layout.fillWidth: true
-                Layout.fillHeight: false
-                implicitHeight: 36
-                focusRing: true
-                colBackground: Appearance.colors.colLayer3
-                color: Appearance.colors.colOnLayer3
                 placeholderText: (row.obj.app ?? "").length ? Translation.tr("Search to replace")
                                                             : Translation.tr("Search apps")
                 onTextChanged: launchCol.appQuery = text
@@ -126,21 +121,14 @@ ColumnLayout {
         onCommitted: v => row.patchValue({ command: v, app: "" })
     }
 
-    RowLayout {
-        spacing: Appearance.spacing.space125
-
-        FormLabel {
-            text: Translation.tr("When it ends")
-        }
-
-        FormChoice {
-            current: row.obj.onEnd ?? "keep"
-            onPicked: v => row.patchValue({ onEnd: v })
-            options: [
-                { displayName: Translation.tr("Leave it open"), value: "keep" },
-                { displayName: Translation.tr("Close it"), value: "close" }
-            ]
-        }
+    FormChoice {
+        text: Translation.tr("When it ends")
+        current: row.obj.onEnd ?? "keep"
+        onPicked: v => row.patchValue({ onEnd: v })
+        options: [
+            { displayName: Translation.tr("Leave it open"), value: "keep" },
+            { displayName: Translation.tr("Close it"), value: "close" }
+        ]
     }
 
     RowLayout {

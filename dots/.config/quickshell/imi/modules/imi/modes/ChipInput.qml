@@ -68,14 +68,9 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Appearance.spacing.space75
 
-        ToolbarTextField {
+        EditorField {
             id: entry
             Layout.fillWidth: true
-            Layout.fillHeight: false
-            implicitHeight: 36
-            focusRing: true
-            colBackground: Appearance.colors.colLayer3
-            color: Appearance.colors.colOnLayer3
             placeholderText: root.placeholder
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -100,7 +95,7 @@ ColumnLayout {
             colBackground: Appearance.colors.colLayer3
             colBackgroundHover: Appearance.colors.colLayer3Hover
             colRipple: Appearance.colors.colLayer3Active
-            onClicked: suggestionMenu.open()
+            onClicked: suggestionLoader.item.open()
 
             contentItem: RowLayout {
                 id: pickRow
@@ -120,8 +115,15 @@ ColumnLayout {
                 }
             }
 
-            EditorPopup {
+            // Built only while there is something to suggest: most chip
+            // inputs never are, and a popup is a plate, a shadow and a list.
+            Loader {
+                id: suggestionLoader
+                active: root.suggestions.length > 0
+
+                sourceComponent: EditorPopup {
                 id: suggestionMenu
+                parent: suggestionLoader.parent
                 y: parent.height + Appearance.spacing.space50
                 x: parent.width - width
                 width: 300
@@ -177,6 +179,7 @@ ColumnLayout {
                         }
                     }
                 }
+            }
             }
         }
     }

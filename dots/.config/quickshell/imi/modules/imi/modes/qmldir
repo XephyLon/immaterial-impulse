@@ -6,6 +6,7 @@ AddRowButton 1.0 AddRowButton.qml
 ChipInput 1.0 ChipInput.qml
 ColorDots 1.0 ColorDots.qml
 DurationField 1.0 DurationField.qml
+EditorField 1.0 EditorField.qml
 EditorPopup 1.0 EditorPopup.qml
 EditorRow 1.0 EditorRow.qml
 EditorSwitchRow 1.0 EditorSwitchRow.qml

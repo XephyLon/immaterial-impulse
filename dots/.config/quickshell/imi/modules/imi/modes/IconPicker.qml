@@ -128,11 +128,11 @@ EditorPopup {
             }
         }
 
-        ToolbarTextField {
+        EditorField {
             id: searchField
             Layout.fillWidth: true
-            Layout.fillHeight: false
             implicitHeight: 42
+            focusRing: false
             leadingIcon: "search"
             placeholderText: Translation.tr("Search symbols")
             colBackground: Appearance.colors.colLayer2
@@ -161,7 +161,14 @@ EditorPopup {
 
             GridView {
                 id: grid
-                anchors.fill: parent
+                // Whole cells only, centred: the remainder split between the
+                // sides rather than a dead gutter on the right.
+                anchors {
+                    top: parent.top
+                    bottom: parent.bottom
+                    horizontalCenter: parent.horizontalCenter
+                }
+                width: Math.max(cellWidth, Math.floor(parent.width / cellWidth) * cellWidth)
                 clip: true
                 cellWidth: 64
                 cellHeight: 64

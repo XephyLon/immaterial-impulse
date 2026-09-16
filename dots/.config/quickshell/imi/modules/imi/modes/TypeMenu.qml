@@ -63,11 +63,11 @@ EditorPopup {
         id: contentColumn
         spacing: Appearance.spacing.space100
 
-        ToolbarTextField {
+        EditorField {
             id: searchField
             Layout.fillWidth: true
-            Layout.fillHeight: false
             implicitHeight: 40
+            focusRing: false
             leadingIcon: "search"
             placeholderText: Translation.tr("Search")
             colBackground: Appearance.colors.colLayer2
@@ -89,11 +89,19 @@ EditorPopup {
             }
         }
 
-        StyledListView {
-            id: list
+        // The list in a frame of its own so the edge fade can sit over it.
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.preferredHeight: Math.min(360, contentHeight)
+            Layout.preferredHeight: Math.min(360, list.contentHeight)
+
+        ScrollEdgeFade {
+            target: list
+        }
+
+        StyledListView {
+            id: list
+            anchors.fill: parent
             clip: true
             spacing: Appearance.spacing.space25
             popin: false
@@ -163,6 +171,7 @@ EditorPopup {
                     }
                 }
             }
+        }
         }
     }
 }

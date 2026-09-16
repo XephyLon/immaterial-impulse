@@ -20,12 +20,6 @@ TextField {
     Layout.fillHeight: true
     implicitWidth: 200
     padding: Appearance.spacing.space150
-    // The text is centred in whatever height the field is given: boxed to a
-    // form row's 36px, the all-round padding left 12px for the glyphs and
-    // clipped them.
-    topPadding: 0
-    bottomPadding: 0
-    verticalAlignment: TextInput.AlignVCenter
     leftPadding: filterField.leadingIcon.length > 0
         ? Appearance.spacing.space150 + leadingGlyph.implicitWidth + Appearance.spacing.space100
         : Appearance.spacing.space150

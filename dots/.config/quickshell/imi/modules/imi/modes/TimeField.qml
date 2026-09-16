@@ -4,22 +4,18 @@ import QtQuick
 import QtQuick.Layouts
 import "../../../services/modes/ModeSchema.js" as ModeSchema
 
-/** HH:MM field on the shell's pill field; `committed` fires only with a valid time. */
-ToolbarTextField {
+/** HH:MM field on EditorField; `committed` fires only with a valid time. */
+EditorField {
     id: root
 
     property string value: "00:00"
     signal committed(string value)
     readonly property bool valid: ModeSchema.validTime(root.text)
 
-    Layout.fillHeight: false
     implicitWidth: 72
-    implicitHeight: 36
     horizontalAlignment: TextInput.AlignHCenter
     inputMask: "99:99"
     font.family: Appearance.font.family.numbers
-    colBackground: Appearance.colors.colLayer3
-    color: Appearance.colors.colOnLayer3
     // The ring doubles as the validity mark: primary while editing, error
     // while the text is not a time.
     ringShown: root.activeFocus || !root.valid

@@ -43,6 +43,13 @@ Popup {
             easing.type: Appearance.animation.elementMoveExit.type
             easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
         }
+        NumberAnimation {
+            property: "scale"
+            to: 0.96
+            duration: Appearance.animation.elementMoveExit.duration
+            easing.type: Appearance.animation.elementMoveExit.type
+            easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
+        }
     }
 
     background: Item {
