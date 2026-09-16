@@ -217,7 +217,48 @@ TestCase {
                     edge + " must not lift along its own strip");
     }
 
+    // --- frame mode ---------------------------------------------------------
+
+    function test_in_frame_mode_the_dock_moves_in_by_the_band_it_meets() {
+        // Outside frame mode: nowhere. Attached: the pill (gap inside its
+        // surface) lands on the band - nothing to move at the default band,
+        // which IS the gap; in by the difference when the band is thicker,
+        // OUT when it is thinner (a negative margin, so the tab still sits on
+        // the band rather than a sliver above it). Floating: in by the band,
+        // so the pill keeps its gap above the band.
+        compare(Geometry.frameOffset(false, true, 12, gaps), 0);
+        compare(Geometry.frameOffset(false, false, 12, gaps), 0);
+        compare(Geometry.frameOffset(true, true, 5, gaps), 0, "the default band is the gap: the tab is already on it");
+        compare(Geometry.frameOffset(true, true, 12, gaps), 7);
+        compare(Geometry.frameOffset(true, true, 2, gaps), -3);
+        compare(Geometry.frameOffset(true, false, 5, gaps), 5);
+        compare(Geometry.frameOffset(true, false, 12, gaps), 12);
+        compare(Geometry.frameOffset(true, false, "12", "5"), 12);
+        // The compositor adds an anchored-edge margin to the zone itself, so
+        // the reservation is untouched by the move.
+        compare(Geometry.exclusiveZone(dockHeight, elevation, gaps), 65);
+    }
+
+    function test_an_attached_dock_squares_only_its_outward_corners() {
+        const r = 22;
+        compare(Geometry.cornerRadii("bottom", r, false), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadii("bottom", r, true), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
+        compare(Geometry.cornerRadii("top", r, true), { topLeft: 0, topRight: 0, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadii("left", r, true), { topLeft: 0, topRight: r, bottomLeft: 0, bottomRight: r });
+        compare(Geometry.cornerRadii("right", r, true), { topLeft: r, topRight: 0, bottomLeft: r, bottomRight: 0 });
+        // The seam is always the outward side, at every edge.
+        for (const edge of ["top", "bottom", "left", "right"]) {
+            const radii = Geometry.cornerRadii(edge, r, true);
+            const out = Geometry.outwardSide(edge);
+            const squared = Object.keys(radii).filter(k => radii[k] === 0);
+            compare(squared.length, 2, edge + " squares exactly two corners");
+            for (const k of squared)
+                verify(k.toLowerCase().indexOf(out) !== -1, edge + ": " + k + " is not on the " + out + " side");
+        }
+    }
+
     function test_the_bars_overloaded_pair_reads_as_an_edge() {
+
         // `bottom` stops meaning bottom once `vertical` is set. The dock only
         // needs this to notice it is being sent where an auto-hiding bar
         // already lives, and a comparison across two vocabularies means

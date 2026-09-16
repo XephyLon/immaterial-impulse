@@ -170,7 +170,39 @@ function popupAnchorSides(edge) {
     return { edges: [inwardSide(e), axisStart], gravity: [inwardSide(e), axisEnd] };
 }
 
+// How far the whole dock surface moves in from the screen edge in frame mode
+// (services/FrameGeometry.qml). The pill sits `gapsOut` inside its surface;
+// the frame's band owns that gap. ATTACHED, the pill sits on the band as a
+// tab: the surface moves in by band minus gap (nothing at all when the band
+// is the gap, which it is by default; a little OUT when the band is thinner
+// than the gap - a negative layer-shell margin, the same device the dead-
+// pixel workaround uses). FLOATING, the pill keeps a gap above the band: the
+// surface moves in by the band. The compositor adds a margin on the anchored
+// edge to the exclusive zone on its own, so the reservation follows without a
+// second number. Outside frame mode the dock is where it always was.
+function frameOffset(frameOn, attached, band, gapsOut) {
+    if (!frameOn) return 0;
+    var b = Number(band) || 0;
+    var g = Number(gapsOut) || 0;
+    return attached ? b - g : b;
+}
+
+// Which of the pill's corners stay round. All four, or - attached to the
+// frame - only the two INWARD ones: the outward pair is the seam where the
+// tab grows out of the band, and a rounded seam is a pill resting on a line.
+function cornerRadii(edge, radius, attached) {
+    var r = { topLeft: radius, topRight: radius, bottomLeft: radius, bottomRight: radius };
+    if (!attached) return r;
+    var out = outwardSide(edge);
+    if (out === "bottom") { r.bottomLeft = 0; r.bottomRight = 0; }
+    else if (out === "top") { r.topLeft = 0; r.topRight = 0; }
+    else if (out === "left") { r.topLeft = 0; r.bottomLeft = 0; }
+    else { r.topRight = 0; r.bottomRight = 0; }
+    return r;
+}
+
 // The direction a dock icon lifts on hover and bounces on launch: inward, so
+
 // the icon rises out of the dock rather than into the screen edge. One vector
 // instead of four call sites each choosing an axis and a sign.
 function inwardVector(edge) {
