@@ -9,7 +9,9 @@
 > band above its zone read as a line across the wallpaper, a band that was its whole strip
 > read as a border as tall as the dock - so the band stays thin on the dock's edge and a
 > pinned dock meets it from its own side: on it as a tab (`appearance.frame.dock`
-> "attached", the default) or a gap above it ("floating"). The bands sit on the Top
+> "attached", the default) or a gap above it ("floating"); an unpinned dock stays at the
+> screen edge for its hover sliver, so it takes the tab look only while the band is the
+> gap and keeps its rounded pill on any other band (known limit). The bands sit on the Top
 > layer (on Bottom the wallpaper, Bottom too, covered them on a cold start) and never
 > overlap. Not modelled yet, and the next slices: modals
 > docking into the frame; the vertical bar; a bar hidden by auto-hide or absent

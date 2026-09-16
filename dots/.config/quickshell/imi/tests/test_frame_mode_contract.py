@@ -96,7 +96,11 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0", dock)
         self.assertIn("border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0", dock)
         self.assertNotIn("regionItem:", dock, "the blur region is composed per corner, not a single-radius rect")
-        self.assertIn("item: Config.options.dock.showBackground ? dockVisualBackground : null", dock)
+        # ...and published only while the pill is at rest: a Region tracks
+        # its item's OWN geometry, the dock hides by offsetting an ancestor,
+        # and a hidden dock left a frosted silhouette where the pill rests.
+        self.assertIn("item: Config.options.dock.showBackground && dockMouseArea.atRest ? dockVisualBackground : null", dock)
+        self.assertIn("readonly property bool atRest: anchors.horizontalCenterOffset === 0 && anchors.verticalCenterOffset === 0", dock)
         self.assertIn("DockGeometry.cornerRadii(root.edge, radius, dockRoot.attached)", dock)
         for corner in ("topLeft", "topRight", "bottomLeft", "bottomRight"):
             self.assertRegex(dock, rf"{corner}Radius:\s+frameRadii\.{corner}", corner)

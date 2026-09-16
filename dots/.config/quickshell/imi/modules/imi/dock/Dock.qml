@@ -130,10 +130,16 @@ Scope {
             // isn't painted: blurring a transparent rect frosts bare
             // wallpaper. Per-corner radii, the bar's centre pill's pattern:
             // attached to the frame the pill squares its outward corners.
+            // Published only while the pill is AT REST: Quickshell's Region
+            // re-evaluates on its item's own x/y/width/height, and the dock
+            // hides by offsetting an ancestor (dockMouseArea's centre offset),
+            // which the pill never sees - so a hidden dock left a frosted
+            // silhouette over the window where the pill rests. The frost lands
+            // when the pill has arrived and lifts the instant it starts to go.
             WindowBlurRegion {
                 targetWindow: dockRoot
                 region: Region {
-                    item: Config.options.dock.showBackground ? dockVisualBackground : null
+                    item: Config.options.dock.showBackground && dockMouseArea.atRest ? dockVisualBackground : null
                     topLeftRadius: dockVisualBackground.topLeftRadius
                     topRightRadius: dockVisualBackground.topRightRadius
                     bottomLeftRadius: dockVisualBackground.bottomLeftRadius
@@ -195,6 +201,9 @@ Scope {
                 Behavior on anchors.verticalCenterOffset {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
+                // The ANIMATED offsets, not revealOffset: at rest means the
+                // slide has finished, for the blur region above.
+                readonly property bool atRest: anchors.horizontalCenterOffset === 0 && anchors.verticalCenterOffset === 0
 
                 Item {
                     id: dockHoverRegion

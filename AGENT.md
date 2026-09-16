@@ -338,7 +338,10 @@ other band an unpinned dock cannot be moved to meet it, so it keeps the pill.
 colour, no border, its outward corners squared (`dock_geometry.js` `cornerRadii`; the blur region is
 composed per corner from the pill's radii, the bar's centre-pill pattern, and KEPT: the bar plate in
 the same colour is blurred, and a tab without blur read as unfrosted translucency on a real
-wallpaper), the surface moved in by band minus gap (nothing at the default
+wallpaper - and published only while the pill is AT REST, `dockMouseArea.atRest` on the animated
+centre offsets: Quickshell's `Region` re-evaluates on its item's own geometry, the dock hides by
+offsetting an ancestor, and a hidden dock left a frosted silhouette where the pill rests, in every
+mode, unmasked the moment the tab kept its blur), the surface moved in by band minus gap (nothing at the default
 band, which is the gap; a negative margin when the band is thinner, so the tab still sits on the
 band); "floating" keeps a gap above the band (moved in by the band). Anything but "floating"
 attaches, so a hand-edited value cannot leave the dock nowhere. The rounding probe runs only

@@ -124,6 +124,9 @@ own repo; the installer pins which revision it builds.
 - Settings > Services: the AI system prompt has a field made for long text
   (label above, full width, grows to ten lines, then scrolls inside with the
   caret kept in view) instead of a one-line value field it could not fit in.
+- Dock: an unpinned dock that had slid off the edge no longer leaves a frosted
+  silhouette over the window where it rests (the blur region did not follow the
+  slide; it is now published only while the dock is fully shown).
 - Frame mode with a pinned dock: the band no longer floats as a thin line
   above the dock with wallpaper under it, nor swells to the dock's whole
   height; it stays thin and the dock sits on it as a tab (or floats a gap
