@@ -55,17 +55,33 @@ TestCase {
         compare(Geo.bandOffset("top", "top", 40, "top", 66), 106);
     }
 
+    function test_a_pinned_docks_band_is_its_whole_strip() {
+        // The dock is a pill, not a plate: a band above its zone was a line
+        // across the wallpaper. On the dock's edge the band covers zone + gap
+        // and the dock is drawn over it; every other edge keeps the band.
+        compare(Geo.bandExtent("bottom", 5, "bottom", 66), 71);
+        compare(Geo.bandExtent("top", 5, "bottom", 66), 5);
+        compare(Geo.bandExtent("left", 5, "bottom", 66), 5);
+        compare(Geo.bandExtent("bottom", 5, "", 66), 5);
+        compare(Geo.bandStart("top", "top", 40), 40);
+        compare(Geo.bandStart("bottom", "top", 40), 0);
+    }
+
     function test_a_band_ends_where_the_adjacent_bands_start() {
         // Bar on top, dock pinned at the bottom: the side bands start under
         // the bar and stop above the dock's strip; no tail past either.
         compare(Geo.bandMargins("left", "top", 40, "bottom", 66), { top: 40, bottom: 66, left: 0, right: 0 });
         compare(Geo.bandMargins("right", "top", 40, "bottom", 66), { top: 40, bottom: 66, left: 0, right: 0 });
         // The top band sits under the bar and spans the width; the bottom
-        // one under the dock.
+        // one starts at the screen edge - the dock's strip is the band's.
         compare(Geo.bandMargins("top", "top", 40, "bottom", 66), { top: 40, bottom: 0, left: 0, right: 0 });
-        compare(Geo.bandMargins("bottom", "top", 40, "bottom", 66), { top: 0, bottom: 66, left: 0, right: 0 });
-        // A dock on a side edge insets the top and bottom bands' end there.
+        compare(Geo.bandMargins("bottom", "top", 40, "bottom", 66), { top: 0, bottom: 0, left: 0, right: 0 });
+        // Bar and dock on one edge: the band starts under the bar's plate only.
+        compare(Geo.bandMargins("top", "top", 40, "top", 66), { top: 40, bottom: 0, left: 0, right: 0 });
+        // A dock on a side edge insets the top and bottom bands' end there;
+        // the band on that edge itself starts at the screen edge (its extent
+        // is the dock's whole strip).
         compare(Geo.bandMargins("top", "top", 40, "left", 66), { top: 40, bottom: 0, left: 66, right: 0 });
-        compare(Geo.bandMargins("left", "top", 40, "left", 66), { top: 40, bottom: 0, left: 66, right: 0 });
+        compare(Geo.bandMargins("left", "top", 40, "left", 66), { top: 40, bottom: 0, left: 0, right: 0 });
     }
 }

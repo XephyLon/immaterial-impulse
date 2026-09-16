@@ -97,6 +97,10 @@ Singleton {
     function cornerMarginsForScreen(corner, screenName) {
         return Geo.cornerMargins(corner, root.insetsForScreen(screenName));
     }
+    function bandExtentForScreen(edge, screenName) {
+        const reserves = root.dockReservesOn(screenName);
+        return Geo.bandExtent(edge, root.thickness, reserves ? root.dockEdge : "", reserves ? root.dockThickness : 0);
+    }
     function bandMarginsForScreen(edge, screenName) {
         const reserves = root.dockReservesOn(screenName);
         return Geo.bandMargins(edge, root.barEdge, root.barThickness, reserves ? root.dockEdge : "", reserves ? root.dockThickness : 0);
