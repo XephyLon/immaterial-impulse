@@ -581,6 +581,15 @@ if ! python3 "$SCRIPT_DIR/lint_hand_rolled_icon_button.py"; then
     exit 1
 fi
 
+# Static lint: a prose `//` comment is not split by a blank line. An edit
+# helper's stray newline did it twice in one branch (once as a parse error
+# that failed the whole shell's load); the second time became this check.
+echo "Running comment run lint..."
+if ! python3 "$SCRIPT_DIR/lint_comment_runs.py"; then
+    echo "Comment run lint failed."
+    exit 1
+fi
+
 # Static lint: a ConfigSwitch click is an intent. Assigning to `checked` - in
 # the widget or at a call site - destroys the binding every settings page hangs
 # on it, and the switch silently detaches from the config it is showing.
