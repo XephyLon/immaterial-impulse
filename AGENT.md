@@ -331,11 +331,14 @@ surface's outward layer-shell margin while pinned - the compositor adds an ancho
 the exclusive zone by itself, so nothing inside the surface moves and the zone needs no second
 number; an unpinned dock hides and reveals from the screen edge and stays there - moved in, its hover
 sliver would sit above the band, which takes no input, and the pointer slammed to the edge would miss
-it. The attached LOOK is not pinned-only: an unpinned dock sits a gap from the edge, which is the
-default band, and a rounded, bordered pill there rested on the band like a pill on a line.
+it. The attached LOOK is not pinned-only while the band IS the gap: an unpinned dock sits a gap from
+the edge, and a rounded, bordered pill there rested on the default band like a pill on a line; on any
+other band an unpinned dock cannot be moved to meet it, so it keeps the pill.
 `appearance.frame.dock`: "attached" (the default) puts the pill ON the band as a tab - the band's
-colour, no border, no blur region (the band has none), its outward corners squared
-(`dock_geometry.js` `cornerRadii`), the surface moved in by band minus gap (nothing at the default
+colour, no border, its outward corners squared (`dock_geometry.js` `cornerRadii`; the blur region is
+composed per corner from the pill's radii, the bar's centre-pill pattern, and KEPT: the bar plate in
+the same colour is blurred, and a tab without blur read as unfrosted translucency on a real
+wallpaper), the surface moved in by band minus gap (nothing at the default
 band, which is the gap; a negative margin when the band is thinner, so the tab still sits on the
 band); "floating" keeps a gap above the band (moved in by the band). Anything but "floating"
 attaches, so a hand-edited value cannot leave the dock nowhere. The rounding probe runs only

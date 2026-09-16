@@ -82,10 +82,10 @@ Scope {
             // hides and reveals from the screen edge, and its hover sliver
             // has to stay AT the edge - moved in, the pointer slammed to the
             // edge would land on the band, which takes no input.
-            exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? DockReservation.zone : 0
-            readonly property bool meetsFrame: root.pinned && !fullscreenOnThisMonitor
+            readonly property bool reserves: root.pinned && !fullscreenOnThisMonitor
+            exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0
             readonly property var frameMargins: DockGeometry.directedSides(
-                root.edge, 0, dockRoot.meetsFrame ? DockReservation.frameOffset : 0)
+                root.edge, 0, dockRoot.reserves ? DockReservation.frameOffset : 0)
             margins {
                 top: dockRoot.frameMargins.top
                 bottom: dockRoot.frameMargins.bottom
@@ -93,12 +93,17 @@ Scope {
                 right: dockRoot.frameMargins.right
             }
             // Attached, the pill is a tab of the band: the band's colour, no
-            // border, no blur (the band has none), its outward corners squared
-            // at the seam. Pinned or not: an unpinned dock sits a gap from the
-            // edge, which is the default band, so a rounded, bordered pill
-            // there rested on the band like a pill on a line; as a tab it
-            // comes out of the band and slides back into it.
+            // border, its outward corners squared at the seam; the blur region
+            // stays (the bar plate in the same colour is blurred, and the tab
+            // has to read as that plate, not as unfrosted translucency).
+            // Unpinned too, while the band is the gap: an unpinned dock sits a
+            // gap from the edge, so on the default band a rounded, bordered
+            // pill there rested on the band like a pill on a line, and as a
+            // tab it comes out of the band and slides back into it. On any
+            // other band an unpinned dock cannot be moved to meet it (its
+            // hover sliver has to stay at the edge), so it keeps the pill.
             readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor
+                && (dockRoot.reserves || DockReservation.frameOffset === 0)
 
             anchors {
                 top: DockGeometry.anchors(root.edge).top
@@ -123,11 +128,17 @@ Scope {
             // the bar/sidebars; pairs with rules.lua turning the layerrule
             // blur off for this namespace. No region when the background
             // isn't painted: blurring a transparent rect frosts bare
-            // wallpaper.
+            // wallpaper. Per-corner radii, the bar's centre pill's pattern:
+            // attached to the frame the pill squares its outward corners.
             WindowBlurRegion {
                 targetWindow: dockRoot
-                regionItem: Config.options.dock.showBackground && !dockRoot.attached ? dockVisualBackground : null
-                regionRadius: dockVisualBackground.radius
+                region: Region {
+                    item: Config.options.dock.showBackground ? dockVisualBackground : null
+                    topLeftRadius: dockVisualBackground.topLeftRadius
+                    topRightRadius: dockVisualBackground.topRightRadius
+                    bottomLeftRadius: dockVisualBackground.bottomLeftRadius
+                    bottomRightRadius: dockVisualBackground.bottomRightRadius
+                }
             }
 
             DockContextMenu {
@@ -234,13 +245,15 @@ Scope {
                                    : dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0
                             border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0
                             border.color: Appearance.colors.colLayer0Border
-                            radius: Appearance.rounding.normal + 6
+                            // `large`: the tab's inward corners sit next to the
+                            // fillets and the bar plate's corners in frame mode,
+                            // so the pill's radius is a design value, not a sum.
+                            radius: Appearance.rounding.large
                             readonly property var frameRadii: DockGeometry.cornerRadii(root.edge, radius, dockRoot.attached)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft
                             bottomRightRadius: frameRadii.bottomRight
-
                         }
 
                         // A GridLayout with a flow rather than a RowLayout, so

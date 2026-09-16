@@ -78,24 +78,29 @@ class FrameModeContract(unittest.TestCase):
         # by re-deriving its inner margins - and only while pinned: an
         # unpinned dock hides and reveals from the screen edge.
         dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
-        self.assertIn("exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? DockReservation.zone : 0", dock)
+        self.assertIn("readonly property bool reserves: root.pinned && !fullscreenOnThisMonitor", dock)
+        self.assertIn("exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0", dock)
         self.assertIn("fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)", dock)
-        self.assertIn("readonly property bool meetsFrame: root.pinned && !fullscreenOnThisMonitor", dock)
-        self.assertIn("root.edge, 0, dockRoot.meetsFrame ? DockReservation.frameOffset : 0)", dock)
+        self.assertIn("root.edge, 0, dockRoot.reserves ? DockReservation.frameOffset : 0)", dock)
         for side in ("top", "bottom", "left", "right"):
             self.assertIn(f"{side}: dockRoot.frameMargins.{side}", dock, side)
         self.assertNotRegex(dock, r"dockThickness: DockGeometry\.thickness\([^)]*frame", "the dock's inner geometry knows nothing of the frame")
-        # Attached, the pill is a tab of the band: its colour, no border, no
-        # blur (the band has none), the outward corners squared at the seam.
-        # ...pinned or not (an unpinned dock rests on the default band; a
-        # rounded, bordered pill there was a pill on a line).
-        self.assertIn("readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor", dock)
+        # Attached, the pill is a tab of the band: its colour, no border, the
+        # outward corners squared at the seam - and the blur region KEPT, per
+        # corner (the bar plate in the same colour is blurred; a tab without
+        # it read as unfrosted translucency on a real wallpaper). Unpinned too
+        # while the band is the gap (a rounded, bordered pill on the default
+        # band was a pill on a line); on any other band an unpinned dock
+        # cannot be moved to meet the band, so it keeps the pill.
+        self.assertIn("readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor\n                && (dockRoot.reserves || DockReservation.frameOffset === 0)", dock)
         self.assertIn("dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0", dock)
         self.assertIn("border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0", dock)
-        self.assertIn("regionItem: Config.options.dock.showBackground && !dockRoot.attached ? dockVisualBackground : null", dock)
+        self.assertNotIn("regionItem:", dock, "the blur region is composed per corner, not a single-radius rect")
+        self.assertIn("item: Config.options.dock.showBackground ? dockVisualBackground : null", dock)
         self.assertIn("DockGeometry.cornerRadii(root.edge, radius, dockRoot.attached)", dock)
         for corner in ("topLeft", "topRight", "bottomLeft", "bottomRight"):
             self.assertRegex(dock, rf"{corner}Radius:\s+frameRadii\.{corner}", corner)
+            self.assertIn(f"{corner}Radius: dockVisualBackground.{corner}Radius", dock, f"the blur region follows the pill's {corner}")
         # GlobalStates.dockPinned existed for the authority; nothing reads it now.
         self.assertNotIn("dockPinned", dock)
         self.assertNotIn("dockPinned", _strip((ROOT / "GlobalStates.qml").read_text()))
@@ -105,7 +110,6 @@ class FrameModeContract(unittest.TestCase):
         self.assertNotIn("fullscreen: screenScope.fullscreen", frame)
         self.assertIn("FrameGeometry.cornerMargins(", corners)
         self.assertNotRegex(corners, r"cornerMarginsForScreen|screen\?\.name", "the fillet asks for its corner, not a screen")
-
         # The compositor's live rounding, the option as the fallback; the
         # probe spawns only while frame mode is on.
         self.assertIn('command: ["hyprctl", "getoption", "decoration:rounding", "-j"]', geo)
@@ -163,7 +167,6 @@ class FrameModeContract(unittest.TestCase):
         index = INDEX.read_text()
         self.assertIn('Translation.tr("Frame")', index)
         self.assertIn('Translation.tr("Floating dock")', index)
-
 
 
 if __name__ == "__main__":
