@@ -366,6 +366,13 @@ corners (the sidebar corner-open hit rect lives there) and moves the fillet shap
 `FrameGeometry.enabled` (the option AND not the vertical bar), the family included. Known stage-1
 limits, stated in the proposal: one frame for every screen; the bar's screen list and auto-hide are
 not modelled. A further slice adds its geometry to the authority first. 220780dfb ("feat(frame): frame mode, stage 1"), 953d67a89 ("fix(frame): a pinned dock's band is its whole strip, under the dock, on the Bottom layer"), 03567ec36 ("fix(frame, dock): a pinned dock sits on the band as a tab, or floats a gap above it").
+**The review sandbox is in the repo: `tests/sandbox/` (README there).** A nested Hyprland on its
+own D-Bus and XDG dirs running a worktree's shell against the shipped defaults, with the
+hot-apply of overrides (the appearance domain is split into `config.d/appearance.json`, wrapped),
+layout-based crops (the nested output resizes with the parent's tiling) and the nested
+compositor's Lua dispatch syntax (`hl.dsp.cursor.move`; the classic `movecursor` is inert there)
+written down where the next machine finds them - the tooling lived in one machine's home dir for
+a week and a laptop session had none of it. 8f3c4a1b2 ("test(sandbox): the review sandbox tooling lives in the repo").
 **Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
 (modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
 its revert snapshot, the activity log, routine runs, paused action steps) lives in
