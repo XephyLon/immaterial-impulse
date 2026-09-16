@@ -84,33 +84,14 @@ Scope {
 
         // Hyprland draws no server-side decorations, so the window carries its
         // own close affordance.
-        RippleButton {
+        CloseButton {
             id: closeButton
             anchors {
                 top: parent.top
                 right: parent.right
                 margins: Appearance.spacing.space150
             }
-            implicitWidth: 32
-            implicitHeight: 32
-            buttonRadius: Appearance.rounding.full
-            colBackground: "transparent"
-            colBackgroundHover: Appearance.colors.colLayer1Hover
-            colRipple: Appearance.colors.colLayer1Active
             onClicked: GlobalStates.settingsOpen = false
-
-            contentItem: MaterialSymbol {
-                verticalAlignment: Text.AlignVCenter
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                text: "close"
-                iconSize: Appearance.font.pixelSize.larger
-                color: Appearance.colors.colOnLayer0
-            }
-
-            StyledToolTip {
-                text: Translation.tr("Close")
-            }
         }
     }
 

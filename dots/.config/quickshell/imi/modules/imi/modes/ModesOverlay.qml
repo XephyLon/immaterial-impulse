@@ -227,34 +227,16 @@ Scope {
                         event.accepted = modesContent.handleKey(event.key, event.modifiers);
                     }
 
-                    RippleButton {
+                    CloseButton {
                         id: closeButton
-
-                        implicitWidth: 40
-                        implicitHeight: 40
-                        buttonRadius: Appearance.rounding.full
                         z: 2
-                        onClicked: modesRoot.hide()
-
                         anchors {
                             top: parent.top
                             right: parent.right
                             topMargin: Appearance.spacing.space250
                             rightMargin: Appearance.spacing.space250
                         }
-
-                        contentItem: MaterialSymbol {
-                            anchors.centerIn: parent
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            font.pixelSize: Appearance.font.pixelSize.title
-                            text: "close"
-                            rotation: closeButton.hovered ? 90 : 0
-
-                            Behavior on rotation {
-                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                            }
-                        }
+                        onClicked: modesRoot.hide()
                     }
 
                     ModesContent {

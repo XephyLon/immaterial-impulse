@@ -159,29 +159,15 @@ Scope { // Scope
                     }
                 }
 
-                RippleButton { // Close button
+                CloseButton {
                     id: closeButton
-                    implicitWidth: 40
-                    implicitHeight: 40
-                    buttonRadius: Appearance.rounding.full
                     anchors {
                         top: parent.top
                         right: parent.right
                         topMargin: Appearance.spacing.space250
                         rightMargin: Appearance.spacing.space250
                     }
-
-                    onClicked: {
-                        cheatsheetRoot.hide();
-                    }
-
-                    contentItem: MaterialSymbol {
-                        verticalAlignment: Text.AlignVCenter
-                        anchors.centerIn: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: Appearance.font.pixelSize.title
-                        text: "close"
-                    }
+                    onClicked: cheatsheetRoot.hide()
                 }
 
                 Component {

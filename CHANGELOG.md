@@ -62,6 +62,9 @@ own repo; the installer pins which revision it builds.
   line. Not built: Proton Mail (needs Proton Bridge), Proton Pass (no API).
 
 ### Changed
+- One close button for whole surfaces: the Settings window, the cheatsheet
+  and the Modes manager close with the same 40 px button, glyph and tooltip
+  (they had three shapes, one of them spinning on hover).
 - **The Modes & Routines editor is drawn with the shell's own controls.**
   Its text fields are the shell's pill field (`ToolbarTextField`, which grew
   an opt-in focus ring and a leading glyph), its removable chips are

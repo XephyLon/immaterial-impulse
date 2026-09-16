@@ -64,6 +64,7 @@ Item {
             note: Translation.tr("dialogs, toolbars, the dock, the FAB"),
             entries: [
                 { type: "modules/common/widgets/DialogButton.qml", props: { buttonText: "Cancel" } },
+                { type: "modules/common/widgets/CloseButton.qml" },
                 { type: "modules/common/widgets/MenuButton.qml", props: { buttonText: "Open" } },
                 { type: "modules/common/widgets/ToolbarButton.qml", props: { buttonText: "Bold" } },
                 { type: "modules/common/widgets/IconToolbarButton.qml", props: { text: "edit" }, toggles: true },
