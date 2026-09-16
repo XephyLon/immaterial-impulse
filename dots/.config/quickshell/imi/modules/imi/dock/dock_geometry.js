@@ -172,33 +172,165 @@ function popupAnchorSides(edge) {
 
 // How far the whole dock surface moves in from the screen edge in frame mode
 // (services/FrameGeometry.qml). The pill sits `gapsOut` inside its surface;
-// the frame's band owns that gap. ATTACHED, the pill sits on the band as a
-// tab: the surface moves in by band minus gap (nothing at all when the band
-// is the gap, which it is by default; a little OUT when the band is thinner
-// than the gap - a negative layer-shell margin, the same device the dead-
-// pixel workaround uses). FLOATING, the pill keeps a gap above the band: the
-// surface moves in by the band. The compositor adds a margin on the anchored
-// edge to the exclusive zone on its own, so the reservation follows without a
-// second number. Outside frame mode the dock is where it always was.
-function frameOffset(frameOn, attached, band, gapsOut) {
+// the frame's band owns that gap. The surface sits where the ATTACHED tab
+// needs it: in by band minus gap (nothing at all when the band is the gap,
+// which it is by default; a little OUT when the band is thinner than the
+// gap - a negative layer-shell margin, the same device the dead-pixel
+// workaround uses). Floating is not a second surface position: the pill
+// lifts inside the surface by `splitTravel`, so the attached <-> floating
+// switch never reconfigures the surface and can be drawn as a motion
+// (docs/proposals/motion-split.md §6). The compositor adds a margin on the
+// anchored edge to the exclusive zone on its own, so the reservation follows
+// without a second number. Outside frame mode the dock is where it always was.
+function frameOffset(frameOn, band, gapsOut) {
     if (!frameOn) return 0;
     var b = Number(band) || 0;
     var g = Number(gapsOut) || 0;
-    return attached ? b - g : b;
+    return b - g;
 }
 
-// Which of the pill's corners stay round. All four, or - attached to the
-// frame - only the two INWARD ones: the outward pair is the seam where the
-// tab grows out of the band, and a rounded seam is a pill resting on a line.
-function cornerRadii(edge, radius, attached) {
+// ---- the split (docs/proposals/motion-split.md §6) -------------------------
+//
+// The band is the island and the pill is the child. Attached is the joined
+// state (the tab fused with the band), floating is the apart state (a gap
+// above it), and the pill is the one body that travels: it lifts off the band
+// by the compositor's gap - that IS the distance between "on the band" and "a
+// gap above it", whatever the band's thickness - and sinks back onto it. One
+// scalar drives a direction (Appearance.animation.split), 0 fused, 1 apart;
+// everything below is arithmetic on that scalar, kept here so
+// tests/tst_dock_geometry.qml can pin it.
+
+// The lift: the gap, while the frame is on and the dock reserves its edge. An
+// unpinned dock never reserves and never lifts - its hover sliver has to stay
+// AT the screen edge (Dock.qml) - so at the default band it takes the look
+// change alone.
+function splitTravel(frameOn, reserves, gapsOut) {
+    if (!frameOn || !reserves) return 0;
+    return Number(gapsOut) || 0;
+}
+
+// What a floating dock reserves beyond an attached one: the lift. The surface
+// no longer moves for the switch, so the zone is what keeps windows a gap
+// away from the floating pill, as the moved surface used to. Bound to the
+// CONFIGURED state, never to the animated scalar: the zone is a compositor
+// re-arrange, written once at the start of a direction to the destination's
+// value, and tiled windows travel on the compositor's own animation.
+function splitZoneExtra(frameOn, attached, gapsOut) {
+    if (!frameOn || attached) return 0;
+    return Number(gapsOut) || 0;
+}
+
+// The pill lifts into its own inward elevation margin. A gap bigger than that
+// margin would lift the pill out of its surface, so the dock grows across
+// its axis by exactly the shortfall - nothing at the defaults (gap 5,
+// elevation 10).
+function splitRoom(gapsOut, elevationMargin) {
+    var g = Number(gapsOut) || 0;
+    var e = Number(elevationMargin) || 0;
+    return Math.max(0, g - e);
+}
+
+// The pill's margin pair with a lift applied: outward grows by the lift,
+// inward shrinks by it (and carries the room), so the sum is the box's
+// thickness whatever the scalar says. `rest` is `margins()`'s answer.
+function liftedMargins(edge, rest, room, lift) {
+    var e = normalizedEdge(edge);
+    var inward = (Number(rest[inwardSide(e)]) || 0) + (Number(room) || 0) - (Number(lift) || 0);
+    var outward = (Number(rest[outwardSide(e)]) || 0) + (Number(lift) || 0);
+    return directedSides(e, inward, outward);
+}
+
+// Where the icons go so they ride the pill: the strip is centred in the
+// dock's box and the pill is not, once it has lifted (or the box has room),
+// so the strip takes the difference as a centre offset along the across
+// axis - inward by the lift, outward by half the room.
+function liftOffset(edge, room, lift) {
+    var along = (Number(room) || 0) / 2 - (Number(lift) || 0);
+    var v = inwardVector(edge);
+    return { x: -v.x * along, y: -v.y * along };
+}
+
+// Which of the pill's corners stay round, as a function of how far apart
+// the pill and the band are: 0 is the fused tab (the outward pair squared -
+// that seam is where the tab grows out of the band, and a rounded seam is a
+// pill resting on a line), 1 is the free pill, between is the outward pair
+// rounding with the scalar while the inward pair never moves. Clamped: the
+// scalar's curve may leave the unit box, and a negative radius is not a
+// corner.
+function cornerRadiiAt(edge, radius, apart) {
+    var a = Math.max(0, Math.min(1, Number(apart) || 0));
     var r = { topLeft: radius, topRight: radius, bottomLeft: radius, bottomRight: radius };
-    if (!attached) return r;
     var out = outwardSide(edge);
-    if (out === "bottom") { r.bottomLeft = 0; r.bottomRight = 0; }
-    else if (out === "top") { r.topLeft = 0; r.topRight = 0; }
-    else if (out === "left") { r.topLeft = 0; r.bottomLeft = 0; }
-    else { r.topRight = 0; r.bottomRight = 0; }
+    var seam = radius * a;
+    if (out === "bottom") { r.bottomLeft = seam; r.bottomRight = seam; }
+    else if (out === "top") { r.topLeft = seam; r.topRight = seam; }
+    else if (out === "left") { r.topLeft = seam; r.bottomLeft = seam; }
+    else { r.topRight = seam; r.bottomRight = seam; }
     return r;
+}
+
+// The two ends of cornerRadiiAt, for a caller with no scalar.
+function cornerRadii(edge, radius, attached) {
+    return cornerRadiiAt(edge, radius, attached ? 0 : 1);
+}
+
+// How far apart the two outlines may be and still be bridged by a neck: the
+// reference's 40% of the travelling body's thickness
+// (Appearance.animation.splitNeckReach), or the whole travel when that is
+// shorter - a 5 px lift on a 60 px pill is bridged all the way and the neck
+// breaks at rest. No travel, no neck.
+function neckReach(thickness, travel, fraction) {
+    var t = Number(travel) || 0;
+    if (t <= 0) return 0;
+    return Math.min((Number(thickness) || 0) * (Number(fraction) || 0), t);
+}
+
+// The neck's waist: the pill's full width when the outlines touch, nothing
+// at the reach, linear between.
+function neckWaist(width, gap, reach) {
+    var r = Number(reach) || 0;
+    if (r <= 0) return 0;
+    var g = Number(gap) || 0;
+    return (Number(width) || 0) * Math.max(0, 1 - g / r);
+}
+
+// The neck's box, from the pill's: it fills the lift between the pill's
+// outward edge and the band (the pill's REST outward edge, since the pill
+// moved and the band did not), centred along the strip at the waist's width.
+function neckBox(edge, pill, lift, waist) {
+    var e = normalizedEdge(edge);
+    var l = Number(lift) || 0;
+    var w = Number(waist) || 0;
+    if (isVertical(e)) {
+        var y = pill.y + (pill.height - w) / 2;
+        return e === "left"
+            ? { x: pill.x - l, y: y, width: l, height: w }
+            : { x: pill.x + pill.width, y: y, width: l, height: w };
+    }
+    var x = pill.x + (pill.width - w) / 2;
+    return e === "top"
+        ? { x: x, y: pill.y - l, width: w, height: l }
+        : { x: x, y: pill.y + pill.height, width: w, height: l };
+}
+
+// The neck's two flanks are concave fillets (RoundCorner) whose straight
+// edges hug the band and the waist. Named by the corner of its own box the
+// fillet fills, for the start (left/top) and end (right/bottom) flank along
+// the strip.
+function neckFilletCorners(edge) {
+    switch (normalizedEdge(edge)) {
+    case "top": return { start: "topRight", end: "topLeft" };
+    case "left": return { start: "bottomLeft", end: "topLeft" };
+    case "right": return { start: "bottomRight", end: "topRight" };
+    default: return { start: "bottomRight", end: "bottomLeft" };
+    }
+}
+
+// A flank fillet is as tall as the neck and never wider than the room the
+// waist leaves on its side of the pill.
+function neckFilletSize(lift, pillWidth, waist) {
+    var flank = ((Number(pillWidth) || 0) - (Number(waist) || 0)) / 2;
+    return Math.max(0, Math.min(Number(lift) || 0, flank));
 }
 
 // The direction a dock icon lifts on hover and bounces on launch: inward, so

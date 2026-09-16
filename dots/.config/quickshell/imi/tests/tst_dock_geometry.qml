@@ -220,23 +220,158 @@ TestCase {
     // --- frame mode ---------------------------------------------------------
 
     function test_in_frame_mode_the_dock_moves_in_by_the_band_it_meets() {
-        // Outside frame mode: nowhere. Attached: the pill (gap inside its
-        // surface) lands on the band - nothing to move at the default band,
-        // which IS the gap; in by the difference when the band is thicker,
-        // OUT when it is thinner (a negative margin, so the tab still sits on
-        // the band rather than a sliver above it). Floating: in by the band,
-        // so the pill keeps its gap above the band.
-        compare(Geometry.frameOffset(false, true, 12, gaps), 0);
-        compare(Geometry.frameOffset(false, false, 12, gaps), 0);
-        compare(Geometry.frameOffset(true, true, 5, gaps), 0, "the default band is the gap: the tab is already on it");
-        compare(Geometry.frameOffset(true, true, 12, gaps), 7);
-        compare(Geometry.frameOffset(true, true, 2, gaps), -3);
-        compare(Geometry.frameOffset(true, false, 5, gaps), 5);
-        compare(Geometry.frameOffset(true, false, 12, gaps), 12);
-        compare(Geometry.frameOffset(true, false, "12", "5"), 12);
+        // Outside frame mode: nowhere. In it, the SURFACE sits where the
+        // attached tab needs it - the pill (gap inside its surface) on the
+        // band: nothing to move at the default band, which IS the gap; in by
+        // the difference when the band is thicker, OUT when it is thinner (a
+        // negative margin, so the tab still sits on the band rather than a
+        // sliver above it). Floating is not a second surface position any
+        // more: the pill lifts INSIDE the surface (splitTravel), so the
+        // switch never reconfigures the surface and can be drawn.
+        compare(Geometry.frameOffset(false, 12, gaps), 0);
+        compare(Geometry.frameOffset(true, 5, gaps), 0, "the default band is the gap: the tab is already on it");
+        compare(Geometry.frameOffset(true, 12, gaps), 7);
+        compare(Geometry.frameOffset(true, 2, gaps), -3);
+        compare(Geometry.frameOffset(true, "12", "5"), 7);
         // The compositor adds an anchored-edge margin to the zone itself, so
         // the reservation is untouched by the move.
         compare(Geometry.exclusiveZone(dockHeight, elevation, gaps), 65);
+    }
+
+    // --- the split (docs/proposals/motion-split.md §6) -------------------------
+
+    function test_the_lift_is_the_compositor_gap_and_only_while_the_frame_is_on() {
+        // Floating = a gap above the band, attached = on it: the travel between
+        // the two is the gap, whatever the band's thickness. Outside frame mode
+        // there is nothing to lift off, and an unpinned dock never reserves,
+        // so it never lifts (its hover sliver stays at the edge).
+        compare(Geometry.splitTravel(true, true, gaps), 5);
+        compare(Geometry.splitTravel(true, true, 12), 12);
+        compare(Geometry.splitTravel(false, true, gaps), 0);
+        compare(Geometry.splitTravel(true, false, gaps), 0);
+        compare(Geometry.splitTravel(true, true, "5"), 5);
+    }
+
+    function test_the_zone_grows_by_the_gap_when_the_dock_floats() {
+        // The surface no longer moves for the switch, so the reservation is
+        // what keeps windows the same distance from a floating pill as before:
+        // offset + zone + lift is band + height + gap either way.
+        compare(Geometry.splitZoneExtra(true, true, gaps), 0, "attached reserves what it always did");
+        compare(Geometry.splitZoneExtra(true, false, gaps), 5, "floating reserves the lift too");
+        compare(Geometry.splitZoneExtra(false, false, gaps), 0);
+        const band = 12;
+        const attachedWindows = Geometry.frameOffset(true, band, gaps) + Geometry.exclusiveZone(dockHeight, elevation, gaps) + Geometry.splitZoneExtra(true, true, gaps);
+        const floatingWindows = Geometry.frameOffset(true, band, gaps) + Geometry.exclusiveZone(dockHeight, elevation, gaps) + Geometry.splitZoneExtra(true, false, gaps);
+        compare(attachedWindows, dockHeight + band, "attached: windows end height + band from the edge, as #396 measured");
+        compare(floatingWindows, dockHeight + band + gaps, "floating: a gap further, as #396's moved surface gave");
+    }
+
+    function test_the_lift_room_is_the_elevation_margin_or_the_dock_grows() {
+        // The pill lifts into its own inward elevation margin. A gap bigger
+        // than that margin would push it out of its surface, so the dock
+        // grows by exactly the shortfall - nothing at all at the defaults.
+        compare(Geometry.splitRoom(gaps, elevation), 0);
+        compare(Geometry.splitRoom(10, elevation), 0);
+        compare(Geometry.splitRoom(20, elevation), 10);
+        compare(Geometry.splitRoom("20", "10"), 10);
+    }
+
+    function test_a_lifted_pill_keeps_its_margins_summing_to_the_thickness() {
+        // The outward margin grows by the lift and the inward one shrinks by
+        // it (plus the room, which only exists when the gap outgrows the
+        // elevation): the pill moves, the strip's thickness does not.
+        const rest = Geometry.margins("bottom", elevation, gaps);
+        const lifted = Geometry.liftedMargins("bottom", rest, 0, 3);
+        compare(lifted.top, elevation - 3);
+        compare(lifted.bottom, gaps + 3);
+        compare(lifted.left, 0);
+        compare(lifted.right, 0);
+        compare(lifted.top + lifted.bottom, rest.top + rest.bottom, "the sum is the sum");
+        const roomy = Geometry.liftedMargins("bottom", rest, 10, 0);
+        compare(roomy.top, elevation + 10, "the room sits inward, so the pill stays where it was");
+        compare(roomy.bottom, gaps);
+        // Directed, so the same call is right at every edge.
+        const top = Geometry.liftedMargins("top", Geometry.margins("top", elevation, gaps), 0, 3);
+        compare(top.top, gaps + 3); compare(top.bottom, elevation - 3);
+        const left = Geometry.liftedMargins("left", Geometry.margins("left", elevation, gaps), 0, 3);
+        compare(left.left, gaps + 3); compare(left.right, elevation - 3); compare(left.top, 0);
+        const right = Geometry.liftedMargins("right", Geometry.margins("right", elevation, gaps), 0, 3);
+        compare(right.right, gaps + 3); compare(right.left, elevation - 3);
+    }
+
+    function test_the_icons_ride_the_pill() {
+        // The strip is centred in the dock's box; the pill is not, once it has
+        // lifted (or the box has room). The icons take the difference as a
+        // centre offset along the dock's across axis: inward by the lift,
+        // outward by half the room.
+        compare(Geometry.liftOffset("bottom", 0, 5), { x: 0, y: -5 });
+        compare(Geometry.liftOffset("top", 0, 5), { x: 0, y: 5 });
+        compare(Geometry.liftOffset("left", 0, 5), { x: 5, y: 0 });
+        compare(Geometry.liftOffset("right", 0, 5), { x: -5, y: 0 });
+        compare(Geometry.liftOffset("bottom", 10, 0), { x: 0, y: 5 });
+        compare(Geometry.liftOffset("bottom", 10, 5), { x: 0, y: 0 });
+    }
+
+    function test_the_outward_corners_round_with_the_lift() {
+        // Fused, the seam is square; free, the pill is a pill; between, the
+        // outward pair rounds with the scalar and the inward pair never moves.
+        const r = 22;
+        compare(Geometry.cornerRadiiAt("bottom", r, 0), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.5), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
+        compare(Geometry.cornerRadiiAt("bottom", r, 1), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("top", r, 0.25), { topLeft: 5.5, topRight: 5.5, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("left", r, 0.5), { topLeft: 11, topRight: r, bottomLeft: 11, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("right", r, 0.5), { topLeft: r, topRight: 11, bottomLeft: r, bottomRight: 11 });
+        // Past the ends is the ends: a curve that leaves the unit box must not
+        // produce a negative radius or a corner rounder than the pill.
+        compare(Geometry.cornerRadiiAt("bottom", r, -0.2), Geometry.cornerRadiiAt("bottom", r, 0));
+        compare(Geometry.cornerRadiiAt("bottom", r, 1.3), Geometry.cornerRadiiAt("bottom", r, 1));
+        // The boolean form is the two ends of the same function.
+        for (const edge of ["top", "bottom", "left", "right"]) {
+            compare(Geometry.cornerRadii(edge, r, true), Geometry.cornerRadiiAt(edge, r, 0), edge);
+            compare(Geometry.cornerRadii(edge, r, false), Geometry.cornerRadiiAt(edge, r, 1), edge);
+        }
+    }
+
+    function test_the_neck_bridges_the_reach_and_narrows_to_nothing() {
+        // The reference's neck exists while the outlines are within 40% of
+        // the travelling body's thickness. The dock's lift is 5 px on a 60 px
+        // pill, so the reach is the whole travel and the neck breaks at rest;
+        // a body travelling further than 40% of itself breaks part way.
+        compare(Geometry.neckReach(60, 5, 0.4), 5);
+        compare(Geometry.neckReach(60, 40, 0.4), 24);
+        compare(Geometry.neckReach(60, 0, 0.4), 0, "no travel, no neck");
+        // The waist: the pill's full width when fused, nothing at the reach.
+        compare(Geometry.neckWaist(400, 0, 5), 400);
+        compare(Geometry.neckWaist(400, 2.5, 5), 200);
+        compare(Geometry.neckWaist(400, 5, 5), 0);
+        compare(Geometry.neckWaist(400, 7, 5), 0, "past the reach the bridge is broken");
+        compare(Geometry.neckWaist(400, 1, 0), 0, "a zero reach never bridges");
+    }
+
+    function test_the_neck_sits_between_the_pill_and_the_band_at_every_edge() {
+        // The neck's box, from the pill's box: it fills the lift between the
+        // pill's outward edge and where the band is (the pill's REST outward
+        // edge), centred along the strip at the waist's width.
+        const pill = { x: 100, y: 5, width: 400, height: 60 };
+        const bottom = Geometry.neckBox("bottom", pill, 4, 200);
+        compare(bottom, { x: 200, y: 65, width: 200, height: 4 });
+        const top = Geometry.neckBox("top", pill, 4, 200);
+        compare(top, { x: 200, y: 1, width: 200, height: 4 });
+        const side = { x: 5, y: 100, width: 60, height: 400 };
+        compare(Geometry.neckBox("left", side, 4, 200), { x: 1, y: 200, width: 4, height: 200 });
+        compare(Geometry.neckBox("right", side, 4, 200), { x: 65, y: 200, width: 4, height: 200 });
+        // Its two flanks are fillets whose straight edges hug the band and the
+        // waist: for a bottom dock the start (left) flank fills its box's
+        // bottom-right and the end (right) flank its bottom-left.
+        compare(Geometry.neckFilletCorners("bottom"), { start: "bottomRight", end: "bottomLeft" });
+        compare(Geometry.neckFilletCorners("top"), { start: "topRight", end: "topLeft" });
+        compare(Geometry.neckFilletCorners("left"), { start: "bottomLeft", end: "topLeft" });
+        compare(Geometry.neckFilletCorners("right"), { start: "bottomRight", end: "topRight" });
+        // The fillet is as big as the lift and never wider than the flank room.
+        compare(Geometry.neckFilletSize(4, 400, 200), 4);
+        compare(Geometry.neckFilletSize(40, 400, 380), 10);
+        compare(Geometry.neckFilletSize(4, 400, 400), 0, "no flank, no fillet");
     }
 
     function test_an_attached_dock_squares_only_its_outward_corners() {
