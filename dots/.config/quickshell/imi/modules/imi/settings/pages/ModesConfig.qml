@@ -160,11 +160,17 @@ ContentPage {
 
             GroupedList {
                 ConfigRow {
+                    spacing: Appearance.spacing.space200
+                    MaterialSymbol {
+                        Layout.leftMargin: Appearance.spacing.space100
+                        text: "restore"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colOnLayer1
+                    }
                     StyledText {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colSubtext
+                        color: Appearance.colors.colOnLayer1
                         text: page.seededText.length > 0 ? page.seededText
                             : Translation.tr("The built-in modes (Sleep, Work, Focus, Gaming, Theater, Presentation, Relax) are ordinary entries once added: edit or delete them freely. This puts back any you removed, without touching the ones still there.")
                     }
@@ -212,15 +218,15 @@ ContentPage {
 
             GroupedList {
                 ConfigSelectionArray {
+                    icon: "campaign"
+                    text: Translation.tr("Show")
                     currentValue: page.opts.flash
                     onSelected: newValue => { Config.options.modes.flash = newValue; }
                     options: [
                         { "displayName": Translation.tr("Brief banner"), "value": "auto" },
                         { "displayName": Translation.tr("Nothing"), "value": "off" }
                     ]
-                }
-                ConfigRow {
-                    StyledText {
+                    detailContent: StyledText {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
                         font.pixelSize: Appearance.font.pixelSize.smaller
@@ -306,12 +312,13 @@ ContentPage {
                 ConfigRow {
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: Appearance.spacing.space50
+                        Layout.leftMargin: Appearance.spacing.space100
+                        Layout.rightMargin: Appearance.spacing.space100
+                        spacing: Appearance.spacing.space75
                         StyledText {
                             Layout.fillWidth: true
                             wrapMode: Text.WordWrap
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnLayer1
                             text: Translation.tr("Window classes treated as games no matter what. Pick from the windows open now, or type one.")
                         }
                         ChipInput {
@@ -346,11 +353,17 @@ ContentPage {
 
             GroupedList {
                 ConfigRow {
+                    spacing: Appearance.spacing.space200
+                    MaterialSymbol {
+                        Layout.leftMargin: Appearance.spacing.space100
+                        text: "history"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colOnLayer1
+                    }
                     StyledText {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colSubtext
+                        color: Appearance.colors.colOnLayer1
                         text: {
                             const n = Modes.history.length;
                             const count = n === 1 ? Translation.tr("1 entry") : Translation.tr("%1 entries").arg(n);
@@ -365,7 +378,7 @@ ContentPage {
                         colBackground: Appearance.colors.colSecondaryContainer
                         colRipple: Appearance.colors.colSecondaryContainerActive
                         enabled: Modes.history.length > 0
-                                    // Two presses, the second within three seconds: the log is
+                        // Two presses, the second within three seconds: the log is
                         // history, and a confirmation dialog does not belong on a page.
                         property bool armed: false
                         Timer { id: disarm; interval: 3000; onTriggered: parent.armed = false }
@@ -391,11 +404,18 @@ ContentPage {
 
             GroupedList {
                 ConfigRow {
+                    spacing: Appearance.spacing.space200
+                    MaterialSymbol {
+                        Layout.leftMargin: Appearance.spacing.space100
+                        text: "folder_open"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colOnLayer1
+                    }
                     StyledText {
                         Layout.fillWidth: true
+                        Layout.rightMargin: Appearance.spacing.space100
                         wrapMode: Text.WordWrap
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colSubtext
+                        color: Appearance.colors.colOnLayer1
                         text: Translation.tr("Modes and routines are saved in the shell config under \"modes\", so a config backup carries them. What is running and the activity log are state, kept separately and restored after a restart.")
                     }
                 }

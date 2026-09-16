@@ -83,6 +83,12 @@ own repo; the installer pins which revision it builds.
   `applycolor` and presets read the new file.
 
 ### Fixed
+- Modes manager: choosing another mode, routine or template, or switching tab,
+  fades and settles the page in the way a settings page does instead of
+  swapping it in one frame. Settings > Modes & Routines: the Presets,
+  Activity and "Where it lives" rows carry the row glyph and inset like every
+  other row, and the banner choice is a labelled row with its explanation on
+  the hint line.
 - **Update Dots no longer leaves a `hyprlock.conf.new` / `hypridle.conf.new`
   identical to your file.** The legacy files step wrote the backup copy
   whenever the file existed; it now compares first, and removes a stale
