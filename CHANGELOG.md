@@ -27,6 +27,9 @@ own repo; the installer pins which revision it builds.
   on, only a model on this machine answers unless "Inline answers may use
   my cloud key" is on as well, because keystroke-driven cloud calls cost
   money and send what you type.
+- `qs -c imi ipc call settings page "<page id>[:<section>]"` opens Settings on a page,
+  at a section - what the launcher's settings results already do, now scriptable
+  (`settings page "appearance:Frame"`).
 - Frame mode (Settings > Appearance > Frame, off by default): the bar, a band along every
   screen edge and rounded inner corners are drawn as one connected surface in the bar's
   colour, so the shell reads as a frame around your windows instead of floating islands.

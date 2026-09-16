@@ -100,6 +100,14 @@ Scope {
         function toggle(): void { GlobalStates.settingsOpen = !GlobalStates.settingsOpen; }
         function open(): void   { GlobalStates.settingsOpen = true; }
         function close(): void  { GlobalStates.settingsOpen = false; }
+        // Open on a page, optionally at a section: "appearance", or
+        // "appearance:Frame" - the same "<page id>[:<section>]" the launcher's
+        // settings results and the desktop menu hand GlobalStates.settingsPage.
+        //   qs -c imi ipc call settings page "appearance:Frame"
+        function page(target: string): void {
+            GlobalStates.settingsPage = target;
+            GlobalStates.settingsOpen = true;
+        }
     }
 
     GlobalShortcut {
