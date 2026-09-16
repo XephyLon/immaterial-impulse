@@ -105,8 +105,11 @@ Scope {
         // settings results and the desktop menu hand GlobalStates.settingsPage.
         //   qs -c imi ipc call settings page "appearance:Frame"
         function page(target: string): void {
-            GlobalStates.settingsPage = target;
+            // Open first, then the page on the next tick - the launcher's
+            // order: the content consumes settingsPage once it is up, and a
+            // section jump needs the page laid out to have somewhere to go.
             GlobalStates.settingsOpen = true;
+            Qt.callLater(() => { GlobalStates.settingsPage = target; });
         }
     }
 
