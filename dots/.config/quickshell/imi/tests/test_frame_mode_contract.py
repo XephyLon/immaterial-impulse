@@ -72,7 +72,9 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("readonly property real zone: DockGeometry.exclusiveZone(", reservation)
         self.assertIn("readonly property bool attached: FrameGeometry.enabled && FrameGeometry.dockAttached", reservation)
         self.assertIn("readonly property real frameOffset: DockGeometry.frameOffset(", reservation)
-        self.assertIn("FrameGeometry.thickness, Appearance.sizes.hyprlandGapsOut)", reservation)
+        self.assertIn("FrameGeometry.enabled, FrameGeometry.thickness, Appearance.sizes.hyprlandGapsOut)", reservation)
+        self.assertNotIn("FrameGeometry.dockAttached, FrameGeometry.thickness", reservation,
+                         "the surface sits where the attached tab needs it in BOTH states; floating is the pill's lift inside it")
         # The dock meets the band by moving its whole SURFACE (an anchored-
         # edge margin, which the compositor adds to the zone by itself), never
         # by re-deriving its inner margins - and only while pinned: an
@@ -93,15 +95,16 @@ class FrameModeContract(unittest.TestCase):
         # band was a pill on a line); on any other band an unpinned dock
         # cannot be moved to meet the band, so it keeps the pill.
         self.assertIn("readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor\n                && (dockRoot.reserves || DockReservation.frameOffset === 0)", dock)
-        self.assertIn("dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0", dock)
-        self.assertIn("border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0", dock)
+        self.assertIn("dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0", dock)
+        self.assertIn("border.width: Config.options.dock.showBackground && !dockRoot.attachedLook ? Appearance.borderWidth.standard : 0", dock)
         self.assertNotIn("regionItem:", dock, "the blur region is composed per corner, not a single-radius rect")
         # ...and published only while the pill is at rest: a Region tracks
         # its item's OWN geometry, the dock hides by offsetting an ancestor,
         # and a hidden dock left a frosted silhouette where the pill rests.
         self.assertIn("item: Config.options.dock.showBackground && dockMouseArea.atRest ? dockVisualBackground : null", dock)
         self.assertIn("readonly property bool atRest: anchors.horizontalCenterOffset === 0 && anchors.verticalCenterOffset === 0", dock)
-        self.assertIn("DockGeometry.cornerRadii(root.edge, radius, dockRoot.attached)", dock)
+        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.splitProgress)", dock,
+                      "the outward corners round WITH the lift, not at a boolean")
         for corner in ("topLeft", "topRight", "bottomLeft", "bottomRight"):
             self.assertRegex(dock, rf"{corner}Radius:\s+frameRadii\.{corner}", corner)
             self.assertIn(f"{corner}Radius: dockVisualBackground.{corner}Radius", dock, f"the blur region follows the pill's {corner}")
@@ -120,6 +123,73 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("running: root.enabled && root.probeArmed\n", geo)
         self.assertNotIn("roundingProbe.running =", geo, "re-arm through the flag; a write over the binding destroys it")
         self.assertIn('if (event.name !== "configreloaded" || !root.enabled) return;', geo)
+
+    def test_the_dock_switch_is_the_split(self):
+        """docs/proposals/motion-split.md §6: one scalar, the split tier taken
+        whole, the pill lifting inside a surface that never moves, the look
+        sequenced outside the motion, and a neck at the seam."""
+        dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
+        reservation = _strip((ROOT / "modules/imi/dock/DockReservation.qml").read_text())
+        appearance = _strip((ROOT / "modules/common/Appearance.qml").read_text())
+        # The tier: a two-segment curve whose join - the seam - is the scalar's
+        # midpoint, an 800 ms base through the policy, and the two constants
+        # beside it. Measured, not chosen: the proposal's §4.
+        self.assertIn("readonly property list<real> split: [0.15, 0, 0.5, 0.5, 0.5, 0.5, 0.6, 0.5, 0.5, 1, 1, 1]", appearance)
+        self.assertIn("readonly property real splitDuration: 800", appearance)
+        self.assertIn("property QtObject split: QtObject {", appearance)
+        self.assertIn("motion.scale(animationCurves.splitDuration)", appearance)
+        self.assertIn("readonly property real splitSeam: 0.5", appearance)
+        self.assertIn("readonly property real splitNeckReach: 0.4", appearance)
+        self.assertIn("### Split (one body becomes two, or two become one)", (ROOT.parents[3] / "docs/M3_GUIDELINES.md").read_text())
+        # ONE scalar, 0 fused and 1 apart, driven by the attached predicate,
+        # with exactly one Behavior - the tier whole, and a pause before a
+        # landing so the look lands before the outline moves (the reference
+        # sequences effects and space, never overlaps them).
+        self.assertIn("property real splitProgress: dockRoot.attached ? 0 : 1", dock)
+        self.assertEqual(dock.count("Behavior on splitProgress"), 1)
+        behavior = dock[dock.index("Behavior on splitProgress"):]
+        behavior = behavior[:behavior.index("readonly property real splitTravel")]
+        self.assertIn("SequentialAnimation", behavior)
+        self.assertIn("PauseAnimation { duration: splitBehavior.targetValue === 0 ? Appearance.animation.elementMoveFast.duration : 0 }", behavior)
+        for half in ("duration: Appearance.animation.split.duration",
+                     "easing.type: Appearance.animation.split.type",
+                     "easing.bezierCurve: Appearance.animation.split.bezierCurve"):
+            self.assertIn(half, behavior, "the tier is taken whole")
+        self.assertNotRegex(dock, r"duration:\s*\d", "no literal duration anywhere in the dock")
+        # The lift: the gap, only while the dock reserves its edge; the pill
+        # moves on its OWN margins (so the blur region, which tracks its
+        # item's own geometry, rides the lift) and the icons ride the pill.
+        self.assertIn("readonly property real splitTravel: DockGeometry.splitTravel(FrameGeometry.enabled, dockRoot.reserves, Appearance.sizes.hyprlandGapsOut)", dock)
+        self.assertIn("readonly property real splitLift: dockRoot.splitTravel * dockRoot.splitProgress", dock)
+        self.assertIn("readonly property real splitRoom: DockGeometry.splitRoom(Appearance.sizes.hyprlandGapsOut, Appearance.sizes.elevationMargin)", dock)
+        self.assertIn("DockGeometry.liftedMargins(root.edge, dockRoot.dockMargins, dockRoot.splitRoom, dockRoot.splitLift)", dock)
+        self.assertIn("DockGeometry.liftOffset(root.edge, dockRoot.splitRoom, dockRoot.splitLift)", dock)
+        self.assertIn("Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut) + dockRoot.splitRoom", dock,
+                      "the strip grows by the room the lift needs, nothing at the defaults")
+        # The reservation steps to the destination at the start, from the
+        # CONFIGURED state - never from the animated scalar.
+        self.assertIn("+ DockGeometry.splitZoneExtra(FrameGeometry.enabled, FrameGeometry.dockAttached,", reservation)
+        self.assertNotIn("splitProgress", reservation)
+        self.assertIn("exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0", dock)
+        # The look: the tab's until the pill has landed apart, then the pill's
+        # on the effects tier - after the motion on a lift, before it on a
+        # landing (the pause above).
+        self.assertIn("readonly property bool attachedLook: dockRoot.attached || dockRoot.splitProgress < 1", dock)
+        self.assertIn("Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }", dock)
+        self.assertIn("Behavior on border.width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }", dock)
+        # The neck: a same-colour bridge under the pill, boxed by the module
+        # (never anchored - the turn is a size), its flanks two fillets.
+        neck = dock[dock.index("id: splitNeck"):]
+        neck = neck[:neck.index("id: dockVisualBackground")]
+        self.assertIn("DockGeometry.neckReach(", dock)
+        self.assertIn("Appearance.animation.splitNeckReach", dock)
+        self.assertIn("DockGeometry.neckWaist(", dock)
+        self.assertIn("DockGeometry.neckBox(root.edge,", neck)
+        self.assertIn("color: FrameGeometry.color", neck)
+        self.assertEqual(neck.count("RoundCorner {"), 2, "two flank fillets")
+        self.assertIn("DockGeometry.neckFilletCorners(root.edge)", neck)
+        self.assertIn("DockGeometry.neckFilletSize(", neck)
+        self.assertNotIn("anchors.", neck, "the neck is a box, not an anchor set that changes with the edge")
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())

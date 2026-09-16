@@ -419,10 +419,20 @@ Singleton {
         // than rounded to a Material one so the panels move exactly as they
         // did when Hyprland moved them.
         readonly property list<real> panelSlideDecel: [0.05, 0.9, 0.1, 1.05, 1, 1]
+        // The split (docs/proposals/motion-split.md §4): one body becoming
+        // two, or two becoming one. Two segments joined at the scalar's
+        // midpoint, which IS the seam - `standardAccel` scaled into the
+        // first half (the reach into the seam accelerates) and `standard`
+        // into the second (the withdrawal from it decelerates). Measured off
+        // the reference frame by frame; no single curve in this catalogue
+        // fits either direction (`emphasized` inflects at 17% where the seam
+        // is at 50%), and this one fits both.
+        readonly property list<real> split: [0.15, 0, 0.5, 0.5, 0.5, 0.5, 0.6, 0.5, 0.5, 1, 1, 1]
         readonly property real expressiveFastSpatialDuration: 350
         readonly property real expressiveDefaultSpatialDuration: 500
         readonly property real expressiveSlowSpatialDuration: 650
         readonly property real expressiveEffectsDuration: 200
+        readonly property real splitDuration: 800
     }
 
     // The motion vocabulary every interactive element passes through, in one
@@ -704,6 +714,31 @@ Singleton {
                 easing.type: root.animation.elementMoveFaster.type
                 easing.bezierCurve: root.animation.elementMoveFaster.bezierCurve
             }}
+        }
+
+        // One body becoming two, or two becoming one (the guideline's
+        // "Split"): one scalar per direction, 0 fused and 1 apart, on the
+        // two-segment curve above. `splitSeam` is where on that scalar the
+        // outlines touch or part - the join of the curve's two segments, so
+        // an adopter keys the neck, a corner or a colour on it rather than on
+        // a second timer that has to agree with the duration. Both constants
+        // are unitless: a fraction of the scalar, and a fraction of the
+        // travelling body's own thickness (the reach was measured on a 20 px
+        // pill and applies to a 60 px one).
+        readonly property real splitSeam: 0.5
+        readonly property real splitNeckReach: 0.4
+        property QtObject split: QtObject {
+            property int duration: motion.scale(animationCurves.splitDuration)
+            property int type: Easing.BezierSpline
+            property list<real> bezierCurve: animationCurves.split
+            property int velocity: motion.scaleVelocity(650)
+            property Component numberAnimation: Component {
+                NumberAnimation {
+                    duration: root.animation.split.duration
+                    easing.type: root.animation.split.type
+                    easing.bezierCurve: root.animation.split.bezierCurve
+                }
+            }
         }
 
         property QtObject elementResize: QtObject {

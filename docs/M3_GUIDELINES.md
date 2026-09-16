@@ -218,6 +218,20 @@ When introducing or removing elements from the screen:
 - **Entrance**: `Appearance.animation.elementMoveEnter` (`emphasizedDecel`, 400ms).
 - **Exit**: `Appearance.animation.elementMoveExit` (`emphasizedAccel`, 200ms).
 
+### Split (one body becomes two, or two become one)
+
+A surface that detaches from another, or docks into it, takes `Appearance.animation.split` whole:
+one scalar 0 -> 1 per direction, on a two-segment curve that accelerates into the seam and
+decelerates out of it, with the seam at `Appearance.animation.splitSeam` (0.5). Only ONE body
+travels; the other is the island, and it stays. The travelling body is not faded in or out, ever -
+it is released by the island's outline or absorbed by it - and the seam is bridged by a neck (a
+same-colour bridge whose waist narrows to nothing) while the outlines are within
+`Appearance.animation.splitNeckReach` of the travelling body's thickness, or the whole travel when
+that is shorter. Anything that changes the LOOK at the seam (a corner rounding, a border, a colour)
+runs on the effects tier sequenced with the spatial motion - after it has landed on a split, before
+it starts on a merge - never during it. Measured off the reference in
+`docs/proposals/motion-split.md`; the first adopter is the dock's tab (`modules/imi/dock/Dock.qml`).
+
 ### Expandable Content
 
 - Content revealed inside a list must animate into and out of the layout; do not toggle `visible`

@@ -27,6 +27,17 @@ Scope {
     // survive it - the bar rebuilds instead, and loses all three.
     readonly property bool vertical: DockGeometry.isVertical(root.edge)
 
+    // dock_geometry.js names a fillet's corner (a .pragma library has no QML
+    // enums in scope); the caller maps the name and does not decide it.
+    function filletCorner(name) {
+        switch (name) {
+        case "topLeft": return RoundCorner.CornerEnum.TopLeft;
+        case "topRight": return RoundCorner.CornerEnum.TopRight;
+        case "bottomLeft": return RoundCorner.CornerEnum.BottomLeft;
+        default: return RoundCorner.CornerEnum.BottomRight;
+        }
+    }
+
     Variants {
         model: Quickshell.screens
 
@@ -69,19 +80,23 @@ Scope {
             // margin pair out by hand cannot drift apart.
             readonly property real dockThickness: DockGeometry.thickness(
                 Config.options?.dock.height ?? 60,
-                Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
+                Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut) + dockRoot.splitRoom
             readonly property var dockMargins: DockGeometry.margins(
                 root.edge, Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
 
             // The zone is the dock's own derivation (DockReservation.zone). In
             // frame mode a pinned dock also moves its whole surface in from
-            // the screen edge to meet the frame's band - on it as a tab, or a
-            // gap above it (DockReservation.frameOffset) - and the compositor
-            // adds that anchored-edge margin to the zone by itself, so nothing
-            // inside the surface moves. Only while pinned: an unpinned dock
-            // hides and reveals from the screen edge, and its hover sliver
-            // has to stay AT the edge - moved in, the pointer slammed to the
-            // edge would land on the band, which takes no input.
+            // the screen edge to where the attached tab meets the frame's
+            // band (DockReservation.frameOffset) - and the compositor adds
+            // that anchored-edge margin to the zone by itself, so nothing
+            // inside the surface moves. Floating is not a second surface
+            // position: the pill lifts INSIDE the surface (splitLift below),
+            // so the switch is drawn rather than reconfigured, and the zone
+            // alone steps - to the destination's value, at the start, from
+            // the configured state (DockReservation.zone). Only while pinned:
+            // an unpinned dock hides and reveals from the screen edge, and
+            // its hover sliver has to stay AT the edge - moved in, the pointer
+            // slammed to the edge would land on the band, which takes no input.
             readonly property bool reserves: root.pinned && !fullscreenOnThisMonitor
             exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0
             readonly property var frameMargins: DockGeometry.directedSides(
@@ -104,6 +119,60 @@ Scope {
             // hover sliver has to stay at the edge), so it keeps the pill.
             readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor
                 && (dockRoot.reserves || DockReservation.frameOffset === 0)
+
+            // The attached <-> floating switch is the split
+            // (docs/proposals/motion-split.md §6): the band is the island
+            // and the pill is the child, attached is the joined state, and
+            // the pill is the one body that travels. ONE scalar per
+            // direction - 0 fused, 1 apart - on the split tier taken whole,
+            // whose curve accelerates into the seam (0.5) and decelerates
+            // out of it. Every other piece of the motion below (the lift,
+            // the corners, the neck, the look) is a function of this number,
+            // never a second animation that has to agree with it.
+            //
+            // The pause is the reference's sequencing: effects and space
+            // never overlap. On a LANDING (target 0) the look lands first -
+            // the tab's colour, no border, on the effects tier - and only
+            // then does the outline move; on a lift there is nothing to wait
+            // for, since the look changes after the pill has landed apart
+            // (attachedLook below). Read off the Behavior's own target, which
+            // is set before the animation starts, rather than off a binding
+            // that may not have re-evaluated yet.
+            property real splitProgress: dockRoot.attached ? 0 : 1
+            Behavior on splitProgress {
+                id: splitBehavior
+                SequentialAnimation {
+                    PauseAnimation { duration: splitBehavior.targetValue === 0 ? Appearance.animation.elementMoveFast.duration : 0 }
+                    NumberAnimation {
+                        duration: Appearance.animation.split.duration
+                        easing.type: Appearance.animation.split.type
+                        easing.bezierCurve: Appearance.animation.split.bezierCurve
+                    }
+                }
+            }
+            // The lift: the compositor's gap - the distance between "on the
+            // band" and "a gap above it" - while the dock reserves its edge.
+            // An unpinned dock never lifts (its hover sliver stays at the
+            // edge), so at the default band it takes the look change alone.
+            readonly property real splitTravel: DockGeometry.splitTravel(FrameGeometry.enabled, dockRoot.reserves, Appearance.sizes.hyprlandGapsOut)
+            readonly property real splitLift: dockRoot.splitTravel * dockRoot.splitProgress
+            // The pill lifts into its own inward elevation margin; a gap bigger
+            // than that margin grows the strip by the shortfall (nothing at
+            // the defaults) so the lifted pill stays inside its surface.
+            readonly property real splitRoom: DockGeometry.splitRoom(Appearance.sizes.hyprlandGapsOut, Appearance.sizes.elevationMargin)
+            // The look is the tab's until the pill has landed apart: on a
+            // lift the colour and the border change AFTER the motion, on the
+            // effects tier; on a landing `attached` flips first and the pause
+            // above holds the outline for that tier's length.
+            readonly property bool attachedLook: dockRoot.attached || dockRoot.splitProgress < 1
+            // The icons ride the pill: the strip is centred in the box and
+            // the pill, lifted, is not.
+            readonly property var liftOffset: DockGeometry.liftOffset(root.edge, dockRoot.splitRoom, dockRoot.splitLift)
+            // How far apart the pill and the band may be and still be bridged
+            // by the neck: the reference's fraction of the pill's thickness,
+            // or the whole travel when that is shorter (it is, at 5 px on a
+            // 60 px pill: the neck spans the lift and breaks at rest).
+            readonly property real neckReach: DockGeometry.neckReach(Config.options?.dock.height ?? 60, dockRoot.splitTravel, Appearance.animation.splitNeckReach)
 
             anchors {
                 top: DockGeometry.anchors(root.edge).top
@@ -242,23 +311,79 @@ Scope {
                             visible: false
                         }
 
+                        // The neck (motion-split.md §2): a same-colour bridge
+                        // between the pill's outward edge and the band while
+                        // the two are within reach, its waist narrowing to
+                        // nothing, its flanks two concave fillets hugging the
+                        // band and the waist. Boxes from the module, never
+                        // anchors: the turn is a size, and an anchor set that
+                        // changes with the edge is the trap the strip already
+                        // paid for. Under the pill, so the pill's own edge is
+                        // what the eye reads.
+                        Item {
+                            id: splitNeck
+                            readonly property real pillAlong: root.vertical ? dockVisualBackground.height : dockVisualBackground.width
+                            readonly property real waist: DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitLift, dockRoot.neckReach)
+                            readonly property var box: DockGeometry.neckBox(root.edge,
+                                { x: dockVisualBackground.x, y: dockVisualBackground.y,
+                                  width: dockVisualBackground.width, height: dockVisualBackground.height },
+                                dockRoot.splitLift, splitNeck.waist)
+                            readonly property real filletSize: DockGeometry.neckFilletSize(dockRoot.splitLift, splitNeck.pillAlong, splitNeck.waist)
+                            readonly property var filletCorners: DockGeometry.neckFilletCorners(root.edge)
+                            readonly property var filletOffsets: DockGeometry.neckFilletOffsets(root.edge, splitNeck.width, splitNeck.height, splitNeck.filletSize)
+                            visible: Config.options.dock.showBackground && dockRoot.splitLift > 0 && splitNeck.waist > 0
+                            x: box.x
+                            y: box.y
+                            width: box.width
+                            height: box.height
+                            Rectangle {
+                                width: splitNeck.width
+                                height: splitNeck.height
+                                color: FrameGeometry.color
+                            }
+                            RoundCorner {
+                                x: splitNeck.filletOffsets.start.x
+                                y: splitNeck.filletOffsets.start.y
+                                implicitSize: Math.round(splitNeck.filletSize)
+                                corner: root.filletCorner(splitNeck.filletCorners.start)
+                                color: FrameGeometry.color
+                            }
+                            RoundCorner {
+                                x: splitNeck.filletOffsets.end.x
+                                y: splitNeck.filletOffsets.end.y
+                                implicitSize: Math.round(splitNeck.filletSize)
+                                corner: root.filletCorner(splitNeck.filletCorners.end)
+                                color: FrameGeometry.color
+                            }
+                        }
+
                         Rectangle {
                             id: dockVisualBackground
                             property real margin: Appearance.sizes.elevationMargin
+                            // The pill's own margins carry the lift (outward
+                            // grows, inward shrinks, the sum is the thickness),
+                            // so the blur region - which tracks its item's OWN
+                            // geometry - rides the motion, and the frost lands
+                            // with the pill rather than a beat after it.
+                            readonly property var pillMargins: DockGeometry.liftedMargins(root.edge, dockRoot.dockMargins, dockRoot.splitRoom, dockRoot.splitLift)
                             anchors.fill: parent
-                            anchors.topMargin:    dockRoot.dockMargins.top
-                            anchors.bottomMargin: dockRoot.dockMargins.bottom
-                            anchors.leftMargin:   dockRoot.dockMargins.left
-                            anchors.rightMargin:  dockRoot.dockMargins.right
+                            anchors.topMargin:    pillMargins.top
+                            anchors.bottomMargin: pillMargins.bottom
+                            anchors.leftMargin:   pillMargins.left
+                            anchors.rightMargin:  pillMargins.right
                             color: !Config.options.dock.showBackground ? "transparent"
-                                   : dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0
-                            border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0
+                                   : dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0
+                            Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                            border.width: Config.options.dock.showBackground && !dockRoot.attachedLook ? Appearance.borderWidth.standard : 0
+                            Behavior on border.width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
                             border.color: Appearance.colors.colLayer0Border
                             // `large`: the tab's inward corners sit next to the
                             // fillets and the bar plate's corners in frame mode,
                             // so the pill's radius is a design value, not a sum.
                             radius: Appearance.rounding.large
-                            readonly property var frameRadii: DockGeometry.cornerRadii(root.edge, radius, dockRoot.attached)
+                            // The outward pair rounds with the lift: square at
+                            // the seam, a pill once apart.
+                            readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.splitProgress)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft
@@ -279,6 +404,8 @@ Scope {
                             // the module, so no anchor has to appear or
                             // disappear when the dock turns.
                             anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: dockRoot.liftOffset.x
+                            anchors.verticalCenterOffset: dockRoot.liftOffset.y
                             readonly property var box: DockGeometry.contentBox(
                                 root.edge, dockRoot.dockThickness,
                                 implicitWidth, implicitHeight)
