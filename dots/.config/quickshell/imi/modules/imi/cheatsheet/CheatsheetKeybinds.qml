@@ -367,32 +367,26 @@ Item {
                                                     pixelSize: Config.options.cheatsheet.fontSize.key
                                                     color: Appearance.colors.colOnLayer0
                                                 }
-                                                RippleButton {
+                                                IconButton {
                                                     id: editBindingButton
+                                                    buttonIcon: "edit"
+                                                    // 22, below the dense size: every cell of the
+                                                    // grid reserves this button's width, so the
+                                                    // ladder's 28 would widen every column.
+                                                    buttonSize: 22
+                                                    colText: modelData.binding?.overridden
+                                                        ? Appearance.colors.colPrimary
+                                                        : Appearance.colors.colOnLayer0
                                                     // Space is always reserved so hovering cannot
                                                     // reflow the grid; only the icon fades in.
                                                     visible: keybindCell.editable
                                                     opacity: (keybindCellHover.hovered || editBindingButton.hovered) ? 1 : 0
                                                     enabled: opacity > 0
                                                     anchors.verticalCenter: parent.verticalCenter
-                                                    implicitWidth: 22
-                                                    implicitHeight: 22
-                                                    buttonRadius: Appearance.rounding.full
                                                     onClicked: root.editRequested(modelData.binding)
 
                                                     Behavior on opacity {
                                                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                                    }
-
-                                                    contentItem: MaterialSymbol {
-                                                        verticalAlignment: Text.AlignVCenter
-                                                        anchors.centerIn: parent
-                                                        horizontalAlignment: Text.AlignHCenter
-                                                        iconSize: Appearance.font.pixelSize.normal
-                                                        text: "edit"
-                                                        color: modelData.binding?.overridden
-                                                            ? Appearance.colors.colPrimary
-                                                            : Appearance.colors.colOnLayer0
                                                     }
                                                 }
                                             }

@@ -54,9 +54,13 @@ ColumnLayout {
         Repeater {
             model: appCol.playing
 
-            delegate: SmallButton {
+            delegate: DialogButton {
                 required property string modelData
                 buttonText: modelData
+                colBackground: Appearance.colors.colSecondaryContainer
+                colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                colRipple: Appearance.colors.colSecondaryContainerActive
+                colText: Appearance.colors.colOnSecondaryContainer
                 onClicked: row.patchValue({ app: modelData })
             }
         }

@@ -369,14 +369,18 @@ Rectangle {
                 onCommitted: sec => root.setValue(sec)
             }
 
-            FormIconButton {
+            IconButton {
                 buttonIcon: root.expanded ? "expand_less" : "expand_more"
+                buttonSize: 32
+                colText: Appearance.colors.colOnLayer2
                 visible: !root.isWait
                 onClicked: root.expanded = !root.expanded
             }
 
-            FormIconButton {
+            IconButton {
                 buttonIcon: "close"
+                buttonSize: 32
+                colText: Appearance.colors.colOnLayer2
                 onClicked: root.removeRequested()
             }
         }

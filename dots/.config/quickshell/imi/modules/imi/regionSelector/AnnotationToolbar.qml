@@ -33,25 +33,20 @@ Rectangle {
     border.width: 1
     border.color: Appearance.colors.colLayer0Border
 
-    component BarButton: RippleButton {
+    // IconButton at the bar's own size: 36, not the 40 of the standard
+    // density - the bar is a fixed 48 px pill and a 40 px circle inside it
+    // leaves 4 px of rail on either side.
+    component BarButton: IconButton {
         id: button
-        property string barIcon: ""
-        property string tip: ""
-        implicitWidth: 36
-        implicitHeight: 36
-        buttonRadius: toggled ? Appearance.rounding.small : height / 2
-        colBackground: "transparent"
-        colRipple: Appearance.colors.colLayer1Active
-        colBackgroundHover: Appearance.colors.colLayer1Hover
+        buttonSize: 36
+        iconSize: Appearance.font.pixelSize.large
+        // Selecting a tool squares the circle off, which is the toolbar's
+        // own answer to "which tool am I in" - so the radius stays named.
+        buttonRadius: button.toggled ? Appearance.rounding.small : height / 2
         colBackgroundToggled: Appearance.colors.colPrimary
-        contentItem: MaterialSymbol {
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: button.barIcon
-            iconSize: Appearance.font.pixelSize.large
-            color: button.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
-        }
-        StyledToolTip { text: button.tip }
+        colBackgroundToggledHover: Appearance.colors.colPrimaryHover
+        colRippleToggled: Appearance.colors.colPrimaryActive
+        colText: button.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
     }
 
     RowLayout {
@@ -63,8 +58,8 @@ Rectangle {
             model: bar.tools
             delegate: BarButton {
                 required property var modelData
-                barIcon: modelData.icon
-                tip: modelData.tip
+                buttonIcon: modelData.icon
+                tooltip: modelData.tip
                 toggled: bar.annotationLayer.tool === modelData.id
                 onClicked: bar.annotationLayer.tool = modelData.id
             }
@@ -132,15 +127,15 @@ Rectangle {
         Rectangle { implicitWidth: 1; implicitHeight: 24; color: Appearance.colors.colLayer0Border }
 
         BarButton {
-            barIcon: "undo"
-            tip: Translation.tr("Undo")
+            buttonIcon: "undo"
+            tooltip: Translation.tr("Undo")
             enabled: bar.annotationLayer.hasAnnotations
             opacity: enabled ? 1 : 0.4
             onClicked: bar.annotationLayer.undo()
         }
         BarButton {
-            barIcon: "delete_sweep"
-            tip: Translation.tr("Clear annotations")
+            buttonIcon: "delete_sweep"
+            tooltip: Translation.tr("Clear annotations")
             enabled: bar.annotationLayer.hasAnnotations
             opacity: enabled ? 1 : 0.4
             onClicked: bar.annotationLayer.clearAll()
@@ -172,8 +167,8 @@ Rectangle {
             StyledToolTip { text: Translation.tr("Copy to clipboard (Enter)") }
         }
         BarButton {
-            barIcon: "close"
-            tip: Translation.tr("Cancel (Esc)")
+            buttonIcon: "close"
+            tooltip: Translation.tr("Cancel (Esc)")
             onClicked: bar.cancelled()
         }
     }

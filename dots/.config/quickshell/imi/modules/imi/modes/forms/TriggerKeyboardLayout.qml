@@ -35,9 +35,13 @@ ColumnLayout {
         Repeater {
             model: Array.from(HyprlandXkb.layoutCodes ?? []).filter((c, i, a) => c && a.indexOf(c) === i)
 
-            delegate: SmallButton {
+            delegate: DialogButton {
                 required property string modelData
                 buttonText: modelData
+                colBackground: Appearance.colors.colSecondaryContainer
+                colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                colRipple: Appearance.colors.colSecondaryContainerActive
+                colText: Appearance.colors.colOnSecondaryContainer
                 onClicked: row.set({ code: modelData })
             }
         }

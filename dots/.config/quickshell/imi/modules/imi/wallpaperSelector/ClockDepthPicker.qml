@@ -181,46 +181,24 @@ Item {
                     wrapMode: Text.WordWrap
                 }
             }
-            // A RippleButton rather than the IconToolbarButton this started as:
+            // An IconButton rather than the IconToolbarButton this started as:
             // ToolbarButton carries `Layout.fillHeight: true` for the toolbars
             // it was written for, and IconToolbarButton derives its width from
             // its height - so in a header row it stretches to the row and comes
             // out as a circle a third of the dialog wide, which is also what
             // made the row that tall. It is the close button's twin now.
-            RippleButton {
+            IconButton {
                 id: inspectButton
-                implicitWidth: 36
-                implicitHeight: 36
-                buttonRadius: height / 2
+                buttonIcon: "chrome_reader_mode"
                 toggled: root.inspect
+                colText: inspectButton.toggled
+                    ? Appearance.colors.colOnSecondaryContainer
+                    : Appearance.colors.colOnLayer0
+                tooltip: Translation.tr("Dim everything the model did not pick, and trace its edge")
                 onClicked: root.inspect = !root.inspect
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "chrome_reader_mode"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: inspectButton.toggled
-                        ? Appearance.colors.colOnPrimary
-                        : Appearance.colors.colOnLayer0
-                }
-                StyledToolTip {
-                    text: Translation.tr("Dim everything the model did not pick, and trace its edge")
-                }
             }
-            RippleButton {
-                implicitWidth: 36
-                implicitHeight: 36
-                buttonRadius: height / 2
+            CloseButton {
                 onClicked: root.closeRequested()
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "close"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer0
-                }
             }
         }
 

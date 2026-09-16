@@ -415,12 +415,12 @@ MouseArea {
                             }
                         }
 
-                        RippleButton {
-                            implicitWidth: 36
-                            implicitHeight: 36
-                            buttonRadius: height / 2
+                        IconButton {
+                            buttonIcon: "search"
                             toggled: root.toolbarVisible
                             colBackground: Appearance.colors.colSecondaryContainer
+                            colText: Appearance.colors.colOnSecondaryContainer
+                            tooltip: Translation.tr("Toggle search toolbar (Ctrl+F)")
                             onClicked: {
                                 if (Config.options.wallpaperSelector.showSearchbar) {
                                     Config.options.wallpaperSelector.showSearchbar = false
@@ -428,19 +428,6 @@ MouseArea {
                                 } else {
                                     showControls = !showControls
                                 }
-                            }
-                            contentItem: MaterialSymbol {
-                                anchors.centerIn: parent
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: "search"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: root.toolbarVisible
-                                    ? Appearance.colors.colOnPrimary
-                                    : Appearance.colors.colOnSecondaryContainer
-                            }
-                            StyledToolTip {
-                                text: Translation.tr("Toggle search toolbar (Ctrl+F)")
                             }
                         }
                     }

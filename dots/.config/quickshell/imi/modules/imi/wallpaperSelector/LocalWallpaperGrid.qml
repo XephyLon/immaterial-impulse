@@ -63,35 +63,21 @@ Item {
         Row {
             anchors.centerIn: parent
             spacing: Appearance.spacing.space150
-            RippleButton {
-                implicitWidth: 36; implicitHeight: 36
-                buttonRadius: height / 2
+            // Not CloseButton: this dismisses the tile's delete confirmation,
+            // it does not close the selector.
+            IconButton {
+                buttonIcon: "close"
                 colBackground: Appearance.colors.colPrimaryContainer
+                colText: Appearance.colors.colPrimary
                 onClicked: contextMenu.visible = false
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "close"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colPrimary
-                }
             }
-            RippleButton {
-                implicitWidth: 36; implicitHeight: 36
-                buttonRadius: height / 2
+            IconButton {
+                buttonIcon: "check"
                 colBackground: Appearance.colors.colErrorContainer
+                colText: Appearance.colors.colPrimary
                 onClicked: {
                     contextMenu.visible = false
                     deleteProc.deleteFile(contextMenu.targetPath)
-                }
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "check"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colPrimary
                 }
             }
         }

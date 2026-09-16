@@ -100,17 +100,14 @@ StyledPopup {
                             font.pixelSize: Appearance.font.pixelSize.small
                             color: runChip.onColor
                         }
-                        MouseArea {
-                            implicitWidth: Appearance.font.pixelSize.large
-                            implicitHeight: Appearance.font.pixelSize.large
-                            cursorShape: Qt.PointingHandCursor
+                        // The chip's × is a button, not a bare glyph with a
+                        // MouseArea: it had no press and a target the size of
+                        // the glyph.
+                        IconButton {
+                            buttonIcon: "close"
+                            buttonSize: 28
+                            colText: runChip.onColor
                             onClicked: Modes.stopRoutine(runChip.modelData.id, "manual")
-                            MaterialSymbol {
-                                anchors.centerIn: parent
-                                text: "close"
-                                iconSize: Appearance.font.pixelSize.large
-                                color: runChip.onColor
-                            }
                         }
                     }
                 }

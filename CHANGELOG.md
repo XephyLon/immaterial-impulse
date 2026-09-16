@@ -62,6 +62,12 @@ own repo; the installer pins which revision it builds.
   line. Not built: Proton Mail (needs Proton Bridge), Proton Pass (no API).
 
 ### Changed
+- One icon button and one text button across the shell. Forty-odd
+  hand-drawn icon buttons (eight different sizes) are the new `IconButton`;
+  the settings pages', sidebars' and dialogs' text pills are `DialogButton`;
+  the Modes editor's own small button and icon button are gone. Two send
+  buttons (Intelligence, Anime) had a pointer area sitting over them that
+  swallowed the press: they ripple and fire again.
 - One close button for whole surfaces: the Settings window, the cheatsheet
   and the Modes manager close with the same 40 px button, glyph and tooltip
   (they had three shapes, one of them spinning on hover).

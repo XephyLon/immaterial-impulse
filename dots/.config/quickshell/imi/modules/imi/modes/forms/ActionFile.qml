@@ -23,8 +23,12 @@ RowLayout {
         onCommitted: v => row.setValue(v)
     }
 
-    SmallButton {
+    DialogButton {
         buttonText: Translation.tr("Use current")
+        colBackground: Appearance.colors.colSecondaryContainer
+        colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+        colRipple: Appearance.colors.colSecondaryContainerActive
+        colText: Appearance.colors.colOnSecondaryContainer
         onClicked: row.setValue(Config.options.background.wallpaperPath)
     }
 }

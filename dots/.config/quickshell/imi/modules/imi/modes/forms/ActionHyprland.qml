@@ -118,8 +118,10 @@ ColumnLayout {
                 }
             }
 
-            FormIconButton {
+            IconButton {
                 buttonIcon: "close"
+                buttonSize: 32
+                colText: Appearance.colors.colOnLayer2
                 onClicked: {
                     const opts = ModeSchema.clone(row.obj.options ?? {});
                     delete opts[optionRow.modelData];
@@ -152,8 +154,12 @@ ColumnLayout {
             placeholder: Translation.tr("value")
         }
 
-        SmallButton {
+        DialogButton {
             buttonText: Translation.tr("Add")
+            colBackground: Appearance.colors.colSecondaryContainer
+            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+            colRipple: Appearance.colors.colSecondaryContainerActive
+            colText: Appearance.colors.colOnSecondaryContainer
             onClicked: {
                 const key = newKey.value.trim();
                 if (!key.length)

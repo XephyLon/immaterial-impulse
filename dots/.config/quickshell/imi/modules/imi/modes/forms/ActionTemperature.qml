@@ -41,8 +41,12 @@ ColumnLayout {
             color: Appearance.colors.colOnLayer2
         }
 
-        SmallButton {
+        DialogButton {
             buttonText: Translation.tr("Use current")
+            colBackground: Appearance.colors.colSecondaryContainer
+            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+            colRipple: Appearance.colors.colSecondaryContainerActive
+            colText: Appearance.colors.colOnSecondaryContainer
             onClicked: row.setValue(Config.options.light.night.colorTemperature)
         }
     }

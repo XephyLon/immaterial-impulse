@@ -272,47 +272,22 @@ OverlayBackground {
                 }
             }
 
-            RippleButton {
+            // 32, the dense size: these sit beside the 32 px chip rail above.
+            IconButton {
                 id: addNoteButton
-                implicitWidth: 30
-                implicitHeight: 30
-                buttonRadius: Appearance.rounding.full
+                buttonIcon: "add"
+                buttonSize: 32
+                tooltip: Translation.tr("New note")
                 onClicked: root.startNewNote()
-
-                contentItem: MaterialSymbol {
-                    verticalAlignment: Text.AlignVCenter
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    text: "add"
-                    iconSize: Appearance.font.pixelSize.normal
-                    color: Appearance.colors.colOnLayer1
-                }
-
-                StyledToolTip {
-                    text: Translation.tr("New note")
-                }
             }
 
-            RippleButton {
+            IconButton {
                 id: deleteNoteButton
-                implicitWidth: 30
-                implicitHeight: 30
-                buttonRadius: Appearance.rounding.full
+                buttonIcon: "delete"
+                buttonSize: 32
+                tooltip: Translation.tr("Delete note")
                 enabled: root.currentNoteId.length > 0
                 onClicked: root.deleteCurrentNote()
-
-                contentItem: MaterialSymbol {
-                    verticalAlignment: Text.AlignVCenter
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    text: "delete"
-                    iconSize: Appearance.font.pixelSize.normal
-                    color: Appearance.colors.colOnLayer1
-                }
-
-                StyledToolTip {
-                    text: Translation.tr("Delete note")
-                }
             }
         }
 

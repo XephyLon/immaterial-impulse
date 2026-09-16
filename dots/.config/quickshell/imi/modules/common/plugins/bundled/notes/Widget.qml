@@ -249,23 +249,14 @@ Item {
                                     maximumLineCount: 1
                                 }
 
-                                RippleButton {
+                                IconButton {
                                     id: deleteNoteButton
                                     objectName: "deleteNoteButton"
                                     Layout.alignment: Qt.AlignVCenter
-                                    implicitWidth: 28
-                                    implicitHeight: 28
-                                    buttonRadius: Appearance.rounding.full
+                                    buttonIcon: "delete"
+                                    buttonSize: 28
+                                    colText: Appearance.colors.colOnLayer2
                                     onClicked: Notes.deleteNote(noteRow.modelData.id)
-
-                                    contentItem: MaterialSymbol {
-                                        verticalAlignment: Text.AlignVCenter
-                                        anchors.centerIn: parent
-                                        horizontalAlignment: Text.AlignHCenter
-                                        text: "delete"
-                                        iconSize: Appearance.font.pixelSize.normal
-                                        color: Appearance.colors.colOnLayer2
-                                    }
                                 }
                             }
                         }
@@ -284,21 +275,12 @@ Item {
                     Layout.fillWidth: true
                     spacing: Appearance.spacing.space100
 
-                    RippleButton {
+                    IconButton {
                         id: backButton
-                        implicitWidth: 30
-                        implicitHeight: 30
-                        buttonRadius: Appearance.rounding.full
+                        buttonIcon: "arrow_back"
+                        buttonSize: 32
+                        colText: Appearance.colors.colOnSecondaryContainer
                         onClicked: root.saveAndBack()
-
-                        contentItem: MaterialSymbol {
-                            verticalAlignment: Text.AlignVCenter
-                            anchors.centerIn: parent
-                            horizontalAlignment: Text.AlignHCenter
-                            text: "arrow_back"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSecondaryContainer
-                        }
                     }
 
                     StyledText {
