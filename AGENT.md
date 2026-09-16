@@ -344,8 +344,12 @@ through it was inert for a whole review round). `modules/imi/frame/Frame.qml` dr
 screen from `bandMargins`: the horizontal bands span the width (under the bar's plate on the bar's
 edge, at the screen edge otherwise), the side bands run between them, so no two bands overlap - the
 frame's colour is translucent, and a crossing was a band-square painted twice. The bands sit on the
-BOTTOM layer (the dock, the bar and every window above them, the wallpaper under; on Top they stacked
-by creation order against the dock), `ExclusionMode.Ignore`, an empty mask; they stay mapped and
+TOP layer, like the fillets on Overlay: chrome, over a floating window dragged into the gap. A round
+on Bottom ("under every window, over the wallpaper") was invisible on every cold start with the mode
+on: `quickshell:background` is on Bottom too and a level stacks by creation order, so a band created
+before the wallpaper sat under it - it showed only when the mode was switched on at runtime (measured
+in the sandbox: bands present in `hyprctl layers`, every band pixel the wallpaper's). The wallpaper
+cannot move to Background: the WallpaperEngine satellite relies on being below it. `ExclusionMode.Ignore`, an empty mask; they stay mapped and
 paint transparent for a fullscreen window
 (`visible` on a layer surface destroys it; `rules.lua` gives `quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen
 corners (the sidebar corner-open hit rect lives there) and moves the fillet shape inward through

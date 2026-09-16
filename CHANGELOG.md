@@ -124,9 +124,10 @@ own repo; the installer pins which revision it builds.
 - Frame mode with a pinned dock: the band no longer floats as a thin line
   above the dock with wallpaper under it, nor swells to the dock's whole
   height; it stays thin and the dock sits on it as a tab (or floats a gap
-  above it, by choice). The bands also sit under windows now (Bottom layer)
-  instead of over a floating window's edge, and no longer overlap at the
-  corners, where the translucent colour painted twice read darker.
+  above it, by choice). The bands no longer overlap at the corners, where
+  the translucent colour painted twice read darker, and they show on a cold
+  start with the mode on (a round on the Bottom layer put them under the
+  wallpaper whenever the wallpaper came up after them).
 - Settings: the Modes overview and the Google client instructions are rows
   with their action, not banners; notices carry a little more padding.
 - Modes manager: choosing another mode, routine or template, or switching tab,

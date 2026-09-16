@@ -33,12 +33,17 @@ Scope {
         visible: FrameGeometry.enabled
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "quickshell:frame"
-        // Bottom, not Top: the band lives in the gap under everything that
-        // is not wallpaper. On Top it stacked by creation order against the
-        // dock (a later-built frame covered the pill on the dock's strip)
-        // and over a floating window's edge; on Bottom the dock, the bar
-        // and every window are above it and the wallpaper is under it.
-        WlrLayershell.layer: WlrLayer.Bottom
+        // Top. The band is chrome, like the fillets on Overlay: it draws
+        // over a floating window dragged into the gap, and that is the
+        // frame. A round on Bottom ("under every window, over the
+        // wallpaper") was not that: the wallpaper (quickshell:background)
+        // is on Bottom too, and within a level the compositor stacks by
+        // creation order, so a band created before the wallpaper - every
+        // cold start with frame mode on - was under it and invisible; it
+        // only showed when the mode was switched on at runtime. The dock,
+        // the other Top surface on the band's edge, no longer overlaps it:
+        // the pill sits on the band or above it.
+        WlrLayershell.layer: WlrLayer.Top
         color: band.painted ? FrameGeometry.color : "transparent"
         mask: Region {}
         anchors {
