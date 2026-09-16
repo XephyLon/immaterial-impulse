@@ -299,65 +299,35 @@ Scope {
                         Layout.topMargin: Appearance.spacing.space50
                         spacing: Appearance.spacing.space100
 
-                        RippleButton {
+                        DialogButton {
                             Layout.fillWidth: true
-                            implicitHeight: 40
-                            buttonRadius: height / 2
+                            buttonText: Translation.tr("Copy")
                             colBackground: Appearance.colors.colSecondaryContainer
                             colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                            colRipple: Appearance.colors.colSecondaryContainerActive
+                            colText: Appearance.colors.colOnSecondaryContainer
                             onClicked: DropShelf.copyAll()
-                            contentItem: RowLayout {
-                                anchors.fill: parent
-                                spacing: Appearance.spacing.space75
-                                StyledText {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    Layout.fillWidth: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: Translation.tr("Copy")
-                                    color: Appearance.colors.colOnSecondaryContainer
-                                }
-                            }
                         }
 
-                        RippleButton {
+                        DialogButton {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignRight
-                            implicitHeight: 40
-                            buttonRadius: height / 2
+                            buttonText: Translation.tr("Clear")
                             colBackground: Appearance.colors.colLayer1
                             colBackgroundHover: Appearance.colors.colLayer1Hover
+                            colRipple: Appearance.colors.colLayer1Active
+                            colText: Appearance.colors.colOnLayer1
                             onClicked: DropShelf.clear()
-                            contentItem: RowLayout {
-                                anchors.fill: parent
-                                spacing: Appearance.spacing.space75
-                                StyledText {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    Layout.fillWidth: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: Translation.tr("Clear")
-                                    color: Appearance.colors.colOnLayer1
-                                }
-                            }
                         }
-                        RippleButton {
+                        DialogButton {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignRight
-                            implicitHeight: 40
-                            buttonRadius: height / 2
+                            buttonText: Translation.tr("Close")
                             colBackground: Appearance.colors.colLayer1
                             colBackgroundHover: Appearance.colors.colLayer1Hover
+                            colRipple: Appearance.colors.colLayer1Active
+                            colText: Appearance.colors.colOnLayer1
                             onClicked: DropShelf.hide()
-                            contentItem: RowLayout {
-                                anchors.fill: parent
-                                spacing: Appearance.spacing.space75
-                                StyledText {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    Layout.fillWidth: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: Translation.tr("Close")
-                                    color: Appearance.colors.colOnLayer1
-                                }
-                            }
                         }
                     }
                 }

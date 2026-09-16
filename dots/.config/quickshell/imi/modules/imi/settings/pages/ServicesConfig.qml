@@ -18,53 +18,6 @@ ContentPage {
     forceWidth: true
     bottomContentPadding: 15
 
-    component IconButton : RippleButton {
-        id: iRoot
-        property string iconName
-        property string textString
-        property color textColor: Appearance.colors.colOnPrimary
-
-        toggled: true
-        implicitHeight: 36
-        padding: Appearance.spacing.space200
-        implicitWidth: layoutItem.implicitWidth + padding * 2
-        buttonRadius: Appearance.rounding.full
-        // The press tones follow each state's own fill family: the filled
-        // pill ripples in its container's Active, and the flat variant -
-        // whose colLayer1 default reads as no background at all on this
-        // page - ripples in the Layer2 family it hovers in.
-        // A filled surface ripples in its ON-color, faint: this palette's
-        // PrimaryActive sits nearly on Primary itself, which was the
-        // weakness - and SecondaryContainerActive was the wrong family
-        // for a colPrimary fill entirely.
-        colRippleToggled: ColorUtils.transparentize(Appearance.colors.colOnPrimary, 0.75)
-        colBackground: "transparent"
-        colBackgroundHover: Appearance.colors.colLayer2Hover
-        colRipple: Appearance.colors.colLayer2Active
-
-        contentItem: Item {
-            implicitWidth: layoutItem.implicitWidth
-            implicitHeight: layoutItem.implicitHeight
-            RowLayout {
-                id: layoutItem
-                anchors.centerIn: parent
-                spacing: Appearance.spacing.space100
-                MaterialSymbol {
-                    text: iRoot.iconName
-                    color: iRoot.textColor
-                    iconSize: Appearance.font.pixelSize.normal
-                    Layout.alignment: Qt.AlignVCenter
-                }
-                StyledText {
-                    text: iRoot.textString
-                    color: iRoot.textColor
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    Layout.alignment: Qt.AlignVCenter
-                }
-            }
-        }
-    }
-
     //This was intended to go into the results more deeply but in the end I didn't like it but I left it just in case lol
     function goTo(term) {
         const t = term.toLowerCase().trim()
@@ -139,26 +92,17 @@ ContentPage {
                                 elide: Text.ElideMiddle
                                 color: Appearance.colors.colOnLayer1
                             }
-                            RippleButton {
+                            IconButton {
                                 Layout.rightMargin: Appearance.spacing.space100
-                                implicitWidth: 32
-                                implicitHeight: 32
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: "transparent"
+                                buttonIcon: "delete"
+                                buttonSize: 32
+                                colText: Appearance.colors.colError
                                 colRipple: Appearance.colors.colErrorActive
+                                tooltip: Translation.tr("Remove folder")
                                 onClicked: {
                                     const gone = String(folderRow.modelData ?? "");
                                     Config.options.ai.tools.folders = (Config.options.ai.tools.folders ?? []).filter(f => f !== gone);
                                 }
-                                contentItem: MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: "delete"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colError
-                                }
-                                StyledToolTip { text: Translation.tr("Remove folder") }
                             }
                         }
                     }
@@ -216,27 +160,18 @@ ContentPage {
                                 elide: Text.ElideMiddle
                                 color: Appearance.colors.colOnLayer1
                             }
-                            RippleButton {
+                            IconButton {
                                 Layout.rightMargin: Appearance.spacing.space100
-                                implicitWidth: 32
-                                implicitHeight: 32
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: "transparent"
+                                buttonIcon: "delete"
+                                buttonSize: 32
+                                colText: Appearance.colors.colError
                                 colRipple: Appearance.colors.colErrorActive
+                                tooltip: Translation.tr("Remove and forget this folder")
                                 onClicked: {
                                     const gone = String(docFolderRow.modelData ?? "");
                                     Config.options.ai.documents.folders = (Config.options.ai.documents.folders ?? []).filter(f => f !== gone);
                                     AiRag.forget(gone);
                                 }
-                                contentItem: MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: "delete"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colError
-                                }
-                                StyledToolTip { text: Translation.tr("Remove and forget this folder") }
                             }
                         }
                     }
@@ -294,22 +229,17 @@ ContentPage {
                                       .arg(AiRag.indexedWith.length > 0 ? AiRag.indexedWith : "")
                             color: AiRag.error.length > 0 ? Appearance.m3colors.m3error : Appearance.colors.colOnLayer1
                         }
-                        RippleButton {
+                        DialogButton {
                             Layout.rightMargin: Appearance.spacing.space100
                             enabled: AiRag.configured && !AiRag.indexing
-                            implicitHeight: 32
-                            padding: Appearance.spacing.space150
-                            buttonRadius: Appearance.rounding.full
+                            buttonText: AiRag.indexing
+                                ? Translation.tr("Indexing %1 / %2").arg(AiRag.progressDone).arg(AiRag.progressTotal)
+                                : Translation.tr("Index now")
                             colBackground: Appearance.colors.colSecondaryContainer
+                            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                             colRipple: Appearance.colors.colSecondaryContainerActive
+                            colText: Appearance.colors.colOnSecondaryContainer
                             onClicked: AiRag.index()
-                            contentItem: StyledText {
-                                text: AiRag.indexing
-                                    ? Translation.tr("Indexing %1 / %2").arg(AiRag.progressDone).arg(AiRag.progressTotal)
-                                    : Translation.tr("Index now")
-                                color: Appearance.colors.colOnSecondaryContainer
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                            }
                         }
                     }
                 }
@@ -362,21 +292,16 @@ ContentPage {
                                 : Translation.tr("whisper.cpp found")
                             color: AiDictation.hint.length > 0 || AiDictation.downloadState === "error" ? Appearance.m3colors.m3error : Appearance.colors.colOnLayer1
                         }
-                        RippleButton {
+                        DialogButton {
                             Layout.rightMargin: Appearance.spacing.space100
                             enabled: AiDictation.fasterWhisper && AiDictation.downloadState !== "downloading"
-                            implicitHeight: 32
-                            padding: Appearance.spacing.space150
-                            buttonRadius: Appearance.rounding.full
+                            buttonText: AiDictation.downloadState === "downloading" ? Translation.tr("Downloading…")
+                                : Translation.tr("Download model")
                             colBackground: Appearance.colors.colSecondaryContainer
+                            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                             colRipple: Appearance.colors.colSecondaryContainerActive
+                            colText: Appearance.colors.colOnSecondaryContainer
                             onClicked: AiDictation.download()
-                            contentItem: StyledText {
-                                text: AiDictation.downloadState === "downloading" ? Translation.tr("Downloading…")
-                                    : Translation.tr("Download model")
-                                color: Appearance.colors.colOnSecondaryContainer
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                            }
                         }
                     }
                     ConfigSwitch {

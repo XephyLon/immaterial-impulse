@@ -202,20 +202,13 @@ Item {
                         fieldWidth: 300
                         singleLine: true
                     }
-                    RippleButton {
-                        implicitWidth: installLabel.implicitWidth + Appearance.spacing.space300
-                        implicitHeight: 44
+                    DialogButton {
                         enabled: !PluginManager.installing
-                        buttonRadius: Appearance.rounding.full
+                        buttonText: PluginManager.installing ? Translation.tr("Installing…") : Translation.tr("Install")
+                        colText: Appearance.colors.colOnLayer1
                         // ConfigTextArea.text is the row label; the field content is
                         // its `value` alias.
                         releaseAction: () => PluginManager.installFromManifest(manifestUrl.value.trim())
-                        contentItem: StyledText {
-                            id: installLabel
-                            anchors.centerIn: parent
-                            text: PluginManager.installing ? Translation.tr("Installing…") : Translation.tr("Install")
-                            color: Appearance.colors.colOnLayer1
-                        }
                     }
                 }
 
@@ -446,34 +439,24 @@ Item {
                                         // shell. Removal is gated on the plugin being
                                         // disabled so a running plugin is never pulled
                                         // out from under itself.
-                                        RippleButton {
+                                        IconButton {
                                             id: deleteButton
                                             visible: pluginCard.modelData._origin === "installed"
                                             enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
                                             Layout.alignment: Qt.AlignVCenter
-                                            implicitWidth: 36
-                                            implicitHeight: 36
-                                            buttonRadius: Appearance.rounding.full
-                                            colBackground: "transparent"
+                                            // 36, not a density step: it stands
+                                            // beside the Update button in the
+                                            // same trailing row.
+                                            buttonSize: 36
+                                            buttonIcon: "delete"
+                                            colText: deleteButton.enabled
+                                                ? Appearance.colors.colError : Appearance.colors.colSubtext
                                             colRipple: Appearance.colors.colLayer2Active
                                             colBackgroundHover: Appearance.colors.colLayer2
+                                            tooltip: configSwitch.isEnabled
+                                                ? Translation.tr("Disable the widget before deleting")
+                                                : Translation.tr("Delete widget")
                                             onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
-
-                                            contentItem: MaterialSymbol {
-                                                horizontalAlignment: Text.AlignHCenter
-                                                verticalAlignment: Text.AlignVCenter
-                                                anchors.centerIn: parent
-                                                text: "delete"
-                                                iconSize: Appearance.font.pixelSize.larger
-                                                color: deleteButton.enabled
-                                                    ? Appearance.colors.colError : Appearance.colors.colSubtext
-                                            }
-
-                                            StyledToolTip {
-                                                text: configSwitch.isEnabled
-                                                    ? Translation.tr("Disable the widget before deleting")
-                                                    : Translation.tr("Delete widget")
-                                            }
                                         }
                                     ]
 

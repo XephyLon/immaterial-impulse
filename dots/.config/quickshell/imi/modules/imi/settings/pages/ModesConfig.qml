@@ -176,23 +176,17 @@ ContentPage {
                         text: page.seededText.length > 0 ? page.seededText
                             : Translation.tr("The built-in modes (Sleep, Work, Focus, Gaming, Theater, Presentation, Relax) are ordinary entries once added: edit or delete them freely. This puts back any you removed, without touching the ones still there.")
                     }
-                    RippleButton {
+                    DialogButton {
                         Layout.rightMargin: Appearance.spacing.space100
-                        implicitHeight: 32
-                        padding: Appearance.spacing.space150
-                        buttonRadius: Appearance.rounding.full
+                        buttonText: Translation.tr("Restore missing presets")
                         colBackground: Appearance.colors.colSecondaryContainer
+                        colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                         colRipple: Appearance.colors.colSecondaryContainerActive
+                        colText: Appearance.colors.colOnSecondaryContainer
                         onClicked: {
                             const added = Modes.seedPresets();
                             page.seededText = added.length === 0 ? Translation.tr("All presets are already there.")
                                 : Translation.tr("Added: %1").arg(added.map(id => Modes.modeById(id)?.name ?? id).join(", "));
-                        }
-                        contentItem: StyledText {
-                            text: Translation.tr("Restore missing presets")
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            color: Appearance.colors.colOnSecondaryContainer
                         }
                     }
                 }
@@ -372,28 +366,24 @@ ContentPage {
                             return Translation.tr("%1 in the Activity tab. The newest 200 are kept.").arg(count);
                         }
                     }
-                    RippleButton {
+                    DialogButton {
+                        id: clearActivityButton
                         Layout.rightMargin: Appearance.spacing.space100
-                        implicitHeight: 32
-                        padding: Appearance.spacing.space150
-                        buttonRadius: Appearance.rounding.full
-                        colBackground: Appearance.colors.colSecondaryContainer
-                        colRipple: Appearance.colors.colSecondaryContainerActive
                         enabled: Modes.history.length > 0
                         // Two presses, the second within three seconds: the log is
                         // history, and a confirmation dialog does not belong on a page.
                         property bool armed: false
-                        Timer { id: disarm; interval: 3000; onTriggered: parent.armed = false }
+                        buttonText: clearActivityButton.armed ? Translation.tr("Press again to clear")
+                            : Translation.tr("Clear activity")
+                        colBackground: Appearance.colors.colSecondaryContainer
+                        colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                        colRipple: Appearance.colors.colSecondaryContainerActive
+                        colText: Appearance.colors.colOnSecondaryContainer
+                        Timer { id: disarm; interval: 3000; onTriggered: clearActivityButton.armed = false }
                         onClicked: {
-                            if (!armed) { armed = true; disarm.restart(); return; }
+                            if (!clearActivityButton.armed) { clearActivityButton.armed = true; disarm.restart(); return; }
                             Modes.clearHistory();
-                            armed = false;
-                        }
-                        contentItem: StyledText {
-                            text: parent.armed ? Translation.tr("Press again to clear") : Translation.tr("Clear activity")
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            color: Appearance.colors.colOnSecondaryContainer
+                            clearActivityButton.armed = false;
                         }
                     }
                 }

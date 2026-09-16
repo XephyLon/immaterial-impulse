@@ -58,24 +58,18 @@ ColumnLayout {
             }
         }
 
-        RippleButton {
-            Layout.preferredWidth: 36
-            Layout.preferredHeight: 36
+        IconButton {
             visible: Config.options.hyprland.autostartApps.enable
-            buttonRadius: implicitWidth / 2
+            buttonIcon: "motion_play"
+            buttonSize: 32
+            colText: Appearance.colors.colPrimary
+            // The tonal plate stays: this one carries a container where the
+            // page's other glyph buttons are flat.
             colBackground: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.85)
             colBackgroundHover: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.6)
             colRipple: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.5)
             onClicked: {
                 Quickshell.execDetached(["python3", `${Directories.scriptPath}/hyprland/autostart.py`])
-            }
-            contentItem: MaterialSymbol {
-                verticalAlignment: Text.AlignVCenter
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                text: "motion_play"
-                iconSize: Appearance.font.pixelSize.normal
-                color: Appearance.colors.colPrimary
             }
         }
     }
@@ -162,22 +156,16 @@ ColumnLayout {
                     onValueModified: root.updateEntry(entryRow.index, "delay", newValue)
                 }
 
-                RippleButton {
-                    width: 36
-                    height: 36
-                    buttonRadius: width / 2
+                IconButton {
+                    buttonIcon: "delete"
+                    buttonSize: 32
+                    colText: Appearance.colors.colError
+                    // Keeps its error-tinted plate: it is the destructive end
+                    // of an editable row, not a flat toolbar glyph.
                     colBackground: ColorUtils.transparentize(Appearance.colors.colError, 0.85)
                     colBackgroundHover: ColorUtils.transparentize(Appearance.colors.colError, 0.6)
                     colRipple: ColorUtils.transparentize(Appearance.colors.colError, 0.5)
                     onClicked: root.removeEntry(entryRow.index)
-                    contentItem: MaterialSymbol {
-                        verticalAlignment: Text.AlignVCenter
-                        anchors.centerIn: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        text: "delete"
-                        iconSize: Appearance.font.pixelSize.normal
-                        color: Appearance.colors.colError
-                    }
                 }
             }
 

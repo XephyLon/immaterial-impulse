@@ -297,26 +297,17 @@ ContentPage {
                             elide: Text.ElideMiddle
                             color: Appearance.colors.colOnLayer1
                         }
-                        RippleButton {
+                        IconButton {
                             Layout.rightMargin: Appearance.spacing.space100
-                            implicitWidth: 32
-                            implicitHeight: 32
-                            buttonRadius: Appearance.rounding.full
-                            colBackground: "transparent"
+                            buttonIcon: "delete"
+                            buttonSize: 32
+                            colText: Appearance.colors.colError
                             colRipple: Appearance.colors.colErrorActive
+                            tooltip: Translation.tr("Remove feed")
                             onClicked: {
                                 const gone = String(urlRow.modelData ?? "");
                                 Config.options.calendar.ics.urls = (Config.options.calendar.ics.urls ?? []).filter(u => u !== gone);
                             }
-                            contentItem: MaterialSymbol {
-                                anchors.centerIn: parent
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: "delete"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colError
-                            }
-                            StyledToolTip { text: Translation.tr("Remove feed") }
                         }
                     }
                 }

@@ -467,7 +467,7 @@ ContentPage {
                             elide: Text.ElideRight
                         }
 
-                        RippleButton {
+                        IconButton {
                             id: overrideEditButton
                             // findBinding is an invokable, not a property: the
                             // binding cannot see the tree change through it, so
@@ -477,39 +477,23 @@ ContentPage {
                                 void tree;
                                 return HyprlandKeybinds.findBinding(overrideRow.modelData.identity) !== null;
                             }
-                            implicitWidth: 30
-                            implicitHeight: 30
-                            buttonRadius: Appearance.rounding.full
+                            buttonIcon: "edit"
+                            buttonSize: 32
+                            tooltip: Translation.tr("Edit")
                             onClicked: {
                                 keybindsSection.editingBinding =
                                     HyprlandKeybinds.findBinding(overrideRow.modelData.identity);
                             }
-                            contentItem: MaterialSymbol {
-                                verticalAlignment: Text.AlignVCenter
-                                anchors.centerIn: parent
-                                horizontalAlignment: Text.AlignHCenter
-                                iconSize: Appearance.font.pixelSize.larger
-                                text: "edit"
-                            }
-                            StyledToolTip { text: Translation.tr("Edit") }
                         }
 
-                        RippleButton {
+                        IconButton {
                             id: overrideResetButton
                             enabled: HyprlandKeybindOverrides.shimStatus !== "foreign"
-                            implicitWidth: 30
-                            implicitHeight: 30
-                            buttonRadius: Appearance.rounding.full
+                            buttonIcon: "restart_alt"
+                            buttonSize: 32
+                            colText: Appearance.colors.colError
+                            tooltip: Translation.tr("Reset to default")
                             onClicked: HyprlandKeybindOverrides.reset(overrideRow.modelData.identity)
-                            contentItem: MaterialSymbol {
-                                verticalAlignment: Text.AlignVCenter
-                                anchors.centerIn: parent
-                                horizontalAlignment: Text.AlignHCenter
-                                iconSize: Appearance.font.pixelSize.larger
-                                text: "restart_alt"
-                                color: Appearance.colors.colError
-                            }
-                            StyledToolTip { text: Translation.tr("Reset to default") }
                         }
                     }
                 }

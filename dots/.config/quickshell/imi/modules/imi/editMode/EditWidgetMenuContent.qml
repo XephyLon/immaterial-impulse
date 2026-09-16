@@ -221,24 +221,15 @@ Item {
                     font.pixelSize: Appearance.font.pixelSize.normal
                     color: Appearance.colors.colOnLayer1
                 }
-                RippleButton {
+                IconButton {
                     id: sizeDownButton
                     objectName: "editMenuSizeDown"
-                    implicitWidth: 32
-                    implicitHeight: 32
+                    buttonIcon: "chevron_left"
+                    buttonSize: 32
                     enabled: root.stepBack !== null
-                    onClicked: root.stepSize(-1)
-                    colBackground: "transparent"
                     colRipple: Appearance.colors.colLayer2Active
                     colBackgroundHover: Appearance.colors.colLayer2
-                    contentItem: MaterialSymbol {
-                        anchors.centerIn: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: "chevron_left"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
+                    onClicked: root.stepSize(-1)
                 }
                 StyledText {
                     text: root.currentSize
@@ -246,24 +237,15 @@ Item {
                     font.pixelSize: Appearance.font.pixelSize.normal
                     color: Appearance.colors.colOnLayer1
                 }
-                RippleButton {
+                IconButton {
                     id: sizeUpButton
                     objectName: "editMenuSizeUp"
-                    implicitWidth: 32
-                    implicitHeight: 32
+                    buttonIcon: "chevron_right"
+                    buttonSize: 32
                     enabled: root.stepForward !== null
-                    onClicked: root.stepSize(1)
-                    colBackground: "transparent"
                     colRipple: Appearance.colors.colLayer2Active
                     colBackgroundHover: Appearance.colors.colLayer2
-                    contentItem: MaterialSymbol {
-                        anchors.centerIn: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: "chevron_right"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
+                    onClicked: root.stepSize(1)
                 }
             }
         }

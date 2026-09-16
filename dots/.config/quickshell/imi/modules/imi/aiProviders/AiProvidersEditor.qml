@@ -21,53 +21,6 @@ ColumnLayout {
     id: root
     spacing: Appearance.spacing.space200
 
-    component IconButton : RippleButton {
-        id: iRoot
-        property string iconName
-        property string textString
-        property color textColor: Appearance.colors.colOnPrimary
-
-        toggled: true
-        implicitHeight: 36
-        padding: Appearance.spacing.space200
-        implicitWidth: layoutItem.implicitWidth + padding * 2
-        buttonRadius: Appearance.rounding.full
-        // The press tones follow each state's own fill family: the filled
-        // pill ripples in its container's Active, and the flat variant -
-        // whose colLayer1 default reads as no background at all on this
-        // page - ripples in the Layer2 family it hovers in.
-        // A filled surface ripples in its ON-color, faint: this palette's
-        // PrimaryActive sits nearly on Primary itself, which was the
-        // weakness - and SecondaryContainerActive was the wrong family
-        // for a colPrimary fill entirely.
-        colRippleToggled: ColorUtils.transparentize(Appearance.colors.colOnPrimary, 0.75)
-        colBackground: "transparent"
-        colBackgroundHover: Appearance.colors.colLayer2Hover
-        colRipple: Appearance.colors.colLayer2Active
-
-        contentItem: Item {
-            implicitWidth: layoutItem.implicitWidth
-            implicitHeight: layoutItem.implicitHeight
-            RowLayout {
-                id: layoutItem
-                anchors.centerIn: parent
-                spacing: Appearance.spacing.space100
-                MaterialSymbol {
-                    text: iRoot.iconName
-                    color: iRoot.textColor
-                    iconSize: Appearance.font.pixelSize.normal
-                    Layout.alignment: Qt.AlignVCenter
-                }
-                StyledText {
-                    text: iRoot.textString
-                    color: iRoot.textColor
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    Layout.alignment: Qt.AlignVCenter
-                }
-            }
-        }
-    }
-
     Repeater {
         model: Config.options.ai.customProviders ? Config.options.ai.customProviders.length : 0
 
@@ -103,24 +56,28 @@ ColumnLayout {
                 anchors.margins: Appearance.spacing.space200
                 spacing: Appearance.spacing.space100
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
+                // The card's header is a settings row like any other: the
+                // provider's name is the label, the type is its byline, and
+                // the enable switch is the row's affordance. Remove lives in
+                // the trailing slot - the switch is the last thing a
+                // ConfigSwitch draws, so anything appended lands beyond it.
+                ConfigSwitch {
+                    buttonIcon: "cloud"
+                    text: Config.options.ai.customProviders[providerCard.index].name
+                        || Translation.tr("Provider %1").arg(providerCard.index + 1)
+                    // The click is an INTENT: the write below is what flips the
+                    // picture, and assigning `checked` would destroy this
+                    // binding (see lint_config_switch_intent.py's history).
+                    checked: Config.options.ai.customProviders[providerCard.index].enabled === true
+                    onToggleRequested: {
+                        // Whole-list assignment: JsonAdapter lists only
+                        // persist when replaced.
+                        let providers = [...Config.options.ai.customProviders];
+                        providers[providerCard.index].enabled = !providers[providerCard.index].enabled;
+                        Config.options.ai.customProviders = providers;
+                    }
 
-                    MaterialSymbol {
-                        text: "cloud"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colPrimary
-                    }
-    StyledText {
-                        elide: Text.ElideRight
-                        text: Config.options.ai.customProviders[providerCard.index].name
-                            || Translation.tr("Provider %1").arg(providerCard.index + 1)
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnLayer2
-                    }
-                    StyledText {
+                    titleContent: StyledText {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                         text: ({
@@ -132,28 +89,14 @@ ColumnLayout {
                         font.pixelSize: Appearance.font.pixelSize.smaller
                         color: Appearance.colors.colSubtext
                     }
-                    StyledSwitch {
-                        // Non-checkable: the click is an INTENT and the write
-                        // below is what flips the picture - a Switch moving
-                        // its own `checked` destroys this binding (see
-                        // lint_config_switch_intent.py's history).
-                        checkable: false
-                        checked: Config.options.ai.customProviders[providerCard.index].enabled === true
-                        onClicked: {
-                            // Whole-list assignment: JsonAdapter lists only
-                            // persist when replaced.
-                            let providers = [...Config.options.ai.customProviders];
-                            providers[providerCard.index].enabled = !providers[providerCard.index].enabled;
-                            Config.options.ai.customProviders = providers;
-                        }
-                    }
-                    RippleButton {
-                        implicitWidth: 32
-                        implicitHeight: 32
-                        buttonRadius: Appearance.rounding.full
-                        colBackground: "transparent"
+
+                    trailingContent: IconButton {
+                        buttonIcon: "delete"
+                        buttonSize: 32
+                        colText: Appearance.colors.colError
                         colBackgroundHover: Appearance.colors.colLayer2Hover
                         colRipple: Appearance.colors.colErrorActive
+                        tooltip: Translation.tr("Remove provider")
                         onClicked: {
                             const removedIndex = providerCard.index;
                             const count = Config.options.ai.customProviders.length;
@@ -173,15 +116,6 @@ ColumnLayout {
                                     KeyringStorage.setNestedField(["apiKeys", id], after[id]);
                             }
                         }
-                        contentItem: MaterialSymbol {
-                            anchors.centerIn: parent
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            text: "delete"
-                            iconSize: Appearance.font.pixelSize.larger
-                            color: Appearance.colors.colError
-                        }
-                        StyledToolTip { text: Translation.tr("Remove provider") }
                     }
                 }
 
@@ -360,22 +294,15 @@ ColumnLayout {
                     color: Appearance.colors.colSubtext
                     font.pixelSize: Appearance.font.pixelSize.smaller
                 }
-                RippleButton {
-                    implicitWidth: 26
-                    implicitHeight: 26
-                    buttonRadius: Appearance.rounding.full
-                    colBackground: "transparent"
+                IconButton {
+                    buttonIcon: "close"
+                    // 28: the smallest density, which is the one that belongs
+                    // beside the "Provider type" label's smaller type.
+                    buttonSize: 28
+                    colText: Appearance.colors.colSubtext
                     colBackgroundHover: Appearance.colors.colLayer2Hover
                     colRipple: Appearance.colors.colLayer2Active
                     onClicked: addSlot.choosing = false
-                    contentItem: MaterialSymbol {
-                        anchors.centerIn: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: "close"
-                        iconSize: Appearance.font.pixelSize.normal
-                        color: Appearance.colors.colSubtext
-                    }
                 }
             }
 

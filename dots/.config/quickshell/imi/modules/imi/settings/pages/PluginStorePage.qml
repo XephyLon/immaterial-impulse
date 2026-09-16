@@ -275,7 +275,7 @@ ContentPage {
                             ]
 
                             affordance: [
-                                RippleButton {
+                                DialogButton {
                                     id: actionButton
                                     readonly property var actionSpec: {
                                         switch (card.status) {
@@ -292,28 +292,25 @@ ContentPage {
                                         }
                                     }
                                     Layout.alignment: Qt.AlignVCenter
-                                    implicitWidth: actionLabel.implicitWidth + Appearance.spacing.space300
-                                    implicitHeight: 36
                                     enabled: actionSpec.actionable && !PluginManager.installing
-                                    buttonRadius: Appearance.rounding.full
+                                    buttonText: actionButton.actionSpec.label
                                     colBackground: actionSpec.actionable
                                         ? Appearance.colors.colSecondaryContainer
                                         : Appearance.colors.colLayer2
+                                    colBackgroundHover: actionSpec.actionable
+                                        ? Appearance.colors.colSecondaryContainerHover
+                                        : Appearance.colors.colLayer2Hover
+                                    colRipple: actionSpec.actionable
+                                        ? Appearance.colors.colSecondaryContainerActive
+                                        : Appearance.colors.colLayer2Active
+                                    colText: actionButton.enabled
+                                        ? Appearance.colors.colOnSecondaryContainer
+                                        : Appearance.colors.colSubtext
                                     onClicked: {
                                         if (card.status === "available")
                                             PluginStore.requestInstall(card.modelData);
                                         else if (card.status === "update")
                                             PluginStore.requestUpgrade(card.modelData);
-                                    }
-
-                                    contentItem: StyledText {
-                                        id: actionLabel
-                                        anchors.centerIn: parent
-                                        text: actionButton.actionSpec.label
-                                        font.pixelSize: Appearance.font.pixelSize.small
-                                        color: actionButton.enabled
-                                            ? Appearance.colors.colOnSecondaryContainer
-                                            : Appearance.colors.colSubtext
                                     }
                                 }
                             ]

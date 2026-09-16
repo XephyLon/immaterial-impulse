@@ -192,38 +192,46 @@ Scope {
 
                             // Filled (secondary-container) primary actions; Discard
                             // below stays background-less per the design.
-                            RippleButton {
+                            IconButton {
+                                // Squircle, not a circle: these three read as one
+                                // action bar, and the radius is what groups them.
                                 buttonRadius: Appearance.rounding.normal
                                 // 44: square action-button dimension (no Appearance.sizes
                                 // token exists for this; matches DiscordVoicePopup's 44).
-                                implicitWidth: 44; implicitHeight: 44
+                                buttonSize: 44
+                                iconSize: 22
+                                buttonIcon: "save"
+                                colText: Appearance.colors.colOnSecondaryContainer
                                 colBackground: Appearance.colors.colSecondaryContainer
                                 colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                                 colRipple: Appearance.colors.colSecondaryContainerActive
+                                tooltip: Translation.tr("Save to Pictures")
                                 onClicked: root.saveCurrent()
-                                MaterialSymbol { anchors.centerIn: parent; text: "save"; iconSize: 22; color: Appearance.colors.colOnSecondaryContainer }
-                                StyledToolTip { text: Translation.tr("Save to Pictures") }
                             }
-                            RippleButton {
+                            IconButton {
                                 visible: root.editorBinary !== ""
                                     || (Config.options.screenshotResult?.editorCommand ?? []).length > 0
                                 buttonRadius: Appearance.rounding.normal
-                                implicitWidth: 44; implicitHeight: 44
+                                buttonSize: 44
+                                iconSize: 22
+                                buttonIcon: "edit"
+                                colText: Appearance.colors.colOnSecondaryContainer
                                 colBackground: Appearance.colors.colSecondaryContainer
                                 colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                                 colRipple: Appearance.colors.colSecondaryContainerActive
+                                tooltip: Translation.tr("Annotate")
                                 onClicked: root.editCurrent()
-                                MaterialSymbol { anchors.centerIn: parent; text: "edit"; iconSize: 22; color: Appearance.colors.colOnSecondaryContainer }
-                                StyledToolTip { text: Translation.tr("Annotate") }
                             }
-                            RippleButton {
+                            IconButton {
                                 buttonRadius: Appearance.rounding.normal
-                                implicitWidth: 44; implicitHeight: 44
+                                buttonSize: 44
+                                iconSize: 22
+                                buttonIcon: "delete"
+                                colText: Appearance.colors.colError
                                 colBackgroundHover: Appearance.colors.colErrorContainerHover
                                 colRipple: Appearance.colors.colErrorContainerActive
+                                tooltip: Translation.tr("Discard")
                                 onClicked: root.releaseCurrent()
-                                MaterialSymbol { anchors.centerIn: parent; text: "delete"; iconSize: 22; color: Appearance.colors.colError }
-                                StyledToolTip { text: Translation.tr("Discard") }
                             }
                     }
                     }

@@ -170,19 +170,17 @@ ContentPage {
                 // alignment expresses the same bottom-right pin.
                 Layout.alignment: Qt.AlignRight | Qt.AlignBottom
                 spacing: Appearance.spacing.space100
-                RippleButton {
+                DialogButton {
                     buttonText: Translation.tr("Update Dots")
-                    buttonRadius: Appearance.rounding.full
                     colBackground: Appearance.colors.colPrimaryContainer
                     colBackgroundHover: Appearance.colors.colPrimaryContainerHover
+                    colRipple: Appearance.colors.colPrimaryContainerActive
+                    colText: Appearance.colors.colOnPrimaryContainer
+                    // The page's one primary action, and it sits alone at the
+                    // card's corner rather than in an action row - it keeps the
+                    // taller target it was drawn at.
                     Layout.preferredHeight: 44
                     downAction: () => runUpdateDots()
-                    contentItem: StyledText {
-                        text: parent.buttonText
-                        horizontalAlignment: Text.AlignHCenter
-                        leftPadding: Appearance.spacing.space150
-                        rightPadding: Appearance.spacing.space150
-                    }
                 }
             }
         }
@@ -318,40 +316,31 @@ ContentPage {
                     }
                 }
 
-                RippleButton {
-                    implicitHeight: 36
-                    buttonRadius: height / 2
+                DialogButton {
+                    buttonText: Translation.tr("Full changelog")
                     colBackground: Appearance.colors.colLayer2
                     colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+                    colText: Appearance.colors.colOnLayer2
                     onClicked: Qt.openUrlExternally("https://github.com/XephyLon/immaterial-impulse/blob/main/CHANGELOG.md")
-                    contentItem: StyledText {
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: Appearance.spacing.space200
-                        rightPadding: Appearance.spacing.space200
-                        text: Translation.tr("Full changelog")
-                        color: Appearance.colors.colOnLayer2
-                    }
                 }
 
-                RippleButton {
-                    implicitWidth: 36
-                    implicitHeight: 36
-                    buttonRadius: height / 2
+                IconButton {
+                    // 36, not a density step: it is the twin of the pill beside
+                    // it and has to be exactly as tall.
+                    buttonSize: 36
+                    buttonIcon: "expand_more"
+                    colText: Appearance.colors.colOnLayer2
                     colBackground: Appearance.colors.colLayer2
                     colBackgroundHover: Appearance.colors.colLayer2Hover
-                    onClicked: root.changelogExpanded = !root.changelogExpanded
-                    contentItem: MaterialSymbol {
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: "expand_more"
-                        iconSize: Appearance.font.pixelSize.huge
-                        color: Appearance.colors.colOnLayer2
-                        rotation: root.changelogExpanded ? 180 : 0
-                        Behavior on rotation {
-                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                        }
+                    colRipple: Appearance.colors.colLayer2Active
+                    // The whole (round) button turns, which is the same picture
+                    // as turning the glyph and does not need one exposed.
+                    rotation: root.changelogExpanded ? 180 : 0
+                    Behavior on rotation {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                     }
+                    onClicked: root.changelogExpanded = !root.changelogExpanded
                 }
             }
 

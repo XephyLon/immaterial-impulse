@@ -373,22 +373,12 @@ Item {
                     }
                 }
 
-                RippleButton {
+                IconButton {
                     visible: root.navigationQuery.length > 0
-                    implicitWidth: 32
-                    implicitHeight: 32
-                    buttonRadius: Appearance.rounding.full
-                    colBackground: "transparent"
+                    buttonIcon: "close"
+                    buttonSize: 32
                     colRipple: Appearance.colors.colLayer2Active
                     onClicked: settingsSearchField.text = ""
-                    contentItem: MaterialSymbol {
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        anchors.centerIn: parent
-                        text: "close"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnLayer1
-                    }
                 }
             }
         }
@@ -522,7 +512,7 @@ Item {
                         opacity: 0.15
                     }
 
-                    RippleButton {
+                    RippleButtonWithIcon {
                         id: fab
                         Layout.fillWidth: true
                         implicitHeight: 42
@@ -532,6 +522,11 @@ Item {
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                         colRipple: Appearance.colors.colSecondaryContainerActive
+                        materialIcon: fab.justCopied ? "check" : "edit"
+                        materialIconFill: false
+                        // The label goes with the rail; the glyph stays, so the
+                        // collapsed rail shows a square icon button.
+                        mainText: navRail.expanded ? fab.buttonText : ""
                         // The folder, not config.json: appearance lives in
                         // config.d/appearance.json since the config split, so
                         // a hand edit has two files to choose from.
@@ -542,26 +537,6 @@ Item {
                             Quickshell.clipboardText = CF.FileUtils.trimFileProtocol(`${Directories.config}/immaterial-impulse`);
                             fab.justCopied = true;
                             revertTextTimer.restart()
-                        }
-                        contentItem: RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: Appearance.spacing.space150
-                            anchors.rightMargin: Appearance.spacing.space150
-                            spacing: Appearance.spacing.space100
-
-                            MaterialSymbol {
-                                text: fab.justCopied ? "check" : "edit"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colOnSecondaryContainer
-                            }
-                            StyledText {
-                                Layout.fillWidth: true
-                                visible: navRail.expanded
-                                text: fab.buttonText
-                                color: Appearance.colors.colOnSecondaryContainer
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                elide: Text.ElideRight
-                            }
                         }
                         Timer {
                             id: revertTextTimer
