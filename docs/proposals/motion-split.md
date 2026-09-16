@@ -237,13 +237,14 @@ colour, border and corner radii flip in one frame.
   is where the outlines are one.
 - **Attached IS the joined state** (the tab fused with the band, outward
   corners squared, the band's colour, no border); **floating is the apart
-  state** (a gap of the band's thickness between pill and band, four round
-  corners, `colLayer0`, a border). So attach -> float is the reference's
-  RELEASE half read as a lift: the pill rises off the band by the band's
-  thickness, the neck stretches and breaks at 40% of the pill's thickness,
-  the outward corners round as the gap opens. Float -> attach is the
-  SWALLOW: the pill sinks, the neck forms as the outlines come within reach,
-  the corners square as it fuses.
+  state** (a gap between pill and band, four round corners, `colLayer0`, a
+  border). The gap is the compositor's outer gap (`gapsOut`, 5 px by
+  default), whatever the band's thickness: "on the band" and "a gap above
+  it" are `gapsOut` apart by #396's own definition. So attach -> float is
+  the reference's RELEASE half read as a lift: the pill rises off the band
+  by the gap, the neck stretches and breaks, the outward corners round as
+  the gap opens. Float -> attach is the SWALLOW: the pill sinks, the neck
+  forms as the outlines come within reach, the corners square as it fuses.
 - **The swell.** The reference's island grows in both axes before it
   releases. On the dock that reads as the tab thickening before it lifts -
   a squash-and-stretch the pill has no room for inside its surface and that
@@ -263,19 +264,19 @@ colour, border and corner radii flip in one frame.
 The surface's layer-shell margin cannot animate: every write is a
 compositor reconfigure. Three shapes were weighed:
 
-- **(a) Keep the surface at the attached position and grow it by the band;
-  animate the pill inside it.** The surface's outward margin stays at
-  `band - gap` (the attached offset - the outermost of the two), its thickness
-  becomes `dockThickness + band` while pinned in frame mode, and the pill's
-  outward inset animates between `gap` (attached) and `gap + band` (floating)
-  on the split scalar. The surface never moves for the switch; it
-  reconfigures once, when frame mode or the pin changes. **Recommended.**
+- **(a) Keep the surface at the attached position; animate the pill inside
+  it.** The surface's outward margin stays at `band - gap` (the attached
+  offset) in both states, and the pill's outward inset animates between
+  `gap` (attached) and `2 * gap` (floating) on the split scalar - the pill
+  lifts into its own inward elevation margin (10 px at the defaults, against
+  a 5 px lift). Where a configured gap outgrows that margin, the strip grows
+  by exactly the shortfall (`splitRoom`; nothing at the defaults). The
+  surface never moves for the switch; it reconfigures once, when frame mode
+  or the pin changes. **Recommended, and built.**
 - **(b) Animate inside the old surface, then reconfigure at the end where the
-  pixels already match.** Works at the default band (5 px: the lifted pill
-  eats 5 of its 10 px inward elevation margin) and breaks at a 14 px band,
-  where the lifted pill leaves the surface and is clipped - so it needs (a)'s
-  surface growth anyway, plus a hand-off at the end that has to land on the
-  same pixel.
+  pixels already match.** The same lift, plus a hand-off at the end that has
+  to land on the same pixel and a second surface position to keep in sync
+  with the first. Nothing (a) does not do, for one more thing to get wrong.
 - **(c) Two surfaces** (a reserver like the bar's, and a travelling one) -
   the machinery `BarExclusiveZoneReserver` exists for, and more than a 5 px
   lift needs.
@@ -283,9 +284,11 @@ compositor reconfigure. Three shapes were weighed:
 Under (a) the **exclusive zone** is the one thing that still steps: attached
 reserves `height + band` from the edge, floating `height + gap + band`, and
 the difference is the gap that keeps windows off the floating pill. The zone
-is written at the START of either direction, to the destination's value: the
-compositor re-tiles, and tiled windows travel on Hyprland's own window
-animation, so the step is a window slide and not a jump. On a float the
+is written at the START of either direction, to the destination's value,
+from the CONFIGURED state and never from the scalar: the compositor
+re-tiles, and tiled windows travel on Hyprland's own window animation, so
+the step is a window slide and not a jump (measured in the sandbox: a kitty
+of 841 px becomes 836 as the reservation goes 65 -> 70). On a float the
 windows move away first and the pill lifts into the space; on an attach the
 pill lands and the windows follow it in. The surface does not move, so the
 unpinned dock's hover sliver - which must stay AT the edge - is untouched:
@@ -294,26 +297,31 @@ the default band its look-only switch takes the effects half alone.
 
 ### What rides the scalar
 
-- **Position**: the pill's outward inset, `gap + band * s` (attach -> float)
-  and the reverse. The inward elevation margin is unchanged: the surface grew
-  by exactly the travel.
+- **Position**: the pill's outward inset, `gap + gap * s` (attach -> float)
+  and the reverse, on the pill's OWN margins (`liftedMargins`), so the blur
+  region - which tracks its item's own geometry - rides the lift. The inward
+  margin gives up exactly what the outward one gains. The icons ride the
+  pill through a centre offset on the strip (`liftOffset`).
 - **Corners**: `cornerRadii` extended to take a progress. The two outward
   radii are `radius * clamp((s - seam) / (1 - seam), 0, 1)` on a lift and the
   mirror on a landing - square while the outlines are one, rounding over the
   settle half as the gap opens, round at rest. The inward pair stays at
   `radius` throughout.
-- **The neck**: drawn while `gap < splitNeckReach * pillThickness` (24 px on
-  a 60 px pill, against a 5 px default band - so at the default band the neck
-  spans the whole lift and breaks only at rest, which is what the reference
-  shows for a gap of half a body; at a 14 px band it breaks part way). Its
-  waist is `pillWidth * (1 - gap / reach)` at the band, concave-sided.
+- **The neck**: drawn while the gap is inside the reach, which is
+  `splitNeckReach * pillThickness` or the whole travel when that is shorter
+  (`neckReach`: 24 px on a 60 px pill against a 5 px lift, so the neck spans
+  the whole lift and breaks at rest - the reference's gap of half a body is
+  the same regime). Its waist is `pillWidth * (1 - gap / reach)` at the
+  band, its flanks two `RoundCorner` fillets no bigger than the lift.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
-  after the scalar lands at 1 (the pill takes `colLayer0` and its border once
-  it is free, the reference's content-after-landing). On a landing they run
-  before the scalar leaves 0 (the pill drops to the band's colour and loses
-  its border, then sinks - the reference's dot-before-outline). Keyed on the
-  scalar's rest values, so a switch reversed mid-flight retargets the scalar
-  and the look never runs mid-travel.
+  after the scalar lands at 1 (`attachedLook` holds the tab's look while the
+  scalar is below 1; the pill takes `colLayer0` and its border once it is
+  free - the reference's content-after-landing). On a landing they run
+  before the scalar leaves 0: `attached` flips at once, and the scalar's
+  Behavior is a `SequentialAnimation` whose `PauseAnimation` is the effects
+  tier's length when the target is 0 (read off the Behavior's own
+  `targetValue`) - the reference's dot-before-outline. Measured in the
+  sandbox: a 133 ms look change, then the descent.
 - **The blur region** rides the pill: a `Region` re-evaluates on its item's
   own geometry, and here it is the pill's own inset that moves, not an
   ancestor's offset (the hide is that case and keeps its `atRest` gate). Its
@@ -322,12 +330,16 @@ the default band its look-only switch takes the effects half alone.
 
 ### Verification (per the review rule)
 
-Sandbox captures, both directions, as frame sequences: ~60 ms in (the neck
-forming/breaking), at the seam, at rest; pinned and unpinned; default band
-and 14 px; the dock on a side edge; the settings row. `tst_dock_geometry.qml`
-for the extended `cornerRadii`, the inset arithmetic and the neck waist;
-`test_frame_mode_contract.py` pins the surface growth, the zone write at the
-start, and the effects sequencing; `lint_motion_tier_partial.py` holds the
+Sandbox recordings at 60 fps (`wf-recorder` on the nested output), both
+directions, read frame by frame the way the reference was: the pill's
+extent one row above the band goes 322 -> 0 px across a ~700 ms lift and
+0 -> 322 across a ~600 ms landing that starts 133 ms after the look has
+changed; pinned and unpinned; the default band and 14 px; the dock on the
+left edge; the settings row. `tst_dock_geometry.qml` pins the lift, the
+room, the lifted margins, the icon offset, the corners at a scalar and the
+neck's boxes; `test_frame_mode_contract.py` pins the tier, the one scalar
+and its one Behavior, the pause, the zone step from the configured state,
+the look's sequencing and the neck; `lint_motion_tier_partial.py` holds the
 tier whole. Reviewer >= 8.5 on all three axes before the one full suite.
 
 ## 7. Where the split goes next

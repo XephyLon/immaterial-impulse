@@ -13,7 +13,14 @@
 > screen edge for its hover sliver, so it takes the tab look only while the band is the
 > gap and keeps its rounded pill on any other band (known limit). The bands sit on the Top
 > layer (on Bottom the wallpaper, Bottom too, covered them on a cold start) and never
-> overlap. Not modelled yet, and the next slices: modals
+> overlap. **2026-09-17**: the attached <-> floating switch is a motion - the split
+> measured off a dynamic-island reference (`docs/proposals/motion-split.md`): the
+> surface sits at the attached position in both states, the pill lifts off the band by
+> the compositor's gap on one scalar (`Appearance.animation.split`) with a neck at the
+> seam and its outward corners rounding as the gap opens, the reservation steps to the
+> destination at the start so windows re-tile on the compositor's own animation, and the
+> look changes outside the motion. That split is the motion base for every later
+> docking in frame mode. Not modelled yet, and the next slices: modals
 > docking into the frame; the vertical bar; a bar hidden by auto-hide or absent
 > from a screen's list; per-screen frames.
 
@@ -67,7 +74,9 @@ fundamentally about making those surfaces aware of each other's geometry.
   frame and stay rounded elsewhere. This is the same fix, one scale up.
 - Modals attach to a frame edge: the launcher grows out of the bar rather than
   appearing centered over the wallpaper; notifications slide from the frame edge
-  they are anchored to.
+  they are anchored to. Each of those is a split (`docs/proposals/motion-split.md`
+  §7): the frame's surface is the island, the modal is the child, and the tier,
+  the seam and the neck are the dock's.
 - Gate the whole thing behind a config option, defaulting **off**. Frame mode is
   a look, not a correctness fix, and the existing floating look must remain
   available.

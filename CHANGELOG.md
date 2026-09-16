@@ -67,6 +67,14 @@ own repo; the installer pins which revision it builds.
   line. Not built: Proton Mail (needs Proton Bridge), Proton Pass (no API).
 
 ### Changed
+- Frame mode's dock switch (Settings > Appearance > Frame > Dock) is a motion now: the
+  pill lifts off the frame's band and sinks back onto it - a neck in the band's colour
+  bridging the seam, the outward corners rounding as the gap opens, the border and
+  the pill's own colour arriving once it is free - instead of jumping between the two
+  looks in one frame. Windows re-tile by the gap on the compositor's own animation. The
+  motion is measured off a dynamic-island reference (`docs/proposals/motion-split.md`)
+  and is the base for everything that docks into the frame from here on; the Motion
+  speed slider and reduce motion reach it.
 - The typing test's settings page is drawn in the settings grammar (sections,
   grouped rows, the shell's switch, slider and choice rows) instead of its own
   row kit; the phone tab's navigation cards, app rows and the Intelligence

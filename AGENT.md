@@ -343,8 +343,34 @@ centre offsets: Quickshell's `Region` re-evaluates on its item's own geometry, t
 offsetting an ancestor, and a hidden dock left a frosted silhouette where the pill rests, in every
 mode, unmasked the moment the tab kept its blur), the surface moved in by band minus gap (nothing at the default
 band, which is the gap; a negative margin when the band is thinner, so the tab still sits on the
-band); "floating" keeps a gap above the band (moved in by the band). Anything but "floating"
-attaches, so a hand-edited value cannot leave the dock nowhere. The rounding probe runs only
+band); "floating" keeps a gap above the band. Anything but "floating"
+attaches, so a hand-edited value cannot leave the dock nowhere.
+**The attached <-> floating switch is the SPLIT, and the surface never moves for it.** It was a
+jump - the layer-shell margin reconfigured by the band in one step, colour, border and radii in one
+frame - and a layer surface's margin cannot animate. So `DockReservation.frameOffset` is the
+ATTACHED position (band minus gap) in both states, and floating is the pill lifting INSIDE the
+surface by the compositor's gap (`dock_geometry.js` `splitTravel` - "on the band" and "a gap above
+it" are `gapsOut` apart by definition, whatever the band), on ONE scalar (`Dock.qml`
+`splitProgress`, 0 fused, 1 apart) taking `Appearance.animation.split` whole - the tier measured off
+the dynamic-island reference in `docs/proposals/motion-split.md`, a two-segment curve whose join is
+the seam. Everything else is arithmetic on that scalar: the pill's own margins carry the lift
+(`liftedMargins`; the blur `Region` tracks its item's OWN geometry, so the frost rides), the icons
+follow through a centre offset (`liftOffset`), the outward corners round with it (`cornerRadiiAt`),
+and a neck in the band's colour (`neckBox`, `neckWaist`, two `RoundCorner` flanks) bridges the seam
+while the gap is inside `neckReach`. What still steps is the RESERVATION, and it steps from the
+configured state at the start of a direction (`splitZoneExtra`, in `DockReservation.zone`, never
+from the scalar): the compositor re-tiles and windows travel on its own animation. The look is
+sequenced outside the motion, as the reference does it: `attachedLook` holds the tab's colour and
+border until the scalar has landed apart, and a landing pauses the scalar's `SequentialAnimation` for
+the effects tier first - `PauseAnimation` keyed on the Behavior's own `targetValue`, which is set
+before the animation starts, where a binding on `attached` may not have re-evaluated yet. Two
+limits, stated: an unpinned dock never reserves and never lifts, so at the default band it takes the
+look change alone; and a configured gap larger than the elevation margin the pill lifts into grows
+the strip by the shortfall (`splitRoom`, nothing at the defaults). `test_frame_mode_contract.py`
+pins all of it; `tst_dock_geometry.qml` the arithmetic. Verified in the sandbox at 60 fps, read the
+way the reference was: the pill's extent one row above the band 322 -> 0 px across a ~700 ms lift,
+and a 133 ms look change before a ~600 ms landing. ("feat(dock): the attached <-> floating switch is
+the split"). The rounding probe runs only
 while the mode is on (`running: root.enabled`, re-armed on `configreloaded` while on): the shell
 rewrites hypr files itself, so an ungated probe spawned `hyprctl` on every self-inflicted reload for
 every user. `lint_globalstates_import.py` refuses a QML file that names `GlobalStates` without a way
