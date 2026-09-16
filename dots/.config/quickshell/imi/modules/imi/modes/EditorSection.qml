@@ -13,6 +13,10 @@ ColumnLayout {
     property string icon
     property string subtitle: ""
     property alias headerItem: headerSlot.sourceComponent
+    // A section whose rows carry a drag handle before the glyph (an action
+    // list with two or more actions) has its glyph column that much further
+    // in; the header follows it, so each card keeps one column.
+    property bool handleColumn: false
     default property alias rows: body.data
 
     Layout.fillWidth: true
@@ -25,7 +29,7 @@ ColumnLayout {
     // rows' trailing buttons end.
     RowLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: Appearance.spacing.space175
+        Layout.leftMargin: section.handleColumn ? Appearance.spacing.space400 : Appearance.spacing.space175
         Layout.rightMargin: Appearance.spacing.space100
         spacing: Appearance.spacing.space150
 

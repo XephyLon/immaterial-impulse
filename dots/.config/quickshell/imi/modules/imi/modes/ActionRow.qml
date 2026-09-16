@@ -42,6 +42,9 @@ Rectangle {
     property bool ghost: false
     // Forms line up with the label, which the handle pushes right.
     readonly property int formIndent: root.draggable ? 62 : 34
+    // Where a switch row's glyph starts so it is centred under the header's:
+    // the form indent less one glyph and its gap.
+    readonly property int switchIndent: root.formIndent - 34
     // Only actions the engine can put back offer the "undo at end" choice.
     readonly property bool revertible: root.routineKind === "while" && !!root.entry?.read && !!root.entry?.revert
     readonly property bool undoAtEnd: root.action?.revert !== false
@@ -366,27 +369,6 @@ Rectangle {
                 onCommitted: sec => root.setValue(sec)
             }
 
-            // Routines: keep the effect after the routine ends, or put it back.
-            RowLayout {
-                visible: root.revertible
-                spacing: Appearance.spacing.space75
-
-                StyledText {
-                    text: Translation.tr("Undo at end")
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colSubtext
-                }
-
-                StyledSwitch {
-                    checked: root.undoAtEnd
-                    onClicked: root.setRevert(checked)
-
-                    StyledToolTip {
-                        text: Translation.tr("Off: what this sets stays after the routine ends")
-                    }
-                }
-            }
-
             FormIconButton {
                 buttonIcon: root.expanded ? "expand_less" : "expand_more"
                 visible: !root.isWait
@@ -432,17 +414,33 @@ Rectangle {
             }
         }
 
+        // Routines: keep the effect after the routine ends, or put it back.
+        ConfigSwitch {
+            Layout.fillWidth: true
+            Layout.leftMargin: root.switchIndent
+            Layout.bottomMargin: Appearance.spacing.space50
+            leftPadding: 0
+            rightPadding: 0
+            iconSize: Appearance.font.pixelSize.huge
+            visible: root.expanded && root.revertible
+            buttonIcon: "undo"
+            text: Translation.tr("Put it back when the routine ends")
+            description: root.undoAtEnd ? Translation.tr("What this sets is restored when the routine ends")
+                : Translation.tr("Off: what this sets stays after the routine ends")
+            checked: root.undoAtEnd
+            onToggleRequested: root.setRevert(!root.undoAtEnd)
+        }
+
         // "Screens off ten minutes after Sleep starts": the list pauses here
         // before this action, so anything below waits too. The shell's switch
         // row on the header's columns (see TriggerRow's).
         ConfigSwitch {
             Layout.fillWidth: true
-            // The form indent lands text on the title column; the glyph goes
-            // one glyph-and-gap back from it, centred under the header's.
-            Layout.leftMargin: root.formIndent - Appearance.spacing.space400
+            Layout.leftMargin: root.switchIndent
             Layout.bottomMargin: Appearance.spacing.space50
             leftPadding: 0
             rightPadding: 0
+            iconSize: Appearance.font.pixelSize.huge
             visible: root.expanded && !root.isWait
             buttonIcon: "more_time"
             text: Translation.tr("Delay")

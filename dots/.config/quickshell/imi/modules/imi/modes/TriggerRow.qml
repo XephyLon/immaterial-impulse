@@ -212,6 +212,7 @@ Rectangle {
             Layout.bottomMargin: Appearance.spacing.space50
             leftPadding: 0
             rightPadding: 0
+            iconSize: Appearance.font.pixelSize.huge
             visible: root.expanded
             buttonIcon: "flip"
             text: Translation.tr("Invert")
@@ -229,6 +230,7 @@ Rectangle {
             Layout.bottomMargin: Appearance.spacing.space50
             leftPadding: 0
             rightPadding: 0
+            iconSize: Appearance.font.pixelSize.huge
             visible: root.expanded && !ModeSchema.isEventTrigger(root.type)
             buttonIcon: "hourglass_top"
             text: Translation.tr("For at least")

@@ -464,6 +464,7 @@ Item {
             EditorSection {
                 title: Translation.tr("Then")
                 icon: "bolt"
+                handleColumn: (root.routine?.actions.length ?? 0) > 1
                 subtitle: {
                     const n = root.routine?.actions.length ?? 0;
                     if (n === 0)
@@ -498,8 +499,13 @@ Item {
                     ? Translation.tr("Acts once when its conditions turn true and leaves things as they are")
                     : Translation.tr("Keeps its actions applied while its conditions hold, then puts them back")
 
-                ConfigSelectionArray {
-                    Layout.leftMargin: Appearance.spacing.space50
+                // The header's control, where the sections above keep their
+                // switch - not a choice floating on the page between two
+                // plated sections.
+                headerItem: ConfigSelectionArray {
+                    Layout.fillWidth: false
+                    Layout.leftMargin: 0
+                    Layout.rightMargin: 0
                     currentValue: root.routine?.kind ?? "while"
                     onSelected: value => root.patch({ kind: value })
                     options: [

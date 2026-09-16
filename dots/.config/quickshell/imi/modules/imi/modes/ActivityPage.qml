@@ -89,8 +89,10 @@ Item {
                     // filter chips keep their place whether or not there is
                     // anything to count.
                     StyledText {
-                        visible: Modes.history.length > 0
-                        text: root.entries.length === Modes.history.length
+                        // Always laid out (empty text keeps its line) so the
+                        // title does not rise when the first entry arrives.
+                        text: Modes.history.length === 0 ? ""
+                            : root.entries.length === Modes.history.length
                             ? (Modes.history.length === 1 ? Translation.tr("1 entry") : Translation.tr("%1 entries").arg(Modes.history.length))
                             : Translation.tr("%1 of %2").arg(root.entries.length).arg(Modes.history.length)
                         font.pixelSize: Appearance.font.pixelSize.smaller

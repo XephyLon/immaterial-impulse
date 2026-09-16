@@ -66,7 +66,9 @@ ColumnLayout {
         Repeater {
             model: 7
 
-            delegate: RippleButton {
+            // The shell's filter chip, in its selected tone: the default
+            // (every day) is not the form's heaviest element.
+            delegate: FilterChip {
                 id: dayButton
                 required property int index
                 readonly property int day: dayButton.index + 1
@@ -74,12 +76,8 @@ ColumnLayout {
                 readonly property var days: ModeSchema.toArray(row.trigger.days).map(Number)
                 readonly property bool on: dayButton.days.length === 0 || dayButton.days.indexOf(dayButton.day) !== -1
 
-                implicitWidth: 44
-                implicitHeight: 32
-                buttonRadius: Appearance.rounding.full
-                colBackground: on ? Appearance.colors.colPrimary : Appearance.colors.colLayer3
-                colBackgroundHover: on ? Appearance.colors.colPrimaryHover : Appearance.colors.colLayer3Hover
-                colRipple: on ? Appearance.colors.colPrimaryActive : Appearance.colors.colLayer3Active
+                label: ModeUi.dayShort[dayButton.index]
+                toggled: dayButton.on
                 onClicked: {
                     const days = dayButton.days.length ? Array.from(dayButton.days) : [1, 2, 3, 4, 5, 6, 7];
                     const idx = days.indexOf(dayButton.day);
@@ -88,15 +86,6 @@ ColumnLayout {
                     else if (days.length > 1)
                         days.splice(idx, 1);
                     row.set({ days: days.sort((a, b) => a - b) });
-                }
-
-                contentItem: StyledText {
-                    text: ModeUi.dayShort[dayButton.index]
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    font.weight: Font.Medium
-                    color: dayButton.on ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer3
                 }
             }
         }

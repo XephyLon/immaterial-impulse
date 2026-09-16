@@ -470,6 +470,7 @@ Item {
             EditorSection {
                 title: Translation.tr("When it's on")
                 icon: "tune"
+                handleColumn: (root.mode?.actions.length ?? 0) > 1
                 subtitle: {
                     const n = root.mode?.actions.length ?? 0;
                     if (n === 0)
