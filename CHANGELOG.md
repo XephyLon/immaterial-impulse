@@ -83,6 +83,12 @@ own repo; the installer pins which revision it builds.
   `applycolor` and presets read the new file.
 
 ### Fixed
+- Frame mode with a pinned dock: the bottom band no longer floats as a thin
+  line above the dock with wallpaper under it; the dock's strip is the frame
+  and the dock sits on it. The bands also sit under windows now (Bottom
+  layer) instead of over a floating window's edge.
+- Settings: the Modes overview and the Google client instructions are rows
+  with their action, not banners; notices carry a little more padding.
 - Modes manager: choosing another mode, routine or template, or switching tab,
   fades and settles the page in the way a settings page does instead of
   swapping it in one frame. Settings > Modes & Routines: the Presets,

@@ -334,16 +334,21 @@ rewrites hypr files itself, so an ungated probe spawned `hyprctl` on every self-
 every user. `FrameGeometry` names `GlobalStates`, so it imports `qs`; `lint_globalstates_import.py`
 now refuses a QML file that names it without a way to resolve it (a throwing binding is a warning, not
 a load failure: the dock occupant was inert for a whole review round). `modules/imi/frame/Frame.qml`
-draws four bands per screen, each inset at BOTH ends (`bandMargins`: under its own edge's occupants,
-and stopping where the adjacent bands start - side bands anchored top+bottom ran the full screen
-height and dropped two band-wide tails through a pinned dock's strip), Top layer,
-`ExclusionMode.Ignore`, an empty mask; they stay mapped and paint transparent for a fullscreen window
+draws four bands per screen, each inset at BOTH ends (`bandMargins`: under the bar's plate on the
+bar's edge, and stopping where the adjacent bands start - side bands anchored top+bottom ran the full
+screen height and dropped two band-wide tails through a pinned dock's strip). On a PINNED DOCK's edge
+the band is the dock's whole strip (`bandExtent`: zone + band, from the screen edge) with the dock
+drawn over it - the bar is a plate that covers its strip, the dock is a pill in the middle of its,
+and a band placed above the dock's zone read as a line across the wallpaper. The bands sit on the
+BOTTOM layer (the dock, the bar and every window above them, the wallpaper under; on Top they stacked
+by creation order against the dock), `ExclusionMode.Ignore`, an empty mask; they stay mapped and
+paint transparent for a fullscreen window
 (`visible` on a layer surface destroys it; `rules.lua` gives `quickshell:frame` no_anim). `ScreenCorners` keeps its windows AT the screen
 corners (the sidebar corner-open hit rect lives there) and moves the fillet shape inward through
 `RoundCorner`'s visual margins; `BarContent` squares the centre-only pill. All gated on
 `FrameGeometry.enabled` (the option AND not the vertical bar), the family included. Known stage-1
 limits, stated in the proposal: one frame for every screen; the bar's screen list and auto-hide are
-not modelled. A further slice adds its geometry to the authority first. 220780dfb ("feat(frame): frame mode, stage 1").
+not modelled. A further slice adds its geometry to the authority first. 220780dfb ("feat(frame): frame mode, stage 1"), 953d67a89 ("fix(frame): a pinned dock's band is its whole strip, under the dock, on the Bottom layer").
 **Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
 (modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
 its revert snapshot, the activity log, routine runs, paused action steps) lives in
