@@ -326,6 +326,22 @@ function neckFilletCorners(edge) {
     }
 }
 
+// Where each flank fillet's box sits, in the neck's own frame: against the
+// band (the neck's far side, which is where the lift is measured to) and
+// just outside the waist, at the start and the end of the strip.
+function neckFilletOffsets(edge, neckWidth, neckHeight, size) {
+    var e = normalizedEdge(edge);
+    var sz = Number(size) || 0;
+    var w = Number(neckWidth) || 0;
+    var h = Number(neckHeight) || 0;
+    if (isVertical(e)) {
+        var x = e === "left" ? 0 : w - sz;
+        return { start: { x: x, y: -sz }, end: { x: x, y: h } };
+    }
+    var y = e === "top" ? 0 : h - sz;
+    return { start: { x: -sz, y: y }, end: { x: w, y: y } };
+}
+
 // A flank fillet is as tall as the neck and never wider than the room the
 // waist leaves on its side of the pill.
 function neckFilletSize(lift, pillWidth, waist) {

@@ -368,6 +368,13 @@ TestCase {
         compare(Geometry.neckFilletCorners("top"), { start: "topRight", end: "topLeft" });
         compare(Geometry.neckFilletCorners("left"), { start: "bottomLeft", end: "topLeft" });
         compare(Geometry.neckFilletCorners("right"), { start: "bottomRight", end: "topRight" });
+        // Where each fillet's box sits, in the neck's own frame: against the
+        // band (the neck's far side) and just outside the waist.
+        compare(Geometry.neckFilletOffsets("bottom", 200, 4, 4), { start: { x: -4, y: 0 }, end: { x: 200, y: 0 } });
+        compare(Geometry.neckFilletOffsets("bottom", 200, 6, 4), { start: { x: -4, y: 2 }, end: { x: 200, y: 2 } });
+        compare(Geometry.neckFilletOffsets("top", 200, 6, 4), { start: { x: -4, y: 0 }, end: { x: 200, y: 0 } });
+        compare(Geometry.neckFilletOffsets("left", 6, 200, 4), { start: { x: 0, y: -4 }, end: { x: 0, y: 200 } });
+        compare(Geometry.neckFilletOffsets("right", 6, 200, 4), { start: { x: 2, y: -4 }, end: { x: 2, y: 200 } });
         // The fillet is as big as the lift and never wider than the flank room.
         compare(Geometry.neckFilletSize(4, 400, 200), 4);
         compare(Geometry.neckFilletSize(40, 400, 380), 10);
