@@ -168,6 +168,9 @@ Rectangle {
 
     component RowAction: IconButton {
         buttonSize: 28
+        // On a layer2 row: the hover and ripple in that layer's tones.
+        colBackgroundHover: Appearance.colors.colLayer2Hover
+        colRipple: Appearance.colors.colLayer2Active
     }
 
     component SessionRow: Rectangle {

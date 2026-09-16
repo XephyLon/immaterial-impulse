@@ -270,6 +270,7 @@ Item {
                                             property bool copied: false
 
                                             buttonIcon: copyButton.copied ? "check" : "content_copy"
+                                            animateChange: true
                                             buttonSize: 32
                                             iconFill: 1
                                             colBackground: Appearance.colors.colSurfaceContainerHighest

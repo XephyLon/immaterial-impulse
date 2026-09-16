@@ -572,6 +572,15 @@ if ! python3 "$SCRIPT_DIR/lint_final_properties.py"; then
     exit 1
 fi
 
+# An icon-only RippleButton is IconButton: forty-three hand-rolled copies at
+# eight sizes were folded onto it, and a copy is the kind of thing that
+# regrows one call site at a time.
+echo "Running hand-rolled icon button lint..."
+if ! python3 "$SCRIPT_DIR/lint_hand_rolled_icon_button.py"; then
+    echo "Hand-rolled icon button lint failed."
+    exit 1
+fi
+
 # Static lint: a ConfigSwitch click is an intent. Assigning to `checked` - in
 # the widget or at a call site - destroys the binding every settings page hangs
 # on it, and the switch silently detaches from the config it is showing.

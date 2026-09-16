@@ -21,6 +21,7 @@ RippleButton {
     colBackgroundHover: Appearance.colors.colLayer3Hover
     colRipple: Appearance.colors.colLayer3Active
     property alias colText: buttonTextWidget.color
+    property int fontWeight: Font.Normal
 
     // Whether this action carries a container at all. Read off the fill rather
     // than set by the call site, so the one thing a caller has to do to make a
@@ -66,6 +67,7 @@ RippleButton {
         text: buttonText
         horizontalAlignment: Text.AlignHCenter
         font.pixelSize: Appearance?.font.pixelSize.small ?? 12
+        font.weight: root.fontWeight
         color: root.enabled ? root.colEnabled : root.colDisabled
 
         Behavior on color {

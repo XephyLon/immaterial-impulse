@@ -61,7 +61,7 @@ ColumnLayout {
         IconButton {
             visible: Config.options.hyprland.autostartApps.enable
             buttonIcon: "motion_play"
-            buttonSize: 32
+            buttonSize: 36
             colText: Appearance.colors.colPrimary
             // The tonal plate stays: this one carries a container where the
             // page's other glyph buttons are flat.
@@ -158,7 +158,7 @@ ColumnLayout {
 
                 IconButton {
                     buttonIcon: "delete"
-                    buttonSize: 32
+                    buttonSize: 36
                     colText: Appearance.colors.colError
                     // Keeps its error-tinted plate: it is the destructive end
                     // of an editable row, not a flat toolbar glyph.

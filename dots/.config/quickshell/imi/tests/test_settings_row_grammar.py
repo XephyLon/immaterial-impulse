@@ -265,7 +265,10 @@ class TokensOnlyTests(unittest.TestCase):
             fonts += len(self.FONT_SIZE.findall(source))
             colors += len(self.COLOR.findall(source))
             behaviors += len(blocks(source, r"Behavior on [\w.]+", pattern=True))
-        self.assertGreaterEqual(radii, 3)
+        # Two, not three, since the text area's reveal button became IconButton
+        # and took its radius token with it; the floor only says the regex
+        # still matches something.
+        self.assertGreaterEqual(radii, 2)
         self.assertGreaterEqual(fonts, 8)
         self.assertGreaterEqual(colors, 15)
         self.assertGreaterEqual(behaviors, 5)

@@ -242,22 +242,12 @@ Item {
                         text: row.info?.title ?? `${row.modelData}`
                     }
 
-                    RippleButton {
-                        implicitWidth: 32
-                        implicitHeight: 32
-                        buttonRadius: Appearance.rounding.full
-                        colBackground: "transparent"
+                    IconButton {
+                        buttonSize: 32
+                        buttonIcon: "close"
+                        tooltip: Translation.tr("Remove")
                         colRipple: Appearance.colors.colLayer2Active
                         onClicked: root.removeRequested(row.index)
-                        contentItem: MaterialSymbol {
-                            anchors.centerIn: parent
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            text: "close"
-                            iconSize: Appearance.font.pixelSize.larger
-                            color: Appearance.colors.colOnLayer1
-                        }
-                        StyledToolTip { text: Translation.tr("Remove") }
                     }
                 }
             }

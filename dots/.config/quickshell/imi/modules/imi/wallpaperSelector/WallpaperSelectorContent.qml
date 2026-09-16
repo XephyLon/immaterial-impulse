@@ -417,9 +417,9 @@ MouseArea {
 
                         IconButton {
                             buttonIcon: "search"
+                            buttonSize: 36
                             toggled: root.toolbarVisible
-                            colBackground: Appearance.colors.colSecondaryContainer
-                            colText: Appearance.colors.colOnSecondaryContainer
+                            colText: toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer0
                             tooltip: Translation.tr("Toggle search toolbar (Ctrl+F)")
                             onClicked: {
                                 if (Config.options.wallpaperSelector.showSearchbar) {

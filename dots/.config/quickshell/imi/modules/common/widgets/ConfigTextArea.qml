@@ -238,25 +238,15 @@ RowLayout {
             }
         }
 
-        RippleButton {
+        IconButton {
             visible: root.password && root.revealButton
             enabled: root.enabled
-            implicitWidth: 30
-            implicitHeight: 30
-            buttonRadius: Appearance.rounding.full
-            colBackground: "transparent"
+            buttonSize: 32
+            buttonIcon: root.revealed ? "visibility_off" : "visibility"
+            animateChange: true
             colBackgroundHover: Appearance.colors.colPrimaryContainerHover
             colRipple: Appearance.colors.colPrimaryContainerActive
             onClicked: root.revealed = !root.revealed
-
-            contentItem: MaterialSymbol {
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                iconSize: Appearance.font.pixelSize.larger
-                text: root.revealed ? "visibility_off" : "visibility"
-                color: Appearance.colors.colOnLayer1
-            }
         }
     }
     // Enters and leaves the way the bar's standalone pills do (TimerPill,

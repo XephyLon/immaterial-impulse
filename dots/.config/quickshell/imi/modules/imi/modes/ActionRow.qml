@@ -371,6 +371,7 @@ Rectangle {
 
             IconButton {
                 buttonIcon: root.expanded ? "expand_less" : "expand_more"
+                animateChange: true
                 buttonSize: 32
                 colText: Appearance.colors.colOnLayer2
                 visible: !root.isWait

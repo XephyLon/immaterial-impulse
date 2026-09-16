@@ -254,6 +254,7 @@ PhoneSubPage {
                         DialogButton {
                             buttonText: Translation.tr("Focus")
                             colBackground: Appearance.colors.colPrimary
+                            fontWeight: Font.DemiBold
                             colBackgroundHover: Appearance.colors.colPrimaryHover
                             colRipple: Appearance.colors.colPrimaryActive
                             colText: Appearance.colors.colOnPrimary
@@ -430,6 +431,7 @@ PhoneSubPage {
                                 readonly property bool favourite: PhoneScrcpy.isFavorite(appRow.modelData.package)
 
                                 buttonIcon: starButton.favourite ? "star" : "star_outline"
+                                animateChange: true
                                 buttonSize: 32
                                 iconFill: starButton.favourite ? 1 : 0
                                 colText: starButton.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext

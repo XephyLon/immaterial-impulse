@@ -20,8 +20,14 @@ RippleButton {
     // `buttonIcon`, not `icon`: `icon` is a FINAL property of AbstractButton.
     property string buttonIcon: ""
     property real buttonSize: 40
-    property real iconSize: root.buttonSize >= 36 ? Appearance.font.pixelSize.larger : Appearance.font.pixelSize.normal
+    // Three rungs, so a 32px button keeps the `larger` glyph the rows drew
+    // before (a two-rung ladder shrank sixteen of them by 3px).
+    property real iconSize: root.buttonSize >= 32 ? Appearance.font.pixelSize.larger
+        : root.buttonSize >= 28 ? Appearance.font.pixelSize.large : Appearance.font.pixelSize.normal
     property real iconFill: 0
+    // Opt-in: a glyph that swaps (star/star_outline, expand_less/more) slides;
+    // a glyph that never changes does not carry a dormant animation tree.
+    property bool animateChange: false
     property string tooltip: ""
     property color colText: root.toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1
 
@@ -43,7 +49,7 @@ RippleButton {
         iconSize: root.iconSize
         fill: root.iconFill
         color: root.colText
-        animateChange: true
+        animateChange: root.animateChange
     }
 
     // Built only when there is something to say: a ToolTip is a popup. Its

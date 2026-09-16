@@ -72,6 +72,7 @@ PhoneSubPage {
                 Layout.alignment: Qt.AlignRight
                 buttonText: Translation.tr("How to install")
                 colBackground: Appearance.colors.colPrimary
+                fontWeight: Font.DemiBold
                 colBackgroundHover: Appearance.colors.colPrimaryHover
                 colRipple: Appearance.colors.colPrimaryActive
                 colText: Appearance.colors.colOnPrimary

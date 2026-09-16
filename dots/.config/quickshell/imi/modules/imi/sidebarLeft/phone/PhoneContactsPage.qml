@@ -239,6 +239,7 @@ PhoneSubPage {
 
                             IconButton {
                                 buttonIcon: contactRow.favourite ? "star" : "star_outline"
+                                animateChange: true
                                 buttonSize: 32
                                 iconFill: contactRow.favourite ? 1 : 0
                                 colText: contactRow.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
