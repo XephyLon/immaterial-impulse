@@ -59,6 +59,8 @@ Item {
                     // "Language", and the chips wrap across the panel's width
                     // rather than starting after a label that repeats it.
                     ConfigSelectionArray {
+                        icon: "translate"
+                        text: Translation.tr("Word list")
                         currentValue: root.options.language
                         options: root.chipOptions(TypingLanguages.languages)
                         onSelected: value => {
