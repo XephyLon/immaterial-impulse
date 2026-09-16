@@ -123,6 +123,21 @@ class GoogleOauthHelper(unittest.TestCase):
         self.assertIn("state", json.loads(out)["error"])
         self.assertEqual(len(FakeGoogle.tokens_seen), before, "no code exchange after a forged state")
 
+    def test_a_consent_refusal_says_what_to_do(self):
+        env = {"PATH": os.environ["PATH"], "IMI_GOOGLE_OAUTH_BASE": self.base, "IMI_GOOGLE_AUTH_URL": self.base + "/auth",
+               "IMI_NO_BROWSER": "1", "IMI_OAUTH_TIMEOUT": "15", "GOOGLE_CLIENT_ID": "cid", "GOOGLE_CLIENT_SECRET": "sec"}
+        proc = subprocess.Popen([sys.executable, str(HELPER), "authorize"], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        url = json.loads(proc.stderr.readline())["open"]
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        # Google's consent page for a Testing-status app answers a non-test
+        # user with error=access_denied and no code.
+        urllib.request.urlopen(query["redirect_uri"][0] + "?" + urllib.parse.urlencode({"error": "access_denied", "state": query["state"][0]}), timeout=10).read()
+        out, err = proc.communicate(timeout=20)
+        self.assertEqual(proc.returncode, 4, out)
+        message = json.loads(out)["error"]
+        self.assertIn("access_denied", message)
+        self.assertIn("Test users", message, "the refusal names the console setting that fixes it")
+
     def test_authorize_round_trips_through_the_loopback_redirect(self):
         env = {"PATH": os.environ["PATH"], "IMI_GOOGLE_OAUTH_BASE": self.base, "IMI_GOOGLE_USERINFO_URL": self.base + "/userinfo",
                "IMI_GOOGLE_AUTH_URL": self.base + "/auth", "IMI_NO_BROWSER": "1", "IMI_OAUTH_TIMEOUT": "15",

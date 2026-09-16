@@ -80,7 +80,7 @@ ContentPage {
                 ConfigActionRow {
                     rowVisible: !GoogleAccount.configured
                     icon: "key"
-                    text: Translation.tr("Google needs an OAuth client of your own: a Desktop app client under APIs & Services > Credentials, with the Calendar, Tasks and Gmail APIs enabled. Its ID and secret go below and are kept in the keyring.")
+                    text: Translation.tr("Google needs an OAuth client of your own: a Desktop app client under APIs & Services > Credentials, with the Calendar, Tasks and Gmail APIs enabled, and your own Google account added under OAuth consent screen > Audience > Test users (a client in Testing lets nobody else in). Its ID and secret go below and are kept in the keyring.")
                     RippleButtonWithIcon {
                         materialIcon: "open_in_new"
                         mainText: Translation.tr("Open the console")

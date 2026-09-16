@@ -136,7 +136,15 @@ def authorize():
     if got.get("state") != state:
         fail("the redirect did not carry our state", 4)
     if "code" not in got:
-        fail(got.get("error", "no code in the redirect"), 4)
+        error = got.get("error", "no code in the redirect")
+        # Google's consent page answers a Testing-status app with a bare
+        # access_denied for any account that is not one of its test users;
+        # the raw word told the user nothing about the fix.
+        if error == "access_denied":
+            error = ("Google refused the sign-in (access_denied). While the OAuth client is in "
+                     "Testing, only its test users may sign in: add this Google account under "
+                     "OAuth consent screen > Audience > Test users, then connect again.")
+        fail(error, 4)
 
     tokens = post_form(TOKEN_URL, {
         "code": got["code"], "client_id": cid, "client_secret": secret,
