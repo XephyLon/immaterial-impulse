@@ -28,13 +28,14 @@ Scope {
         visible: FrameGeometry.enabled ? !fullscreen
             : (Config.options.appearance.fakeScreenRounding === 1 || (Config.options.appearance.fakeScreenRounding === 2 && !fullscreen))
         property var corner
-        // Where this fillet sits in frame mode: at the inner corner, where
-        // the bar (or band) meets the side band. FrameGeometry owns the
-        // arithmetic AND the per-screen fullscreen rule; nothing here
-        // computes an inset or decides whether the dock reserves.
+        // Where this fillet sits in frame mode: at the frame's inner corner,
+        // where the bar (or band) meets the side band - the band, on the
+        // dock's edge too. FrameGeometry owns the arithmetic; nothing here
+        // computes an inset.
         readonly property var frameMargins: FrameGeometry.enabled
-            ? FrameGeometry.cornerMarginsForScreen(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight", cornerPanelWindow.screen?.name ?? "")
+            ? FrameGeometry.cornerMargins(cornerWidget.isTopLeft ? "topLeft" : cornerWidget.isTopRight ? "topRight" : cornerWidget.isBottomLeft ? "bottomLeft" : "bottomRight")
             : ({ left: 0, top: 0, right: 0, bottom: 0 })
+
 
         exclusionMode: ExclusionMode.Ignore
         mask: Region {

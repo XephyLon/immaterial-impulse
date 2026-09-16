@@ -16,8 +16,6 @@ import "dock_geometry.js" as DockGeometry
 Scope {
     id: root
     property bool pinned: Config.options?.dock.pinnedOnStartup ?? false
-    onPinnedChanged: GlobalStates.dockPinned = root.pinned
-    Component.onCompleted: GlobalStates.dockPinned = root.pinned
 
     // Which edge the dock lives on. Everything positional derives from this
     // one value; nothing below names a side directly.
@@ -75,8 +73,27 @@ Scope {
             readonly property var dockMargins: DockGeometry.margins(
                 root.edge, Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
 
-            // One value with FrameGeometry (DockReservation.zone).
+            // The zone is the dock's own derivation (DockReservation.zone). In
+            // frame mode a pinned dock also moves its whole surface in from
+            // the screen edge to meet the frame's band - on it as a tab, or a
+            // gap above it (DockReservation.frameOffset) - and the compositor
+            // adds that anchored-edge margin to the zone by itself, so nothing
+            // inside the surface moves. An unpinned dock hides and reveals
+            // from the screen edge and stays there.
             exclusiveZone: (root.pinned && !fullscreenOnThisMonitor) ? DockReservation.zone : 0
+            readonly property bool meetsFrame: root.pinned && !fullscreenOnThisMonitor
+            readonly property var frameMargins: DockGeometry.directedSides(
+                root.edge, 0, dockRoot.meetsFrame ? DockReservation.frameOffset : 0)
+            margins {
+                top: dockRoot.frameMargins.top
+                bottom: dockRoot.frameMargins.bottom
+                left: dockRoot.frameMargins.left
+                right: dockRoot.frameMargins.right
+            }
+            // Attached, the pill is a tab of the band: the band's colour, no
+            // border, no blur (the band has none), its outward corners squared
+            // at the seam.
+            readonly property bool attached: dockRoot.meetsFrame && DockReservation.attached
 
             anchors {
                 top: DockGeometry.anchors(root.edge).top
@@ -104,7 +121,7 @@ Scope {
             // wallpaper.
             WindowBlurRegion {
                 targetWindow: dockRoot
-                regionItem: Config.options.dock.showBackground ? dockVisualBackground : null
+                regionItem: Config.options.dock.showBackground && !dockRoot.attached ? dockVisualBackground : null
                 regionRadius: dockVisualBackground.radius
             }
 
@@ -208,11 +225,17 @@ Scope {
                             anchors.bottomMargin: dockRoot.dockMargins.bottom
                             anchors.leftMargin:   dockRoot.dockMargins.left
                             anchors.rightMargin:  dockRoot.dockMargins.right
-                            color: Config.options.dock.showBackground
-                                   ? Appearance.colors.colLayer0 : "transparent"
-                            border.width: Config.options.dock.showBackground ? 1 : 0
+                            color: !Config.options.dock.showBackground ? "transparent"
+                                   : dockRoot.attached ? FrameGeometry.color : Appearance.colors.colLayer0
+                            border.width: Config.options.dock.showBackground && !dockRoot.attached ? 1 : 0
                             border.color: Appearance.colors.colLayer0Border
                             radius: Appearance.rounding.normal + 6
+                            readonly property var frameRadii: DockGeometry.cornerRadii(root.edge, radius, dockRoot.attached)
+                            topLeftRadius:     frameRadii.topLeft
+                            topRightRadius:    frameRadii.topRight
+                            bottomLeftRadius:  frameRadii.bottomLeft
+                            bottomRightRadius: frameRadii.bottomRight
+
                         }
 
                         // A GridLayout with a flow rather than a RowLayout, so

@@ -10,11 +10,8 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 Singleton {
-    // Whether a dock is pinned (reserving its edge). Written by Dock.qml;
-    // read by FrameGeometry, which frames the dock's edge only when the dock
-    // actually reserves it.
-    property bool dockPinned: false
-    // Modes & Routines (services/Modes.qml; ported from the p3drovfx fork):
+    // Modes & Routines
+ (services/Modes.qml; ported from the p3drovfx fork):
     // the overlay's open state, the start/end flash, and the OLED saver's
     // per-monitor set an action toggles.
     property bool modesOpen: false

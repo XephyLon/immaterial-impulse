@@ -10,9 +10,9 @@ import Quickshell.Hyprland
  * The frame's four bands (frame mode, stage 1), one per screen edge, drawn
  * in the bar's colour so bar, bands and the ScreenCorners fillets read as
  * one connected surface. The band on the bar's edge sits under the bar
- * plate; on a pinned dock's edge it is the dock's whole strip, the pill
- * drawn over it (a band above the zone was a line across the wallpaper).
- * Input passes through (an empty
+ * plate; every other edge, the dock's included, is the band alone - a
+ * pinned dock meets it on its own terms (Dock.qml: on it as a tab, or a
+ * gap above it). Input passes through (an empty
  * mask); nothing is reserved - the band lives in the outer gap windows
  * already leave. Painted transparent, never unmapped, for a fullscreen
  * window.
@@ -47,22 +47,20 @@ Scope {
             top: band.edge !== "bottom"
             bottom: band.edge !== "top"
         }
-        // The band starts under its own edge's zone(s) and stops at both
-        // ends where the adjacent bands start, per screen: the authority
-        // answers by screen name (the dock drops its zone on a fullscreen
-        // monitor).
-        readonly property var bandMargins: FrameGeometry.bandMarginsForScreen(band.edge, band.screen?.name ?? "")
+        // Under the bar's plate on the bar's edge, at the screen edge
+        // elsewhere; the horizontal bands span the width and the side bands
+        // run between them, so no two bands overlap (the colour is
+        // translucent: a crossing was painted twice).
+        readonly property var bandMargins: FrameGeometry.bandMargins(band.edge)
         margins {
             top: band.bandMargins.top
             bottom: band.bandMargins.bottom
             left: band.bandMargins.left
             right: band.bandMargins.right
         }
-        // On a pinned dock's edge the band is the dock's whole strip (zone +
-        // band), drawn under the dock pill; elsewhere it is the band.
-        readonly property real extent: FrameGeometry.bandExtentForScreen(band.edge, band.screen?.name ?? "")
-        implicitWidth: (band.edge === "left" || band.edge === "right") ? Math.max(1, band.extent) : 0
-        implicitHeight: (band.edge === "top" || band.edge === "bottom") ? Math.max(1, band.extent) : 0
+        implicitWidth: (band.edge === "left" || band.edge === "right") ? Math.max(1, FrameGeometry.thickness) : 0
+        implicitHeight: (band.edge === "top" || band.edge === "bottom") ? Math.max(1, FrameGeometry.thickness) : 0
+
     }
 
     Variants {
