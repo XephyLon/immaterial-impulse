@@ -63,21 +63,10 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
-            RippleButton {
-                implicitWidth: 32
-                implicitHeight: 32
-                buttonRadius: Appearance.rounding.full
-                colBackground: "transparent"
-                colRipple: Appearance.colors.colLayer2Active
+            IconButton {
+                buttonIcon: "arrow_back"
+                buttonSize: 32
                 onClicked: root.closed()
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "arrow_back"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer1
-                }
             }
             StyledText {
                 text: Translation.tr("Chats")
@@ -177,24 +166,8 @@ Rectangle {
         }
     }
 
-    component RowAction: RippleButton {
-        id: actionButton
-        property string glyph: ""
-        property real glyphFill: 0
-        implicitWidth: 28
-        implicitHeight: 28
-        buttonRadius: Appearance.rounding.full
-        colBackground: "transparent"
-        colRipple: Appearance.colors.colLayer2Active
-        contentItem: MaterialSymbol {
-            anchors.centerIn: parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: actionButton.glyph
-            fill: actionButton.glyphFill
-            iconSize: Appearance.font.pixelSize.normal
-            color: Appearance.colors.colOnLayer1
-        }
+    component RowAction: IconButton {
+        buttonSize: 28
     }
 
     component SessionRow: Rectangle {
@@ -293,12 +266,12 @@ Rectangle {
 
             RowAction {
                 visible: rowHover.hovered && !row.renaming
-                glyph: row.modelData.pinned ? "keep_off" : "keep"
+                buttonIcon: row.modelData.pinned ? "keep_off" : "keep"
                 onClicked: AiSessions.setPinned(row.modelData.id, !row.modelData.pinned)
             }
             RowAction {
                 visible: rowHover.hovered && !row.renaming
-                glyph: "edit"
+                buttonIcon: "edit"
                 onClicked: {
                     row.renaming = true;
                     titleInput.text = row.modelData.title;
@@ -308,7 +281,7 @@ Rectangle {
             }
             RowAction {
                 visible: rowHover.hovered && !row.renaming
-                glyph: "delete"
+                buttonIcon: "delete"
                 onClicked: AiSessions.remove(row.modelData.id)
             }
         }

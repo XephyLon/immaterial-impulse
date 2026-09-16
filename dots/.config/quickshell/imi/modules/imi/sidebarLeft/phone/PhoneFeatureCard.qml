@@ -183,33 +183,24 @@ Item {
                 }
             }
 
-            RippleButton {
+            IconButton {
                 id: settingsButton
                 // Named because the card's own surface is a RippleButton too
                 // now, and "the first RippleButton in the card" stopped being
                 // this one the moment the surface was drawn behind it.
                 objectName: "cardSettingsChip"
                 Layout.alignment: Qt.AlignVCenter
-                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
                 visible: root.hasSettings
-                buttonRadius: Appearance.rounding.full
+                buttonIcon: "tune"
+                buttonSize: 32
+                // The card's own ink, thinned: the chip rides a coloured
+                // surface, so the layer tones would vanish into it.
                 colBackground: ColorUtils.transparentize(root.colForeground, 0.85)
                 colBackgroundHover: ColorUtils.transparentize(root.colForeground, 0.72)
                 colRipple: ColorUtils.transparentize(root.colForeground, 0.62)
+                colText: root.colForeground
+                tooltip: Translation.tr("Settings")
                 onClicked: root.settingsClicked()
-
-                contentItem: MaterialSymbol {
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "tune"
-                    iconSize: Appearance.font.pixelSize.large
-                    color: root.colForeground
-                }
-
-                StyledToolTip {
-                    text: Translation.tr("Settings")
-                }
             }
 
             // Three marks, one slot: a chevron for a card that acts, the house

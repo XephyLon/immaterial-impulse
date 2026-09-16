@@ -877,21 +877,10 @@ Item {
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: Appearance.spacing.space100
-                            RippleButton {
-                                implicitWidth: 32
-                                implicitHeight: 32
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: "transparent"
-                                colRipple: Appearance.colors.colLayer2Active
+                            IconButton {
+                                buttonIcon: "arrow_back"
+                                buttonSize: 32
                                 onClicked: root.closeView()
-                                contentItem: MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: "arrow_back"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colOnLayer1
-                                }
                             }
                             StyledText {
                                 text: Translation.tr("Providers & keys")
@@ -900,26 +889,15 @@ Item {
                                 color: Appearance.colors.colOnLayer1
                             }
                             Item { Layout.fillWidth: true }
-                            RippleButton {
+                            IconButton {
                                 // The fetch: a flat primary-inked icon in
                                 // the header (was a text button lost at the
                                 // bottom; the filled FAB read too heavy).
-                                implicitWidth: 36
-                                implicitHeight: 36
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: "transparent"
-                                colBackgroundHover: Appearance.colors.colLayer2Hover
-                                colRipple: Appearance.colors.colLayer2Active
+                                buttonIcon: "sync"
+                                buttonSize: 40
+                                colText: Appearance.colors.colPrimary
+                                tooltip: Translation.tr("Fetch models")
                                 onClicked: Ai.fetchCustomModels()
-                                contentItem: MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: "sync"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colPrimary
-                                }
-                                StyledToolTip { text: Translation.tr("Fetch models") }
                             }
                         }
 
@@ -1535,18 +1513,16 @@ Item {
                     enabled: messageInputField.text.length > 0 || Ai.isGenerating
                     toggled: enabled
 
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: sendButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: {
-                            if (Ai.isGenerating) {
-                                Ai.stopGeneration();
-                                return;
-                            }
-                            const inputText = messageInputField.text;
-                            root.acceptComposer(inputText);
-                            messageInputField.clear();
+                    // The click belongs to the button: an overlaid MouseArea
+                    // ate every press, so the ripple never ran.
+                    onClicked: {
+                        if (Ai.isGenerating) {
+                            Ai.stopGeneration();
+                            return;
                         }
+                        const inputText = messageInputField.text;
+                        root.acceptComposer(inputText);
+                        messageInputField.clear();
                     }
 
                     contentItem: MaterialSymbol {

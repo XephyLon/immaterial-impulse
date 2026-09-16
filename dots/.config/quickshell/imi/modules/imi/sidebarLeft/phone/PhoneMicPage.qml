@@ -68,23 +68,14 @@ PhoneSubPage {
             text: Translation.tr("The phone microphone is not set up on this machine. %1 is missing.")
                 .arg(PhoneDeps.missingFor("microphone").map(dependency => dependency.name).join(", "))
 
-            RippleButton {
+            DialogButton {
                 Layout.alignment: Qt.AlignRight
-                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                buttonRadius: Appearance.rounding.full
+                buttonText: Translation.tr("How to install")
                 colBackground: Appearance.colors.colPrimary
                 colBackgroundHover: Appearance.colors.colPrimaryHover
                 colRipple: Appearance.colors.colPrimaryActive
+                colText: Appearance.colors.colOnPrimary
                 onClicked: installGuide.shown = true
-
-                contentItem: StyledText {
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: Translation.tr("How to install")
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    font.weight: Font.DemiBold
-                    color: Appearance.colors.colOnPrimary
-                }
             }
         }
 

@@ -121,27 +121,16 @@ PhoneSubPage {
                 onTextChanged: root.query = searchField.text
             }
 
-            RippleButton {
-                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space200
-                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space200
+            IconButton {
                 enabled: PhoneScrcpy.appModeSupported && !PhoneScrcpy.appsLoading
-                buttonRadius: Appearance.rounding.full
+                buttonIcon: "refresh"
+                buttonSize: 40
                 colBackground: Appearance.colors.colLayer3
                 colBackgroundHover: Appearance.colors.colLayer3Hover
                 colRipple: Appearance.colors.colLayer3Active
+                colText: Appearance.colors.colOnLayer3
+                tooltip: Translation.tr("Ask the phone for its app list")
                 onClicked: PhoneScrcpy.refreshApps()
-
-                contentItem: MaterialSymbol {
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "refresh"
-                    iconSize: Appearance.font.pixelSize.large
-                    color: Appearance.colors.colOnLayer3
-                }
-
-                StyledToolTip {
-                    text: Translation.tr("Ask the phone for its app list")
-                }
             }
         }
 
@@ -262,44 +251,24 @@ PhoneSubPage {
                             elide: Text.ElideRight
                         }
 
-                        RippleButton {
-                            Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space125
-                            buttonRadius: Appearance.rounding.full
+                        DialogButton {
+                            buttonText: Translation.tr("Focus")
                             colBackground: Appearance.colors.colPrimary
                             colBackgroundHover: Appearance.colors.colPrimaryHover
                             colRipple: Appearance.colors.colPrimaryActive
+                            colText: Appearance.colors.colOnPrimary
                             onClicked: PhoneScrcpy.focusApp(sessionRow.modelData.package)
-
-                            contentItem: StyledText {
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: Translation.tr("Focus")
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                font.weight: Font.DemiBold
-                                color: Appearance.colors.colOnPrimary
-                            }
                         }
 
-                        RippleButton {
-                            Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space125
-                            Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space125
-                            buttonRadius: Appearance.rounding.full
+                        IconButton {
+                            buttonIcon: "close"
+                            buttonSize: 32
                             colBackground: Appearance.colors.colErrorContainer
                             colBackgroundHover: Appearance.colors.colErrorContainerHover
                             colRipple: Appearance.colors.colErrorContainerActive
+                            colText: Appearance.colors.colOnErrorContainer
+                            tooltip: Translation.tr("Close this session")
                             onClicked: PhoneScrcpy.stopApp(sessionRow.modelData.package)
-
-                            contentItem: MaterialSymbol {
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: "close"
-                                iconSize: Appearance.font.pixelSize.small
-                                color: Appearance.colors.colOnErrorContainer
-                            }
-
-                            StyledToolTip {
-                                text: Translation.tr("Close this session")
-                            }
                         }
                     }
                 }
@@ -456,33 +425,18 @@ PhoneSubPage {
                                 }
                             }
 
-                            RippleButton {
+                            IconButton {
                                 id: starButton
                                 readonly property bool favourite: PhoneScrcpy.isFavorite(appRow.modelData.package)
 
-                                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: "transparent"
-                                colBackgroundHover: Appearance.colors.colLayer3Hover
-                                colRipple: Appearance.colors.colLayer3Active
+                                buttonIcon: starButton.favourite ? "star" : "star_outline"
+                                buttonSize: 32
+                                iconFill: starButton.favourite ? 1 : 0
+                                colText: starButton.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                tooltip: starButton.favourite
+                                    ? Translation.tr("Remove from favourites")
+                                    : Translation.tr("Add to favourites")
                                 onClicked: PhoneScrcpy.toggleFavorite(appRow.modelData.package)
-
-                                contentItem: MaterialSymbol {
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: starButton.favourite ? "star" : "star_outline"
-                                    fill: starButton.favourite ? 1 : 0
-                                    iconSize: Appearance.font.pixelSize.large
-                                    color: starButton.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                                    animateChange: true
-                                }
-
-                                StyledToolTip {
-                                    text: starButton.favourite
-                                        ? Translation.tr("Remove from favourites")
-                                        : Translation.tr("Add to favourites")
-                                }
                             }
 
                             MaterialSymbol {

@@ -66,29 +66,18 @@ PhoneSubPage {
                 onTextChanged: PhoneContacts.query = searchField.text
             }
 
-            RippleButton {
-                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space200
-                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space200
-                buttonRadius: Appearance.rounding.full
+            IconButton {
+                buttonIcon: "refresh"
+                buttonSize: 40
                 colBackground: Appearance.colors.colLayer3
                 colBackgroundHover: Appearance.colors.colLayer3Hover
                 colRipple: Appearance.colors.colLayer3Active
+                colText: Appearance.colors.colOnLayer3
+                tooltip: Translation.tr("Re-read the phone's contacts")
                 // The vCards are watched, so this is for the case the watch
                 // cannot see: a monitor that gave up, or a directory that
                 // appeared after it started.
                 onClicked: PhoneContacts.restartMonitor()
-
-                contentItem: MaterialSymbol {
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "refresh"
-                    iconSize: Appearance.font.pixelSize.large
-                    color: Appearance.colors.colOnLayer3
-                }
-
-                StyledToolTip {
-                    text: Translation.tr("Re-read the phone's contacts")
-                }
             }
         }
 
@@ -248,34 +237,18 @@ PhoneSubPage {
                                 }
                             }
 
-                            RippleButton {
-                                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: "transparent"
-                                colBackgroundHover: Appearance.colors.colLayer3Hover
-                                colRipple: Appearance.colors.colLayer3Active
+                            IconButton {
+                                buttonIcon: contactRow.favourite ? "star" : "star_outline"
+                                buttonSize: 32
+                                iconFill: contactRow.favourite ? 1 : 0
+                                colText: contactRow.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                // Starring is also what keeps a nameless card
+                                // (a SIM import, a blocked number) out of the
+                                // hide-unnamed filter.
+                                tooltip: contactRow.favourite
+                                    ? Translation.tr("Remove from favourites")
+                                    : Translation.tr("Add to favourites")
                                 onClicked: PhoneContacts.toggleFavorite(contactRow.modelData.id)
-
-                                contentItem: MaterialSymbol {
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: contactRow.favourite ? "star" : "star_outline"
-                                    fill: contactRow.favourite ? 1 : 0
-                                    iconSize: Appearance.font.pixelSize.large
-                                    color: contactRow.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                                    animateChange: true
-                                }
-
-                                StyledToolTip {
-                                    // Starring is also what keeps a
-                                    // nameless card (a SIM import, a
-                                    // blocked number) out of the
-                                    // hide-unnamed filter.
-                                    text: contactRow.favourite
-                                        ? Translation.tr("Remove from favourites")
-                                        : Translation.tr("Add to favourites")
-                                }
                             }
 
                             MaterialSymbol {
@@ -342,70 +315,37 @@ PhoneSubPage {
                                     }
                                 }
 
-                                RippleButton {
-                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    buttonRadius: Appearance.rounding.full
+                                IconButton {
+                                    buttonIcon: "call"
+                                    buttonSize: 32
                                     colBackground: Appearance.colors.colPrimaryContainer
                                     colBackgroundHover: Appearance.colors.colPrimaryContainerHover
                                     colRipple: Appearance.colors.colPrimaryContainerActive
+                                    colText: Appearance.colors.colOnPrimaryContainer
+                                    tooltip: Translation.tr("Open the dialer on the phone")
                                     onClicked: PhoneContacts.openDialer(phoneRow.modelData.value)
-
-                                    contentItem: MaterialSymbol {
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        text: "call"
-                                        iconSize: Appearance.font.pixelSize.small
-                                        color: Appearance.colors.colOnPrimaryContainer
-                                    }
-
-                                    StyledToolTip {
-                                        text: Translation.tr("Open the dialer on the phone")
-                                    }
                                 }
 
-                                RippleButton {
-                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    buttonRadius: Appearance.rounding.full
+                                IconButton {
+                                    buttonIcon: "sms"
+                                    buttonSize: 32
                                     colBackground: Appearance.colors.colSecondaryContainer
                                     colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                                     colRipple: Appearance.colors.colSecondaryContainerActive
+                                    colText: Appearance.colors.colOnSecondaryContainer
+                                    tooltip: Translation.tr("Write a message on the phone")
                                     onClicked: PhoneContacts.composeSms(phoneRow.modelData.value)
-
-                                    contentItem: MaterialSymbol {
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        text: "sms"
-                                        iconSize: Appearance.font.pixelSize.small
-                                        color: Appearance.colors.colOnSecondaryContainer
-                                    }
-
-                                    StyledToolTip {
-                                        text: Translation.tr("Write a message on the phone")
-                                    }
                                 }
 
-                                RippleButton {
-                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    buttonRadius: Appearance.rounding.full
+                                IconButton {
+                                    buttonIcon: "content_copy"
+                                    buttonSize: 32
                                     colBackground: Appearance.colors.colLayer4
                                     colBackgroundHover: Appearance.colors.colLayer4Hover
                                     colRipple: Appearance.colors.colLayer4Active
+                                    colText: Appearance.colors.colOnLayer4
+                                    tooltip: Translation.tr("Copy the number")
                                     onClicked: Quickshell.clipboardText = phoneRow.modelData.value
-
-                                    contentItem: MaterialSymbol {
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        text: "content_copy"
-                                        iconSize: Appearance.font.pixelSize.small
-                                        color: Appearance.colors.colOnLayer4
-                                    }
-
-                                    StyledToolTip {
-                                        text: Translation.tr("Copy the number")
-                                    }
                                 }
                             }
                         }
@@ -434,26 +374,15 @@ PhoneSubPage {
                                     color: Appearance.colors.colOnLayer3
                                     elide: Text.ElideRight
                                 }
-                                RippleButton {
-                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                    buttonRadius: Appearance.rounding.full
+                                IconButton {
+                                    buttonIcon: "content_copy"
+                                    buttonSize: 32
                                     colBackground: Appearance.colors.colLayer4
                                     colBackgroundHover: Appearance.colors.colLayer4Hover
                                     colRipple: Appearance.colors.colLayer4Active
+                                    colText: Appearance.colors.colOnLayer4
+                                    tooltip: Translation.tr("Copy the address")
                                     onClicked: Quickshell.clipboardText = emailRow.modelData.value
-
-                                    contentItem: MaterialSymbol {
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        text: "content_copy"
-                                        iconSize: Appearance.font.pixelSize.small
-                                        color: Appearance.colors.colOnLayer4
-                                    }
-
-                                    StyledToolTip {
-                                        text: Translation.tr("Copy the address")
-                                    }
                                 }
                             }
                         }

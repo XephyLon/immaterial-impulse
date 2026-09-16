@@ -34,25 +34,20 @@ ClippingRectangle {
         onClicked: GlobalStates.aiImageViewerSource = root.path
     }
 
-    RippleButton {
+    // Not EditRemoveBadge: that badge is Edit Mode's error-role affordance at
+    // a fixed 18px, and this one rides a photo - it keeps the scrim plate and
+    // the white glyph so it reads against whatever is under it.
+    IconButton {
         visible: root.removable
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Appearance.spacing.space50
-        implicitWidth: 22
-        implicitHeight: 22
-        buttonRadius: Appearance.rounding.full
+        buttonIcon: "close"
+        buttonSize: 28
         colBackground: ColorUtils.transparentize(Appearance.m3colors.m3scrim ?? "#000", 0.35)
         colBackgroundHover: ColorUtils.transparentize(Appearance.m3colors.m3scrim ?? "#000", 0.15)
         colRipple: Appearance.colors.colLayer2Active
+        colText: "#ffffff"
         onClicked: root.remove()
-        contentItem: MaterialSymbol {
-            anchors.centerIn: parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: "close"
-            iconSize: Appearance.font.pixelSize.normal
-            color: "#ffffff"
-        }
     }
 }

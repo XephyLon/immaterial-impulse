@@ -98,21 +98,15 @@ Rectangle {
                 wrapMode: Text.Wrap
             }
 
-            RippleButton {
+            // Not EditRemoveBadge: this detach sits on the composer's card in
+            // the layer tones, not in Edit Mode's error role.
+            IconButton {
                 visible: root.canRemove
                 Layout.alignment: Qt.AlignTop
-                buttonRadius: Appearance.rounding.full
+                buttonIcon: "close"
+                buttonSize: 28
                 colBackground: Appearance.colors.colLayer2
-                implicitHeight: 28
-                implicitWidth: 28
-                contentItem: MaterialSymbol {
-                    verticalAlignment: Text.AlignVCenter
-                    anchors.centerIn: parent
-                    text: "close"
-                    horizontalAlignment: Text.AlignHCenter
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnSurfaceVariant
-                }
+                colText: Appearance.colors.colOnSurfaceVariant
 
                 onClicked: root.remove()
             }

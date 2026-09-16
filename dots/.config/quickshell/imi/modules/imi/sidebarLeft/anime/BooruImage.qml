@@ -78,27 +78,21 @@ Button {
             }
         }
 
-        RippleButton {
+        IconButton {
             id: menuButton
             anchors.top: parent.top
             anchors.right: parent.right
-            property real buttonSize: 30
-            anchors.margins: Math.max(root.imageRadius - buttonSize / 2, 8)
-            implicitHeight: buttonSize
-            implicitWidth: buttonSize
+            // The badge tucks into the image's rounded corner, so its margin
+            // is measured off its own size.
+            anchors.margins: Math.max(root.imageRadius - menuButton.buttonSize / 2, 8)
 
-            buttonRadius: Appearance.rounding.full
+            buttonIcon: "more_vert"
+            buttonSize: 32
+            // A scrim plate, not a layer tone: this rides the artwork.
             colBackground: ColorUtils.transparentize(Appearance.m3colors.m3surface, 0.3)
             colBackgroundHover: ColorUtils.transparentize(ColorUtils.mix(Appearance.m3colors.m3surface, Appearance.m3colors.m3onSurface, 0.8), 0.2)
             colRipple: ColorUtils.transparentize(ColorUtils.mix(Appearance.m3colors.m3surface, Appearance.m3colors.m3onSurface, 0.6), 0.1)
-
-            contentItem: MaterialSymbol {
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                iconSize: Appearance.font.pixelSize.large
-                color: Appearance.m3colors.m3onSurface
-                text: "more_vert"
-            }
+            colText: Appearance.m3colors.m3onSurface
 
             onClicked: {
                 root.showActions = !root.showActions

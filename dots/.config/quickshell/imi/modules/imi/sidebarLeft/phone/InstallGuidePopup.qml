@@ -105,22 +105,17 @@ Item {
                     elide: Text.ElideRight
                 }
 
-                RippleButton {
-                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space125
-                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space125
-                    buttonRadius: Appearance.rounding.full
+                IconButton {
+                    buttonIcon: "close"
+                    buttonSize: 32
+                    // The tonal plate stays: this close sits ON the popup's
+                    // layer2 header, so a flat one would have nothing to
+                    // stand against.
                     colBackground: Appearance.colors.colLayer3
                     colBackgroundHover: Appearance.colors.colLayer3Hover
                     colRipple: Appearance.colors.colLayer3Active
+                    colText: Appearance.colors.colOnLayer3
                     onClicked: root.closeRequested()
-
-                    contentItem: MaterialSymbol {
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: "close"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnLayer3
-                    }
                 }
             }
 
@@ -270,34 +265,22 @@ Item {
                                             maximumLineCount: 1
                                         }
 
-                                        RippleButton {
+                                        IconButton {
                                             id: copyButton
                                             property bool copied: false
 
-                                            Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space100
-                                            Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space100
-                                            buttonRadius: Appearance.rounding.full
+                                            buttonIcon: copyButton.copied ? "check" : "content_copy"
+                                            buttonSize: 32
+                                            iconFill: 1
                                             colBackground: Appearance.colors.colSurfaceContainerHighest
                                             colBackgroundHover: Appearance.colors.colSurfaceContainerHighestHover
                                             colRipple: Appearance.colors.colSurfaceContainerHighestActive
+                                            colText: copyButton.copied ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer4
+                                            tooltip: Translation.tr("Copy the install command")
                                             onClicked: {
                                                 Quickshell.execDetached(PhoneCards.copyArgv(dependencyRow.command));
                                                 copyButton.copied = true;
                                                 copiedTimer.restart();
-                                            }
-
-                                            contentItem: MaterialSymbol {
-                                                horizontalAlignment: Text.AlignHCenter
-                                                verticalAlignment: Text.AlignVCenter
-                                                text: copyButton.copied ? "check" : "content_copy"
-                                                fill: 1
-                                                iconSize: Appearance.font.pixelSize.small
-                                                color: copyButton.copied ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer4
-                                                animateChange: true
-                                            }
-
-                                            StyledToolTip {
-                                                text: Translation.tr("Copy the install command")
                                             }
 
                                             Timer {

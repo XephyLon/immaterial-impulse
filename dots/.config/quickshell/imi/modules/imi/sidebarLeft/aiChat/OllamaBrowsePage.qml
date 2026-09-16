@@ -101,19 +101,14 @@ ColumnLayout {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smaller
         }
-        RippleButton {
+        DialogButton {
             visible: !OllamaCatalog.daemonUp
-            implicitHeight: 30
-            padding: Appearance.spacing.space150
-            buttonRadius: Appearance.rounding.full
+            buttonText: Translation.tr("Start")
             colBackground: Appearance.colors.colPrimary
+            colBackgroundHover: Appearance.colors.colPrimaryHover
             colRipple: Appearance.colors.colPrimaryActive
+            colText: Appearance.colors.colOnPrimary
             onClicked: OllamaCatalog.startDaemon()
-            contentItem: StyledText {
-                text: Translation.tr("Start")
-                color: Appearance.colors.colOnPrimary
-                font.pixelSize: Appearance.font.pixelSize.smaller
-            }
             StyledToolTip { text: "systemctl --user start ollama.service" }
         }
     }
@@ -142,23 +137,12 @@ ColumnLayout {
                 color: OllamaCatalog.pullError.length > 0 ? Appearance.m3colors.m3error : Appearance.colors.colOnLayer1
                 font.pixelSize: Appearance.font.pixelSize.smaller
             }
-            RippleButton {
+            IconButton {
                 visible: OllamaCatalog.pulling
-                implicitWidth: 28
-                implicitHeight: 28
-                buttonRadius: Appearance.rounding.full
-                colBackground: "transparent"
-                colRipple: Appearance.colors.colLayer2Active
+                buttonIcon: "close"
+                buttonSize: 28
+                tooltip: Translation.tr("Cancel the pull")
                 onClicked: OllamaCatalog.cancelPull()
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "close"
-                    iconSize: Appearance.font.pixelSize.normal
-                    color: Appearance.colors.colOnLayer1
-                }
-                StyledToolTip { text: Translation.tr("Cancel the pull") }
             }
         }
         StyledProgressBar {
@@ -206,19 +190,14 @@ ColumnLayout {
             buttonIcon: "download"
             placeholderText: Translation.tr("Pull any model by name, e.g. qwen3:8b")
         }
-        RippleButton {
+        DialogButton {
             enabled: OllamaCatalog.daemonUp && !OllamaCatalog.pulling && pullField.value.trim().length > 0
-            implicitHeight: 32
-            padding: Appearance.spacing.space150
-            buttonRadius: Appearance.rounding.full
+            buttonText: Translation.tr("Pull")
             colBackground: Appearance.colors.colSecondaryContainer
+            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
             colRipple: Appearance.colors.colSecondaryContainerActive
+            colText: Appearance.colors.colOnSecondaryContainer
             onClicked: { root.notice = OllamaCatalog.pull(pullField.value.trim()); pullField.value = ""; }
-            contentItem: StyledText {
-                text: Translation.tr("Pull")
-                color: Appearance.colors.colOnSecondaryContainer
-                font.pixelSize: Appearance.font.pixelSize.smaller
-            }
         }
     }
 
@@ -277,19 +256,14 @@ ColumnLayout {
                             font.pixelSize: Appearance.font.pixelSize.smaller
                         }
                     }
-                    RippleButton {
-                        implicitHeight: 28
-                        padding: Appearance.spacing.space150
-                        buttonRadius: Appearance.rounding.full
+                    DialogButton {
                         toggled: installedRow.current
+                        buttonText: installedRow.current ? Translation.tr("In use") : Translation.tr("Use")
                         colBackground: installedRow.current ? Appearance.colors.colPrimary : Appearance.colors.colSecondaryContainer
+                        colBackgroundHover: installedRow.current ? Appearance.colors.colPrimaryHover : Appearance.colors.colSecondaryContainerHover
                         colRipple: installedRow.current ? Appearance.colors.colPrimaryActive : Appearance.colors.colSecondaryContainerActive
+                        colText: installedRow.current ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
                         onClicked: root.useModel(installedRow.modelData.name)
-                        contentItem: StyledText {
-                            text: installedRow.current ? Translation.tr("In use") : Translation.tr("Use")
-                            color: installedRow.current ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                        }
                     }
                     RippleButton {
                         implicitHeight: 28
@@ -354,22 +328,12 @@ ColumnLayout {
                         MaterialSymbol { visible: libRow.modelData.tools; text: "build"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colSubtext }
                         MaterialSymbol { visible: libRow.modelData.vision; text: "visibility"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colSubtext }
                         MaterialSymbol { visible: libRow.modelData.embedding; text: "scatter_plot"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colSubtext }
-                        RippleButton {
-                            implicitWidth: 26
-                            implicitHeight: 26
-                            buttonRadius: Appearance.rounding.full
-                            colBackground: "transparent"
-                            colRipple: Appearance.colors.colLayer2Active
+                        IconButton {
+                            buttonIcon: "open_in_new"
+                            buttonSize: 28
+                            colText: Appearance.colors.colSubtext
+                            tooltip: Translation.tr("Open on ollama.com")
                             onClicked: Qt.openUrlExternally(`https://ollama.com/library/${libRow.modelData.name}`)
-                            contentItem: MaterialSymbol {
-                                anchors.centerIn: parent
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: "open_in_new"
-                                iconSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colSubtext
-                            }
-                            StyledToolTip { text: Translation.tr("Open on ollama.com") }
                         }
                     }
                     Flow {

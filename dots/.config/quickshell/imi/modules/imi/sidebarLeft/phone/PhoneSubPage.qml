@@ -34,28 +34,13 @@ Item {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
 
-            RippleButton {
+            IconButton {
                 id: backButton
-                implicitWidth: 36
-                implicitHeight: 36
-                buttonRadius: Appearance.rounding.full
-                colBackground: "transparent"
-                colBackgroundHover: Appearance.colors.colLayer2Hover
-                colRipple: Appearance.colors.colLayer2Active
+                buttonIcon: "arrow_back"
+                buttonSize: 40
+                colText: Appearance.colors.colOnLayer2
+                tooltip: Translation.tr("Back")
                 onClicked: root.back()
-
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "arrow_back"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer2
-                }
-
-                StyledToolTip {
-                    text: Translation.tr("Back")
-                }
             }
 
             StyledText {

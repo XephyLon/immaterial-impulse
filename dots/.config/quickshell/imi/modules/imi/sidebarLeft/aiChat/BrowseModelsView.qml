@@ -100,21 +100,10 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
-            RippleButton {
-                implicitWidth: 32
-                implicitHeight: 32
-                buttonRadius: Appearance.rounding.full
-                colBackground: "transparent"
-                colRipple: Appearance.colors.colLayer2Active
+            IconButton {
+                buttonIcon: "arrow_back"
+                buttonSize: 32
                 onClicked: root.closed()
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "arrow_back"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer1
-                }
             }
             StyledText {
                 text: Translation.tr("Browse models")
@@ -123,23 +112,12 @@ Rectangle {
                 color: Appearance.colors.colOnLayer1
             }
             Item { Layout.fillWidth: true }
-            RippleButton {
+            IconButton {
                 visible: root.openRouterMode && !root.ollamaMode
-                implicitWidth: 32
-                implicitHeight: 32
-                buttonRadius: Appearance.rounding.full
-                colBackground: "transparent"
-                colRipple: Appearance.colors.colLayer2Active
+                buttonIcon: "refresh"
+                buttonSize: 32
+                tooltip: Translation.tr("Refresh the index")
                 onClicked: OpenRouterModels.refresh(true)
-                contentItem: MaterialSymbol {
-                    anchors.centerIn: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "refresh"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer1
-                }
-                StyledToolTip { text: Translation.tr("Refresh the index") }
             }
         }
 

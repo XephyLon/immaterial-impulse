@@ -447,14 +447,12 @@ Item {
                     enabled: tagInputField.text.length > 0
                     toggled: enabled
 
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: sendButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: {
-                            const inputText = tagInputField.text
-                            root.handleInput(inputText)
-                            tagInputField.clear()
-                        }
+                    // The click belongs to the button: an overlaid MouseArea
+                    // ate every press, so the ripple never ran.
+                    onClicked: {
+                        const inputText = tagInputField.text
+                        root.handleInput(inputText)
+                        tagInputField.clear()
                     }
 
                     contentItem: MaterialSymbol {
