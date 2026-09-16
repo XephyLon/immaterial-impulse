@@ -55,14 +55,11 @@ ContentPage {
             shape: MaterialShape.Shape.Ghostish
             title: Translation.tr("AI")
 
-            // A paragraph, not a value: the label floats inside a field that
-            // takes the row's width and several lines' height.
-            ConfigTextArea {
-                Layout.fillWidth: true
+            // A paragraph, not a value: the long-text row grows with it and
+            // scrolls inside itself past ten lines.
+            ConfigLongText {
                 buttonIcon: "psychology"
                 text: Translation.tr("System prompt")
-                floatingLabel: true
-                fieldHeight: 160
                 placeholderText: Translation.tr("How the assistant should behave")
                 value: Config.options.ai.systemPrompt
                 // Deferred, because the write feeds back into the binding that

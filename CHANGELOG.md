@@ -117,6 +117,9 @@ own repo; the installer pins which revision it builds.
   `applycolor` and presets read the new file.
 
 ### Fixed
+- Settings > Services: the AI system prompt has a field made for long text
+  (label above, full width, grows to ten lines, then scrolls inside with the
+  caret kept in view) instead of a one-line value field it could not fit in.
 - Frame mode with a pinned dock: the bottom band no longer floats as a thin
   line above the dock with wallpaper under it; the dock's strip is the frame
   and the dock sits on it. The bands also sit under windows now (Bottom

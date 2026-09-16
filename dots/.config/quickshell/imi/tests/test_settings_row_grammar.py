@@ -71,6 +71,7 @@ GRAMMAR_WIDGETS = (
     "ConfigSelectionArray.qml",
     "ConfigComboBox.qml",
     "ConfigTextArea.qml",
+    "ConfigLongText.qml",
     "ContentSubsection.qml",
 )
 
@@ -82,6 +83,7 @@ INFO_WIDGETS = (
     "ConfigComboBox.qml",
     "ConfigTextArea.qml",
     "ConfigSpinBox.qml",
+    "ConfigLongText.qml",
 )
 
 

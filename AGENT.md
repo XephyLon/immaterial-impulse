@@ -7064,8 +7064,10 @@ header button and the rail button must stay the same height, or that shared cent
 Shared building blocks to reach for before writing something from scratch: `StyledText`,
 `StyledComboBox`/`StyledComboBoxSearch`, `StyledSlider`, `StyledToolTip`/`StyledToolTipContent`,
 `RippleButton`, `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
-`ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows - see the row-grammar entry
-below for the opt-in shapes they carry), `StyledPopup` (a bar
+`ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea`/`ConfigLongText` (settings rows - see the row-grammar
+entry below for the opt-in shapes they carry; `ConfigTextArea` is a one-line VALUE field, `ConfigLongText`
+the row for a paragraph: label above, full width, grows to a line cap, scrolls inside - a system prompt in a
+`ConfigTextArea` was clipped to its first lines), `StyledPopup` (a bar
 widget's hover popup: a declaration plus a hover state machine, *not* a window - its content is
 hosted on `modules/imi/bar/BarPopupOverlay.qml`'s shared card, b22a923a5 ("refactor(bar): delete
 the per-popup layer surface")), `StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
