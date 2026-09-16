@@ -418,12 +418,21 @@ ContentPage {
                 wrapMode: Text.Wrap
             }
 
-            StyledText {
+            // The shared placeholder fills and centres itself in what it is
+            // given, so in this column it gets an item with its own height.
+            Item {
                 Layout.fillWidth: true
-                visible: keybindsSection.overrideEntries.length === 0
-                text: Translation.tr("No customized shortcuts yet.")
-                color: Appearance.colors.colSubtext
-                font.pixelSize: Appearance.font.pixelSize.small
+                implicitHeight: noOverridesPlaceholder.visible ? 200 : 0
+
+                PagePlaceholder {
+                    id: noOverridesPlaceholder
+                    shown: keybindsSection.overrideEntries.length === 0
+                    icon: "keyboard"
+                    shape: MaterialShape.Shape.Cookie7Sided
+                    title: Translation.tr("No customized shortcuts yet")
+                    description: Translation.tr("Rebind one from the cheatsheet and it is listed here.")
+                    descriptionHorizontalAlignment: Text.AlignHCenter
+                }
             }
 
             ColumnLayout {

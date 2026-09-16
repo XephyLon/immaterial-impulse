@@ -116,53 +116,20 @@ Item {
         }
     }
 
-    // Missing key
-    Item {
-        anchors.fill: parent
-        visible: root.missingKey
-
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: Appearance.spacing.space200
-
-            MaterialSymbol {
-                Layout.alignment: Qt.AlignHCenter
-                text: "key_off"
-                iconSize: 48
-                color: Appearance.colors.colOnLayer1
-            }
-
-            StyledText {
-                Layout.alignment: Qt.AlignHCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: root.unsplashMissingKey
-                    ? Translation.tr("Unsplash API key not set")
-                    : Translation.tr("Pexels API key not set")
-                font.pixelSize: Appearance.font.pixelSize.larger
-                color: Appearance.colors.colOnLayer1
-            }
-
-            StyledText {
-                Layout.alignment: Qt.AlignHCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: root.unsplashMissingKey
-                    ? Translation.tr("Open the launcher and run:\n/unsplash YOUR_API_KEY")
-                    : Translation.tr("Open the launcher and run:\n/pexels YOUR_API_KEY")
-                color: Appearance.colors.colSubtext
-                font.pixelSize: Appearance.font.pixelSize.normal
-                font.family: Appearance.font.family.main
-            }
-
-            StyledText {
-                Layout.alignment: Qt.AlignHCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: root.unsplashMissingKey
-                    ? Translation.tr("Get your free key at unsplash.com/developers")
-                    : Translation.tr("Get your free key at pexels.com/api")
-                color: Appearance.colors.colSubtext
-                font.pixelSize: Appearance.font.pixelSize.small
-            }
-        }
+    // Missing key. The two lines under the title - the command to run and
+    // where the key comes from - are one description here: the placeholder
+    // carries a single body, and they were always read as one instruction.
+    PagePlaceholder {
+        shown: root.missingKey
+        icon: "key_off"
+        shape: MaterialShape.Shape.Cookie7Sided
+        title: root.unsplashMissingKey
+            ? Translation.tr("Unsplash API key not set")
+            : Translation.tr("Pexels API key not set")
+        description: root.unsplashMissingKey
+            ? Translation.tr("Open the launcher and run:\n/unsplash YOUR_API_KEY\n\nGet your free key at unsplash.com/developers")
+            : Translation.tr("Open the launcher and run:\n/pexels YOUR_API_KEY\n\nGet your free key at pexels.com/api")
+        descriptionHorizontalAlignment: Text.AlignHCenter
     }
 
     // Loading
@@ -304,24 +271,26 @@ Item {
             }
         }
 
-        // Empty state
+        // Empty state. PagePlaceholder carries no action of its own, so the
+        // placeholder takes a block of its own in this column and the retry
+        // button stays underneath it.
         ColumnLayout {
             anchors.centerIn: parent
             visible: wallpaperModel.count === 0 && !OnlineWallpapers.loading
             spacing: Appearance.spacing.space150
 
-            MaterialSymbol {
+            Item {
                 Layout.alignment: Qt.AlignHCenter
-                text: "cloud_off"
-                iconSize: 48
-                color: Appearance.colors.colSubtext
-            }
+                implicitWidth: 320
+                implicitHeight: 180
 
-            StyledText {
-                Layout.alignment: Qt.AlignHCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: Translation.tr("No results — try fetching again")
-                color: Appearance.colors.colSubtext
+                PagePlaceholder {
+                    icon: "cloud_off"
+                    shape: MaterialShape.Shape.Cookie7Sided
+                    title: Translation.tr("No results")
+                    description: Translation.tr("Try fetching again")
+                    descriptionHorizontalAlignment: Text.AlignHCenter
+                }
             }
 
             RippleButton {

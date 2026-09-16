@@ -11,49 +11,35 @@ RippleButton {
     implicitWidth: 70
     colBackground: Appearance.colors.colLayer2
     buttonRadius: Appearance.rounding.small
+    // The corner badges' plate, named once: the tile is already layer 2, so
+    // the pills sit on a washed-out copy of it rather than a second tone.
+    readonly property color colBadge: ColorUtils.transparentize(Appearance.colors.colLayer2)
 
-    Rectangle {
+    // The two corner facts are read-only pills, so they are the shared badge.
+    // It also sizes to its label, which the hand-rolled circle did not: a
+    // weight wider than its own 20px square used to spill out of the pill.
+    Badge {
         anchors {
             top: parent.top
             left: parent.left
             topMargin: Appearance.spacing.space50
             leftMargin: Appearance.spacing.space50
         }
-        color: ColorUtils.transparentize(Appearance.colors.colLayer2)
-        radius: Appearance.rounding.full
-        implicitWidth: Math.max(20, elementNumber.implicitWidth)
-        implicitHeight: Math.max(20, elementNumber.implicitHeight)
-        width: height
-
-        StyledText {
-            id: elementNumber
-            anchors.left: parent.left
-            color: Appearance.colors.colOnLayer2
-            text: root.element.number
-            font.pixelSize: Appearance.font.pixelSize.smallest
-        }
+        label: root.element.number
+        colBackground: root.colBadge
+        colText: Appearance.colors.colOnLayer2
     }
 
-    Rectangle {
+    Badge {
         anchors {
             top: parent.top
             right: parent.right
             topMargin: Appearance.spacing.space50
             rightMargin: Appearance.spacing.space50
         }
-        color: ColorUtils.transparentize(Appearance.colors.colLayer2)
-        radius: Appearance.rounding.full
-        implicitWidth: Math.max(20, elementWeight.implicitWidth)
-        implicitHeight: Math.max(20, elementWeight.implicitHeight)
-        width: height
-
-        StyledText {
-            id: elementWeight
-            anchors.right: parent.right
-            color: Appearance.colors.colOnLayer2
-            text: root.element.weight
-            font.pixelSize: Appearance.font.pixelSize.smallest
-        }
+        label: root.element.weight
+        colBackground: root.colBadge
+        colText: Appearance.colors.colOnLayer2
     }
 
     StyledText {

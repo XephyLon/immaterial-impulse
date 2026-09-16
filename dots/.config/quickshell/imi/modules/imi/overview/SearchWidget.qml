@@ -259,35 +259,22 @@ Item { // Wrapper
                 id: clipboardEmptyState
                 visible: root.showResults && root.clipboardMode && appResults.count === 0
                 Layout.fillWidth: true
-                implicitHeight: 120
+                // The shared placeholder's shape is taller than the bare glyph
+                // this used to draw, so the strip grew one step to hold it.
+                implicitHeight: 160
 
                 readonly property bool isFilteredSearch: Cliphist.entries.length > 0 && root.clipboardSearching
 
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space50
-
-                    MaterialSymbol {
-                        Layout.alignment: Qt.AlignHCenter
-                        iconSize: 48
-                        color: Appearance.m3colors.m3outline
-                        text: clipboardEmptyState.isFilteredSearch ? "search_off" : "content_paste"
-                    }
-                    StyledText {
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.DemiBold
-                        color: Appearance.m3colors.m3outline
-                        horizontalAlignment: Text.AlignHCenter
-                        text: clipboardEmptyState.isFilteredSearch ? Translation.tr("No results found") : Translation.tr("Clipboard is empty")
-                    }
-                    StyledText {
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.m3colors.m3outline
-                        horizontalAlignment: Text.AlignHCenter
-                        text: clipboardEmptyState.isFilteredSearch ? Translation.tr("Try a different search") : Translation.tr("Copy something to see it here")
-                    }
+                PagePlaceholder {
+                    // The launcher is as tall as its results, so on a short
+                    // screen this strip is the first thing squeezed.
+                    dropIconWhenCramped: true
+                    shown: clipboardEmptyState.visible
+                    icon: clipboardEmptyState.isFilteredSearch ? "search_off" : "content_paste"
+                    shape: MaterialShape.Shape.Cookie7Sided
+                    title: clipboardEmptyState.isFilteredSearch ? Translation.tr("No results found") : Translation.tr("Clipboard is empty")
+                    description: clipboardEmptyState.isFilteredSearch ? Translation.tr("Try a different search") : Translation.tr("Copy something to see it here")
+                    descriptionHorizontalAlignment: Text.AlignHCenter
                 }
             }
 

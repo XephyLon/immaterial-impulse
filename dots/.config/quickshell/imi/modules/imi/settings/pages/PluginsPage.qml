@@ -356,20 +356,33 @@ Item {
                     }
                 }
 
-                StyledText {
+                // The empty state is the shared placeholder, which fills and
+                // centres itself in whatever it is given - so inside this
+                // column it needs an item with a height of its own.
+                Item {
                     Layout.fillWidth: true
-                    visible: root.filteredPlugins.length === 0
-                    // Distinguish "nothing installed" from "the filters
-                    // excluded everything". availablePlugins starts empty and
-                    // fills in asynchronously as the manifest FileViews load,
-                    // so a page opened during the scan would otherwise blame a
-                    // filter the user never set.
-                    text: PluginManager.availablePlugins.length === 0
-                        ? Translation.tr("No widgets installed.")
-                        : Translation.tr("No widgets match these filters.")
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    color: Appearance.colors.colSubtext
-                    wrapMode: Text.Wrap
+                    implicitHeight: noPluginsPlaceholder.visible ? 200 : 0
+
+                    PagePlaceholder {
+                        id: noPluginsPlaceholder
+                        shown: root.filteredPlugins.length === 0
+                        // Distinguish "nothing installed" from "the filters
+                        // excluded everything". availablePlugins starts empty and
+                        // fills in asynchronously as the manifest FileViews load,
+                        // so a page opened during the scan would otherwise blame a
+                        // filter the user never set.
+                        readonly property bool nothingInstalled:
+                            PluginManager.availablePlugins.length === 0
+                        icon: noPluginsPlaceholder.nothingInstalled ? "extension_off" : "filter_alt_off"
+                        shape: MaterialShape.Shape.Cookie7Sided
+                        title: noPluginsPlaceholder.nothingInstalled
+                            ? Translation.tr("No widgets installed")
+                            : Translation.tr("No matches")
+                        description: noPluginsPlaceholder.nothingInstalled
+                            ? Translation.tr("Browse the store to add one.")
+                            : Translation.tr("No widgets match these filters.")
+                        descriptionHorizontalAlignment: Text.AlignHCenter
+                    }
                 }
 
                 Repeater {

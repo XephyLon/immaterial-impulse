@@ -67,6 +67,14 @@ own repo; the installer pins which revision it builds.
   row kit; the phone tab's navigation cards, app rows and the Intelligence
   panel's model and session rows draw with the shell's catalogue row; persona
   and distro choices are the shell's chips.
+- Empty states across Settings (plugins, store, profile, Hyprland, cursor,
+  icon packs), the overview's clipboard strip, the online wallpaper grid and
+  the to-do list are the shell's page placeholder; the element tiles' corner
+  labels are badges; the wallpaper resolution picker is a labelled choice
+  row; the profile avatar, cursor theme, icon pack and colour scheme cards
+  are real buttons (hover, press, ripple); the Wi-Fi and Tailscale dialogs'
+  lists and the code block's scrollbar are the shell's; the to-do field is
+  the shell's field.
 - Three shapes that had no widget now have one: the floating plate under
   the tray and dock menus, the sidebars, the on-screen keyboard, the drop
   shelf, the search widget and the Modes editor's popups (`PopupPlate`); the

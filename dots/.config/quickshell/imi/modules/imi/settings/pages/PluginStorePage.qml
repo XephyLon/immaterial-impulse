@@ -188,17 +188,32 @@ ContentPage {
                 wrapMode: Text.Wrap
             }
 
-            StyledText {
+            // The shared placeholder fills and centres itself in what it is
+            // given, so in this column it gets an item with its own height.
+            Item {
                 Layout.fillWidth: true
-                visible: root.filteredEntries.length === 0
-                text: PluginStore.fetching
-                    ? Translation.tr("Fetching widget catalog…")
-                    : (PluginStore.entries.length === 0
-                        ? Translation.tr("No widgets in the catalog yet.")
-                        : Translation.tr("No widgets match the current filters."))
-                font.pixelSize: Appearance.font.pixelSize.small
-                color: Appearance.colors.colSubtext
-                wrapMode: Text.Wrap
+                implicitHeight: emptyCatalogPlaceholder.visible ? 200 : 0
+
+                PagePlaceholder {
+                    id: emptyCatalogPlaceholder
+                    shown: root.filteredEntries.length === 0
+                    readonly property bool fetching: PluginStore.fetching
+                    readonly property bool emptyCatalog: PluginStore.entries.length === 0
+                    icon: emptyCatalogPlaceholder.fetching ? "cloud_download"
+                        : (emptyCatalogPlaceholder.emptyCatalog ? "storefront" : "filter_alt_off")
+                    shape: MaterialShape.Shape.Cookie7Sided
+                    title: emptyCatalogPlaceholder.fetching
+                        ? Translation.tr("Fetching the catalog…")
+                        : (emptyCatalogPlaceholder.emptyCatalog
+                            ? Translation.tr("Catalog is empty")
+                            : Translation.tr("No matches"))
+                    description: emptyCatalogPlaceholder.fetching
+                        ? Translation.tr("Reading the official widget registry.")
+                        : (emptyCatalogPlaceholder.emptyCatalog
+                            ? Translation.tr("No widgets in the catalog yet.")
+                            : Translation.tr("No widgets match the current filters."))
+                    descriptionHorizontalAlignment: Text.AlignHCenter
+                }
             }
 
             Repeater {

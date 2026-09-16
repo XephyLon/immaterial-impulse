@@ -58,13 +58,26 @@ ContentPage {
             shape: MaterialShape.Shape.Clover4Leaf
             title: Translation.tr("Pointer")
 
-            StyledText {
-                visible: !CursorThemes.available
-                text: CursorThemes.loading
-                    ? Translation.tr("Scanning cursor themes…")
-                    : Translation.tr("No cursor themes found.")
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                color: Appearance.colors.colSubtext
+            // The shared placeholder fills and centres itself in what it is
+            // given, so in this column it gets an item with its own height.
+            Item {
+                Layout.fillWidth: true
+                implicitHeight: noCursorThemesPlaceholder.visible ? 200 : 0
+
+                PagePlaceholder {
+                    id: noCursorThemesPlaceholder
+                    shown: !CursorThemes.available
+                    readonly property bool scanning: CursorThemes.loading
+                    icon: noCursorThemesPlaceholder.scanning ? "hourglass" : "mouse"
+                    shape: MaterialShape.Shape.Clover4Leaf
+                    title: noCursorThemesPlaceholder.scanning
+                        ? Translation.tr("Scanning cursor themes…")
+                        : Translation.tr("No cursor themes found")
+                    description: noCursorThemesPlaceholder.scanning
+                        ? ""
+                        : Translation.tr("Install one and it shows up here.")
+                    descriptionHorizontalAlignment: Text.AlignHCenter
+                }
             }
 
             // A wrapping card grid, NOT a ConfigSelectionArray: the chip strip
@@ -82,35 +95,39 @@ ContentPage {
 
                 Repeater {
                     model: CursorThemes.themes
-                    delegate: Rectangle {
+                    // A button, not a plate with a MouseArea: the cards are
+                    // picked, so they hover, press and ripple like the rest.
+                    delegate: RippleButton {
                         id: themeCard
                         required property var modelData
                         readonly property bool isActive: modelData.id === CursorThemes.activeId
                         Layout.fillWidth: true
+                        padding: Appearance.spacing.space100
                         implicitHeight: cardRow.implicitHeight + Appearance.spacing.space100 * 2
-                        radius: Appearance.rounding.normal
-                        color: themeCardArea.containsMouse
-                            ? Appearance.colors.colLayer2Hover : Appearance.colors.colLayer2
-                        border.width: themeCard.isActive
+                        buttonRadius: Appearance.rounding.normal
+                        colBackground: Appearance.colors.colLayer2
+                        colBackgroundHover: Appearance.colors.colLayer2Hover
+                        colRipple: Appearance.colors.colLayer2Active
+                        // The active card is marked by its border and its
+                        // check, not by a plate of its own - so the toggled
+                        // tones are the same layer pair.
+                        toggled: themeCard.isActive
+                        colBackgroundToggled: Appearance.colors.colLayer2
+                        colBackgroundToggledHover: Appearance.colors.colLayer2Hover
+                        colRippleToggled: Appearance.colors.colLayer2Active
+                        border: true
+                        borderWidth: themeCard.isActive
                             ? Appearance.borderWidth.emphasis : Appearance.borderWidth.standard
-                        border.color: themeCard.isActive
+                        colBorder: themeCard.isActive
                             ? Appearance.colors.colPrimary : "transparent"
 
-                        MouseArea {
-                            id: themeCardArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (themeCard.modelData.id === CursorThemes.activeId) return
-                                CursorThemes.apply(themeCard.modelData.id, Config.options.hyprland.cursor.size)
-                            }
+                        onClicked: {
+                            if (themeCard.modelData.id === CursorThemes.activeId) return
+                            CursorThemes.apply(themeCard.modelData.id, Config.options.hyprland.cursor.size)
                         }
 
-                        RowLayout {
+                        contentItem: RowLayout {
                             id: cardRow
-                            anchors.centerIn: parent
-                            width: parent.width - Appearance.spacing.space100 * 2
                             spacing: Appearance.spacing.space50
                             // The theme's own pointer, extracted to PNG by the
                             // scanner (Qt cannot decode Xcursor files). Falls

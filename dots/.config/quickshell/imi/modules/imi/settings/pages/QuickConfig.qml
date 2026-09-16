@@ -187,99 +187,109 @@ ContentPage {
                                 { value: "scheme-tonal-spot",  displayName: Translation.tr("Tonal Spot"),  icon: "lens" },
                             ]
 
-                            delegate: Rectangle {
+                            // A button, not a plate with a hover MouseArea: the
+                            // chips are picked, so they press and ripple like
+                            // every other selection card. `hovered` is the
+                            // Control's own now, and the plate's colour
+                            // Behavior is the shared button's.
+                            delegate: RippleButton {
                                 id: schemeChip
                                 required property var modelData
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 66
                                 Layout.maximumHeight: 66
+                                padding: 0
 
-                                property bool isSelected: Config.options.appearance.palette.type === modelData.value
-                                property bool hovered: hoverArea.containsMouse
-                                property var swatches: SchemePreview.swatches[modelData.value] ?? []
+                                property bool isSelected: Config.options.appearance.palette.type === schemeChip.modelData.value
+                                property var swatches: SchemePreview.swatches[schemeChip.modelData.value] ?? []
 
-                                radius: Appearance.rounding.normal
-                                color: hovered ? Appearance.colors.colSecondaryContainerHover
-                                    : Appearance.colors.colSecondaryContainer
-                                Behavior on color {
-                                    animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                                buttonRadius: Appearance.rounding.normal
+                                // The selected chip is marked by its ring and
+                                // its check, not by a plate of its own - so the
+                                // toggled tones are the same container pair.
+                                toggled: schemeChip.isSelected
+                                colBackground: Appearance.colors.colSecondaryContainer
+                                colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                                colRipple: Appearance.colors.colSecondaryContainerActive
+                                colBackgroundToggled: Appearance.colors.colSecondaryContainer
+                                colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
+                                colRippleToggled: Appearance.colors.colSecondaryContainerActive
+
+                                onClicked: {
+                                    Config.options.appearance.palette.type = schemeChip.modelData.value
+                                    page.refreshTheme(["--type", schemeChip.modelData.value])
                                 }
 
-                                ColumnLayout {
-                                    anchors.centerIn: parent
-                                    spacing: Appearance.spacing.space25
+                                // An item, then the column centred in it: the
+                                // card's height is fixed at 66, so a column
+                                // handed that height would sit its 51px of
+                                // content against the top edge.
+                                contentItem: Item {
+                                    ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: Appearance.spacing.space25
 
-                                    Item {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        implicitWidth: 34
-                                        implicitHeight: 34
+                                        Item {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            implicitWidth: 34
+                                            implicitHeight: 34
 
-                                        SchemePaletteCircle {
-                                            anchors.centerIn: parent
-                                            swatches: schemeChip.swatches
-                                            fallbackIcon: schemeChip.modelData.icon
-                                        }
-
-                                        // Selection ring + center check badge
-                                        Rectangle {
-                                            anchors.centerIn: parent
-                                            width: 34
-                                            height: 34
-                                            radius: 17
-                                            color: "transparent"
-                                            border.width: 2
-                                            border.color: Appearance.colors.colPrimary
-                                            opacity: schemeChip.isSelected ? 1 : 0
-                                            scale: schemeChip.isSelected ? 1 : 0.7
-                                            Behavior on opacity {
-                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                            }
-                                            Behavior on scale {
-                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                            }
-                                        }
-                                        Rectangle {
-                                            anchors.centerIn: parent
-                                            width: 16
-                                            height: 16
-                                            radius: 8
-                                            color: Appearance.colors.colPrimary
-                                            opacity: schemeChip.isSelected ? 1 : 0
-                                            scale: schemeChip.isSelected ? 1 : 0.4
-                                            Behavior on opacity {
-                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                            }
-                                            Behavior on scale {
-                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                            }
-                                            MaterialSymbol {
+                                            SchemePaletteCircle {
                                                 anchors.centerIn: parent
-                                                text: "check"
-                                                iconSize: 14
-                                                color: Appearance.colors.colOnPrimary
+                                                swatches: schemeChip.swatches
+                                                fallbackIcon: schemeChip.modelData.icon
+                                            }
+
+                                            // Selection ring + center check badge
+                                            Rectangle {
+                                                anchors.centerIn: parent
+                                                width: 34
+                                                height: 34
+                                                radius: 17
+                                                color: "transparent"
+                                                border.width: 2
+                                                border.color: Appearance.colors.colPrimary
+                                                opacity: schemeChip.isSelected ? 1 : 0
+                                                scale: schemeChip.isSelected ? 1 : 0.7
+                                                Behavior on opacity {
+                                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                                }
+                                                Behavior on scale {
+                                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                                }
+                                            }
+                                            Rectangle {
+                                                anchors.centerIn: parent
+                                                width: 16
+                                                height: 16
+                                                radius: 8
+                                                color: Appearance.colors.colPrimary
+                                                opacity: schemeChip.isSelected ? 1 : 0
+                                                scale: schemeChip.isSelected ? 1 : 0.4
+                                                Behavior on opacity {
+                                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                                }
+                                                Behavior on scale {
+                                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                                }
+                                                MaterialSymbol {
+                                                    anchors.centerIn: parent
+                                                    text: "check"
+                                                    iconSize: 14
+                                                    color: Appearance.colors.colOnPrimary
+                                                }
                                             }
                                         }
-                                    }
 
-                                    StyledText {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        Layout.maximumWidth: schemeChip.width - Appearance.spacing.space100 * 2
-                                        elide: Text.ElideRight
-                                        text: schemeChip.modelData.displayName
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                        font.weight: schemeChip.isSelected ? Font.DemiBold : Font.Medium
-                                        color: Appearance.colors.colOnSecondaryContainer
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: hoverArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        Config.options.appearance.palette.type = modelData.value
-                                        page.refreshTheme(["--type", modelData.value])
+                                        StyledText {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            Layout.maximumWidth: schemeChip.width - Appearance.spacing.space100 * 2
+                                            elide: Text.ElideRight
+                                            text: schemeChip.modelData.displayName
+                                            font.pixelSize: Appearance.font.pixelSize.smaller
+                                            font.weight: schemeChip.isSelected ? Font.DemiBold : Font.Medium
+                                            color: Appearance.colors.colOnSecondaryContainer
+                                        }
                                     }
                                 }
                             }

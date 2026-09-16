@@ -95,7 +95,10 @@ ContentPage {
 
                 Item {
                     Layout.fillWidth: true
-                    implicitHeight: Config.options.profile.avatarPath === "" ? placeholderCol.implicitHeight : avatarFlow.implicitHeight
+                    // A height of its own while the placeholder is up: the
+                    // shared placeholder FILLS what it is given, so taking
+                    // this item's height from it would be a loop.
+                    implicitHeight: Config.options.profile.avatarPath === "" ? 200 : avatarFlow.implicitHeight
 
                     Flow {
                         id: avatarFlow
@@ -107,78 +110,87 @@ ContentPage {
 
                         Repeater {
                             model: avatarFolderModel
-                            delegate: Rectangle {
+                            // A button, not a bare plate with a MouseArea: the
+                            // cards are picked, so they hover, press and morph
+                            // like every other selection card in Settings.
+                            delegate: RippleButton {
+                                id: avatarCard
                                 required property string fileName
                                 required property string filePath
-                                width: 64
-                                height: 64
-                                radius: width / 2
-                                color: Appearance.colors.colLayer2
+                                padding: 0
+                                implicitWidth: 64
+                                implicitHeight: 64
+                                buttonRadius: width / 2
+                                // No radius morph on press: the picture is
+                                // masked to a circle of its own, so a plate
+                                // that squares under it shows its corners.
+                                buttonRadiusPressed: avatarCard.buttonRadius
+                                colBackground: Appearance.colors.colLayer2
+                                colBackgroundHover: Appearance.colors.colLayer2Hover
+                                colRipple: Appearance.colors.colLayer2Active
+                                // The picture is the card, so the selected card
+                                // keeps the same plate and says so with the
+                                // check badge below rather than a tone nobody
+                                // can see under the image.
+                                toggled: avatarCard.isSelected
+                                colBackgroundToggled: Appearance.colors.colLayer2
+                                colBackgroundToggledHover: Appearance.colors.colLayer2Hover
+                                colRippleToggled: Appearance.colors.colLayer2Active
 
-                                property bool isSelected: FileUtils.trimFileProtocol(filePath.toString()) === Config.options.profile.avatarPicture
+                                property bool isSelected: FileUtils.trimFileProtocol(avatarCard.filePath.toString()) === Config.options.profile.avatarPicture
 
-                                Image {
-                                    id: avatarImage
-                                    anchors.fill: parent
-                                    source: filePath
-                                    fillMode: Image.PreserveAspectCrop
-                                    sourceSize.width: avatarImage.width * 2
-                                    sourceSize.height: avatarImage.height * 2
-                                    layer.enabled: true
-                                    layer.effect: OpacityMask {
-                                        maskSource: Rectangle {
-                                            width: 64; height: width; radius: width / 2
+                                onClicked: Config.options.profile.avatarPicture = FileUtils.trimFileProtocol(avatarCard.filePath.toString())
+
+                                contentItem: Item {
+                                    Image {
+                                        id: avatarImage
+                                        anchors.fill: parent
+                                        source: avatarCard.filePath
+                                        fillMode: Image.PreserveAspectCrop
+                                        sourceSize.width: avatarImage.width * 2
+                                        sourceSize.height: avatarImage.height * 2
+                                        layer.enabled: true
+                                        layer.effect: OpacityMask {
+                                            maskSource: Rectangle {
+                                                width: 64
+                                                height: width
+                                                radius: width / 2
+                                            }
                                         }
                                     }
-                                }
 
-                                Rectangle {
-                                    visible: parent.isSelected
-                                    anchors.right: parent.right
-                                    anchors.bottom: parent.bottom
-                                    anchors.rightMargin: Appearance.spacing.space25
-                                    anchors.bottomMargin: Appearance.spacing.space25
-                                    width: 20
-                                    height: width
-                                    radius: width / 2
-                                    color: Appearance.colors.colPrimary
+                                    Rectangle {
+                                        visible: avatarCard.isSelected
+                                        anchors.right: parent.right
+                                        anchors.bottom: parent.bottom
+                                        anchors.rightMargin: Appearance.spacing.space25
+                                        anchors.bottomMargin: Appearance.spacing.space25
+                                        width: 20
+                                        height: width
+                                        radius: width / 2
+                                        color: Appearance.colors.colPrimary
 
-                                    MaterialSymbol {
-                                        anchors.centerIn: parent
-                                        text: "check"
-                                        iconSize: Appearance.font.pixelSize.small
-                                        color: Appearance.colors.colOnPrimary
+                                        MaterialSymbol {
+                                            anchors.centerIn: parent
+                                            text: "check"
+                                            iconSize: Appearance.font.pixelSize.small
+                                            color: Appearance.colors.colOnPrimary
+                                        }
                                     }
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: Config.options.profile.avatarPicture = FileUtils.trimFileProtocol(filePath.toString())
                                 }
                             }
                         }
                     }
 
-                    ColumnLayout {
+                    PagePlaceholder {
                         id: placeholderCol
-                        visible: Config.options.profile.avatarPath === ""
-                        anchors.centerIn: parent
+                        shown: Config.options.profile.avatarPath === ""
                         z: 1
-                        spacing: Appearance.spacing.space50
-
-                        MaterialSymbol {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: "image"
-                            iconSize: 32
-                            color: Appearance.colors.colSubtext
-                        }
-                        StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: Translation.tr("Pick a folder above to see avatars here")
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
-                        }
+                        icon: "image"
+                        shape: MaterialShape.Shape.Circle
+                        title: Translation.tr("No avatars yet")
+                        description: Translation.tr("Pick a folder above to see avatars here")
+                        descriptionHorizontalAlignment: Text.AlignHCenter
                     }
                 }
             }
@@ -262,14 +274,22 @@ ContentPage {
                 }
             }
 
-            StyledText {
+            // The shared placeholder fills and centres itself in what it is
+            // given, so in this column it gets an item with its own height.
+            Item {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.space500
-                visible: Presets.folderModel.count === 0
-                horizontalAlignment: Text.AlignHCenter
-                text: Translation.tr("No presets yet")
-                color: Appearance.colors.colSubtext
-                font.pixelSize: Appearance.font.pixelSize.normal
+                Layout.topMargin: Appearance.spacing.space200
+                implicitHeight: noPresetsPlaceholder.visible ? 200 : 0
+
+                PagePlaceholder {
+                    id: noPresetsPlaceholder
+                    shown: Presets.folderModel.count === 0
+                    icon: "bookmark_add"
+                    shape: MaterialShape.Shape.Pentagon
+                    title: Translation.tr("No presets yet")
+                    description: Translation.tr("Name one above to save the current look.")
+                    descriptionHorizontalAlignment: Text.AlignHCenter
+                }
             }
 
             Flow {

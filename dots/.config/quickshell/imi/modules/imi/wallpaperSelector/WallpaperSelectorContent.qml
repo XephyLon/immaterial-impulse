@@ -359,28 +359,19 @@ MouseArea {
                             id: resolutionChips
                             active: root.source !== "local" && root.source !== "wallpaperEngine"
                             visible: active
-                            sourceComponent: RowLayout {
-                                spacing: Appearance.spacing.space50
-                                Repeater {
-                                    model: ["1080p", "2K", "4K"]
-                                    delegate: RippleButton {
-                                        required property string modelData
-                                        implicitHeight: 38
-                                        buttonRadius: height / 2
-                                        toggled: root.selectedResolution === modelData
-                                        colBackgroundToggled: Appearance.colors.colSecondaryContainer
-                                        colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
-                                        colRippleToggled: Appearance.colors.colSecondaryContainerActive
-                                        onClicked: root.selectedResolution = modelData
-                                        contentItem: StyledText {
-                                            anchors.centerIn: parent
-                                            text: modelData
-                                            color: parent.toggled
-                                                ? Appearance.colors.colOnSecondaryContainer
-                                                : Appearance.colors.colOnLayer2
-                                        }
-                                    }
+                            // One choice, so the shared segmented row: three
+                            // loose pills became one connected group that
+                            // spells out which end is current.
+                            sourceComponent: ConfigSelectionArray {
+                                currentValue: root.selectedResolution
+                                onSelected: newValue => {
+                                    root.selectedResolution = newValue
                                 }
+                                options: [
+                                    { displayName: "1080p", value: "1080p" },
+                                    { displayName: "2K", value: "2K" },
+                                    { displayName: "4K", value: "4K" },
+                                ]
                             }
                         }
                     }
