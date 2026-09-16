@@ -7466,7 +7466,10 @@ control from `LockSurface` rather than naming a type, so the two cannot drift ag
 same failure shape as the `colLayer0`/`colLayer1` note below - "it uses a real shared widget" is not
 "it uses the right shared widget for this position". The four remaining call sites are unreviewed
 rather than sanctioned; `modules/imi/sidebarRight/wifiNetworks/WifiNetworkItem.qml` is the next one
-of them that is a password prompt.
+of them that is a password prompt. Both files are now DELETED and those four sites moved onto the
+widgets above: the Wi-Fi password prompt to `PasswordField`, the AI system prompt and the
+networking user agent (`ServicesConfig.qml`) and the autostart command row (`AutostartApps.qml`) to
+`ConfigTextArea`, and `welcome.qml`'s locale box to `ToolbarTextField`.
 f957d9e59 ("fix(polkit): give the auth prompt the field the rest of the shell uses").
 
 **...and the same two prompts then drifted again in the half a type name does not carry, which is

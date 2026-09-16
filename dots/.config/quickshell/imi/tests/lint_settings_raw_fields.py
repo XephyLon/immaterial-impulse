@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A settings page takes text through ConfigTextArea, never a raw field.
 
-`MaterialTextField` is the QQC2 Material `TextField` with the shell's colours
+`MaterialTextField` WAS the QQC2 Material `TextField` with the shell's colours
 poured in - the outlined box with the floating label in the accent colour.
 It predates the settings row grammar (test_settings_row_grammar.py) and the
 maintainer retired it from the pages on 2026-09-14 when two folder rows
@@ -10,9 +10,16 @@ component for those. This one should be obsolete at this point."
 
 So under modules/imi/settings/pages/ no file declares a single-line
 `MaterialTextField` or `TextField` of its own; the row widgets (ConfigTextArea
-and friends) are the only way a line of text is asked for there. A multi-line
-`MaterialTextArea` (the system prompt, an autostart list) is a different
-control and stays.
+and friends) are the only way a line of text is asked for there.
+
+`MaterialTextField.qml` and `MaterialTextArea.qml` have since been DELETED:
+their last call sites - the system prompt, the networking user agent, the
+autostart command rows, the welcome window's locale box and the Wi-Fi password
+prompt - moved to `ConfigTextArea`, `ToolbarTextField` and `PasswordField`, and
+neither file had a consumer left. The banned name stays in the regex anyway: a
+lint that stops recognising what it retired cannot tell you when it comes back,
+and `TextField` - the raw QQC2 type either one would be rebuilt from - is the
+half of the pattern that was always doing the work.
 """
 import re
 import sys
@@ -47,7 +54,9 @@ class SettingsRawFields(unittest.TestCase):
         self.assertTrue(RAW.search("    MaterialTextField {\n"))
         self.assertTrue(RAW.search("    TextField {\n"))
         self.assertFalse(RAW.search("    ConfigTextArea {\n"), "the row widget is the allowed one")
-        self.assertFalse(RAW.search("    MaterialTextArea {\n"), "a multi-line area is a different control")
+        self.assertFalse(RAW.search("    MaterialTextArea {\n"),
+                         "the deleted multi-line area was a different control; "
+                         "the pattern is anchored on the field's name, not a prefix")
         self.assertFalse(RAW.search("property alias textArea: textArea"))
 
 

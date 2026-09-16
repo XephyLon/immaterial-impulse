@@ -1,7 +1,12 @@
 # Duplicated components — the repo-wide census
 
-Status: inventory only, nothing swept. Compiled 2026-08-28 from two
-read-only surveys of `main` @ `8df7e3e93`. Supersedes nothing; the Phone
+Status: swept 2026-09-16 in six PRs (icon and pill buttons onto `IconButton` /
+`DialogButton`; switch rows onto `ConfigSwitch`; list rows onto `CatalogueRow`;
+`PopupPlate`, `BarStandalonePill`, `ConfigActionRow` added; empty states onto
+`PagePlaceholder`, badges onto `Badge`; `MaterialTextField`, `MaterialTextArea`,
+`MaterialPill`, `Fab`, `VibrantToolbarButton`, `StyledPopupMenu` deleted). The
+vendored `designsystem` mirror is the one item left, a licensing call. Compiled
+2026-08-28 from two read-only surveys of `main` @ `8df7e3e93`. Supersedes nothing; the Phone
 tab's own consolidation plan is
 [`phone-tab-component-consolidation.md`](phone-tab-component-consolidation.md).
 

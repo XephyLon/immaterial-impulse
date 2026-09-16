@@ -71,7 +71,6 @@ Item {
                 { type: "modules/common/widgets/IconToolbarButton.qml", props: { text: "edit" }, toggles: true },
                 { type: "modules/common/widgets/InlineEditChip.qml", props: { chipIcon: "thermostat", value: "0.5" } },
                 { type: "modules/common/widgets/IconAndTextToolbarButton.qml", props: { iconText: "save", text: "Save" }, toggles: true },
-                { type: "modules/common/widgets/VibrantToolbarButton.qml", props: { buttonText: "Star" } },
                 { type: "modules/common/widgets/ToolbarTabButton.qml", props: { materialSymbol: "tab", current: true } },
                 { type: "modules/common/widgets/FilterChip.qml", props: { label: "Unread", chipIcon: "filter_alt" }, toggles: true },
                 { type: "modules/common/widgets/FloatingActionButton.qml", props: { iconText: "add" } },

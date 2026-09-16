@@ -75,6 +75,12 @@ own repo; the installer pins which revision it builds.
   are real buttons (hover, press, ripple); the Wi-Fi and Tailscale dialogs'
   lists and the code block's scrollbar are the shell's; the to-do field is
   the shell's field.
+- The Wi-Fi password prompt is the shell's masked field (the one the lock
+  screen and polkit use); the system prompt, user agent and autostart command
+  fields and the welcome screen's locale field are the shell's own fields.
+  Six shared widgets nothing used, or that drew a second design system, are
+  gone: `MaterialTextField`, `MaterialTextArea`, `MaterialPill`, `Fab`,
+  `VibrantToolbarButton`, `StyledPopupMenu`.
 - Three shapes that had no widget now have one: the floating plate under
   the tray and dock menus, the sidebars, the on-screen keyboard, the drop
   shelf, the search widget and the Modes editor's popups (`PopupPlate`); the
