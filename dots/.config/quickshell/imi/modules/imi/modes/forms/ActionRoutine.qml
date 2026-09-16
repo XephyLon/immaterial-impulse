@@ -28,6 +28,7 @@ ColumnLayout {
 
         FormChoice {
             Layout.fillWidth: false
+            text: Translation.tr("Do")
             current: row.obj.action ?? "run"
             onPicked: v => row.patchValue({ action: v })
             options: [

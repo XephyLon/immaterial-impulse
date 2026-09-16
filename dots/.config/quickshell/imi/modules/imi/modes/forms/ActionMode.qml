@@ -28,6 +28,7 @@ ColumnLayout {
 
         FormChoice {
             Layout.fillWidth: false
+            text: Translation.tr("Do")
             current: row.obj.action ?? "start"
             onPicked: v => row.patchValue({ action: v, id: v === "stop" ? "" : row.obj.id ?? "" })
             options: [

@@ -130,6 +130,36 @@ class ModesContract(unittest.TestCase):
             self.assertNotIn(name, everything, f"dropped in the port but still named: {name}")
         self.assertFalse((ROOT / "services/modes/conditions/CalendarCondition.qml").exists())
 
+    def test_the_editor_is_built_from_the_shells_controls(self):
+        """A StyledSwitch beside a label, or a bare segmented choice, is the fork kit growing back."""
+        # A bare StyledSwitch is allowed only where it IS the value: a
+        # section header's master switch, an action's own on/off value, a
+        # list row's enable. Everything with a label beside it is ConfigSwitch.
+        allowed = {"ModeEditor.qml": 1, "RoutineEditor.qml": 1, "ActionRow.qml": 1, "ModeListRow.qml": 1}
+        for path in MODES_UI.rglob("*.qml"):
+            n = _strip(path.read_text()).count("StyledSwitch {")
+            self.assertLessEqual(n, allowed.get(path.name, 0), f"{path.name}: {n} bare StyledSwitch(es); a labelled switch row is ConfigSwitch")
+        # A segmented choice standing on its own in a form is labelled (the
+        # settings grammar: label left, chips right); only one that shares
+        # its line with another control (Layout.fillWidth: false) may not be.
+        for path in (MODES_UI / "forms").glob("*.qml"):
+            code = _strip(path.read_text())
+            for m in re.finditer(r"FormChoice \{", code):
+                i, depth = m.end(), 1
+                while depth:
+                    depth += (code[i] == "{") - (code[i] == "}")
+                    i += 1
+                block = code[m.start():i]
+                if "Layout.fillWidth: false" in block:
+                    continue
+                self.assertRegex(block, r"\n\s*text:", f"{path.name}: a segmented choice on its own line has no label")
+        # A hand-rolled pill field: the shell's field is EditorField.
+        for path in MODES_UI.rglob("*.qml"):
+            if path.name in ("ToolbarTextField.qml",):
+                continue
+            code = _strip(path.read_text())
+            self.assertNotRegex(code, r"border\.width: \w+\.activeFocus", f"{path.name} draws its own focus ring; use EditorField")
+
     def test_settings_page_grammar(self):
         page = PAGE.read_text()
         self.assertIn("forceWidth: true", page, "every settings page takes the standard width; the notice's unwrapped text otherwise sized the column")

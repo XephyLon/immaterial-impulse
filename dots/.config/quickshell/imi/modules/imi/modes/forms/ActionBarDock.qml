@@ -16,39 +16,25 @@ ColumnLayout {
 
     spacing: Appearance.spacing.space125
 
-    RowLayout {
-        spacing: Appearance.spacing.space125
-
-        FormLabel {
-            text: Translation.tr("Bar")
-        }
-
-        FormChoice {
-            current: row.obj.bar ?? "keep"
-            onPicked: v => row.patchValue({ bar: v })
-            options: [
-                { displayName: Translation.tr("Keep"), value: "keep" },
-                { displayName: Translation.tr("Auto-hide"), value: "autoHide" },
-                { displayName: Translation.tr("Always shown"), value: "fixed" }
-            ]
-        }
+    FormChoice {
+        text: Translation.tr("Bar")
+        current: row.obj.bar ?? "keep"
+        onPicked: v => row.patchValue({ bar: v })
+        options: [
+            { displayName: Translation.tr("Keep"), value: "keep" },
+            { displayName: Translation.tr("Auto-hide"), value: "autoHide" },
+            { displayName: Translation.tr("Always shown"), value: "fixed" }
+        ]
     }
 
-    RowLayout {
-        spacing: Appearance.spacing.space125
-
-        FormLabel {
-            text: Translation.tr("Dock")
-        }
-
-        FormChoice {
-            current: row.obj.dock ?? "keep"
-            onPicked: v => row.patchValue({ dock: v })
-            options: [
-                { displayName: Translation.tr("Keep"), value: "keep" },
-                { displayName: Translation.tr("Hidden"), value: "hide" },
-                { displayName: Translation.tr("Shown"), value: "show" }
-            ]
-        }
+    FormChoice {
+        text: Translation.tr("Dock")
+        current: row.obj.dock ?? "keep"
+        onPicked: v => row.patchValue({ dock: v })
+        options: [
+            { displayName: Translation.tr("Keep"), value: "keep" },
+            { displayName: Translation.tr("Hidden"), value: "hide" },
+            { displayName: Translation.tr("Shown"), value: "show" }
+        ]
     }
 }

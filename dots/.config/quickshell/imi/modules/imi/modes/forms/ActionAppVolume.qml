@@ -62,24 +62,23 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
-        spacing: Appearance.spacing.space150
+    // The shell's switch row; the slider rides its detail line while a
+    // level is set.
+    ConfigSwitch {
+        Layout.fillWidth: true
+        leftPadding: 0
+        rightPadding: 0
+        buttonIcon: "volume_up"
+        text: Translation.tr("Set a level")
+        description: appCol.setsLevel ? Translation.tr("Sets the volume to %1 %").arg(Math.round(levelSlider.value))
+            : Translation.tr("Off: leaves the volume where it is")
+        checked: appCol.setsLevel
+        onToggleRequested: row.patchValue({ level: appCol.setsLevel ? null : 40 })
 
-        StyledSwitch {
-            checked: appCol.setsLevel
-            onClicked: row.patchValue({ level: checked ? 40 : null })
-        }
-
-        StyledText {
-            text: Translation.tr("Set level")
-            color: Appearance.colors.colOnLayer2
-        }
-
-        StyledSlider {
+        detailContent: StyledSlider {
             id: levelSlider
             Layout.fillWidth: true
-            enabled: appCol.setsLevel
-            opacity: enabled ? 1 : 0.4
+            visible: appCol.setsLevel
             from: 0
             to: 100
             stepSize: 1
@@ -88,13 +87,6 @@ ColumnLayout {
                 if (!pressed)
                     row.patchValue({ level: Math.round(value) });
             }
-        }
-
-        StyledText {
-            visible: appCol.setsLevel
-            text: `${Math.round(levelSlider.value)} %`
-            font.family: Appearance.font.family.numbers
-            color: Appearance.colors.colOnLayer2
         }
     }
 
