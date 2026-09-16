@@ -74,40 +74,20 @@ MouseArea {
         }
     }
 
-    Rectangle {
+    BarStandalonePill {
         id: pill
-        anchors.centerIn: parent
-        // The badge belongs to the group pill's footprint, not the bar's, and
-        // those two only share a centre while the group pill's insets match.
-        // Shift onto the group pill's centre along the bar's thickness.
-        anchors.verticalCenterOffset: root.vertical ? 0 : Appearance.sizes.barStandalonePillOffset
-        anchors.horizontalCenterOffset: root.vertical ? Appearance.sizes.barStandalonePillOffset : 0
-        radius: Appearance.rounding.full
+        vertical: root.vertical
+        shown: root.shown
+        horizontalPadding: Appearance.spacing.space100
         color: root.pillColor
+        // Hover is the colour above, not a dim.
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
-        // Fade + scale with the whole show/hide so it eases in and out; hover
-        // is the colour above, not a dim.
-        opacity: root.shown ? 1 : 0
-        scale: root.shown ? 1 : 0.7
-        transformOrigin: Item.Center
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on scale {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        implicitWidth: (root.vertical ? iconColumn.implicitWidth : iconRow.implicitWidth) + Appearance.spacing.space100 * 2
-        // A badge inside the group pill, not a group pill of its own.
-        implicitHeight: root.vertical
-            ? iconColumn.implicitHeight + Appearance.spacing.space50 * 2
-            : Appearance.sizes.barStandalonePillHeight
 
         Row {
             id: iconRow
             visible: !root.vertical
-            anchors.centerIn: parent
             spacing: 0
             IconSlot { on: root.micOn; sym: "mic" }
             IconSlot { on: root.cameraOn; sym: "videocam" }
@@ -119,7 +99,6 @@ MouseArea {
         Column {
             id: iconColumn
             visible: root.vertical
-            anchors.centerIn: parent
             spacing: 0
             IconSlot { on: root.micOn; sym: "mic" }
             IconSlot { on: root.cameraOn; sym: "videocam" }

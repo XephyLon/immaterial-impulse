@@ -111,29 +111,17 @@ ContentPage {
         GroupedList {
             // What is set up and what is on, with the way in: a row like the
             // others, not a banner (a notice is for something wrong).
-            ConfigRow {
-                spacing: Appearance.spacing.space200
-                MaterialSymbol {
-                    Layout.leftMargin: Appearance.spacing.space100
-                    text: Modes.active ? "play_circle" : "tune"
-                    iconSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer1
-                }
-                StyledText {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    color: Appearance.colors.colOnLayer1
-                    text: {
-                        const modes = Modes.modes.length;
-                        const routines = Modes.routines.length;
-                        const line = Translation.tr("%1 mode(s) and %2 routine(s) set up.").arg(modes).arg(routines);
-                        if (Modes.active)
-                            return line + " " + Translation.tr("%1 is on right now.").arg(Modes.activeMode?.name ?? "");
-                        return line + " " + Translation.tr("Nothing is on right now.");
-                    }
+            ConfigActionRow {
+                icon: Modes.active ? "play_circle" : "tune"
+                text: {
+                    const modes = Modes.modes.length;
+                    const routines = Modes.routines.length;
+                    const line = Translation.tr("%1 mode(s) and %2 routine(s) set up.").arg(modes).arg(routines);
+                    if (Modes.active)
+                        return line + " " + Translation.tr("%1 is on right now.").arg(Modes.activeMode?.name ?? "");
+                    return line + " " + Translation.tr("Nothing is on right now.");
                 }
                 RippleButtonWithIcon {
-                    Layout.rightMargin: Appearance.spacing.space100
                     enabled: page.opts.overlayEnabled
                     materialIcon: "open_in_new"
                     mainText: Translation.tr("Open the manager")
@@ -161,23 +149,11 @@ ContentPage {
             title: Translation.tr("Presets")
 
             GroupedList {
-                ConfigRow {
-                    spacing: Appearance.spacing.space200
-                    MaterialSymbol {
-                        Layout.leftMargin: Appearance.spacing.space100
-                        text: "restore"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        color: Appearance.colors.colOnLayer1
-                        text: page.seededText.length > 0 ? page.seededText
-                            : Translation.tr("The built-in modes (Sleep, Work, Focus, Gaming, Theater, Presentation, Relax) are ordinary entries once added: edit or delete them freely. This puts back any you removed, without touching the ones still there.")
-                    }
+                ConfigActionRow {
+                    icon: "restore"
+                    text: page.seededText.length > 0 ? page.seededText
+                        : Translation.tr("The built-in modes (Sleep, Work, Focus, Gaming, Theater, Presentation, Relax) are ordinary entries once added: edit or delete them freely. This puts back any you removed, without touching the ones still there.")
                     DialogButton {
-                        Layout.rightMargin: Appearance.spacing.space100
                         buttonText: Translation.tr("Restore missing presets")
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover
@@ -348,27 +324,15 @@ ContentPage {
             title: Translation.tr("Activity")
 
             GroupedList {
-                ConfigRow {
-                    spacing: Appearance.spacing.space200
-                    MaterialSymbol {
-                        Layout.leftMargin: Appearance.spacing.space100
-                        text: "history"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        color: Appearance.colors.colOnLayer1
-                        text: {
-                            const n = Modes.history.length;
-                            const count = n === 1 ? Translation.tr("1 entry") : Translation.tr("%1 entries").arg(n);
-                            return Translation.tr("%1 in the Activity tab. The newest 200 are kept.").arg(count);
-                        }
+                ConfigActionRow {
+                    icon: "history"
+                    text: {
+                        const n = Modes.history.length;
+                        const count = n === 1 ? Translation.tr("1 entry") : Translation.tr("%1 entries").arg(n);
+                        return Translation.tr("%1 in the Activity tab. The newest 200 are kept.").arg(count);
                     }
                     DialogButton {
                         id: clearActivityButton
-                        Layout.rightMargin: Appearance.spacing.space100
                         enabled: Modes.history.length > 0
                         // Two presses, the second within three seconds: the log is
                         // history, and a confirmation dialog does not belong on a page.
@@ -395,21 +359,9 @@ ContentPage {
             title: Translation.tr("Where it lives")
 
             GroupedList {
-                ConfigRow {
-                    spacing: Appearance.spacing.space200
-                    MaterialSymbol {
-                        Layout.leftMargin: Appearance.spacing.space100
-                        text: "folder_open"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        Layout.rightMargin: Appearance.spacing.space100
-                        wrapMode: Text.WordWrap
-                        color: Appearance.colors.colOnLayer1
-                        text: Translation.tr("Modes and routines are saved in the shell config under \"modes\", so a config backup carries them. What is running and the activity log are state, kept separately and restored after a restart.")
-                    }
+                ConfigActionRow {
+                    icon: "folder_open"
+                    text: Translation.tr("Modes and routines are saved in the shell config under \"modes\", so a config backup carries them. What is running and the activity log are state, kept separately and restored after a restart.")
                 }
             }
         }

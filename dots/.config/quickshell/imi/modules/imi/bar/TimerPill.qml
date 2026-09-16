@@ -55,36 +55,16 @@ MouseArea {
         return `${m}:${sec}`;
     }
 
-    Rectangle {
+    BarStandalonePill {
         id: pill
-        anchors.centerIn: parent
-        // The badge belongs to the group pill's footprint, not the bar's, and
-        // those two only share a centre while the group pill's insets match.
-        // Shift onto the group pill's centre along the bar's thickness.
-        anchors.verticalCenterOffset: root.vertical ? 0 : Appearance.sizes.barStandalonePillOffset
-        anchors.horizontalCenterOffset: root.vertical ? Appearance.sizes.barStandalonePillOffset : 0
-        radius: Appearance.rounding.full
+        vertical: root.vertical
+        shown: root.shown
+        dimmed: root.containsMouse
         color: root.pillColor
-        // Fade + scale with the show/hide so it eases in and out.
-        opacity: root.shown ? (root.containsMouse ? 0.88 : 1) : 0
-        scale: root.shown ? 1 : 0.7
-        transformOrigin: Item.Center
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on scale {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        implicitWidth: pillRow.implicitWidth + Appearance.spacing.space150 * 2
-        // A badge inside the group pill, not a group pill of its own.
-        implicitHeight: root.vertical
-            ? pillColumn.implicitHeight + Appearance.spacing.space50 * 2
-            : Appearance.sizes.barStandalonePillHeight
 
         RowLayout {
             id: pillRow
             visible: !root.vertical
-            anchors.centerIn: parent
             spacing: Appearance.spacing.space50
             MaterialSymbol {
                 text: root.icon
@@ -102,7 +82,6 @@ MouseArea {
         ColumnLayout {
             id: pillColumn
             visible: root.vertical
-            anchors.centerIn: parent
             spacing: 0
             MaterialSymbol {
                 Layout.alignment: Qt.AlignHCenter

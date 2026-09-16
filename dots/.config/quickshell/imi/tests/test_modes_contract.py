@@ -22,6 +22,7 @@ SCHEMA = ROOT / "services/modes/ModeSchema.js"
 ACTIONS = ROOT / "services/modes/ModeActions.qml"
 PILL = ROOT / "modules/imi/bar/ModeIndicator.qml"
 PILL_CARD = ROOT / "modules/imi/bar/ModeIndicatorPopup.qml"
+SHARED_PILL = ROOT / "modules/imi/bar/BarStandalonePill.qml"
 RECORD = ROOT / "modules/imi/bar/RecordIndicator.qml"
 TOGGLE = ROOT / "modules/common/models/quickToggles/ModesToggle.qml"
 CLASSIC = ROOT / "modules/imi/sidebarRight/quickToggles/ClassicQuickPanel.qml"
@@ -87,15 +88,32 @@ class ModesContract(unittest.TestCase):
         self.assertIn('id: "modes", icon: "tune", component: Qt.resolvedUrl("pages/ModesConfig.qml")', index)
 
     def test_the_pill_is_the_record_indicators_grammar(self):
+        """Still the record indicator's grammar - now written once.
+
+        The badge itself (the two centre offsets, the radius, the fade and the
+        scale) was five verbatim copies - this pill, RecordIndicator,
+        TimerPill, SubmapIndicator, PrivacyIndicator - and is one widget,
+        BarStandalonePill, which spells them over its own root; every bar
+        badge, the record indicator included, hands it its state.
+        """
         pill = _strip(PILL.read_text())
         record = _strip(RECORD.read_text())
-        for line in ("visible: implicitWidth > 0",
-                     "anchors.verticalCenterOffset: root.vertical ? 0 : Appearance.sizes.barStandalonePillOffset",
+        shared = _strip(SHARED_PILL.read_text())
+        for line in ("BarStandalonePill {", "vertical: root.vertical", "shown: root.shown", "dimmed: root.containsMouse"):
+            self.assertIn(line, record, f"the record indicator stopped using the shared badge: {line}")
+        self.assertNotIn("barStandalonePillOffset", record, "the badge's geometry is the widget's, not a copy in the record indicator")
+        self.assertIn("visible: implicitWidth > 0", pill)
+        for line in ("anchors.verticalCenterOffset: pill.vertical ? 0 : Appearance.sizes.barStandalonePillOffset",
+                     "anchors.horizontalCenterOffset: pill.vertical ? Appearance.sizes.barStandalonePillOffset : 0",
                      "radius: Appearance.rounding.full",
-                     "opacity: root.shown ? (root.containsMouse ? 0.88 : 1) : 0",
-                     "scale: root.shown ? 1 : 0.7"):
-            self.assertIn(line, pill, line)
-            self.assertIn(line, record, f"the grammar's own source moved: {line}")
+                     "opacity: pill.shown ? (pill.dimmed ? 0.88 : 1) : 0",
+                     "scale: pill.shown ? 1 : 0.7"):
+            self.assertIn(line, shared, f"the shared badge dropped: {line}")
+        for line in ("BarStandalonePill {",
+                     "vertical: root.vertical",
+                     "shown: root.shown",
+                     "dimmed: root.containsMouse"):
+            self.assertIn(line, pill, f"the pill stopped handing the badge its state: {line}")
         self.assertIn("Behavior on implicitWidth {\n        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)", pill)
         for fork_only in ("qs.modules.imi.bar.shared", "shared/cards", "HeroCard", "toggleVisible", "toggleHighlight"):
             self.assertNotIn(fork_only, PILL.read_text(), f"fork-only dependency left in the pill: {fork_only}")

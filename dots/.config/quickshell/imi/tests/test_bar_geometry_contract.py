@@ -33,6 +33,11 @@ BADGES = (
     ROOT / "modules/imi/bar/PrivacyIndicator.qml",
     ROOT / "modules/imi/bar/SubmapIndicator.qml",
 )
+# Two of the three now declare the shared badge instead of spelling the
+# Rectangle out, so the geometry they are pinned on lives in one file. The
+# pins follow the declaration: a badge that names `BarStandalonePill` is read
+# through it, which is what keeps #99 from coming back through the widget.
+SHARED_PILL = ROOT / "modules/imi/bar/BarStandalonePill.qml"
 
 # A margin that is nothing but one named token: `Appearance.sizes.barX`.
 _TOKEN_ONLY = re.compile(r"^Appearance\.sizes\.(\w+)$")
@@ -99,9 +104,15 @@ class StandaloneBadgeOffsetTests(unittest.TestCase):
 
     def _pill(self, path):
         qml = _qml_source(path)
-        pills = [b for b in qml.elements("Rectangle") if qml.element_id(b) == "pill"]
-        self.assertEqual(len(pills), 1, f"expected one `pill` Rectangle in {path.name}")
         self.assertEqual(qml.unclosed, 0, f"unbalanced braces in {path.name}")
+        shared = [b for b in qml.elements("BarStandalonePill") if qml.element_id(b) == "pill"]
+        if shared:
+            self.assertEqual(len(shared), 1,
+                             f"expected one `pill` BarStandalonePill in {path.name}")
+            qml = _qml_source(SHARED_PILL)
+            self.assertEqual(qml.unclosed, 0, f"unbalanced braces in {SHARED_PILL.name}")
+        pills = [b for b in qml.elements("Rectangle") if qml.element_id(b) == "pill"]
+        self.assertEqual(len(pills), 1, f"expected one `pill` Rectangle in {qml.path.name}")
         return qml, dict(qml.members(pills[0]))
 
     def test_each_badge_shifts_onto_its_group_pills_centre(self):

@@ -77,23 +77,11 @@ ContentPage {
             GroupedList {
                 // How to get a client, as a row with the way there - not a
                 // banner (a notice is for something wrong). Gone once set.
-                ConfigRow {
-                    property bool rowVisible: !GoogleAccount.configured
-                    spacing: Appearance.spacing.space200
-                    MaterialSymbol {
-                        Layout.leftMargin: Appearance.spacing.space100
-                        text: "key"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        color: Appearance.colors.colOnLayer1
-                        text: Translation.tr("Google needs an OAuth client of your own: a Desktop app client under APIs & Services > Credentials, with the Calendar, Tasks and Gmail APIs enabled. Its ID and secret go below and are kept in the keyring.")
-                    }
+                ConfigActionRow {
+                    rowVisible: !GoogleAccount.configured
+                    icon: "key"
+                    text: Translation.tr("Google needs an OAuth client of your own: a Desktop app client under APIs & Services > Credentials, with the Calendar, Tasks and Gmail APIs enabled. Its ID and secret go below and are kept in the keyring.")
                     RippleButtonWithIcon {
-                        Layout.rightMargin: Appearance.spacing.space100
                         materialIcon: "open_in_new"
                         mainText: Translation.tr("Open the console")
                         onClicked: Qt.openUrlExternally("https://console.cloud.google.com/apis/credentials")
@@ -119,22 +107,14 @@ ContentPage {
                     confirmButtonIcon: "save"
                     onConfirmClicked: GoogleAccount.setClient(page.clientIdDraft, page.clientSecretDraft)
                 }
-                ConfigRow {
-                    MaterialSymbol {
-                        text: GoogleAccount.connected ? "verified_user" : "person_off"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer1
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: GoogleAccount.connected && GoogleAccount.refreshGaveUp
-                            ? Translation.tr("The sign-in no longer works (%1) - disconnect and connect again").arg(GoogleAccount.lastError)
-                            : GoogleAccount.connected
-                            ? (GoogleAccount.email.length > 0 ? Translation.tr("Signed in as %1").arg(GoogleAccount.email) : Translation.tr("Signed in"))
-                            : GoogleAccount.connecting ? Translation.tr("Finish the sign-in in your browser…")
-                            : Translation.tr("Not signed in")
-                        color: Appearance.colors.colOnLayer1
-                    }
+                ConfigActionRow {
+                    icon: GoogleAccount.connected ? "verified_user" : "person_off"
+                    text: GoogleAccount.connected && GoogleAccount.refreshGaveUp
+                        ? Translation.tr("The sign-in no longer works (%1) - disconnect and connect again").arg(GoogleAccount.lastError)
+                        : GoogleAccount.connected
+                        ? (GoogleAccount.email.length > 0 ? Translation.tr("Signed in as %1").arg(GoogleAccount.email) : Translation.tr("Signed in"))
+                        : GoogleAccount.connecting ? Translation.tr("Finish the sign-in in your browser…")
+                        : Translation.tr("Not signed in")
                     RippleButtonWithIcon {
                         enabled: GoogleAccount.configured && !GoogleAccount.connecting
                         materialIcon: GoogleAccount.connected ? "logout" : "login"

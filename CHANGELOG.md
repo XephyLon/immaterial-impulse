@@ -67,6 +67,12 @@ own repo; the installer pins which revision it builds.
   row kit; the phone tab's navigation cards, app rows and the Intelligence
   panel's model and session rows draw with the shell's catalogue row; persona
   and distro choices are the shell's chips.
+- Three shapes that had no widget now have one: the floating plate under
+  the tray and dock menus, the sidebars, the on-screen keyboard, the drop
+  shelf, the search widget and the Modes editor's popups (`PopupPlate`); the
+  bar's standalone pills - submap, timer, mode, record, privacy - (one
+  `BarStandalonePill`); and the settings pages' glyph-text-action rows
+  (`ConfigActionRow`).
 - One icon button and one text button across the shell. Forty-odd
   hand-drawn icon buttons (eight different sizes) are the new `IconButton`;
   the settings pages', sidebars' and dialogs' text pills are `DialogButton`;

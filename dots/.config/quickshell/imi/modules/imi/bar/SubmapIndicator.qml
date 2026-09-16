@@ -40,61 +40,32 @@ Item {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
-    Rectangle {
+    BarStandalonePill {
         id: pill
-        anchors.centerIn: parent
-        // The badge belongs to the group pill's footprint, not the bar's, and
-        // those two only share a centre while the group pill's insets match.
-        // Shift onto the group pill's centre along the bar's thickness.
-        anchors.verticalCenterOffset: root.vertical ? 0 : Appearance.sizes.barStandalonePillOffset
-        anchors.horizontalCenterOffset: root.vertical ? Appearance.sizes.barStandalonePillOffset : 0
-        radius: Appearance.rounding.full
+        vertical: root.vertical
+        shown: root.shown
         color: root.pillColor
-        // Fade + scale with the show/hide so it eases in and out.
-        opacity: root.shown ? 1 : 0
-        scale: root.shown ? 1 : 0.7
-        transformOrigin: Item.Center
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on scale {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        implicitWidth: root.vertical
-            ? verticalIcon.implicitWidth + Appearance.spacing.space50 * 2
-            : pillRow.implicitWidth + Appearance.spacing.space150 * 2
-        // A badge inside the group pill, not a group pill of its own.
-        implicitHeight: root.vertical
-            ? verticalIcon.implicitHeight + Appearance.spacing.space50 * 2
-            : Appearance.sizes.barStandalonePillHeight
 
         RowLayout {
             id: pillRow
-            visible: !root.vertical
-            anchors.centerIn: parent
             spacing: Appearance.spacing.space50
             MaterialSymbol {
                 text: "keyboard"
                 iconSize: Appearance.font.pixelSize.large
                 color: root.onColor
             }
+            // The vertical bar is too narrow for the submap name, so the glyph
+            // stands alone there (as PrivacyIndicator's vertical form does).
+            // One label that hides, not a second icon beside it: the pill sizes
+            // itself from its slot's childrenRect, which counts a hidden
+            // sibling's width, whereas a layout drops a hidden child's.
             StyledText {
+                visible: !root.vertical
                 text: root.displayName
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.Medium
                 color: root.onColor
             }
-        }
-
-        // The vertical bar is too narrow for the submap name; show the icon
-        // only there (matches PrivacyIndicator's icon-only vertical form).
-        MaterialSymbol {
-            id: verticalIcon
-            visible: root.vertical
-            anchors.centerIn: parent
-            text: "keyboard"
-            iconSize: Appearance.font.pixelSize.large
-            color: root.onColor
         }
     }
 }
