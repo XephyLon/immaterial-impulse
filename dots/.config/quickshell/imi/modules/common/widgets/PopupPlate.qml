@@ -30,7 +30,20 @@ Item {
     implicitWidth: plate.implicitWidth
     implicitHeight: plate.implicitHeight
 
+    Rectangle {
+        id: plate
+        anchors.fill: parent
+        radius: root.radius
+        color: root.color
+        border.width: root.bordered ? Appearance.borderWidth.standard : 0
+        border.color: root.colBorder
+    }
+
+    // Declared after the plate so `plate` exists when the shadow binds its
+    // target (declared first, the Loader built it against an undefined id
+    // for one frame and logged a TypeError); z puts it behind the plate.
     Loader {
+        z: -1
         active: root.shadow
         anchors.fill: parent
         sourceComponent: StyledRectangularShadow {
@@ -39,14 +52,5 @@ Item {
             visible: plate.visible
             opacity: plate.opacity
         }
-    }
-
-    Rectangle {
-        id: plate
-        anchors.fill: parent
-        radius: root.radius
-        color: root.color
-        border.width: root.bordered ? Appearance.borderWidth.standard : 0
-        border.color: root.colBorder
     }
 }
