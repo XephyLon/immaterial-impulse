@@ -55,14 +55,11 @@ PopupWindow {
                 stackView.pop();
         }
 
-        StyledRectangularShadow {
-            target: popupBackground
-            opacity: popupBackground.opacity
-        }
-
-        Rectangle {
+        PopupPlate {
             id: popupBackground
             readonly property real padding: Appearance.spacing.space50
+            // The item list scrolls inside; the root clips as the Rectangle did.
+            clip: true
             anchors {
                 left: parent.left
                 right: parent.right
@@ -72,11 +69,7 @@ PopupWindow {
                 margins: root.padding
             }
 
-            color: Appearance.colors.colLayer0
             radius: Appearance.rounding.windowRounding
-            border.width: Appearance.borderWidth.standard
-            border.color: Appearance.colors.colLayer0Border
-            clip: true
 
             opacity: 0
             Component.onCompleted: opacity = 1

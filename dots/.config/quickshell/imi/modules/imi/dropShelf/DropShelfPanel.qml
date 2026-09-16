@@ -148,12 +148,7 @@ Scope {
             }
             Component.onDestruction: DropShelf.autoDismissHeld = false
 
-            StyledRectangularShadow {
-                target: shelfBg
-                opacity: shelfLife.progress
-            }
-
-            Rectangle {
+            PopupPlate {
                 id: shelfBg
                 anchors.fill: parent
                 // Enter and leave from the lifecycle's one scalar: a fade
@@ -172,8 +167,6 @@ Scope {
                 color: root.blurBackground
                     ? ColorUtils.transparentize(Appearance.colors.colLayer0, 1 - root.backgroundOpacity)
                     : Appearance.colors.colLayer0
-                border.width: 1
-                border.color: Appearance.colors.colLayer0Border
 
                 ColumnLayout {
                     id: contentColumn

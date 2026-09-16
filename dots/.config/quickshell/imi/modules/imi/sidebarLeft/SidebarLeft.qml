@@ -298,21 +298,13 @@ Scope { // Scope
             }
 
             // Content
-            StyledRectangularShadow {
-                target: sidebarLeftBackground
-                radius: sidebarLeftBackground.radius
-                visible: sidebarLeftBackground.visible
-            }
-            Rectangle {
+            PopupPlate {
                 id: sidebarLeftBackground
                 visible: panelWindow.slide.shown
                 anchors.top: parent.top
                 anchors.topMargin: Appearance.sizes.hyprlandGapsOut
                 width: panelWindow.sidebarWidth - Appearance.sizes.hyprlandGapsOut - Appearance.sizes.elevationMargin
                 height: parent.height - Appearance.sizes.hyprlandGapsOut * 2
-                color: Appearance.colors.colLayer0
-                border.width: Appearance.borderWidth.standard
-                border.color: Appearance.colors.colLayer0Border
                 radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1
 
                 // An `x`, not a transform: the blur region and the shadow both

@@ -157,21 +157,20 @@ Item { // Wrapper
         }
     }
 
-    StyledRectangularShadow {
-        target: searchWidgetContent
-    }
-    Rectangle { // Background
+    PopupPlate { // Background
         id: searchWidgetContent
+        // The list scrolls inside the plate; the root clips as the Rectangle did.
+        clip: true
         anchors {
             top: parent.top
             horizontalCenter: parent.horizontalCenter
             topMargin: Appearance.sizes.elevationMargin
         }
-        clip: true
         implicitWidth: columnLayout.implicitWidth
         implicitHeight: columnLayout.implicitHeight
         radius: searchBar.height / 2 + searchBar.verticalPadding
         color: Appearance.colors.colBackgroundSurfaceContainer
+        bordered: false
 
         Behavior on implicitHeight {
             id: searchHeightBehavior

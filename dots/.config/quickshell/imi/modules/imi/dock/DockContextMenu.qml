@@ -96,11 +96,7 @@ Item {
                 onCleared: root.close()
             }
 
-            StyledRectangularShadow {
-                target: menuBackground
-            }
-
-            Rectangle {
+            PopupPlate {
                 id: menuBackground
                 property real contentPadding: Appearance.spacing.space50
 
@@ -112,6 +108,7 @@ Item {
                 // (see Dock.qml's strip for what that costs).
                 anchors.centerIn: parent
                 color: Appearance.m3colors.m3surfaceContainer
+                bordered: false
                 radius: Appearance.rounding.normal
                 implicitWidth: menuColumn.implicitWidth + contentPadding * 2
                 implicitHeight: menuColumn.implicitHeight + contentPadding * 2

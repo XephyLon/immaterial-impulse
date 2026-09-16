@@ -147,18 +147,12 @@ Item {
     implicitHeight: sidebarRightBackground.implicitHeight
     implicitWidth: sidebarRightBackground.implicitWidth
 
-    StyledRectangularShadow {
-        target: sidebarRightBackground
-    }
-    Rectangle {
+    PopupPlate {
         id: sidebarRightBackground
 
         anchors.fill: parent
         implicitHeight: parent.height - Appearance.sizes.hyprlandGapsOut * 2
         implicitWidth: sidebarWidth - Appearance.sizes.hyprlandGapsOut * 2
-        color: Appearance.colors.colLayer0
-        border.width: Appearance.borderWidth.standard
-        border.color: Appearance.colors.colLayer0Border
         radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 5
 
         ColumnLayout {

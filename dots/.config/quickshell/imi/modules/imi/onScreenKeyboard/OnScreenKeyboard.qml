@@ -81,13 +81,10 @@ Scope { // Scope
             }
 
             // Background
-            StyledRectangularShadow {
-                target: oskBackground
-            }
-            Rectangle {
+            PopupPlate {
                 id: oskBackground
                 anchors.centerIn: parent
-                color: Appearance.colors.colLayer0
+                bordered: false
                 radius: Appearance.rounding.windowRounding
                 property real padding: Appearance.spacing.space150
                 implicitWidth: oskRowLayout.implicitWidth + padding * 2
