@@ -369,12 +369,12 @@ function blendBox(edge, pill, lift, spill) {
     var sp = Number(spill) || 0;
     if (isVertical(e)) {
         var box = { x: pill.x, y: pill.y - sp, width: pill.width + l, height: pill.height + 2 * sp };
-        if (e === "left") { box.x = pill.x - l; box.bandEdge = l; box.normal = { x: -1, y: 0 }; }
+        if (e === "left") { box.x = pill.x - l; box.bandEdge = 0; box.normal = { x: -1, y: 0 }; }
         else { box.bandEdge = pill.width + l; box.normal = { x: 1, y: 0 }; }
         return box;
     }
     var box = { x: pill.x - sp, y: pill.y, width: pill.width + 2 * sp, height: pill.height + l };
-    if (e === "top") { box.y = pill.y - l; box.bandEdge = l; box.normal = { x: 0, y: -1 }; }
+    if (e === "top") { box.y = pill.y - l; box.bandEdge = 0; box.normal = { x: 0, y: -1 }; }
     else { box.bandEdge = pill.height + l; box.normal = { x: 0, y: 1 }; }
     return box;
 }

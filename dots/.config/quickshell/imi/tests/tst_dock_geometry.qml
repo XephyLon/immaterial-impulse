@@ -404,10 +404,31 @@ TestCase {
         // box's own frame, so the shader has one number for it.
         const pill = { x: 100, y: 5, width: 400, height: 60 };
         compare(Geometry.blendBox("bottom", pill, 4, 20), { x: 80, y: 5, width: 440, height: 64, bandEdge: 64, normal: { x: 0, y: 1 } });
-        compare(Geometry.blendBox("top", pill, 4, 20), { x: 80, y: 1, width: 440, height: 64, bandEdge: 4, normal: { x: 0, y: -1 } });
+        compare(Geometry.blendBox("top", pill, 4, 20), { x: 80, y: 1, width: 440, height: 64, bandEdge: 0, normal: { x: 0, y: -1 } });
         const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.blendBox("left", side, 4, 20), { x: 1, y: 80, width: 64, height: 440, bandEdge: 4, normal: { x: -1, y: 0 } });
+        compare(Geometry.blendBox("left", side, 4, 20), { x: 1, y: 80, width: 64, height: 440, bandEdge: 0, normal: { x: -1, y: 0 } });
         compare(Geometry.blendBox("right", side, 4, 20), { x: 5, y: 80, width: 64, height: 440, bandEdge: 64, normal: { x: 1, y: 0 } });
+    }
+
+    function test_the_band_edge_is_where_the_pill_rests_at_every_edge() {
+        // The band's inner edge, in the item's own frame, is the pill's REST
+        // outward edge - the lifted pill plus the lift - at every edge. The
+        // first cut placed it a lift further out on the top and left edges
+        // (the box already starts at the band there), and the field drew a
+        // band-coloured slab into the gap along the whole box, then dropped
+        // it in one frame at the hand-over (a reviewer's frame scan).
+        const lift = 4;
+        const pill = { x: 100, y: 5, width: 400, height: 60 };
+        const side = { x: 5, y: 100, width: 60, height: 400 };
+        const rest = {
+            bottom: pill.y + pill.height + lift, top: pill.y - lift,
+            left: side.x - lift, right: side.x + side.width + lift
+        };
+        for (const edge of ["bottom", "top", "left", "right"]) {
+            const vertical = edge === "left" || edge === "right";
+            const b = Geometry.blendBox(edge, vertical ? side : pill, lift, 20);
+            compare((vertical ? b.x : b.y) + b.bandEdge, rest[edge], edge);
+        }
     }
 
     function test_the_pills_field_reaches_into_the_band_until_the_lift_clears_a_pixel() {
