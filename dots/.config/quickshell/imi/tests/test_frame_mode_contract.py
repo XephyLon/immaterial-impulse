@@ -221,7 +221,10 @@ class FrameModeContract(unittest.TestCase):
         # software scene graph) - over the whole scalar, or a square corner
         # hovered over a lit gap for the lift's first half (measured).
         self.assertIn("readonly property bool necked: dockRoot.splitTravel > 0 && splitNeck.fieldAvailable", dock)
-        self.assertIn("dockVisualBackground.necked ? Appearance.animation.splitSeam : 0,\n                                dockVisualBackground.necked ? Appearance.animation.splitNeckReach : 1)", dock,
+        # ...and with one, from where the pill's ends leave the band (before
+        # the seam, for a short lift) to the pinch.
+        self.assertIn("readonly property var cornerSpan: dockVisualBackground.necked\n                                ? DockGeometry.cornerSpan(dockRoot.splitTravel, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)\n                                : ({ seam: 0, reach: 1 })", dock)
+        self.assertIn("dockVisualBackground.cornerSpan.seam, dockVisualBackground.cornerSpan.reach)", dock,
                       "the corners round over the neck's span - seam to pinch - or over the whole look scalar without a lift")
         neck = dock[dock.index("id: splitNeck"):]
         neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]

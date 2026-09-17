@@ -281,6 +281,24 @@ function cornerRadiiAt(edge, radius, apart, seam, reach) {
     return r;
 }
 
+// The outward corners' span on the scalar when a neck is drawn. The neck's
+// blend is nothing at the pill's ends (it tapers to zero there), so the ends
+// leave the band as soon as the lift outruns the field's reach into it -
+// the gap under them is 2 * lift - FIELD_REACH, visible at half a pixel -
+// which for a short travel is before the seam. A corner still square there
+// hovered over a lit gap for two frames (measured). So the span starts where
+// the ends open, never later than the seam, and still ends at the pinch the
+// neck pinches at. With no travel there is no neck: the whole scalar.
+function cornerSpan(travel, seam, reach) {
+    var t = Number(travel) || 0;
+    if (t <= 0) return { seam: 0, reach: 1 };
+    var sm = Math.max(0, Math.min(0.999, Number(seam) || 0));
+    var rc = Math.max(0.001, Math.min(1, Number(reach) || 0));
+    var pinch = sm + (1 - sm) * rc;
+    var open = Math.min(sm, (FIELD_REACH + 0.5) / 2 / t);
+    return { seam: open, reach: (pinch - open) / (1 - open) };
+}
+
 // The two ends of cornerRadiiAt, for a caller with no scalar.
 function cornerRadii(edge, radius, attached) {
     return cornerRadiiAt(edge, radius, attached ? 0 : 1, 0, 1);

@@ -319,6 +319,27 @@ TestCase {
         compare(Geometry.liftOffset("bottom", 10, 5), { x: 0, y: 0 });
     }
 
+    function test_with_a_neck_the_corners_start_where_the_pill_s_ends_leave_the_band() {
+        // The neck's blend is nothing at the pill's ends, so the ends leave
+        // the band as soon as the lift outruns the field's reach into it -
+        // well before the seam - and a corner still square there hovered
+        // over a lit gap for two frames (a reviewer's frame scan). The span
+        // starts where the ends open (the lift at which the gap under them
+        // is half a pixel: 2 * lift - FIELD_REACH = 0.5) and still ends at
+        // the same pinch.
+        const span = Geometry.cornerSpan(5, 0.5, 0.8);
+        compare(span.seam, 0.25, "1.25 px of a 5 px lift");
+        fuzzyCompare(span.seam + (1 - span.seam) * span.reach, 0.9, 1e-9, "the pinch is unchanged");
+        compare(Geometry.cornerRadiiAt("bottom", 20, 0.25, span.seam, span.reach).bottomLeft, 0, "square while the ends touch");
+        verify(Geometry.cornerRadiiAt("bottom", 20, 0.4, span.seam, span.reach).bottomLeft > 0, "rounding before the seam");
+        compare(Geometry.cornerRadiiAt("bottom", 20, 0.9, span.seam, span.reach).bottomLeft, 20, "round at the pinch");
+        // A long lift opens the ends early; the span never starts after the seam.
+        fuzzyCompare(Geometry.cornerSpan(20, 0.5, 0.8).seam, 0.0625, 1e-9);
+        compare(Geometry.cornerSpan(1, 0.5, 0.8).seam, 0.5, "a lift too short to open the ends early keeps the seam");
+        // No travel: no seam, no neck - the whole scalar.
+        compare(Geometry.cornerSpan(0, 0.5, 0.8), { seam: 0, reach: 1 });
+    }
+
     function test_the_outward_corners_round_from_the_seam_to_the_pinch() {
         // Fused, the seam is square; free, the pill is a pill. The outward
         // pair rounds over the NECK'S span - from the seam, where the

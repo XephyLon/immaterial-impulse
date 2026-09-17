@@ -474,11 +474,17 @@ Scope {
                             // (the software scene graph) - over the whole scalar:
                             // keyed on a pinch that is never drawn, a square
                             // corner hovered over a lit gap for half the lift.
+                            // With a neck, the span starts where the pill's ends
+                            // leave the band - the neck's blend is nothing at the
+                            // ends, so for a short lift that is before the seam -
+                            // and still ends at the pinch.
                             readonly property bool necked: dockRoot.splitTravel > 0 && splitNeck.fieldAvailable
+                            readonly property var cornerSpan: dockVisualBackground.necked
+                                ? DockGeometry.cornerSpan(dockRoot.splitTravel, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)
+                                : ({ seam: 0, reach: 1 })
                             readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius,
                                 dockRoot.liftFromTab || dockRoot.splitTarget === 0 ? dockRoot.apart : 1,
-                                dockVisualBackground.necked ? Appearance.animation.splitSeam : 0,
-                                dockVisualBackground.necked ? Appearance.animation.splitNeckReach : 1)
+                                dockVisualBackground.cornerSpan.seam, dockVisualBackground.cornerSpan.reach)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft
