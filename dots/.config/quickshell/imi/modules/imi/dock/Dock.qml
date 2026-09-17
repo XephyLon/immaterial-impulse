@@ -11,7 +11,6 @@ import Quickshell.Io
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
-import QtQuick.Shapes
 import "dock_geometry.js" as DockGeometry
 
 Scope {
@@ -168,14 +167,27 @@ Scope {
             onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedBefore
             Behavior on splitProgress {
                 id: splitBehavior
+                // Where the pill was when the target changed - latched, because
+                // a duration bound to the moving scalar re-evaluates every
+                // frame of its own run and shortens it as it goes (measured: a
+                // reversal at 250 ms took 680). `targetValue` moves once, before
+                // the animation starts, and the scalar is still at rest then.
+                property real from: 0
+                onTargetValueChanged: splitBehavior.from = dockRoot.splitProgress
                 // No lift, no spatial tier: an unpinned dock at the default
                 // band, or the frame switching off, changes its LOOK and
                 // that runs on the effects tier alone (lookApart below).
                 enabled: dockRoot.splitTravel > 0
                 SequentialAnimation {
                     PauseAnimation { duration: splitBehavior.targetValue === 0 && dockRoot.splitProgress >= 1 ? Appearance.animation.elementMoveFast.duration : 0 }
+                    // From part way, a proportional time with the effects
+                    // tier as its floor (the source shortens a merge this
+                    // way; here both directions): a Behavior
+                    // re-targeted at 10% otherwise takes the whole tier to
+                    // cover a tenth of the way. From the latched start, never
+                    // the moving scalar.
                     NumberAnimation {
-                        duration: Appearance.animation.split.duration
+                        duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, splitBehavior.from, splitBehavior.targetValue)
                         easing.type: Appearance.animation.split.type
                         easing.bezierCurve: Appearance.animation.split.bezierCurve
                     }
@@ -352,42 +364,76 @@ Scope {
                             visible: false
                         }
 
-                        // The neck (motion-split.md §2): a same-colour bridge
-                        // between the pill's outward edge and the band from
-                        // the seam to the pinch-off, its waist narrowing to
-                        // nothing, its flanks two concave fillets hugging the
-                        // band and the waist. One Shape on one path from the
-                        // module, no layer; boxed, never anchored - the turn
-                        // is a size, and an anchor set that changes with the
-                        // edge is the trap the strip already paid for. Under
-                        // the pill, so the pill's own edge is what the eye
-                        // reads. Up to the seam the waist is the pill's full
-                        // width: the fused outline stretching as the pill
-                        // lifts, which is the reference's swell.
-                        Shape {
+                        // The neck (motion-split.md §1, §6): the pill's field
+                        // and the band's joined by a smooth-minimum whose
+                        // radius is the neck - one shader over one box, the
+                        // way the reference builds it. The bridge and its two
+                        // concave flanks are the one blend, covered ONCE: a
+                        // path drawn under the pill antialiased its half of a
+                        // fractional boundary against the pill's half and
+                        // composited to a hairline. The blend is nothing at rest, grows to the
+                        // seam and holds; the waist (`neckWaist`) is where it
+                        // acts, tapering along the band so the neck narrows to
+                        // nothing at the pinch - a flat edge over a flat band
+                        // is one distance everywhere, and a uniform blend lets
+                        // go all at once. Boxed, never anchored: the turn is a
+                        // size. While it paints, the pill's Rectangle does not
+                        // (`opacity`, no Behavior: the same silhouette in the
+                        // same colour at both hand-overs - square corners and
+                        // no blend at 0, round corners and no waist past the
+                        // pinch - and a translucent fill drawn twice is darker).
+                        ShaderEffect {
                             id: splitNeck
                             readonly property real pillAlong: root.vertical ? dockVisualBackground.height : dockVisualBackground.width
                             readonly property real waist: DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)
-                            readonly property real fillet: DockGeometry.neckFilletSize(dockRoot.splitLift, splitNeck.pillAlong, splitNeck.waist)
-                            readonly property var box: DockGeometry.neckBox(root.edge,
-                                { x: dockVisualBackground.x, y: dockVisualBackground.y,
-                                  width: dockVisualBackground.width, height: dockVisualBackground.height },
-                                dockRoot.splitLift, splitNeck.waist, splitNeck.fillet)
-                            // Drawn for a split (a lift that began as the tab) and
-                            // for every landing; a pill that was never fused rises
-                            // without one.
-                            visible: Config.options.dock.showBackground && dockRoot.splitLift > 0 && splitNeck.waist > 0
+                            readonly property real blend: DockGeometry.neckBlend(dockRoot.splitTravel, dockRoot.splitProgress, Appearance.animation.splitSeam)
+                            // Laid out once for a motion from the rest margins,
+                            // so the item holds still while the scalar moves and
+                            // only the uniforms below change per frame.
+                            readonly property var box: DockGeometry.splitBox(root.edge,
+                                dockBackground.width, dockBackground.height,
+                                dockRoot.dockMargins, dockRoot.splitRoom, dockRoot.splitTravel)
+                            // Painted for a split (a lift that began as the tab)
+                            // and for every landing; a pill that was never fused
+                            // rises without one.
+                            // Only where a shader can draw: the software scene
+                            // graph draws no ShaderEffect, and a shader that
+                            // failed to load draws nothing - with the pill's
+                            // Rectangle handed over, either would leave the icons
+                            // over bare band for the neck's whole span. There the
+                            // pill lifts without a neck.
+                            readonly property bool fieldAvailable: splitNeck.GraphicsInfo.api !== GraphicsInfo.Software
+                                && splitNeck.status !== ShaderEffect.Error
+                            readonly property bool painting: splitNeck.fieldAvailable && Config.options.dock.showBackground
+                                && dockRoot.splitLift > 0 && splitNeck.waist > 0
                                 && (dockRoot.liftFromTab || dockRoot.splitTarget === 0)
+                            visible: painting
                             x: box.x
                             y: box.y
                             width: box.width
                             height: box.height
-                            preferredRendererType: Shape.CurveRenderer
-                            ShapePath {
-                                strokeWidth: 0
-                                fillColor: FrameGeometry.color
-                                PathSvg { path: DockGeometry.neckPath(root.edge, splitNeck.waist, root.vertical ? splitNeck.width : splitNeck.height, splitNeck.fillet) }
-                            }
+                            // The field's inputs, in the box's own pixels.
+                            readonly property vector2d resolution: Qt.vector2d(width, height)
+                            readonly property color fillColor: FrameGeometry.color
+                            readonly property vector2d pillCenter: Qt.vector2d(
+                                dockVisualBackground.x - splitNeck.x + dockVisualBackground.width / 2,
+                                dockVisualBackground.y - splitNeck.y + dockVisualBackground.height / 2)
+                            readonly property vector2d pillSize: Qt.vector2d(dockVisualBackground.width, dockVisualBackground.height)
+                            // How far the pill's field reaches into the band: the
+                            // lift's first pixels, before the blend can bridge them.
+                            readonly property real reach: DockGeometry.fieldReach(dockRoot.splitLift)
+                            readonly property vector4d pillRadii: Qt.vector4d(
+                                dockVisualBackground.frameRadii.topLeft, dockVisualBackground.frameRadii.topRight,
+                                dockVisualBackground.frameRadii.bottomRight, dockVisualBackground.frameRadii.bottomLeft)
+                            readonly property vector2d bandNormal: Qt.vector2d(box.normal.x, box.normal.y)
+                            readonly property real bandOrigin: box.bandEdge * (box.normal.x + box.normal.y)
+                            readonly property real waistHalf: splitNeck.waist / 2
+                            readonly property real waistCenter: root.vertical ? splitNeck.pillCenter.y : splitNeck.pillCenter.x
+                            readonly property real softness: DockGeometry.BLEND_SOFTNESS
+                            // The WINDOW's ratio, which follows fractional scaling;
+                            // the screen's is the output's integer scale.
+                            readonly property real pixelRatio: dockRoot.devicePixelRatio
+                            fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")
                         }
 
                         Rectangle {
@@ -404,6 +450,7 @@ Scope {
                             anchors.bottomMargin: pillMargins.bottom
                             anchors.leftMargin:   pillMargins.left
                             anchors.rightMargin:  pillMargins.right
+                            opacity: splitNeck.painting ? 0 : 1
                             color: !Config.options.dock.showBackground ? "transparent"
                                    : dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0
                             Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
@@ -423,11 +470,21 @@ Scope {
                             // The outward pair rounds from the seam, where the
                             // outlines part, to the pinch, with the neck that
                             // exposes it: square while fused, a pill once apart.
-                            // With no lift, over the look's own scalar.
+                            // With no neck - no lift, or no shader to draw one
+                            // (the software scene graph) - over the whole scalar:
+                            // keyed on a pinch that is never drawn, a square
+                            // corner hovered over a lit gap for half the lift.
+                            // With a neck, the span starts where the pill's ends
+                            // leave the band - the neck's blend is nothing at the
+                            // ends, so for a short lift that is before the seam -
+                            // and still ends at the pinch.
+                            readonly property bool necked: dockRoot.splitTravel > 0 && splitNeck.fieldAvailable
+                            readonly property var cornerSpan: dockVisualBackground.necked
+                                ? DockGeometry.cornerSpan(dockRoot.splitTravel, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)
+                                : ({ seam: 0, reach: 1 })
                             readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius,
                                 dockRoot.liftFromTab || dockRoot.splitTarget === 0 ? dockRoot.apart : 1,
-                                dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0,
-                                dockRoot.splitTravel > 0 ? Appearance.animation.splitNeckReach : 1)
+                                dockVisualBackground.cornerSpan.seam, dockVisualBackground.cornerSpan.reach)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft

@@ -281,6 +281,32 @@ function cornerRadiiAt(edge, radius, apart, seam, reach) {
     return r;
 }
 
+// The outward corners' span on the scalar when a neck is drawn. The neck's
+// blend is nothing at the pill's ends (it tapers to zero there), so the ends
+// leave the band as soon as the lift outruns the field's reach into it. The
+// pill's field reaches FIELD_REACH - lift below the pill, so its edge climbs
+// at twice the lift; this takes the ends as open once that edge is half a
+// pixel above the band's (lift 1.25 px). It is an approximation of the
+// shader, not its exact threshold: the band's zero-crossing sits a ramp
+// inside the band and the coverage ramp is a device pixel wide, so the ends
+// start to show a little earlier (the frame scan finds one threshold frame
+// with the corner still square), and at a pixel ratio above 1 slightly
+// earlier still. For the default 5 px lift that is a quarter of the way in,
+// before the seam; a corner that waited for the seam sat square over a lit
+// gap for several frames (measured). The span never starts after the seam: for
+// a lift of about 2 px or less the ends are still touching at the seam and
+// the corners start there. It ends at the pinch the neck pinches at. With
+// no travel there is no neck: the whole scalar.
+function cornerSpan(travel, seam, reach) {
+    var t = Number(travel) || 0;
+    if (t <= 0) return { seam: 0, reach: 1 };
+    var sm = Math.max(0, Math.min(0.999, Number(seam) || 0));
+    var rc = Math.max(0.001, Math.min(1, Number(reach) || 0));
+    var pinch = sm + (1 - sm) * rc;
+    var open = Math.min(sm, (FIELD_REACH + 0.5) / 2 / t);
+    return { seam: open, reach: (pinch - open) / (1 - open) };
+}
+
 // The two ends of cornerRadiiAt, for a caller with no scalar.
 function cornerRadii(edge, radius, attached) {
     return cornerRadiiAt(edge, radius, attached ? 0 : 1, 0, 1);
@@ -301,67 +327,90 @@ function neckWaist(width, apart, seam, reach) {
     return (Number(width) || 0) * (1 - t);
 }
 
-// The neck's box, from the pill's: it fills the lift between the pill's
-// outward edge and the band (the pill's REST outward edge, since the pill
-// moved and the band did not), centred along the strip at the waist plus a
-// fillet on each flank - and it reaches NECK_OVERLAP into the pill. The pill
-// is drawn over it, so nothing shows; without the overlap the pill and the
-// neck each antialiased their half of a boundary sitting on a fractional
-// pixel while the lift animated, and two half-coverages of one colour over
-// the light band composited to a hairline across the whole width for the
-// whole fused half of every lift (measured on the sandbox frames: a
-// (71, 76, 74) row inside a (22, 21, 21) body).
-var NECK_OVERLAP = 1;
-function neckBox(edge, pill, lift, waist, fillet) {
-    var e = normalizedEdge(edge);
-    var l = (Number(lift) || 0) + NECK_OVERLAP;
-    var w = (Number(waist) || 0) + 2 * (Number(fillet) || 0);
-    if (isVertical(e)) {
-        var y = pill.y + (pill.height - w) / 2;
-        return e === "left"
-            ? { x: pill.x - l + NECK_OVERLAP, y: y, width: l, height: w }
-            : { x: pill.x + pill.width - NECK_OVERLAP, y: y, width: l, height: w };
-    }
-    var x = pill.x + (pill.width - w) / 2;
-    return e === "top"
-        ? { x: x, y: pill.y - l + NECK_OVERLAP, width: w, height: l }
-        : { x: x, y: pill.y + pill.height - NECK_OVERLAP, width: w, height: l };
+// A direction's duration from part way: the tier times the distance left,
+// never under the floor (the effects tier). The source shortens a merge
+// this way (motion-split.md §1, `max(220, 820 * progress)`); here it is
+// both directions, because a Behavior re-targeted
+// mid-flight otherwise takes the whole tier to cover a tenth of the way, and
+// a lift reversed at 1% would be a jump without the floor. Clamped to the
+// unit box: the curve may overshoot, and a distance over 1 is a whole
+// direction.
+function splitDuration(base, floor, from, to) {
+    var b = Number(base) || 0;
+    var f = Number(floor) || 0;
+    var d = Math.min(1, Math.abs((Number(to) || 0) - (Number(from) || 0)));
+    return Math.max(f, Math.round(b * d));
 }
 
-// A flank fillet is as tall as the neck and never wider than the room the
-// waist leaves on its side of the pill.
-function neckFilletSize(lift, pillWidth, waist) {
-    var flank = ((Number(pillWidth) || 0) - (Number(waist) || 0)) / 2;
-    return Math.max(0, Math.min(Number(lift) || 0, flank));
+// The blend's radius - the neck as a distance field (motion-split.md §1,
+// §6): the smooth-minimum of the pill's field and the band's, whose radius
+// is what bridges the two. It has to be ZERO at rest, since a blend against
+// a fused tab fillets the tab's sides where the Rectangle that takes over
+// draws none - a pop at the hand-over - and it grows to its full value at
+// the seam, held through the settle where the waist does the narrowing. In
+// LIFTS: a polynomial smooth-minimum bridges a gap of g once its radius
+// passes 2g, and the gap at the seam is half the lift, so four lifts keeps
+// the full waist bridged to the seam with room for the flanks.
+var BLEND_LIFTS = 4;
+// The field's coverage ramp, in pixels either side of the outline: a
+// Rectangle's own antialiasing is about a pixel wide, and the hand-over
+// between the two must not change the edge.
+var BLEND_SOFTNESS = 0.75;
+function neckBlend(travel, apart, seam) {
+    var t = Number(travel) || 0;
+    if (t <= 0) return 0;
+    var sm = Math.max(0.001, Number(seam) || 0);
+    var rise = Math.max(0, Math.min(1, (Number(apart) || 0) / sm));
+    return BLEND_LIFTS * t * rise;
 }
 
-// The neck as ONE SVG path in its box's own frame - the waist rectangle with
-// a concave fillet on each flank, its straight edges hugging the pill and
-// the band - so it is one Shape with no layer rather than three items with
-// two. Drawn in (along, across): along the strip, and across from the pill
-// side (0) to the band (`lift` - the box's own depth, overlap included);
-// each edge maps that figure into its box, and a
-// reflection (top, right) flips the arcs' sweep where a rotation (left: two
-// reflections) keeps it.
-function neckPath(edge, waist, lift, fillet) {
+// How far the pill's FIELD reaches into the band: FIELD_REACH less the
+// lift. The blend is nothing at rest, so for the first pixels of a lift it
+// cannot bridge even the sub-pixel gap the coverage ramp exposes as a
+// hairline (measured: a 51 on a 21 body along the whole seam); the reach
+// keeps the union seamless until the blend is big enough to take over, and
+// is gone by then, so past the pinch the field's pill is the Rectangle's.
+// Two pixels: the band's field edge sits one ramp inside the band (the
+// shader), so a pixel of reach alone left the first frames a ramp short. A
+// scalar, extended in the shader, so nothing is built per frame.
+var FIELD_REACH = 2;
+function fieldReach(lift) {
+    return Math.max(0, FIELD_REACH - (Number(lift) || 0));
+}
+
+// The shader's box, from the pill's: the pill and the lift down to the band
+// (the pill's REST outward edge, since the pill moved and the band did not).
+// Nothing along the band past the pill's ends: the blend's radius is zero
+// outside the waist, and the waist never outgrows the pill, so a margin
+// there (the first cut had one) was pixels that only paid the early-out.
+// Boxed, never anchored. `bandEdge` is the band's inner edge in the box's
+// own frame along the across axis, and `normal` points INTO the band, so the
+// shader's field for the band is one half-plane.
+function blendBox(edge, pill, lift) {
     var e = normalizedEdge(edge);
-    var w = Number(waist) || 0;
     var l = Number(lift) || 0;
-    var f = Math.max(0, Math.min(Number(fillet) || 0, l));
-    var flips = (e === "top" || e === "right") ? 1 : 0;
-    function m(u, v) {
-        switch (e) {
-        case "top": return [u, l - v];
-        case "right": return [v, u];
-        case "left": return [l - v, u];
-        default: return [u, v];
-        }
+    if (isVertical(e)) {
+        var box = { x: pill.x, y: pill.y, width: pill.width + l, height: pill.height };
+        if (e === "left") { box.x = pill.x - l; box.bandEdge = 0; box.normal = { x: -1, y: 0 }; }
+        else { box.bandEdge = pill.width + l; box.normal = { x: 1, y: 0 }; }
+        return box;
     }
-    function pt(cmd, u, v) { var p = m(u, v); return cmd + " " + p[0] + " " + p[1]; }
-    function arc(u, v) { var p = m(u, v); return "A " + f + " " + f + " 0 0 " + flips + " " + p[0] + " " + p[1]; }
-    function reach(u, v) { return f > 0 ? arc(u, v) : pt("L", u, v); }
-    return [pt("M", f, 0), pt("L", f + w, 0), pt("L", f + w, l - f), reach(f + w + f, l),
-            pt("L", 0, l), reach(f, l - f), "Z"].join(" ");
+    var box = { x: pill.x, y: pill.y, width: pill.width, height: pill.height + l };
+    if (e === "top") { box.y = pill.y - l; box.bandEdge = 0; box.normal = { x: 0, y: -1 }; }
+    else { box.bandEdge = pill.height + l; box.normal = { x: 0, y: 1 }; }
+    return box;
+}
+
+// The shader's box for a whole motion, from the dock's box and the REST
+// margins: the pill at full lift through `blendBox`. Nothing in it moves
+// while the scalar does, so the item holds still and only its uniforms
+// change per frame; a box built from the moving pill moved the item and
+// rebuilt two objects every frame.
+function splitBox(edge, width, height, rest, room, travel) {
+    var m = liftedMargins(edge, rest, room, travel);
+    var w = Number(width) || 0, h = Number(height) || 0;
+    var full = { x: m.left, y: m.top, width: w - m.left - m.right, height: h - m.top - m.bottom };
+    return blendBox(edge, full, travel);
 }
 
 // The direction a dock icon lifts on hover and bounces on launch: inward, so

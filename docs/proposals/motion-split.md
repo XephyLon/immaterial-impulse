@@ -40,6 +40,58 @@ darker than the threshold and do not reach the outline, so they do not count.
 Frame numbers below are the clip's own (0-based); ms are relative to the
 trigger frame, at 33.3 ms per frame.
 
+### The source, read after the measurement
+
+The shell in the clip is Clavis (https://github.com/StatIndet/quickshell,
+GPL-3.0-or-later per its packaging), and its recording pill is the island; the source was read on
+2026-09-17 at 5183553 after the frames had been measured. It confirms the
+measurement at a scale of exactly 0.5 (a 2560-wide screen recorded at 1280)
+and it says how the motion is built, which the frames could not:
+
+- **The neck is a distance field, not a drawn path.**
+  `assets/shaders/keystone/frag/pill_morph.frag`: two rounded-box signed
+  distance functions (the main body and a "satellite") joined by a
+  polynomial smooth-minimum with a `blendRadius`, and the coverage is a
+  0.8 px smoothstep of the joined distance. The neck, its concave flanks and
+  the corners rounding are all the ONE blend radius; nothing is drawn twice
+  and nothing is antialiased against anything else.
+- **One scalar, linear in time, with the shape keyed in VALUE.**
+  `pillMorphProgress` runs 0 -> 1 over 1000 ms on a split and 820 ms on a
+  merge (`KeystoneSurface.qml` `pillEntryDuration`, `pillFusionDuration`),
+  `Easing.Linear`. Every dimension is a piecewise smoothstep over it
+  (`HorizontalPillRecordingVisual.qml` `morphValue`, `satelliteMorphValue`),
+  five keyframes - idle, peak, neck, split, settled - at 0, 0.58, 0.76, 0.80
+  and 1.0, the satellite holding idle until 0.32:
+
+  | | idle | peak (0.58) | neck (0.76) | split (0.80) | settled (1.0) |
+  |---|---|---|---|---|---|
+  | main width | 220 | 250 | 220 | 210 | 200 |
+  | main height | 42 | 52 | 46 | 44 | 42 |
+  | satellite offset from the main's far edge | -h/2 (inside) | 40 | 38 | 38 | 38 |
+  | blend radius | 0 | 50 | 28 | 18 | 0 |
+
+  At 0.5: main 110 x 21 against the measured 108 x 20 clock pill; joined
+  extent 250 + 40 + 26 = 316 -> 158 against the measured 156; height 52 ->
+  26 against 25; settled 200 + 38 + 21 = 259 -> 129.5 against 128. The split's
+  1000 ms is the measured 30 frames; the merge's 820 is the measured 24.
+- **A merge started mid-split is proportional**: `max(220, 820 * progress)`
+  ms (`KeystoneSurface.qml:773`), so a merge reversed early is short, with a
+  220 ms floor. (Only the merge: a split started from part way is not
+  shortened there.)
+- **Blur is published for the two bodies only** (`blurBackgroundItems`), the
+  neck unblurred.
+- **The attached island has concave edge fillets** where it meets the screen
+  edge (`AttachedEdgeCurve.qml`: a Canvas bezier 8 along, 14 deep), hidden
+  the moment it detaches.
+- **Size changes elsewhere use an overshooting bezier** (`KeystoneMotion.qml`:
+  500 ms to grow, 360 to shrink, control points past 1.0), not this scalar.
+
+What the source changes in this proposal: §4's two-segment bezier stays as
+ImI's tier (it fits the frames, and one Easing.BezierSpline is what the
+motion catalogue is made of), and §6's neck is built the way the source
+builds it - a distance-field blend in one shader - instead of a path, for
+the reasons recorded there. The reversal rule is taken as read.
+
 ## 2. The shape grammar
 
 Two bodies: the **island** (the pill) and the **child** (the stop button).
@@ -50,7 +102,10 @@ What the frames show, and what every implementation has to keep:
   (1016); its outline is `x 204-223` at rest in both sequences. What moves is
   the island's *outline*: it reaches out past the child's resting place, then
   withdraws and leaves the child behind (split); it reaches out, swallows the
-  child, then contracts to one body (merge).
+  child, then contracts to one body (merge). (In the source the satellite is
+  parameterised from the main body's far edge - `mainWidth + offset`, the
+  main swelling 220 -> 250 -> 200 under it - and the composition is centred;
+  the frames are what that composes to on screen, and the frames stand.)
 - **There is a JOINED state, and it is bigger than either rest state in both
   axes.** Split and merge both pass through exactly the same outline: `x
   82-237`, 156 px wide, 25 px tall, against a 108x20 clock pill, a 98x20
@@ -141,6 +196,15 @@ the distance early, a long tail). The samples, for the record - split swell
 `0 .04 .07 .36 .43 .57 .64 .79 .82 .86 .93 .93 1`, merge swallow
 `0 .04 .07 .14 .14 .36 .43 .57 .79 1 1`, merge absorb
 `0 .04 .27 .44 .62 .76 .84 .87 .91 .93 .96 .98 .98 1`.
+
+The source (§1) has no bezier at all: its scalar is linear in time and the
+SHAPE is keyed in value - the satellite leaves at 0.32, the swell peaks at
+0.58, the neck thins to 0.76, pinches by 0.80 and the bodies settle to 1.0.
+Read against the two-stage fit below, that puts the parting of the outlines
+(this proposal's seam, 0.5 of the value) inside the source's 0.32-0.58
+release, and the pinch (0.9 of the value, 0.7 of the time) inside its
+0.80-1.0 settle, where the blend radius runs 18 -> 0. The fit stands; the
+keyframes are the ground truth to retune against.
 
 No single catalogue curve describes a whole direction: treating either
 direction as ONE scalar with the seam at 0.5, the best catalogue curve is
@@ -247,18 +311,21 @@ colour, border and corner radii flip in one frame.
   the eye sees is ONE outline - the tab - getting taller. The two-stage
   curve's accelerating first half is that stretch; the seam is where it
   starts to part.
-- **The neck is drawn.** It is the identity of the motion: without it a
-  lift is a pill moving 5 px, which is what a settings toggle already does
-  when a margin changes. It is a same-colour bridge between the pill's
-  outward edge and the band's inner edge - the pill's full width up to the
-  seam, then a waist narrowing to nothing until `splitNeckReach` of the way
-  through the settle half, its flanks concave fillets. One `Shape` on one
-  path from the module, under the pill, in `FrameGeometry.color`; no layer,
-  no shader. It reaches one pixel into the pill: drawn edge to edge, the
-  pill and the neck each antialiased their half of a boundary sitting on a
-  fractional pixel while the lift animated, and two half-coverages of one
-  colour over the light band composited to a hairline across the whole width
-  for the whole fused half of every lift.
+- **The neck is a distance field.** It is the identity of the motion:
+  without it a lift is a pill moving 5 px, which is what a settings toggle
+  already does when a margin changes. It is built the way the source builds
+  it (§1): the pill's rounded box and the band's half-plane as signed
+  distance fields, joined by a polynomial smooth-minimum whose radius is
+  the neck, covered once by one `ShaderEffect` (`shaders/split.frag`) over
+  a box laid out once per motion from the rest margins (`splitBox`) - the
+  pill at every lift and the lift down to the band, nothing past the
+  pill's ends, where the blend's radius is zero - so the item holds still
+  and only its uniforms change per frame. The first cut was a `Shape` on one SVG path under
+  the pill, reaching a pixel into it: drawn edge to edge, the pill and the
+  path each antialiased their half of a boundary sitting on a fractional
+  pixel while the lift animated, and two half-coverages of one colour over
+  the light band composited to a hairline across the whole width for the
+  whole fused half of every lift. A field has no second edge to meet.
 
 ### The hard constraint, and the recommended shape
 
@@ -307,7 +374,11 @@ the default band its look-only switch takes the effects half alone.
   region - which tracks its item's own geometry - rides the lift. The inward
   margin gives up exactly what the outward one gains. The icons ride the
   pill through a centre offset on the strip (`liftOffset`).
-- **Corners**: `cornerRadiiAt(edge, radius, s, seam, reach)`. The two
+- **Corners**: `cornerRadiiAt(edge, radius, s, seam, reach)`, with the span
+  from `cornerSpan` when a neck is drawn: it starts where the pill's ends
+  leave the band - before the seam for the default 5 px lift, since the
+  neck's blend tapers to nothing at the ends - and ends at the pinch; with
+  no neck, over the whole scalar. The two
   outward radii are `radius * clamp((s - seam) / ((1 - seam) * reach), 0, 1)`
   - square while the outlines are one, rounding over the NECK's span as the
   flank exposes them, round by the pinch - on both directions of the one
@@ -315,14 +386,88 @@ the default band its look-only switch takes the effects half alone.
   gap once the flank had passed it (a reviewer's frame scan). The inward
   pair stays at `radius` throughout. With no lift the seam is 0, the reach
   1, and the rounding rides the look's own effects-tier scalar.
-- **The neck**: the pill's full width up to the seam (the fused outline
-  stretching as the pill lifts its first 2.5 px - the reference's swell,
-  which a 5 px band cannot show any other way), then narrowing to nothing at
-  the pinch, `splitNeckReach` of the way through the settle half
-  (`neckWaist`); the bodies settle apart after it. One `Shape` on one SVG
-  path from the module (`neckPath`: the waist rectangle with a concave
-  fillet on each flank, no bigger than the lift), `CurveRenderer`, no layer,
-  in the band's colour, under the pill.
+- **The neck**: the blend's radius is nothing at rest and four lifts at
+  the seam (`neckBlend` - a smooth-minimum bridges a gap of g once its
+  radius passes 2g, and the gap at the seam is half the lift), held through
+  the settle. It acts over the waist (`neckWaist`: the pill's full width up
+  to the seam - the fused outline stretching as the pill lifts its first
+  2.5 px, the reference's swell, which a 5 px band cannot show any other way
+  - narrowing to nothing at the pinch, `splitNeckReach` of the way through
+  the settle half), tapering along the band from the waist's centre; the
+  bodies settle apart after it. The taper is a heuristic - the blend holds
+  its full radius at the waist's centre and the neck narrows in WIDTH - and
+  it is one of four things the field needed that the source's does not,
+  because a flat pill edge faces a flat band where the source has a circle,
+  each found on the sandbox frames: the taper, because a flat edge over a
+  flat band is one distance everywhere and a uniform blend lets go all at
+  once instead of pinching; a coverage ramp of one DEVICE pixel of the
+  field's own gradient, because between two facing edges the fields'
+  gradients cancel and a ramp in field units smeared into a soft grey
+  flank - the gradient by central differences and the window's pixel
+  ratio (which follows fractional scaling) as a uniform, not `fwidth`, which GLSL ES 1.00 (the profile an OpenGL
+  2.1-class backend gets, #70) has only behind an extension, and floored so
+  the saddle between the flanks does not alias (so there, and on the
+  diagonal flanks, the ramp is somewhat wider than one device pixel), and
+  clamped to 1.5 above: differencing through the blend's taper, which
+  steepens without bound as the waist closes, drew the landing's pinch
+  frame as a half-covered stalk with the pill's body lightened above it,
+  and holding the radius fixed instead left the lift's pinch frame a
+  hard-sided post (both measured); the
+  pill's field reaching two pixels into the band less the lift
+  (`fieldReach`, a uniform), because a blend that
+  is nothing at rest cannot bridge the sub-pixel gap of the first frames and
+  the ramp showed it as a hairline along the seam; and the band's
+  zero-crossing one ramp inside the band, because its ramp otherwise tinted
+  the gap's last row along the whole box. The band's edge is given in the
+  box's own frame: 0 on the top and left edges, where the box starts at the
+  band. (A first cut put it a lift further out there; the field drew a
+  band-coloured slab into the gap on those two edges, a reviewer caught it
+  on the left-edge frames, and `tst_dock_geometry.qml` now checks the edge
+  against the pill's rest edge on all four.) While the field paints the
+  pill's `Rectangle` does not (an `opacity` flip, no Behavior): the same
+  silhouette in the same colour at both hand-overs - square corners and no
+  blend at 0, round corners and no waist past the pinch - and a translucent
+  fill drawn twice is darker. That hand-over happens only where a shader can
+  paint (`fieldAvailable`): the software scene graph draws no
+  `ShaderEffect`, and a shader whose file failed to load draws nothing, so
+  there the pill keeps its Rectangle and lifts without a neck, its outward
+  corners rounding over the whole lift (keyed on a pinch that is never
+  drawn, a square corner hovered over a lit gap for half of it). A shader that
+  loads and then fails to build on the GPU is not caught (the effect's
+  `status` reports the load); keeping the shader inside core GLSL ES 1.00
+  is the guard for that. The blur region
+  stays the pill's: the two bodies, the neck unblurred, as the source
+  publishes it.
+- **Cost**, measured with no sandbox leftovers running (AGENT.md's sandbox
+  point says why that matters). The neck alone, in a bench scene at the
+  dock's default size - a floating window inside the sandbox, the scalar
+  looping on the tier, 60 frames a second in every run - takes process CPU
+  over 8 s, three runs each: #398's `Shape` neck 49-51 ticks on hardware GL
+  and 132-135 on llvmpipe, this field 40-42 and 117-118. Qt's render-loop
+  timing (whole milliseconds) reads 0 for the render step of every frame
+  of both, on either renderer; the ~0.2 ms a frame it does show is the
+  swap, the same for both. The fragment shader's GPU time on hardware is
+  below what it can show; a GL timer query would, but Qt Quick exposes
+  none to QML, and a native harness to read one is outside this change. Fragments further than four ramps
+  from the outline return after one field evaluation, so only the edge pays
+  for the gradient. In the full sandbox shell, two sets of four
+  interleaved fresh starts of each build on hardware GL (the second on the
+  final shader): idle 59-68 ticks per 10 s against #398's 58-65 - the two
+  sets disagree on which is lower, so it is noise at this size - eight
+  motions in 12 s 138-140 against 142-147, and the dock window drawing
+  371-376 frames over those motions in both, none longer than 20 ms.
+- **A direction from part way is proportional**: the tier times the
+  distance left, never under the effects tier (`splitDuration`: the
+  source's rule for a merge, extended here to both directions, with the
+  effects tier - 200 ms before the speed slider - as the floor), from a
+  start the Behavior latches when its target changes - bound to the moving
+  scalar, the duration re-evaluated every frame of its own run and shortened
+  it as it went (measured: a reversal at 250 ms took 680). Measured after,
+  from the pin icon's position per frame: Floating then Attached 250 ms
+  later takes 400 to 650 ms out and back across four recordings (the
+  reversal point is a shell sleep plus a Python start-up, so it varies); a
+  landing reversed about 250 ms in comes back in 216 to 283 ms; a whole
+  direction runs 43 to 45 frames.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
   after the scalar lands at 1 (`attachedLook` holds the tab's look while the
   scalar is below 1; the pill takes `colLayer0` and its border once it is
@@ -331,7 +476,10 @@ the default band its look-only switch takes the effects half alone.
   Behavior is a `SequentialAnimation` whose `PauseAnimation` is the effects
   tier's length when the target is 0 (read off the Behavior's own
   `targetValue`) - the reference's dot-before-outline. Measured in the
-  sandbox: a 133 ms look change, then the descent. The border is a COLOUR
+  sandbox: the border's fade starts, and the descent's first visible
+  frame follows 167 ms later - the 200 ms pause less the descent's first
+  sub-pixel frames. (An earlier note said 133 ms; that was a change
+  detector trimming the fade's faint ends.) The border is a COLOUR
   that fades - from the tab's own colour (a transparent ring would be a
   seam, since a Rectangle's fill stops at its border) to `colLayer0Border` -
   never a width: a width animated from 0 draws nothing until it reaches 1,
@@ -383,8 +531,8 @@ the default band its look-only switch takes the effects half alone.
 Sandbox recordings at 60 fps (`wf-recorder` on the nested output), both
 directions, read frame by frame the way the reference was: the pill's
 extent one row above the band goes 322 -> 0 px across a ~700 ms lift and
-0 -> 322 across a ~600 ms landing that starts 133 ms after the look has
-changed; pinned and unpinned; the default band and 14 px; the dock on the
+0 -> 322 across a ~600 ms landing that starts once the 200 ms look change
+has run; pinned and unpinned; the default band and 14 px; the dock on the
 left edge; the settings row. `tst_dock_geometry.qml` pins the lift, the
 room, the lifted margins, the icon offset, the corners at a scalar and the
 neck's boxes; `test_frame_mode_contract.py` pins the tier, the one scalar

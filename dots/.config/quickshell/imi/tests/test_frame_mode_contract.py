@@ -9,6 +9,9 @@ family loads Frame only while the option is on; the bands reserve nothing and
 take no input; the settings rows and the search index.
 """
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -162,7 +165,7 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("SequentialAnimation", behavior)
         self.assertIn("PauseAnimation { duration: splitBehavior.targetValue === 0 && dockRoot.splitProgress >= 1 ? Appearance.animation.elementMoveFast.duration : 0 }", behavior,
                       "a pause only when a look change is pending - a lift reversed mid-flight parked the pill in the air")
-        for half in ("duration: Appearance.animation.split.duration",
+        for half in ("Appearance.animation.split.duration",
                      "easing.type: Appearance.animation.split.type",
                      "easing.bezierCurve: Appearance.animation.split.bezierCurve"):
             self.assertIn(half, behavior, "the tier is taken whole")
@@ -213,24 +216,90 @@ class FrameModeContract(unittest.TestCase):
         # The corners and the neck are keyed on the SEAM - the outward pair
         # rounds from it, the neck lives from it to the pinch - so the token
         # is read, not decorative.
-        self.assertIn("dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0,\n                                dockRoot.splitTravel > 0 ? Appearance.animation.splitNeckReach : 1)", dock,
+        # With a neck to expose them, the outward corners round over the
+        # neck's span; without one - no lift, or no shader to draw it (the
+        # software scene graph) - over the whole scalar, or a square corner
+        # hovered over a lit gap for the lift's first half (measured).
+        self.assertIn("readonly property bool necked: dockRoot.splitTravel > 0 && splitNeck.fieldAvailable", dock)
+        # ...and with one, from where the pill's ends leave the band (before
+        # the seam, for a short lift) to the pinch.
+        self.assertIn("readonly property var cornerSpan: dockVisualBackground.necked\n                                ? DockGeometry.cornerSpan(dockRoot.splitTravel, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)\n                                : ({ seam: 0, reach: 1 })", dock)
+        self.assertIn("dockVisualBackground.cornerSpan.seam, dockVisualBackground.cornerSpan.reach)", dock,
                       "the corners round over the neck's span - seam to pinch - or over the whole look scalar without a lift")
         neck = dock[dock.index("id: splitNeck"):]
         neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]
         self.assertIn("DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)", neck)
-        # ...and the neck is ONE Shape on one path from the module, no layer,
-        # boxed rather than anchored (the turn is a size).
-        self.assertIn("DockGeometry.neckBox(root.edge,", neck)
-        self.assertIn("DockGeometry.neckPath(root.edge, splitNeck.waist, root.vertical ? splitNeck.width : splitNeck.height, splitNeck.fillet)", neck,
-                      "the path is drawn to the box's own depth, overlap included")
-        self.assertIn("preferredRendererType: Shape.CurveRenderer", neck)
-        self.assertIn("fillColor: FrameGeometry.color", neck)
-        self.assertIn("Shape {\n                            id: splitNeck", dock, "the neck is a Shape")
-        self.assertEqual(neck.count("ShapePath {"), 1, "one path, not three items")
-        self.assertEqual(neck.count("Rectangle {"), 0)
-        self.assertNotIn("RoundCorner", neck)
-        self.assertNotIn("layer.enabled", neck)
-        self.assertNotIn("anchors.", neck, "the neck is a box, not an anchor set that changes with the edge")
+        # ...and the neck is a distance field: ONE shader over one box from
+        # the module, the way the reference builds it (motion-split.md §1),
+        # boxed rather than anchored (the turn is a size), the blend keyed on
+        # the seam and nothing at rest.
+        self.assertIn("ShaderEffect {\n                            id: splitNeck", dock, "the neck is a shader")
+        self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")', neck)
+        self.assertIn("DockGeometry.neckBlend(dockRoot.splitTravel, dockRoot.splitProgress, Appearance.animation.splitSeam)", neck)
+        # The box holds still for a whole motion; only uniforms move per frame.
+        self.assertIn("readonly property var box: DockGeometry.splitBox(root.edge,", neck)
+        self.assertNotRegex(neck, r"box: [^\n]*(splitLift|splitProgress|dockVisualBackground)", "the box is built from the rest margins, never the moving pill")
+        self.assertIn("readonly property real reach: DockGeometry.fieldReach(dockRoot.splitLift)", neck)
+        self.assertIn("readonly property real pixelRatio: dockRoot.devicePixelRatio", neck, "the window's ratio follows fractional scaling")
+        self.assertIn("readonly property color fillColor: FrameGeometry.color", neck)
+        self.assertIn("readonly property real softness: DockGeometry.BLEND_SOFTNESS", neck)
+        # Where no shader can draw, the pill keeps its Rectangle: the software
+        # scene graph draws no ShaderEffect, and a failed load draws nothing.
+        self.assertIn("readonly property bool fieldAvailable: splitNeck.GraphicsInfo.api !== GraphicsInfo.Software", neck)
+        self.assertIn("&& splitNeck.status !== ShaderEffect.Error", neck)
+        self.assertIn("readonly property bool painting: splitNeck.fieldAvailable &&", neck)
+        # ...and the shader stays inside core GLSL ES 1.00 - the profile an
+        # OpenGL 2.1-class backend gets (issue #70, c76d6b7b): no derivatives.
+        frag = (ROOT / "modules/imi/dock/shaders/split.frag").read_text()
+        code = "\n".join(l.split("//")[0] for l in frag.splitlines())
+        for construct in ("fwidth", "dFdx", "dFdy", "#extension"):
+            self.assertNotIn(construct, code, construct)
+        for gone in ("Shape {", "ShapePath {", "PathSvg", "Rectangle {", "RoundCorner", "layer.enabled", "anchors."):
+            self.assertNotIn(gone, neck, gone)
+        self.assertNotIn("import QtQuick.Shapes", dock)
+        # While the field paints, the pill's Rectangle does not: the same
+        # silhouette in the same colour at both hand-overs, and a translucent
+        # fill drawn twice is darker. An opacity flip, never a colour with a
+        # Behavior on it (that would fade the pill out).
+        self.assertIn("opacity: splitNeck.painting ? 0 : 1", dock)
+        self.assertNotIn("Behavior on opacity", dock)
+        # A direction from part way takes a proportional time with the
+        # effects tier as its floor (the reference's rule), and the tier's
+        # curve whole.
+        self.assertIn("duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, splitBehavior.from, splitBehavior.targetValue)", behavior)
+        self.assertIn("onTargetValueChanged: splitBehavior.from = dockRoot.splitProgress", behavior,
+                      "the start is latched: a duration bound to the moving scalar shortens its own run every frame")
+        self.assertNotRegex(behavior, r"duration: DockGeometry\.splitDuration\([^)]*dockRoot\.splitProgress")
+
+    def test_the_split_shader_binary_is_built_from_its_source(self):
+        # The shell loads split.frag.qsb, never split.frag: an edit to the
+        # source that is not rebaked changes nothing on screen and reads as
+        # a fix. split.frag.qsb.bake records what the binary was baked from -
+        # the source's sha256 and the qsb that baked it - so a source edit
+        # without a rebake fails everywhere, CI included, whatever qsb is
+        # there. Where the SAME qsb is installed the binary is also rebaked
+        # and compared byte for byte (qsb's output is deterministic; another
+        # version's is not, so that half skips).
+        import hashlib
+        shaders = ROOT / "modules/imi/dock/shaders"
+        record = (shaders / "split.frag.qsb.bake").read_text().split()
+        digest, version = record[0], " ".join(record[2:4])
+        self.assertEqual(hashlib.sha256((shaders / "split.frag").read_bytes()).hexdigest(), digest,
+                         "split.frag changed since split.frag.qsb was baked: rebake it and rewrite "
+                         "split.frag.qsb.bake (the command is in split.frag's header)")
+        qsb = shutil.which("qsb") or next((p for p in ("/usr/lib/qt6/bin/qsb", "/usr/lib64/qt6/bin/qsb")
+                                           if Path(p).exists()), None)
+        if qsb is None:
+            self.skipTest("Qt's qsb is not installed; the source hash was checked")
+        installed = subprocess.run([qsb, "--version"], capture_output=True, text=True).stdout.strip()
+        if installed != version:
+            self.skipTest(f"baked with {version}, {installed or 'an unknown qsb'} installed; the source hash was checked")
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "split.frag.qsb"
+            subprocess.run([qsb, "--glsl", "100 es,120,150", "--hlsl", "50", "--msl", "12",
+                            "-o", str(out), str(shaders / "split.frag")], check=True, capture_output=True)
+            self.assertEqual(out.read_bytes(), (shaders / "split.frag.qsb").read_bytes(),
+                             "split.frag.qsb does not match a bake of split.frag with the recorded qsb")
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())

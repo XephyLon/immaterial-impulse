@@ -319,6 +319,27 @@ TestCase {
         compare(Geometry.liftOffset("bottom", 10, 5), { x: 0, y: 0 });
     }
 
+    function test_with_a_neck_the_corners_start_where_the_pill_s_ends_leave_the_band() {
+        // The neck's blend is nothing at the pill's ends, so the ends leave
+        // the band as soon as the lift outruns the field's reach into it -
+        // well before the seam - and a corner still square there hovered
+        // over a lit gap for two frames (a reviewer's frame scan). The span
+        // starts where the ends open (the lift at which the gap under them
+        // is half a pixel: 2 * lift - FIELD_REACH = 0.5) and still ends at
+        // the same pinch.
+        const span = Geometry.cornerSpan(5, 0.5, 0.8);
+        compare(span.seam, 0.25, "1.25 px of a 5 px lift");
+        fuzzyCompare(span.seam + (1 - span.seam) * span.reach, 0.9, 1e-9, "the pinch is unchanged");
+        compare(Geometry.cornerRadiiAt("bottom", 20, 0.25, span.seam, span.reach).bottomLeft, 0, "square while the ends touch");
+        verify(Geometry.cornerRadiiAt("bottom", 20, 0.4, span.seam, span.reach).bottomLeft > 0, "rounding before the seam");
+        compare(Geometry.cornerRadiiAt("bottom", 20, 0.9, span.seam, span.reach).bottomLeft, 20, "round at the pinch");
+        // A long lift opens the ends early; the span never starts after the seam.
+        fuzzyCompare(Geometry.cornerSpan(20, 0.5, 0.8).seam, 0.0625, 1e-9);
+        compare(Geometry.cornerSpan(1, 0.5, 0.8).seam, 0.5, "a lift too short to open the ends early keeps the seam");
+        // No travel: no seam, no neck - the whole scalar.
+        compare(Geometry.cornerSpan(0, 0.5, 0.8), { seam: 0, reach: 1 });
+    }
+
     function test_the_outward_corners_round_from_the_seam_to_the_pinch() {
         // Fused, the seam is square; free, the pill is a pill. The outward
         // pair rounds over the NECK'S span - from the seam, where the
@@ -366,42 +387,115 @@ TestCase {
         compare(Geometry.neckWaist(400, 0.6, seam, 0), 0, "a zero reach never bridges");
     }
 
-    function test_the_neck_sits_between_the_pill_and_the_band_at_every_edge() {
-        // The neck's box, from the pill's: it fills the lift between the
-        // pill's outward edge and where the band is (the pill's REST outward
-        // edge), centred along the strip at the waist plus a fillet each side
-        // - and it reaches ONE pixel into the pill. The pill is drawn over it,
-        // so nothing shows; without the overlap the pill and the neck each
-        // antialias their half of a boundary that sits on a fractional pixel
-        // while the lift animates, and two half-coverages of one colour over
-        // the light band composite to a hairline across the whole width.
-        const pill = { x: 100, y: 5, width: 400, height: 60 };
-        compare(Geometry.neckBox("bottom", pill, 4, 200, 4), { x: 196, y: 64, width: 208, height: 5 });
-        compare(Geometry.neckBox("top", pill, 4, 200, 4), { x: 196, y: 1, width: 208, height: 5 });
-        const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.neckBox("left", side, 4, 200, 4), { x: 1, y: 196, width: 5, height: 208 });
-        compare(Geometry.neckBox("right", side, 4, 200, 4), { x: 64, y: 196, width: 5, height: 208 });
-        compare(Geometry.NECK_OVERLAP, 1);
-        // The fillet is as big as the lift and never wider than the flank room.
-        compare(Geometry.neckFilletSize(4, 400, 200), 4);
-        compare(Geometry.neckFilletSize(40, 400, 380), 10);
-        compare(Geometry.neckFilletSize(4, 400, 400), 0, "no flank, no fillet");
+    function test_a_reversal_takes_a_proportional_time_never_under_the_effects_tier() {
+        // The source's rule (motion-split.md §1): a direction started from
+        // part way takes the tier's duration times the distance left, with
+        // a floor - here the effects tier - so a lift reversed at 10% does
+        // not crawl back over the whole 800 ms and a reversal at 1% is not
+        // a jump.
+        compare(Geometry.splitDuration(800, 133, 0, 1), 800, "a whole direction is the tier");
+        compare(Geometry.splitDuration(800, 133, 1, 0), 800);
+        compare(Geometry.splitDuration(800, 133, 0.5, 1), 400, "half the way, half the time");
+        compare(Geometry.splitDuration(800, 133, 0.1, 0), 133, "the floor");
+        compare(Geometry.splitDuration(800, 133, 0.9, 0.9), 133, "no distance is still the floor");
+        compare(Geometry.splitDuration(800, 133, 1.2, 0), 800, "a scalar past the unit box is clamped to a whole direction");
     }
 
-    function test_the_neck_is_one_path_with_two_concave_flanks() {
-        // One Shape, no layer: the waist rectangle and its two fillets as one
-        // SVG path in the neck box's own frame. The band side is the far side
-        // (across = the box's depth: the lift plus the overlap into the pill),
-        // the pill side is across = 0. Called with the box's own depth.
-        const bottom = Geometry.neckPath("bottom", 200, 4, 4);
-        compare(bottom, "M 4 0 L 204 0 L 204 0 A 4 4 0 0 0 208 4 L 0 4 A 4 4 0 0 0 4 0 Z");
-        // Without a fillet the flanks are straight.
-        compare(Geometry.neckPath("bottom", 200, 4, 0), "M 0 0 L 200 0 L 200 4 L 200 4 L 0 4 L 0 4 Z");
-        // Each other edge is the same figure mapped into its box; a reflection
-        // flips the arcs' sweep, a rotation (two reflections) keeps it.
-        compare(Geometry.neckPath("top", 200, 4, 4), "M 4 4 L 204 4 L 204 4 A 4 4 0 0 1 208 0 L 0 0 A 4 4 0 0 1 4 4 Z");
-        compare(Geometry.neckPath("right", 200, 4, 4), "M 0 4 L 0 204 L 0 204 A 4 4 0 0 1 4 208 L 4 0 A 4 4 0 0 1 0 4 Z");
-        compare(Geometry.neckPath("left", 200, 4, 4), "M 4 4 L 4 204 L 4 204 A 4 4 0 0 0 0 208 L 0 0 A 4 4 0 0 0 4 4 Z");
+    function test_the_blend_grows_to_the_seam_and_is_nothing_at_rest() {
+        // The neck is a distance-field blend (motion-split.md §1, §6): a
+        // smooth-minimum of the pill's and the band's fields whose radius is
+        // the neck. It is ZERO at rest - a blend against a fused tab would
+        // fillet its sides where the Rectangle draws none, a pop at the hand-
+        // over - and grows to its full value at the seam, scaled by the lift
+        // (the gap it has to bridge: a smooth-minimum bridges a gap of g
+        // once its radius passes 2g). Past the pinch the waist is 0 and the
+        // blend has nothing to act on.
+        compare(Geometry.neckBlend(5, 0, 0.5), 0, "at rest, nothing");
+        compare(Geometry.neckBlend(5, 0.25, 0.5), 10, "halfway to the seam, half the blend");
+        compare(Geometry.neckBlend(5, 0.5, 0.5), 20, "at the seam, four lifts");
+        compare(Geometry.neckBlend(5, 0.8, 0.5), 20, "held through the settle; the waist does the narrowing");
+        compare(Geometry.neckBlend(0, 0.5, 0.5), 0, "no lift, no blend");
+    }
+
+    function test_the_blend_box_is_the_pill_plus_the_lift() {
+        // The shader's box, from the pill's: the pill and the lift down to
+        // the band (the pill's REST outward edge). Nothing along the band
+        // beyond the pill's ends: the blend's radius is zero outside the
+        // waist, which never outgrows the pill, so a margin there is pixels
+        // that only ever pay the early-out. Boxed, not anchored (the turn is
+        // a size). The band's edge comes back in the box's own frame, so the
+        // shader has one number for it.
+        const pill = { x: 100, y: 5, width: 400, height: 60 };
+        compare(Geometry.blendBox("bottom", pill, 4), { x: 100, y: 5, width: 400, height: 64, bandEdge: 64, normal: { x: 0, y: 1 } });
+        compare(Geometry.blendBox("top", pill, 4), { x: 100, y: 1, width: 400, height: 64, bandEdge: 0, normal: { x: 0, y: -1 } });
+        const side = { x: 5, y: 100, width: 60, height: 400 };
+        compare(Geometry.blendBox("left", side, 4), { x: 1, y: 100, width: 64, height: 400, bandEdge: 0, normal: { x: -1, y: 0 } });
+        compare(Geometry.blendBox("right", side, 4), { x: 5, y: 100, width: 64, height: 400, bandEdge: 64, normal: { x: 1, y: 0 } });
+    }
+
+    function test_the_band_edge_is_where_the_pill_rests_at_every_edge() {
+        // The band's inner edge, in the item's own frame, is the pill's REST
+        // outward edge - the lifted pill plus the lift - at every edge. The
+        // first cut placed it a lift further out on the top and left edges
+        // (the box already starts at the band there), and the field drew a
+        // band-coloured slab into the gap along the whole box, then dropped
+        // it in one frame at the hand-over (a reviewer's frame scan).
+        const lift = 4;
+        const pill = { x: 100, y: 5, width: 400, height: 60 };
+        const side = { x: 5, y: 100, width: 60, height: 400 };
+        const rest = {
+            bottom: pill.y + pill.height + lift, top: pill.y - lift,
+            left: side.x - lift, right: side.x + side.width + lift
+        };
+        for (const edge of ["bottom", "top", "left", "right"]) {
+            const vertical = edge === "left" || edge === "right";
+            const b = Geometry.blendBox(edge, vertical ? side : pill, lift);
+            compare((vertical ? b.x : b.y) + b.bandEdge, rest[edge], edge);
+        }
+    }
+
+    function test_the_pills_field_reaches_into_the_band_until_the_lift_clears_two_pixels() {
+        // The blend is nothing at rest, so for the first pixel of a lift it
+        // cannot bridge even the sub-pixel gap the coverage ramp exposes as
+        // a hairline (measured). The pill's FIELD therefore reaches into the
+        // band by a pixel less the lift - the union is seamless until the
+        // blend is big enough to take over, and by then the reach is gone,
+        // so the field's pill is the Rectangle's pill at the hand-over past
+        // the pinch.
+        // Two pixels of reach: the band's field edge sits a ramp inside the
+        // band, so one pixel left the first frames a ramp short.
+        compare(Geometry.FIELD_REACH, 2);
+        compare(Geometry.fieldReach(0), 2);
+        compare(Geometry.fieldReach(0.25), 1.75);
+        compare(Geometry.fieldReach(2), 0, "two pixels up, nothing to reach");
+        compare(Geometry.fieldReach(4), 0);
+    }
+
+    function test_the_shaders_box_holds_still_through_the_motion() {
+        // The shader's box is laid out once for a motion, from the dock's
+        // box and the REST margins: the pill at every lift and the lift down
+        // to the band. A box built from the
+        // moving pill moved the item and rebuilt two objects every frame; the
+        // moving parts are uniforms.
+        const W = 342, H = 75, travel = 5;
+        for (const edge of ["bottom", "top", "left", "right"]) {
+            const vertical = edge === "left" || edge === "right";
+            const w = vertical ? H : W, h = vertical ? W : H;
+            const rest = Geometry.margins(edge, elevation, gaps);
+            const box = Geometry.splitBox(edge, w, h, rest, 0, travel);
+            // Its band edge is the pill's rest outward edge.
+            const r = Geometry.liftedMargins(edge, rest, 0, 0);
+            const restEdge = { bottom: h - r.bottom, top: r.top, left: r.left, right: w - r.right }[edge];
+            compare((vertical ? box.x : box.y) + box.bandEdge, restEdge, edge + ": band edge");
+            // It holds the pill at every lift, and runs exactly its length.
+            for (const lift of [0, 1.5, travel]) {
+                const m = Geometry.liftedMargins(edge, rest, 0, lift);
+                const pill = { x: m.left, y: m.top, width: w - m.left - m.right, height: h - m.top - m.bottom };
+                verify(pill.x >= box.x && pill.y >= box.y, edge + " " + lift);
+                verify(pill.x + pill.width <= box.x + box.width && pill.y + pill.height <= box.y + box.height, edge + " " + lift);
+            }
+            compare(vertical ? box.height : box.width, vertical ? h : w, edge + ": the pill's length, no more");
+        }
     }
 
     function test_the_bars_overloaded_pair_reads_as_an_edge() {
