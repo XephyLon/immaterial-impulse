@@ -162,7 +162,7 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("SequentialAnimation", behavior)
         self.assertIn("PauseAnimation { duration: splitBehavior.targetValue === 0 && dockRoot.splitProgress >= 1 ? Appearance.animation.elementMoveFast.duration : 0 }", behavior,
                       "a pause only when a look change is pending - a lift reversed mid-flight parked the pill in the air")
-        for half in ("duration: Appearance.animation.split.duration",
+        for half in ("Appearance.animation.split.duration",
                      "easing.type: Appearance.animation.split.type",
                      "easing.bezierCurve: Appearance.animation.split.bezierCurve"):
             self.assertIn(half, behavior, "the tier is taken whole")
@@ -218,19 +218,29 @@ class FrameModeContract(unittest.TestCase):
         neck = dock[dock.index("id: splitNeck"):]
         neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]
         self.assertIn("DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)", neck)
-        # ...and the neck is ONE Shape on one path from the module, no layer,
-        # boxed rather than anchored (the turn is a size).
-        self.assertIn("DockGeometry.neckBox(root.edge,", neck)
-        self.assertIn("DockGeometry.neckPath(root.edge, splitNeck.waist, root.vertical ? splitNeck.width : splitNeck.height, splitNeck.fillet)", neck,
-                      "the path is drawn to the box's own depth, overlap included")
-        self.assertIn("preferredRendererType: Shape.CurveRenderer", neck)
-        self.assertIn("fillColor: FrameGeometry.color", neck)
-        self.assertIn("Shape {\n                            id: splitNeck", dock, "the neck is a Shape")
-        self.assertEqual(neck.count("ShapePath {"), 1, "one path, not three items")
-        self.assertEqual(neck.count("Rectangle {"), 0)
-        self.assertNotIn("RoundCorner", neck)
-        self.assertNotIn("layer.enabled", neck)
-        self.assertNotIn("anchors.", neck, "the neck is a box, not an anchor set that changes with the edge")
+        # ...and the neck is a distance field: ONE shader over one box from
+        # the module, the way the reference builds it (motion-split.md §1),
+        # boxed rather than anchored (the turn is a size), the blend keyed on
+        # the seam and nothing at rest.
+        self.assertIn("ShaderEffect {\n                            id: splitNeck", dock, "the neck is a shader")
+        self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")', neck)
+        self.assertIn("DockGeometry.neckBlend(dockRoot.splitTravel, dockRoot.splitProgress, Appearance.animation.splitSeam)", neck)
+        self.assertIn("DockGeometry.blendBox(root.edge,", neck)
+        self.assertIn("readonly property color fillColor: FrameGeometry.color", neck)
+        self.assertIn("readonly property real softness: DockGeometry.BLEND_SOFTNESS", neck)
+        for gone in ("Shape {", "ShapePath {", "PathSvg", "Rectangle {", "RoundCorner", "layer.enabled", "anchors."):
+            self.assertNotIn(gone, neck, gone)
+        self.assertNotIn("import QtQuick.Shapes", dock)
+        # While the field paints, the pill's Rectangle does not: the same
+        # silhouette in the same colour at both hand-overs, and a translucent
+        # fill drawn twice is darker. An opacity flip, never a colour with a
+        # Behavior on it (that would fade the pill out).
+        self.assertIn("opacity: splitNeck.painting ? 0 : 1", dock)
+        self.assertNotIn("Behavior on opacity", dock)
+        # A direction from part way takes a proportional time with the
+        # effects tier as its floor (the reference's rule), and the tier's
+        # curve whole.
+        self.assertIn("duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, dockRoot.splitProgress, splitBehavior.targetValue)", behavior)
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
