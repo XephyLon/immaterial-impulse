@@ -149,14 +149,25 @@ Scope {
             property real splitProgress: dockRoot.splitTarget
             // Whether the lift under way began as the TAB. A pinned attached
             // dock going floating splits: tab look until it has landed
-            // apart, a neck at the seam. A floating dock being pinned rises
-            // too - the travel appears - but nothing was fused: it rises as
-            // the pill it already is, no neck, corners round. Latched at the
-            // target's rising edge; `attachedLook` reads the same in either
-            // evaluation order there, because `attached` is the same before
-            // and after in every case that reaches this.
+            // apart, a neck at the seam. A floating dock being pinned, or
+            // the frame switching on under a floating one, rises too - the
+            // travel appears - but nothing was fused: it rises as the pill
+            // it already is, no neck, corners round. Decided at the target's
+            // rising edge from WHAT ROSE IT: the option (pin and frame both
+            // as they were at the last edge) means a tab is on screen;
+            // anything else means a pill. Not from the look itself, whose
+            // own terms re-evaluate on the same edge in an order nothing
+            // orders - read that way, the old latch fed itself back.
             property bool liftFromTab: true
-            onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedLook
+            property bool pinnedAtLastEdge: root.pinned
+            property bool framedAtLastEdge: FrameGeometry.enabled
+            onSplitTargetChanged: {
+                if (dockRoot.splitTarget === 1)
+                    dockRoot.liftFromTab = root.pinned === dockRoot.pinnedAtLastEdge
+                        && FrameGeometry.enabled === dockRoot.framedAtLastEdge;
+                dockRoot.pinnedAtLastEdge = root.pinned;
+                dockRoot.framedAtLastEdge = FrameGeometry.enabled;
+            }
             Behavior on splitProgress {
                 id: splitBehavior
                 // No lift, no spatial tier: an unpinned dock at the default

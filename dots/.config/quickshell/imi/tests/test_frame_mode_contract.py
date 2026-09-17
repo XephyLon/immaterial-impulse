@@ -192,7 +192,9 @@ class FrameModeContract(unittest.TestCase):
         # (a floating dock being pinned) rises as a pill: no neck, corners
         # round. Latched at the target's rising edge.
         self.assertIn("property bool liftFromTab: true", dock)
-        self.assertIn("onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedLook", dock)
+        self.assertIn("dockRoot.liftFromTab = root.pinned === dockRoot.pinnedAtLastEdge\n                        && FrameGeometry.enabled === dockRoot.framedAtLastEdge;", dock,
+                      "decided from what rose the target, never from the look, whose terms re-evaluate on the same edge")
+        self.assertNotIn("liftFromTab = dockRoot.attachedLook", dock)
         self.assertIn("&& (dockRoot.liftFromTab || dockRoot.splitTarget === 0)", dock, "the neck draws for a split and for every landing")
         self.assertIn("property real lookApart: dockRoot.attached ? 0 : 1", dock)
         look = dock[dock.index("Behavior on lookApart {"):]
