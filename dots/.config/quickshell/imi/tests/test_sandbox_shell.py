@@ -95,6 +95,7 @@ class SandboxStopTest(unittest.TestCase):
                         XDG_RUNTIME_DIR=str(self.parent_run), WAYLAND_DISPLAY="wayland-parent")
         self.env.pop(MARKER, None)
         self.strays = []
+        self.run_dirs_before = set(Path("/tmp").glob("imi-sb-*"))
 
     def tearDown(self):
         for pid in session_of(self.sb):
@@ -103,6 +104,10 @@ class SandboxStopTest(unittest.TestCase):
             p.kill(); p.wait()
         self.stop()
         self.tmp.cleanup()
+        leaked = set(Path("/tmp").glob("imi-sb-*")) - self.run_dirs_before
+        for d in leaked:
+            subprocess.run(["rm", "-rf", str(d)])
+        self.assertEqual(leaked, set(), "a test left a sandbox run dir in /tmp")
 
     def run_script(self, *args, env=None):
         return subprocess.run(["bash", str(SCRIPT), *args], env=env or self.env,
@@ -153,8 +158,60 @@ class SandboxStopTest(unittest.TestCase):
     def test_a_shell_deaf_to_sigterm_is_still_killed(self):
         self.start(env=dict(self.env, FAKE_QS_DEAF="1"))
         r = self.stop()
-        self.assertIn("sandbox stopped", r.stdout)
+        self.assertRegex(r.stdout, r"sandbox stopped: \d+ processes ended, nothing left \(1 needed SIGKILL\)")
+        self.assertEqual(r.returncode, 0)
         self.assertEqual(shells_of(self.sb), [])
+
+    def test_the_sandbox_is_the_same_however_its_path_is_spelled(self):
+        # The marker is the sandbox dir; a start given one spelling and a stop
+        # given another (relative, trailing slash) found nothing and reported
+        # "nothing left" over a running session.
+        self.start()
+        rel = os.path.relpath(self.sb, self.tmp.name) + "/"
+        r = subprocess.run(["bash", str(SCRIPT), "stop", rel], env=self.env, cwd=self.tmp.name,
+                           capture_output=True, text=True, timeout=60)
+        self.assertRegex(r.stdout, r"sandbox stopped: [1-9]\d* processes ended")
+        self.assertEqual(session_of(self.sb), [])
+
+    def test_a_sandbox_path_is_matched_literally(self):
+        # The marker scan must not read the path as a pattern: a sibling
+        # whose name the pattern "sb." would match is not this sandbox.
+        other = Path(self.tmp.name) / "sbX"
+        env = dict(self.env, **{MARKER: str(other)})
+        p = subprocess.Popen(["sleep", "600"], env=env); self.strays.append(p)
+        dotted = Path(self.tmp.name) / "sb."
+        r = subprocess.run(["bash", str(SCRIPT), "stop", str(dotted)], env=self.env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertIn("sandbox stopped: 0 processes ended", r.stdout)
+        self.assertIsNone(p.poll(), "a sandbox whose path the other's matches as a pattern is left alone")
+
+    def test_start_refuses_to_wipe_a_directory_that_is_not_a_sandbox(self):
+        self.sb.mkdir(parents=True)
+        (self.sb / "precious").write_text("x")
+        r = self.run_script("start", str(self.root), str(self.sb))
+        self.assertNotEqual(r.returncode, 0)
+        self.assertTrue((self.sb / "precious").exists())
+
+    def test_start_does_not_wipe_a_sandbox_it_could_not_stop(self):
+        # A stop that refuses (run from inside a sandbox) must stop the start
+        # too, or the wipe orphans the very session the refusal protected.
+        self.start()
+        env = dict(self.env, **{MARKER: "/elsewhere"})
+        r = self.run_script("start", str(self.root), str(self.sb), env=env)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertTrue((self.sb / "env").exists(), "the running sandbox's dir is intact")
+        self.assertTrue(shells_of(self.sb))
+
+    def test_an_incomplete_stop_says_so_and_fails(self):
+        # A marked process stop could not end is reported, and the exit
+        # status says so, so a script can tell. The kill is made to do
+        # nothing through the script's test-only override.
+        self.sb.mkdir(parents=True)
+        self.marked("sleep", "600")
+        r = self.run_script("stop", str(self.sb), env=dict(self.env, SANDBOX_STOP_KILL="true"))
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("STILL RUNNING", r.stderr)
+        self.assertIn("incomplete", r.stdout)
 
     def test_stop_spares_a_terminal_that_sourced_the_env_file(self):
         # The README's workflow sources <sandbox>/env, which exports the

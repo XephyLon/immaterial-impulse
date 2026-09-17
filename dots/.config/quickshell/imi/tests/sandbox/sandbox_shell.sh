@@ -11,12 +11,24 @@ set -u
 cmd="${1:-}"; shift || true
 case "$cmd" in
 start)
-  ROOT="$1"; SB="$2"; OVERRIDES="${3:-}"
+  # One spelling of the sandbox dir everywhere: it is the session's marker,
+  # and a stop given another spelling (relative, a trailing slash) found
+  # nothing and reported "nothing left" over a running session.
+  ROOT="$1"; SB=$(realpath -m -- "$2"); OVERRIDES="${3:-}"
   [ -n "${WAYLAND_DISPLAY:-}" ] || { echo "no WAYLAND_DISPLAY: the nested compositor needs a parent"; exit 1; }
   PARENT_SOCKET="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
   # Reusing a sandbox dir: stop what is running there first. Wiping the dir
   # under a live session left it running with nothing on disk to find it by.
-  [ -d "$SB" ] && "$0" stop "$SB"
+  # A directory that is not a sandbox is never wiped, and neither is one
+  # whose sandbox could not be stopped (a stop that refuses leaves its
+  # session running, and wiping the dir would orphan it).
+  if [ -e "$SB" ]; then
+    if [ -e "$SB/run.path" ] || [ -e "$SB/env" ] || [ -e "$SB/env.partial" ]; then
+      "$0" stop "$SB" || { echo "start: could not stop the sandbox in $SB; not reusing it" >&2; exit 1; }
+    elif [ -n "$(ls -A "$SB" 2>/dev/null)" ]; then
+      echo "start: $SB exists and is not a sandbox; not wiping it" >&2; exit 1
+    fi
+  fi
   rm -rf "$SB"; mkdir -p "$SB/config/immaterial-impulse" "$SB/config/quickshell" "$SB/cache" "$SB/state" "$SB/data"
   # The runtime dir must be SHORT: a unix socket path is capped at 108 bytes,
   # and under a deep scratchpad path wl_display_add_socket_auto fails
@@ -78,14 +90,20 @@ LUA
       wait $HPID
     ' _ "$SB" "$ROOT" < /dev/null > "$SB/session.log" 2>&1
   for _ in $(seq 1 80); do sleep 0.5; [ -f "$SB/env" ] && grep -q SANDBOX_QS_PID "$SB/env" && break; done
-  [ -f "$SB/env" ] || { echo "FAILED"; cat "$SB/env.partial" 2>/dev/null; tail -5 "$SB/hypr.log" 2>/dev/null; exit 1; }
+  # A start that did not get as far as the shell has still started a
+  # session (the compositor at least); end it rather than leave it running.
+  if ! grep -qs SANDBOX_QS_PID "$SB/env"; then
+    echo "FAILED"; cat "$SB/env.partial" 2>/dev/null; tail -5 "$SB/hypr.log" 2>/dev/null
+    "$0" stop "$SB"
+    exit 1
+  fi
   echo "sandbox up: source $SB/env"
   ;;
 shot)
   SB="$1"; OUT="$2"; source "$SB/env"; grim "$OUT" && echo "$OUT"
   ;;
 stop)
-  SB="$1"
+  SB=$(realpath -m -- "$1")
   # Everything started inside THIS sandbox, found by its environment: every
   # process of the session inherits IMI_SANDBOX_SESSION=<sandbox>, which the
   # env file does not export, so a terminal that sourced that file is never
@@ -108,7 +126,7 @@ stop)
   # processes are readable, and one that exits mid-scan is simply absent.
   session() {
     local f p argv0
-    for f in $(grep -lzx -- "IMI_SANDBOX_SESSION=$SB" /proc/[0-9]*/environ 2>/dev/null); do
+    for f in $(grep -lzxF -- "IMI_SANDBOX_SESSION=$SB" /proc/[0-9]*/environ 2>/dev/null); do
       p=${f#/proc/}; p=${p%/environ}
       [ "$p" = "$$" ] && continue
       if [ "${1:-}" = shell ]; then
@@ -118,12 +136,15 @@ stop)
       echo "$p"
     done
   }
+  # SANDBOX_STOP_KILL exists for test_sandbox_shell.py alone: a kill that
+  # does nothing is how it reaches the "still running" report.
+  signal() { ${SANDBOX_STOP_KILL:-kill} "$@"; }
   found=$(session | wc -w)
-  kill $(session shell) 2>/dev/null
+  signal $(session shell) 2>/dev/null
   for _ in $(seq 1 10); do [ -z "$(session shell)" ] && break; sleep 0.5; done
-  kill $(session) 2>/dev/null
+  signal $(session) 2>/dev/null
   for _ in $(seq 1 6); do [ -z "$(session)" ] && break; sleep 0.5; done
-  hard=$(session); [ -n "$hard" ] && kill -9 $hard 2>/dev/null
+  hard=$(session); [ -n "$hard" ] && signal -9 $hard 2>/dev/null
   sleep 0.2
   left=$(session | wc -w)
   # The run dir: only one start made - /tmp/imi-sb-XXXXXX, an existing
@@ -144,6 +165,7 @@ stop)
   else
     echo "sandbox stopped: $found processes found, $left STILL RUNNING - check /proc for IMI_SANDBOX_SESSION=$SB" >&2
     echo "sandbox stopped (incomplete)"
+    exit 1
   fi
   ;;
 *) echo "usage: $0 start <shell-root> <sandbox-dir> [overrides.json] | shot <sandbox-dir> <out.png> | stop <sandbox-dir>"; exit 2 ;;

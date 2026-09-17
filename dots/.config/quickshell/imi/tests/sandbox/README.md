@@ -16,8 +16,11 @@ D-Bus - found by `IMI_SANDBOX_SESSION=<sandbox-dir>`, which only the session car
 does not, so a terminal that sourced it is never matched). It needs no env file, never kills a pid
 from one on its own, removes only a run dir `start` made (`/tmp/imi-sb-XXXXXX`, unmounting any FUSE
 mount left in it), refuses to run from inside the sandbox, and says how many processes it ended and
-whether any are left. `start` on an existing sandbox dir stops that sandbox first. Before these,
-every stop left the shell's helpers running, and they piled up (`test_sandbox_shell.py`).
+whether any are left - exiting non-zero if any are. The sandbox dir is canonicalised by both
+commands, so any spelling of it names the same sandbox. `start` on an existing sandbox dir stops
+that sandbox first and gives up if it cannot; it will not wipe a non-empty directory that is not a
+sandbox; and a start that fails ends the session it began. Before these, every stop left the
+shell's helpers running, and they piled up (`test_sandbox_shell.py`).
 
 - `<shell-root>` is `dots/.config/quickshell/imi` of the worktree under review. It is SYMLINKED,
   not copied: editing under `<sandbox-dir>/config/quickshell/imi/` edits the repo. Probe patches go
