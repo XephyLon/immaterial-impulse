@@ -21,8 +21,9 @@ commands, so any spelling of it names the same sandbox. A directory is a sandbox
 the `.imi-sandbox` sentinel `start` writes - never because of the names of the files in it. `start`
 on an existing sandbox dir stops that sandbox first and gives up if it cannot; it will not wipe a
 non-empty directory without the sentinel; and a start that fails ends the session it began.
-`SANDBOX_START_WAIT` and `SANDBOX_STOP_KILL` are hooks for `test_sandbox_shell.py`; the latter
-accepts only `true` and says so when set. Before these, every stop left the
+A sandbox made before the sentinel existed is refused like any other directory: `stop` it, then
+remove it. `SANDBOX_START_WAIT` (whole seconds) and `SANDBOX_STOP_KILL` (`true` only) are hooks for
+`test_sandbox_shell.py`; both are validated and announce themselves when set. Before these, every stop left the
 shell's helpers running, and they piled up (`test_sandbox_shell.py`).
 
 - `<shell-root>` is `dots/.config/quickshell/imi` of the worktree under review. It is SYMLINKED,

@@ -206,6 +206,7 @@ class SandboxStopTest(unittest.TestCase):
         r = self.run_script("start", str(self.root), str(self.sb))
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("not a sandbox", r.stderr)
+        self.assertIn("stop", r.stderr, "the refusal says what to do if it is an old sandbox")
         self.assertTrue((self.sb / "precious").exists())
 
     def test_a_start_that_fails_ends_the_session_it_began(self):
@@ -216,8 +217,17 @@ class SandboxStopTest(unittest.TestCase):
         self.remember_run_dir()
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("FAILED", r.stdout)
+        self.assertIn("SANDBOX_START_WAIT", r.stderr, "the test hook announces itself")
         time.sleep(0.3)
         self.assertEqual(session_of(self.sb), [], "nothing of the failed start is left running")
+        for d in self.run_dirs:
+            self.assertFalse(os.path.exists(d), "the failed start removed its own run dir")
+
+    def test_the_start_wait_hook_takes_only_a_whole_number_of_seconds(self):
+        for bad in ("abc", "0", "a[$(touch /tmp/x)]"):
+            r = self.run_script("start", str(self.root), str(self.sb), env=dict(self.env, SANDBOX_START_WAIT=bad))
+            self.assertEqual(r.returncode, 2, bad)
+            self.assertFalse(self.sb.exists(), f"{bad!r} started nothing")
 
     def test_the_test_only_kill_override_announces_itself(self):
         self.sb.mkdir(parents=True)

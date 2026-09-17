@@ -10,7 +10,8 @@
 set -u
 # This script calls itself (start stops a sandbox it reuses or failed to
 # bring up): by bash and its own path, not "$0", which need not be an
-# executable path (no +x, a noexec mount, `bash <(...)`).
+# executable path (a copy without +x, a noexec mount). A script read from a
+# pipe or `bash <(...)` has no path to re-read; run it from a file.
 self() { bash "${BASH_SOURCE[0]}" "$@"; }
 cmd="${1:-}"; shift || true
 case "$cmd" in
@@ -34,13 +35,22 @@ start)
     if [ -f "$SB/.imi-sandbox" ]; then
       self stop "$SB" || { echo "start: could not stop the sandbox in $SB; not reusing it" >&2; exit 1; }
     elif [ -n "$(ls -A "$SB" 2>/dev/null)" ]; then
-      echo "start: $SB exists and is not a sandbox (no .imi-sandbox); not wiping it" >&2; exit 1
+      echo "start: $SB exists and is not a sandbox (no .imi-sandbox); not wiping it" >&2
+      echo "  if it is a sandbox made before the sentinel existed, run \`$0 stop $SB\` first, then remove it" >&2
+      exit 1
     fi
   fi
-  # SANDBOX_START_WAIT (seconds) exists for test_sandbox_shell.py, which
-  # drives a start that never comes up; the defaults are 30 s for the
-  # compositor and 40 s for the shell.
-  WAIT_S="${SANDBOX_START_WAIT:-}"
+  # SANDBOX_START_WAIT (whole seconds) exists for test_sandbox_shell.py,
+  # which drives a start that never comes up. It bounds the compositor's
+  # wait; the shell's is longer, so a compositor that comes up at its
+  # deadline still gets its shell (30 s and 40 s by default). Validated
+  # before it reaches arithmetic, and announced.
+  WAIT_S=30; SHELL_S=40
+  if [ -n "${SANDBOX_START_WAIT:-}" ]; then
+    [[ "$SANDBOX_START_WAIT" =~ ^[1-9][0-9]{0,3}$ ]] || { echo "start: SANDBOX_START_WAIT must be a whole number of seconds (a test hook)" >&2; exit 2; }
+    WAIT_S=$SANDBOX_START_WAIT; SHELL_S=$(( WAIT_S + 2 ))
+    echo "start: SANDBOX_START_WAIT=$WAIT_S is set - waiting ${WAIT_S}s for the compositor (test mode)" >&2
+  fi
   rm -rf "$SB"; mkdir -p "$SB/config/immaterial-impulse" "$SB/config/quickshell" "$SB/cache" "$SB/state" "$SB/data"
   echo "made by tests/sandbox/sandbox_shell.sh start; stop it before deleting this directory" > "$SB/.imi-sandbox"
   # The runtime dir must be SHORT: a unix socket path is capped at 108 bytes,
@@ -85,7 +95,7 @@ LUA
       Hyprland -c "$SB/hypr.lua" > "$SB/hypr.log" 2>&1 &
       HPID=$!
       SIG=""
-      for _ in $(seq 1 $(( ${WAIT_S:-30} * 10 ))); do sleep 0.1; SIG=$(ls "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1); [ -n "$SIG" ] && [ -S "$XDG_RUNTIME_DIR/hypr/$SIG/.socket.sock" ] && break; SIG=""; done
+      for _ in $(seq 1 $(( WAIT_S * 10 ))); do sleep 0.1; SIG=$(ls "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1); [ -n "$SIG" ] && [ -S "$XDG_RUNTIME_DIR/hypr/$SIG/.socket.sock" ] && break; SIG=""; done
       [ -n "$SIG" ] || { echo "FAILED: nested compositor never came up" >> "$SB/env.partial"; exit 1; }
       export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
       export WAYLAND_DISPLAY=$(ls "$XDG_RUNTIME_DIR" | grep -E "^wayland-[0-9]+$" | head -1)
@@ -102,7 +112,7 @@ LUA
       echo "export SANDBOX_QS_PID=$!" >> "$SB/env"
       wait $HPID
     ' _ "$SB" "$ROOT" "$WAIT_S" < /dev/null > "$SB/session.log" 2>&1
-  for _ in $(seq 1 $(( ${WAIT_S:-40} * 10 ))); do sleep 0.1; [ -f "$SB/env" ] && grep -q SANDBOX_QS_PID "$SB/env" && break; done
+  for _ in $(seq 1 $(( SHELL_S * 10 ))); do sleep 0.1; [ -f "$SB/env" ] && grep -q SANDBOX_QS_PID "$SB/env" && break; done
   # A start that did not get as far as the shell has still started a
   # session (the compositor at least); end it rather than leave it running.
   if ! grep -qs SANDBOX_QS_PID "$SB/env"; then
