@@ -426,7 +426,14 @@ the default band its look-only switch takes the effects half alone.
   `status` reports the load); keeping the shader inside core GLSL ES 1.00
   is the guard for that. The blur region
   stays the pill's: the two bodies, the neck unblurred, as the source
-  publishes it.
+  publishes it. Cost: a bench scene of the neck alone at the dock's default
+  size, run inside the sandbox with its window floating, the scalar looping
+  on the tier (process CPU over 9.5 s, three runs each) - #398's `Shape`
+  neck 63-70 ticks on hardware GL and 120-133 on llvmpipe, this field 54-57
+  and 107-114. Fragments further than four ramps from the outline return
+  after one field evaluation, so only the edge pays for the gradient. In
+  the full sandbox shell the dock renders the motion at the same ~62 frames
+  a second as #398 on both renderers.
 - **A direction from part way is proportional**: the tier times the
   distance left, never under the effects tier (`splitDuration`: the
   source's rule for a merge, extended here to both directions, with the
