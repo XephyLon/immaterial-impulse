@@ -11,7 +11,7 @@
 // is the same distance everywhere, which a uniform blend bridges whole or not
 // at all.
 // Adapted from Clavis's assets/shaders/keystone/frag/pill_morph.frag
-// https://github.com/StatIndet/quickshell (at 5183553)
+// https://github.com/StatIndet/quickshell (at 5183553), modified 2026-09-17
 // License: GPL-3.0 | upstream by StatIndet, which carries no copyright line
 // and is GPL-3.0-or-later per its packaging; this adaptation is distributed
 // under this repository's GPL-3.0 (licenses/GPL-3.0.txt). The rounded box
@@ -65,8 +65,17 @@ float smoothMinimum(float a, float b, float k)
     return min(a, b) - h * h * k * 0.25;
 }
 
-// The joined field at a point, in item pixels.
-float field(vec2 p)
+// The blend radius at a point: the neck's, tapering along the band from the
+// waist's centre to its ends.
+float blendAt(vec2 p)
+{
+    float along = dot(p, abs(vec2(bandNormal.y, bandNormal.x)));
+    float u = waistHalf > 0.0 ? (along - waistCenter) / waistHalf : 2.0;
+    return blend * max(0.0, 1.0 - u * u);
+}
+
+// The joined field at a point, in item pixels, for a given blend radius.
+float field(vec2 p, float k)
 {
     // The pill as the field sees it, reaching `reach` into the band so the
     // lift's first pixels, before the blend can bridge them, stay seamless.
@@ -79,21 +88,20 @@ float field(vec2 p)
     // along the whole box while the field painted, and the row stepped back
     // at the hand-over); inside the band the band's own surface covers it.
     float band = bandOrigin - dot(p, bandNormal) + softness;
-    // The blend, tapering along the band from the waist's centre to its ends.
-    float along = dot(p, abs(vec2(bandNormal.y, bandNormal.x)));
-    float u = waistHalf > 0.0 ? (along - waistCenter) / waistHalf : 2.0;
-    float k = blend * max(0.0, 1.0 - u * u);
     return smoothMinimum(pill, band, k);
 }
 
 void main()
 {
     vec2 p = qt_TexCoord0 * resolution;
-    float d = field(p);
+    float k = blendAt(p);
+    float d = field(p, k);
     float px = softness / max(pixelRatio, 0.25);
     // Away from the outline the coverage is 0 or 1 whatever the gradient: the
-    // ramp's half-width is the gradient (at most about 1.7 in this norm)
-    // times one device pixel's softness, so four of those is clear of it.
+    // ramp's half-width is the gradient times one device pixel's softness,
+    // and with the blend radius held (below) the gradient of a polynomial
+    // smooth-minimum of two distance fields is at most 1 + h <= 2 in length,
+    // under 2.9 in the norm used here - so four of those is clear of it.
     // Only the pixels on the edge pay for the four extra field evaluations -
     // the interior is most of the box, and on a software rasteriser the
     // per-pixel cost is the whole frame.
@@ -109,10 +117,14 @@ void main()
     // the GLSL ES 1.00 profile only has behind GL_OES_standard_derivatives -
     // the profile an OpenGL 2.1-class backend gets (issue #70) - and floored
     // so the saddle between the flanks, where it goes to nothing, does not
-    // alias.
+    // alias. The blend radius is HELD at this pixel's value for the four
+    // taps: its taper along the band steepens without bound as the waist
+    // closes, and differencing through it read as a huge gradient on the
+    // pinch frame - a ramp so wide the neck showed as a half-covered stalk
+    // and the pill's body lightened above it (measured).
     const float h = 0.5;
-    float gx = field(p + vec2(h, 0.0)) - field(p - vec2(h, 0.0));
-    float gy = field(p + vec2(0.0, h)) - field(p - vec2(0.0, h));
+    float gx = field(p + vec2(h, 0.0), k) - field(p - vec2(h, 0.0), k);
+    float gy = field(p + vec2(0.0, h), k) - field(p - vec2(0.0, h), k);
     float g = max((abs(gx) + abs(gy)) / (2.0 * h), 0.5);
     float w = g * px;
     float alpha = 1.0 - smoothstep(-w, w, d);
