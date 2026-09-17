@@ -9,6 +9,9 @@ family loads Frame only while the option is on; the bands reserve nothing and
 take no input; the settings rows and the search index.
 """
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -213,7 +216,12 @@ class FrameModeContract(unittest.TestCase):
         # The corners and the neck are keyed on the SEAM - the outward pair
         # rounds from it, the neck lives from it to the pinch - so the token
         # is read, not decorative.
-        self.assertIn("dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0,\n                                dockRoot.splitTravel > 0 ? Appearance.animation.splitNeckReach : 1)", dock,
+        # With a neck to expose them, the outward corners round over the
+        # neck's span; without one - no lift, or no shader to draw it (the
+        # software scene graph) - over the whole scalar, or a square corner
+        # hovered over a lit gap for the lift's first half (measured).
+        self.assertIn("readonly property bool necked: dockRoot.splitTravel > 0 && splitNeck.fieldAvailable", dock)
+        self.assertIn("dockVisualBackground.necked ? Appearance.animation.splitSeam : 0,\n                                dockVisualBackground.necked ? Appearance.animation.splitNeckReach : 1)", dock,
                       "the corners round over the neck's span - seam to pinch - or over the whole look scalar without a lift")
         neck = dock[dock.index("id: splitNeck"):]
         neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]
@@ -259,6 +267,24 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("onTargetValueChanged: splitBehavior.from = dockRoot.splitProgress", behavior,
                       "the start is latched: a duration bound to the moving scalar shortens its own run every frame")
         self.assertNotRegex(behavior, r"duration: DockGeometry\.splitDuration\([^)]*dockRoot\.splitProgress")
+
+    def test_the_split_shader_binary_is_built_from_its_source(self):
+        # The shell loads split.frag.qsb, never split.frag: an edit to the
+        # source that is not rebaked changes nothing on screen and reads as
+        # a fix. qsb's output is byte-for-byte deterministic, so the
+        # committed binary must equal a fresh bake with the same profiles
+        # (the background module's six: GLSL ES 1.00 included).
+        qsb = shutil.which("qsb") or next((p for p in ("/usr/lib/qt6/bin/qsb", "/usr/lib64/qt6/bin/qsb")
+                                           if Path(p).exists()), None)
+        if qsb is None:
+            self.skipTest("Qt's qsb is not installed")
+        shaders = ROOT / "modules/imi/dock/shaders"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "split.frag.qsb"
+            subprocess.run([qsb, "--glsl", "100 es,120,150", "--hlsl", "50", "--msl", "12",
+                            "-o", str(out), str(shaders / "split.frag")], check=True, capture_output=True)
+            self.assertEqual(out.read_bytes(), (shaders / "split.frag.qsb").read_bytes(),
+                             "split.frag.qsb is stale: rebake it with the command in this test")
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())

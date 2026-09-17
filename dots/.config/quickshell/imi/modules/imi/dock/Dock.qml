@@ -470,11 +470,15 @@ Scope {
                             // The outward pair rounds from the seam, where the
                             // outlines part, to the pinch, with the neck that
                             // exposes it: square while fused, a pill once apart.
-                            // With no lift, over the look's own scalar.
+                            // With no neck - no lift, or no shader to draw one
+                            // (the software scene graph) - over the whole scalar:
+                            // keyed on a pinch that is never drawn, a square
+                            // corner hovered over a lit gap for half the lift.
+                            readonly property bool necked: dockRoot.splitTravel > 0 && splitNeck.fieldAvailable
                             readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius,
                                 dockRoot.liftFromTab || dockRoot.splitTarget === 0 ? dockRoot.apart : 1,
-                                dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0,
-                                dockRoot.splitTravel > 0 ? Appearance.animation.splitNeckReach : 1)
+                                dockVisualBackground.necked ? Appearance.animation.splitSeam : 0,
+                                dockVisualBackground.necked ? Appearance.animation.splitNeckReach : 1)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft
