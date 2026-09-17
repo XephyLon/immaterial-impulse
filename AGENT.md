@@ -384,8 +384,9 @@ is darker - and only where a shader CAN paint (`fieldAvailable`: not the softwar
 draws no `ShaderEffect`, and not a shader whose file failed to load), or the hand-over would leave the
 icons over bare band; there the pill lifts without a neck. A shader that loads but fails to build on the
 GPU is not caught - `ShaderEffect.status` reports the load - which is why the shader itself stays inside
-core GLSL ES 1.00. d0f7a2bd ("feat(dock): the neck is a distance
-field, and a reversal takes a proportional time"). The RESERVATION is what still steps, and it reserves the union
+core GLSL ES 1.00.
+3e63f8be ("feat(dock): the neck is a distance field, and a reversal takes a proportional time").
+The RESERVATION is what still steps, and it reserves the union
 of where the pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and
 the end of a landing, a boolean that flips - written at the start of a landing it put the windows against
 the floating pill for a second - and the compositor re-tiles on its own animation. The scalar's target is

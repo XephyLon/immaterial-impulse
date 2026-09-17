@@ -403,7 +403,11 @@ the default band its look-only switch takes the effects half alone.
   ratio (which follows fractional scaling) as a uniform, not `fwidth`, which GLSL ES 1.00 (the profile an OpenGL
   2.1-class backend gets, #70) has only behind an extension, and floored so
   the saddle between the flanks does not alias (so there, and on the
-  diagonal flanks, the ramp is somewhat wider than one device pixel); the
+  diagonal flanks, the ramp is somewhat wider than one device pixel), with
+  the blend radius HELD at the pixel's own value across the four taps -
+  differencing through the taper, which steepens without bound as the
+  waist closes, drew the pinch frame as a half-covered stalk with the
+  pill's body lightened above it; the
   pill's field reaching two pixels into the band less the lift
   (`fieldReach`, a uniform), because a blend that
   is nothing at rest cannot bridge the sub-pixel gap of the first frames and
@@ -421,7 +425,9 @@ the default band its look-only switch takes the effects half alone.
   fill drawn twice is darker. That hand-over happens only where a shader can
   paint (`fieldAvailable`): the software scene graph draws no
   `ShaderEffect`, and a shader whose file failed to load draws nothing, so
-  there the pill keeps its Rectangle and lifts without a neck. A shader that
+  there the pill keeps its Rectangle and lifts without a neck, its outward
+  corners rounding over the whole lift (keyed on a pinch that is never
+  drawn, a square corner hovered over a lit gap for half of it). A shader that
   loads and then fails to build on the GPU is not caught (the effect's
   `status` reports the load); keeping the shader inside core GLSL ES 1.00
   is the guard for that. The blur region
@@ -433,7 +439,7 @@ the default band its look-only switch takes the effects half alone.
   looping on the tier, 60 frames a second in every run - takes process CPU
   over 8 s, three runs each: #398's `Shape` neck 50-51 ticks on hardware GL
   and 132-133 on llvmpipe, this field 41-42 and 119-120. On the render
-  thread both average 0.2 ms a frame or less on either renderer; that
+  thread both average about 0.2 ms a frame (0.01-0.22) on either renderer; that
   timing is whole milliseconds, so the fragment shader's GPU time on
   hardware is below what it can show. Fragments further than four ramps
   from the outline return after one field evaluation, so only the edge pays
@@ -450,9 +456,9 @@ the default band its look-only switch takes the effects half alone.
   scalar, the duration re-evaluated every frame of its own run and shortened
   it as it went (measured: a reversal at 250 ms took 680). Measured after,
   from the pin icon's position per frame: Floating then Attached 250 ms
-  later takes 466 to 650 ms out and back across three recordings (the
+  later takes 400 to 650 ms out and back across four recordings (the
   reversal point is a shell sleep plus a Python start-up, so it varies); a
-  landing reversed about 250 ms in comes back in 250 to 283 ms; a whole
+  landing reversed about 250 ms in comes back in 216 to 283 ms; a whole
   direction runs 43 to 45 frames.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
   after the scalar lands at 1 (`attachedLook` holds the tab's look while the
