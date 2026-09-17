@@ -40,6 +40,57 @@ darker than the threshold and do not reach the outline, so they do not count.
 Frame numbers below are the clip's own (0-based); ms are relative to the
 trigger frame, at 33.3 ms per frame.
 
+### The source, read after the measurement
+
+The shell in the clip is Clavis (https://github.com/StatIndet/quickshell,
+GPL-3), and its recording pill is the island; the source was read on
+2026-09-17 at 5183553 after the frames had been measured. It confirms the
+measurement at a scale of exactly 0.5 (a 2560-wide screen recorded at 1280)
+and it says how the motion is built, which the frames could not:
+
+- **The neck is a distance field, not a drawn path.**
+  `assets/shaders/keystone/frag/pill_morph.frag`: two rounded-box signed
+  distance functions (the main body and a "satellite") joined by a
+  polynomial smooth-minimum with a `blendRadius`, and the coverage is a
+  0.8 px smoothstep of the joined distance. The neck, its concave flanks and
+  the corners rounding are all the ONE blend radius; nothing is drawn twice
+  and nothing is antialiased against anything else.
+- **One scalar, linear in time, with the shape keyed in VALUE.**
+  `pillMorphProgress` runs 0 -> 1 over 1000 ms on a split and 820 ms on a
+  merge (`KeystoneSurface.qml` `pillEntryDuration`, `pillFusionDuration`),
+  `Easing.Linear`. Every dimension is a piecewise smoothstep over it
+  (`HorizontalPillRecordingVisual.qml` `morphValue`, `satelliteMorphValue`),
+  five keyframes - idle, peak, neck, split, settled - at 0, 0.58, 0.76, 0.80
+  and 1.0, the satellite holding idle until 0.32:
+
+  | | idle | peak (0.58) | neck (0.76) | split (0.80) | settled (1.0) |
+  |---|---|---|---|---|---|
+  | main width | 220 | 250 | 220 | 210 | 200 |
+  | main height | 42 | 52 | 46 | 44 | 42 |
+  | satellite offset from the main's far edge | -h/2 (inside) | 40 | 38 | 38 | 38 |
+  | blend radius | 0 | 50 | 28 | 18 | 0 |
+
+  At 0.5: main 110 x 21 against the measured 108 x 20 clock pill; joined
+  extent 250 + 40 + 26 = 316 -> 158 against the measured 156; height 52 ->
+  26 against 25; settled 200 + 38 + 21 = 259 -> 129.5 against 128. The split's
+  1000 ms is the measured 30 frames; the merge's 820 is the measured 24.
+- **A merge started mid-split is proportional**: `max(220, 820 * progress)`
+  ms (`KeystoneSurface.qml:773`), so a reversal near either end is short and
+  never under the effects tier's length.
+- **Blur is published for the two bodies only** (`blurBackgroundItems`), the
+  neck unblurred.
+- **The attached island has concave edge fillets** where it meets the screen
+  edge (`AttachedEdgeCurve.qml`: a Canvas bezier 8 along, 14 deep), hidden
+  the moment it detaches.
+- **Size changes elsewhere use an overshooting bezier** (`KeystoneMotion.qml`:
+  500 ms to grow, 360 to shrink, control points past 1.0), not this scalar.
+
+What the source changes in this proposal: §4's two-segment bezier stays as
+ImI's tier (it fits the frames, and one Easing.BezierSpline is what the
+motion catalogue is made of), and §6's neck is built the way the source
+builds it - a distance-field blend in one shader - instead of a path, for
+the reasons recorded there. The reversal rule is taken as read.
+
 ## 2. The shape grammar
 
 Two bodies: the **island** (the pill) and the **child** (the stop button).
@@ -50,7 +101,10 @@ What the frames show, and what every implementation has to keep:
   (1016); its outline is `x 204-223` at rest in both sequences. What moves is
   the island's *outline*: it reaches out past the child's resting place, then
   withdraws and leaves the child behind (split); it reaches out, swallows the
-  child, then contracts to one body (merge).
+  child, then contracts to one body (merge). (In the source the satellite is
+  parameterised from the main body's far edge - `mainWidth + offset`, the
+  main swelling 220 -> 250 -> 200 under it - and the composition is centred;
+  the frames are what that composes to on screen, and the frames stand.)
 - **There is a JOINED state, and it is bigger than either rest state in both
   axes.** Split and merge both pass through exactly the same outline: `x
   82-237`, 156 px wide, 25 px tall, against a 108x20 clock pill, a 98x20
@@ -141,6 +195,15 @@ the distance early, a long tail). The samples, for the record - split swell
 `0 .04 .07 .36 .43 .57 .64 .79 .82 .86 .93 .93 1`, merge swallow
 `0 .04 .07 .14 .14 .36 .43 .57 .79 1 1`, merge absorb
 `0 .04 .27 .44 .62 .76 .84 .87 .91 .93 .96 .98 .98 1`.
+
+The source (§1) has no bezier at all: its scalar is linear in time and the
+SHAPE is keyed in value - the satellite leaves at 0.32, the swell peaks at
+0.58, the neck thins to 0.76, pinches by 0.80 and the bodies settle to 1.0.
+Read against the two-stage fit below, that puts the parting of the outlines
+(this proposal's seam, 0.5 of the value) inside the source's 0.32-0.58
+release, and the pinch (0.9 of the value, 0.7 of the time) inside its
+0.80-1.0 settle, where the blend radius runs 18 -> 0. The fit stands; the
+keyframes are the ground truth to retune against.
 
 No single catalogue curve describes a whole direction: treating either
 direction as ONE scalar with the seam at 0.5, the best catalogue curve is
