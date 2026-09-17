@@ -228,11 +228,15 @@ it is released by the island's outline or absorbed by it. Up to the seam the two
 (the island stretching, the reference's swell); from the seam a neck - a same-colour bridge whose
 waist narrows to nothing - bridges them until it pinches off `Appearance.animation.splitNeckReach`
 of the way through the settle half, and the bodies settle APART. Shape rides the scalar: a corner
-rounds from the seam to rest, because the rounding is the seam's own shape opening. Anything that
-changes the look but not the shape (a border, a colour, a glyph) runs on the effects tier sequenced
-with the spatial motion - after it has landed on a split, before it starts on a merge - never
-during it. A switch with no travel (nothing to split off) is a look change alone, on the effects
-tier, corners included. Measured off the reference in `docs/proposals/motion-split.md`; the first
+rounds from the seam to the PINCH, over the neck's own span, because the rounding is the seam's
+own shape opening and the neck's flank is what exposes it (rounding to rest left a square corner
+over a lit gap). Anything that changes the look but not the shape (a border, a colour, a glyph)
+runs on the effects tier sequenced with the spatial motion - after it has landed on a split,
+before it starts on a merge - not during it; a border is a colour that fades, never a width
+animated from 0 (a width below 1 draws nothing). One stated exception: a split reversed into a
+merge before it lands has its look already pending and takes it during the descent, since nothing
+is left to wait for. A switch with no travel (nothing to split off) is a look change alone, on the
+effects tier, corners included. Measured off the reference in `docs/proposals/motion-split.md`; the first
 adopter is the dock's tab (`modules/imi/dock/Dock.qml`).
 
 ### Expandable Content
