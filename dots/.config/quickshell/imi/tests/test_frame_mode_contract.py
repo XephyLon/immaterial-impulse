@@ -103,8 +103,8 @@ class FrameModeContract(unittest.TestCase):
         # and a hidden dock left a frosted silhouette where the pill rests.
         self.assertIn("item: Config.options.dock.showBackground && dockMouseArea.atRest ? dockVisualBackground : null", dock)
         self.assertIn("readonly property bool atRest: anchors.horizontalCenterOffset === 0 && anchors.verticalCenterOffset === 0", dock)
-        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.apart,", dock,
-                      "the outward corners round on the scalar, from the seam, not at a boolean")
+        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius,\n                                dockRoot.liftFromTab || dockRoot.splitTarget === 0 ? dockRoot.apart : 1,", dock,
+                      "the outward corners round on the scalar, from the seam, not at a boolean - and stay round for a pill that was never fused")
         for corner in ("topLeft", "topRight", "bottomLeft", "bottomRight"):
             self.assertRegex(dock, rf"{corner}Radius:\s+frameRadii\.{corner}", corner)
             self.assertIn(f"{corner}Radius: dockVisualBackground.{corner}Radius", dock, f"the blur region follows the pill's {corner}")
@@ -187,7 +187,13 @@ class FrameModeContract(unittest.TestCase):
         # on the effects tier - after the motion on a lift, before it on a
         # landing (the pause above). With no lift the look IS the switch and
         # runs on the effects tier alone, corners included, on its own scalar.
-        self.assertIn("readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || dockRoot.splitProgress < 1) : dockRoot.attached", dock)
+        self.assertIn("readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || (dockRoot.splitProgress < 1 && dockRoot.liftFromTab)) : dockRoot.attached", dock)
+        # A lift that began as the tab splits; a pill that was never fused
+        # (a floating dock being pinned) rises as a pill: no neck, corners
+        # round. Latched at the target's rising edge.
+        self.assertIn("property bool liftFromTab: true", dock)
+        self.assertIn("onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedLook", dock)
+        self.assertIn("&& (dockRoot.liftFromTab || dockRoot.splitTarget === 0)", dock, "the neck draws for a split and for every landing")
         self.assertIn("property real lookApart: dockRoot.attached ? 0 : 1", dock)
         look = dock[dock.index("Behavior on lookApart {"):]
         look = look[:look.index("}")]
@@ -199,7 +205,7 @@ class FrameModeContract(unittest.TestCase):
         # The corners and the neck are keyed on the SEAM - the outward pair
         # rounds from it, the neck lives from it to the pinch - so the token
         # is read, not decorative.
-        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.apart, dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)", dock)
+        self.assertIn("dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)", dock, "the corners take the seam from the tier, or none without a lift")
         neck = dock[dock.index("id: splitNeck"):]
         neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]
         self.assertIn("DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)", neck)

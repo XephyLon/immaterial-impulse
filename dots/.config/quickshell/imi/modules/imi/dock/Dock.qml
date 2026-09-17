@@ -147,6 +147,16 @@ Scope {
             // the travel alone, while the dock is hidden.
             readonly property real splitTarget: FrameGeometry.enabled && root.pinned && !DockReservation.attached ? 1 : 0
             property real splitProgress: dockRoot.splitTarget
+            // Whether the lift under way began as the TAB. A pinned attached
+            // dock going floating splits: tab look until it has landed
+            // apart, a neck at the seam. A floating dock being pinned rises
+            // too - the travel appears - but nothing was fused: it rises as
+            // the pill it already is, no neck, corners round. Latched at the
+            // target's rising edge; `attachedLook` reads the same in either
+            // evaluation order there, because `attached` is the same before
+            // and after in every case that reaches this.
+            property bool liftFromTab: true
+            onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedLook
             Behavior on splitProgress {
                 id: splitBehavior
                 // No lift, no spatial tier: an unpinned dock at the default
@@ -184,7 +194,7 @@ Scope {
             // above holds the outline for that tier's length. With no lift
             // the look IS the switch: `attached` alone, on the effects tier,
             // corners included, through a scalar of its own.
-            readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || dockRoot.splitProgress < 1) : dockRoot.attached
+            readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || (dockRoot.splitProgress < 1 && dockRoot.liftFromTab)) : dockRoot.attached
             property real lookApart: dockRoot.attached ? 0 : 1
             Behavior on lookApart {
                 // Read only while there is no lift; idle otherwise.
@@ -354,7 +364,11 @@ Scope {
                                 { x: dockVisualBackground.x, y: dockVisualBackground.y,
                                   width: dockVisualBackground.width, height: dockVisualBackground.height },
                                 dockRoot.splitLift, splitNeck.waist, splitNeck.fillet)
+                            // Drawn for a split (a lift that began as the tab) and
+                            // for every landing; a pill that was never fused rises
+                            // without one.
                             visible: Config.options.dock.showBackground && dockRoot.splitLift > 0 && splitNeck.waist > 0
+                                && (dockRoot.liftFromTab || dockRoot.splitTarget === 0)
                             x: box.x
                             y: box.y
                             width: box.width
@@ -395,7 +409,9 @@ Scope {
                             // outlines part, to rest: square while fused, a
                             // pill once apart. With no lift, over the look's
                             // own scalar.
-                            readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.apart, dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)
+                            readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius,
+                                dockRoot.liftFromTab || dockRoot.splitTarget === 0 ? dockRoot.apart : 1,
+                                dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft
