@@ -400,15 +400,18 @@ function neckBlend(travel, apart, seam) {
     return BLEND_LIFTS * t * rise;
 }
 
-// The pill as the field sees it: reaching NECK_OVERLAP into the band, less
+// The pill as the field sees it: reaching FIELD_REACH into the band, less
 // the lift. The blend is nothing at rest, so for the first pixel of a lift
 // it cannot bridge even the sub-pixel gap the coverage ramp exposes as a
 // hairline (measured: a 51 on a 21 body along the whole seam); the reach
 // keeps the union seamless until the blend is big enough to take over, and
 // is gone by then, so past the pinch the field's pill is the Rectangle's.
+// Two pixels: the band's field edge sits one ramp inside the band (the
+// shader), so a pixel of reach alone left the first frames a ramp short.
+var FIELD_REACH = 2;
 function fieldPill(edge, pill, lift) {
     var e = normalizedEdge(edge);
-    var r = Math.max(0, NECK_OVERLAP - (Number(lift) || 0));
+    var r = Math.max(0, FIELD_REACH - (Number(lift) || 0));
     var box = { x: pill.x, y: pill.y, width: pill.width, height: pill.height };
     if (e === "bottom") box.height += r;
     else if (e === "top") { box.y -= r; box.height += r; }

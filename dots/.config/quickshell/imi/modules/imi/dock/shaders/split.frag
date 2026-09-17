@@ -61,8 +61,13 @@ void main()
 {
     vec2 p = qt_TexCoord0 * resolution;
     float pill = roundedBox(p - pillCenter, pillSize * 0.5, pillRadii);
-    // The band: everything past its inner edge, in the direction of its normal.
-    float band = bandOrigin - dot(p, bandNormal);
+    // The band: everything past its inner edge, in the direction of its
+    // normal - with its zero-crossing one ramp INSIDE the band, so the ramp
+    // never reaches the gap side of the edge (it tinted the gap's last row
+    // 7% along the whole box while the field painted, and the row stepped
+    // back at the hand-over); inside the band the band's own surface covers
+    // it.
+    float band = bandOrigin - dot(p, bandNormal) + softness;
     // The blend, tapering along the band from the waist's centre to its ends.
     float along = dot(p, abs(vec2(bandNormal.y, bandNormal.x)));
     float u = waistHalf > 0.0 ? (along - waistCenter) / waistHalf : 2.0;

@@ -440,15 +440,18 @@ TestCase {
         // blend is big enough to take over, and by then the reach is gone,
         // so the field's pill is the Rectangle's pill at the hand-over past
         // the pinch.
+        // Two pixels of reach: the band's field edge sits a ramp inside the
+        // band, so one pixel left the first frames a ramp short.
         const pill = { x: 100, y: 5, width: 400, height: 60 };
-        compare(Geometry.fieldPill("bottom", pill, 0), { x: 100, y: 5, width: 400, height: 61 });
-        compare(Geometry.fieldPill("bottom", pill, 0.25), { x: 100, y: 5, width: 400, height: 60.75 });
-        compare(Geometry.fieldPill("bottom", pill, 1), pill, "a pixel up, nothing to reach");
+        compare(Geometry.FIELD_REACH, 2);
+        compare(Geometry.fieldPill("bottom", pill, 0), { x: 100, y: 5, width: 400, height: 62 });
+        compare(Geometry.fieldPill("bottom", pill, 0.25), { x: 100, y: 5, width: 400, height: 61.75 });
+        compare(Geometry.fieldPill("bottom", pill, 2), pill, "two pixels up, nothing to reach");
         compare(Geometry.fieldPill("bottom", pill, 4), pill);
-        compare(Geometry.fieldPill("top", pill, 0), { x: 100, y: 4, width: 400, height: 61 });
+        compare(Geometry.fieldPill("top", pill, 0), { x: 100, y: 3, width: 400, height: 62 });
         const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.fieldPill("left", side, 0), { x: 4, y: 100, width: 61, height: 400 });
-        compare(Geometry.fieldPill("right", side, 0.5), { x: 5, y: 100, width: 60.5, height: 400 });
+        compare(Geometry.fieldPill("left", side, 0), { x: 3, y: 100, width: 62, height: 400 });
+        compare(Geometry.fieldPill("right", side, 0.5), { x: 5, y: 100, width: 61.5, height: 400 });
     }
 
     function test_the_neck_is_one_path_with_two_concave_flanks() {
