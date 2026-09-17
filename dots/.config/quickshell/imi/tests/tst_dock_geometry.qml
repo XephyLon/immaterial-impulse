@@ -252,16 +252,23 @@ TestCase {
         compare(Geometry.splitTravel(true, true, "5"), 5);
     }
 
-    function test_the_zone_grows_by_the_gap_when_the_dock_floats() {
+    function test_the_zone_reserves_the_union_of_where_the_pill_is_and_where_it_goes() {
         // The surface no longer moves for the switch, so the reservation is
-        // what keeps windows the same distance from a floating pill as before:
-        // offset + zone + lift is band + height + gap either way.
-        compare(Geometry.splitZoneExtra(true, true, gaps), 0, "attached reserves what it always did");
-        compare(Geometry.splitZoneExtra(true, false, gaps), 5, "floating reserves the lift too");
-        compare(Geometry.splitZoneExtra(false, false, gaps), 0);
+        // what keeps windows a gap away from a floating pill. It steps at the
+        // START of a lift (windows move away, the pill lifts into the space)
+        // and at the END of a landing (the pill lands, then the windows
+        // follow it in) - never mid-flight, and never while the pill is up:
+        // stepping at the start of a landing put the windows against the
+        // still-floating pill for the length of the motion.
+        compare(Geometry.splitZoneExtra(5, false, 0), 0, "attached, at rest: what it always reserved");
+        compare(Geometry.splitZoneExtra(5, true, 0), 5, "the lift is asked for: reserve it before the pill moves");
+        compare(Geometry.splitZoneExtra(5, true, 1), 5, "floating, at rest");
+        compare(Geometry.splitZoneExtra(5, false, 1), 5, "the landing is asked for: hold it while the pill is up");
+        compare(Geometry.splitZoneExtra(5, false, 0.3), 5, "...all the way down");
+        compare(Geometry.splitZoneExtra(0, true, 1), 0, "no lift (unpinned, or the frame off): nothing to reserve");
         const band = 12;
-        const attachedWindows = Geometry.frameOffset(true, band, gaps) + Geometry.exclusiveZone(dockHeight, elevation, gaps) + Geometry.splitZoneExtra(true, true, gaps);
-        const floatingWindows = Geometry.frameOffset(true, band, gaps) + Geometry.exclusiveZone(dockHeight, elevation, gaps) + Geometry.splitZoneExtra(true, false, gaps);
+        const attachedWindows = Geometry.frameOffset(true, band, gaps) + Geometry.exclusiveZone(dockHeight, elevation, gaps) + Geometry.splitZoneExtra(gaps, false, 0);
+        const floatingWindows = Geometry.frameOffset(true, band, gaps) + Geometry.exclusiveZone(dockHeight, elevation, gaps) + Geometry.splitZoneExtra(gaps, true, 1);
         compare(attachedWindows, dockHeight + band, "attached: windows end height + band from the edge, as #396 measured");
         compare(floatingWindows, dockHeight + band + gaps, "floating: a gap further, as #396's moved surface gave");
     }
@@ -312,91 +319,78 @@ TestCase {
         compare(Geometry.liftOffset("bottom", 10, 5), { x: 0, y: 0 });
     }
 
-    function test_the_outward_corners_round_with_the_lift() {
-        // Fused, the seam is square; free, the pill is a pill; between, the
-        // outward pair rounds with the scalar and the inward pair never moves.
+    function test_the_outward_corners_round_from_the_seam() {
+        // Fused, the seam is square; free, the pill is a pill. The outward
+        // pair rounds over the SETTLE half of the scalar - from the seam,
+        // where the outlines part, to rest - and the inward pair never moves.
         const r = 22;
-        compare(Geometry.cornerRadiiAt("bottom", r, 0), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
-        compare(Geometry.cornerRadiiAt("bottom", r, 0.5), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
-        compare(Geometry.cornerRadiiAt("bottom", r, 1), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
-        compare(Geometry.cornerRadiiAt("top", r, 0.25), { topLeft: 5.5, topRight: 5.5, bottomLeft: r, bottomRight: r });
-        compare(Geometry.cornerRadiiAt("left", r, 0.5), { topLeft: 11, topRight: r, bottomLeft: 11, bottomRight: r });
-        compare(Geometry.cornerRadiiAt("right", r, 0.5), { topLeft: r, topRight: 11, bottomLeft: r, bottomRight: 11 });
+        const seam = 0.5;
+        compare(Geometry.cornerRadiiAt("bottom", r, 0, seam), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.5, seam), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 }, "square until the seam");
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.75, seam), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
+        compare(Geometry.cornerRadiiAt("bottom", r, 1, seam), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("top", r, 0.625, seam), { topLeft: 5.5, topRight: 5.5, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("left", r, 0.75, seam), { topLeft: 11, topRight: r, bottomLeft: 11, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("right", r, 0.75, seam), { topLeft: r, topRight: 11, bottomLeft: r, bottomRight: 11 });
+        // A look with no lift has no seam: the whole scalar is the rounding.
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.5, 0), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
         // Past the ends is the ends: a curve that leaves the unit box must not
         // produce a negative radius or a corner rounder than the pill.
-        compare(Geometry.cornerRadiiAt("bottom", r, -0.2), Geometry.cornerRadiiAt("bottom", r, 0));
-        compare(Geometry.cornerRadiiAt("bottom", r, 1.3), Geometry.cornerRadiiAt("bottom", r, 1));
+        compare(Geometry.cornerRadiiAt("bottom", r, -0.2, seam), Geometry.cornerRadiiAt("bottom", r, 0, seam));
+        compare(Geometry.cornerRadiiAt("bottom", r, 1.3, seam), Geometry.cornerRadiiAt("bottom", r, 1, seam));
         // The boolean form is the two ends of the same function.
         for (const edge of ["top", "bottom", "left", "right"]) {
-            compare(Geometry.cornerRadii(edge, r, true), Geometry.cornerRadiiAt(edge, r, 0), edge);
-            compare(Geometry.cornerRadii(edge, r, false), Geometry.cornerRadiiAt(edge, r, 1), edge);
+            compare(Geometry.cornerRadii(edge, r, true), Geometry.cornerRadiiAt(edge, r, 0, seam), edge);
+            compare(Geometry.cornerRadii(edge, r, false), Geometry.cornerRadiiAt(edge, r, 1, seam), edge);
         }
     }
 
-    function test_the_neck_bridges_the_reach_and_narrows_to_nothing() {
-        // The reference's neck exists while the outlines are within 40% of
-        // the travelling body's thickness. The dock's lift is 5 px on a 60 px
-        // pill, so the reach is the whole travel and the neck breaks at rest;
-        // a body travelling further than 40% of itself breaks part way.
-        compare(Geometry.neckReach(60, 5, 0.4), 5);
-        compare(Geometry.neckReach(60, 40, 0.4), 24);
-        compare(Geometry.neckReach(60, 0, 0.4), 0, "no travel, no neck");
-        // The waist: the pill's full width when fused, nothing at the reach.
-        compare(Geometry.neckWaist(400, 0, 5), 400);
-        compare(Geometry.neckWaist(400, 2.5, 5), 200);
-        compare(Geometry.neckWaist(400, 5, 5), 0);
-        compare(Geometry.neckWaist(400, 7, 5), 0, "past the reach the bridge is broken");
-        compare(Geometry.neckWaist(400, 1, 0), 0, "a zero reach never bridges");
+    function test_the_neck_bridges_the_near_half_of_the_settle_and_narrows_to_nothing() {
+        // The reference's neck lives from the seam to a pinch-off part way
+        // through the settle half (165 ms of 800: the seam at 0.5 of the time,
+        // the pinch at 0.7, which on this front-loaded curve is 0.9 of the
+        // VALUE), never to rest - the bodies settle APART. `reach` is the
+        // fraction of the settle half the neck bridges: the pill's full width
+        // at the seam, nothing at the pinch.
+        const seam = 0.5, reach = 0.8;
+        compare(Geometry.neckWaist(400, 0, seam, reach), 400, "fused: the bridge is the pill");
+        compare(Geometry.neckWaist(400, 0.5, seam, reach), 400, "at the seam, still the pill");
+        compare(Geometry.neckWaist(400, 0.7, seam, reach), 200);
+        compare(Geometry.neckWaist(400, 0.9, seam, reach), 0, "the pinch-off");
+        compare(Geometry.neckWaist(400, 0.95, seam, reach), 0, "apart, settling");
+        compare(Geometry.neckWaist(400, 1, seam, reach), 0);
+        compare(Geometry.neckWaist(400, 0.6, seam, 0), 0, "a zero reach never bridges");
     }
 
     function test_the_neck_sits_between_the_pill_and_the_band_at_every_edge() {
-        // The neck's box, from the pill's box: it fills the lift between the
+        // The neck's box, from the pill's: it fills the lift between the
         // pill's outward edge and where the band is (the pill's REST outward
-        // edge), centred along the strip at the waist's width.
+        // edge), centred along the strip at the waist plus a fillet each side.
         const pill = { x: 100, y: 5, width: 400, height: 60 };
-        const bottom = Geometry.neckBox("bottom", pill, 4, 200);
-        compare(bottom, { x: 200, y: 65, width: 200, height: 4 });
-        const top = Geometry.neckBox("top", pill, 4, 200);
-        compare(top, { x: 200, y: 1, width: 200, height: 4 });
+        compare(Geometry.neckBox("bottom", pill, 4, 200, 4), { x: 196, y: 65, width: 208, height: 4 });
+        compare(Geometry.neckBox("top", pill, 4, 200, 4), { x: 196, y: 1, width: 208, height: 4 });
         const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.neckBox("left", side, 4, 200), { x: 1, y: 200, width: 4, height: 200 });
-        compare(Geometry.neckBox("right", side, 4, 200), { x: 65, y: 200, width: 4, height: 200 });
-        // Its two flanks are fillets whose straight edges hug the band and the
-        // waist: for a bottom dock the start (left) flank fills its box's
-        // bottom-right and the end (right) flank its bottom-left.
-        compare(Geometry.neckFilletCorners("bottom"), { start: "bottomRight", end: "bottomLeft" });
-        compare(Geometry.neckFilletCorners("top"), { start: "topRight", end: "topLeft" });
-        compare(Geometry.neckFilletCorners("left"), { start: "bottomLeft", end: "topLeft" });
-        compare(Geometry.neckFilletCorners("right"), { start: "bottomRight", end: "topRight" });
-        // Where each fillet's box sits, in the neck's own frame: against the
-        // band (the neck's far side) and just outside the waist.
-        compare(Geometry.neckFilletOffsets("bottom", 200, 4, 4), { start: { x: -4, y: 0 }, end: { x: 200, y: 0 } });
-        compare(Geometry.neckFilletOffsets("bottom", 200, 6, 4), { start: { x: -4, y: 2 }, end: { x: 200, y: 2 } });
-        compare(Geometry.neckFilletOffsets("top", 200, 6, 4), { start: { x: -4, y: 0 }, end: { x: 200, y: 0 } });
-        compare(Geometry.neckFilletOffsets("left", 6, 200, 4), { start: { x: 0, y: -4 }, end: { x: 0, y: 200 } });
-        compare(Geometry.neckFilletOffsets("right", 6, 200, 4), { start: { x: 2, y: -4 }, end: { x: 2, y: 200 } });
+        compare(Geometry.neckBox("left", side, 4, 200, 4), { x: 1, y: 196, width: 4, height: 208 });
+        compare(Geometry.neckBox("right", side, 4, 200, 4), { x: 65, y: 196, width: 4, height: 208 });
         // The fillet is as big as the lift and never wider than the flank room.
         compare(Geometry.neckFilletSize(4, 400, 200), 4);
         compare(Geometry.neckFilletSize(40, 400, 380), 10);
         compare(Geometry.neckFilletSize(4, 400, 400), 0, "no flank, no fillet");
     }
 
-    function test_an_attached_dock_squares_only_its_outward_corners() {
-        const r = 22;
-        compare(Geometry.cornerRadii("bottom", r, false), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
-        compare(Geometry.cornerRadii("bottom", r, true), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
-        compare(Geometry.cornerRadii("top", r, true), { topLeft: 0, topRight: 0, bottomLeft: r, bottomRight: r });
-        compare(Geometry.cornerRadii("left", r, true), { topLeft: 0, topRight: r, bottomLeft: 0, bottomRight: r });
-        compare(Geometry.cornerRadii("right", r, true), { topLeft: r, topRight: 0, bottomLeft: r, bottomRight: 0 });
-        // The seam is always the outward side, at every edge.
-        for (const edge of ["top", "bottom", "left", "right"]) {
-            const radii = Geometry.cornerRadii(edge, r, true);
-            const out = Geometry.outwardSide(edge);
-            const squared = Object.keys(radii).filter(k => radii[k] === 0);
-            compare(squared.length, 2, edge + " squares exactly two corners");
-            for (const k of squared)
-                verify(k.toLowerCase().indexOf(out) !== -1, edge + ": " + k + " is not on the " + out + " side");
-        }
+    function test_the_neck_is_one_path_with_two_concave_flanks() {
+        // One Shape, no layer: the waist rectangle and its two fillets as one
+        // SVG path in the neck box's own frame. The band side is the far side
+        // (across = lift), the pill side is across = 0.
+        const bottom = Geometry.neckPath("bottom", 200, 4, 4);
+        compare(bottom, "M 4 0 L 204 0 L 204 0 A 4 4 0 0 0 208 4 L 0 4 A 4 4 0 0 0 4 0 Z");
+        // Without a fillet the flanks are straight.
+        compare(Geometry.neckPath("bottom", 200, 4, 0), "M 0 0 L 200 0 L 200 4 L 200 4 L 0 4 L 0 4 Z");
+        // Each other edge is the same figure mapped into its box; a reflection
+        // flips the arcs' sweep, a rotation (two reflections) keeps it.
+        compare(Geometry.neckPath("top", 200, 4, 4), "M 4 4 L 204 4 L 204 4 A 4 4 0 0 1 208 0 L 0 0 A 4 4 0 0 1 4 4 Z");
+        compare(Geometry.neckPath("right", 200, 4, 4), "M 0 4 L 0 204 L 0 204 A 4 4 0 0 1 4 208 L 4 0 A 4 4 0 0 1 0 4 Z");
+        compare(Geometry.neckPath("left", 200, 4, 4), "M 4 4 L 4 204 L 4 204 A 4 4 0 0 0 0 208 L 0 0 A 4 4 0 0 0 4 4 Z");
     }
 
     function test_the_bars_overloaded_pair_reads_as_an_edge() {

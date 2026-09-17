@@ -81,7 +81,7 @@ class FrameModeContract(unittest.TestCase):
         # unpinned dock hides and reveals from the screen edge.
         dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
         self.assertIn("readonly property bool reserves: root.pinned && !fullscreenOnThisMonitor", dock)
-        self.assertIn("exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0", dock)
+        self.assertIn("exclusiveZone: dockRoot.reserves ? DockReservation.zone + dockRoot.splitZoneExtra : 0", dock)
         self.assertIn("fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)", dock)
         self.assertIn("root.edge, 0, dockRoot.reserves ? DockReservation.frameOffset : 0)", dock)
         for side in ("top", "bottom", "left", "right"):
@@ -103,8 +103,8 @@ class FrameModeContract(unittest.TestCase):
         # and a hidden dock left a frosted silhouette where the pill rests.
         self.assertIn("item: Config.options.dock.showBackground && dockMouseArea.atRest ? dockVisualBackground : null", dock)
         self.assertIn("readonly property bool atRest: anchors.horizontalCenterOffset === 0 && anchors.verticalCenterOffset === 0", dock)
-        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.splitProgress)", dock,
-                      "the outward corners round WITH the lift, not at a boolean")
+        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.apart,", dock,
+                      "the outward corners round on the scalar, from the seam, not at a boolean")
         for corner in ("topLeft", "topRight", "bottomLeft", "bottomRight"):
             self.assertRegex(dock, rf"{corner}Radius:\s+frameRadii\.{corner}", corner)
             self.assertIn(f"{corner}Radius: dockVisualBackground.{corner}Radius", dock, f"the blur region follows the pill's {corner}")
@@ -127,28 +127,35 @@ class FrameModeContract(unittest.TestCase):
     def test_the_dock_switch_is_the_split(self):
         """docs/proposals/motion-split.md §6: one scalar, the split tier taken
         whole, the pill lifting inside a surface that never moves, the look
-        sequenced outside the motion, and a neck at the seam."""
+        sequenced outside the motion, the corners and the neck keyed on the
+        seam, and a zone that reserves the union of where the pill is and
+        where it goes."""
         dock = _strip((ROOT / "modules/imi/dock/Dock.qml").read_text())
         reservation = _strip((ROOT / "modules/imi/dock/DockReservation.qml").read_text())
         appearance = _strip((ROOT / "modules/common/Appearance.qml").read_text())
         # The tier: a two-segment curve whose join - the seam - is the scalar's
         # midpoint, an 800 ms base through the policy, and the two constants
-        # beside it. Measured, not chosen: the proposal's §4.
+        # beside it. Measured, not chosen: the proposal's §4 and §5.
         self.assertIn("readonly property list<real> split: [0.15, 0, 0.5, 0.5, 0.5, 0.5, 0.6, 0.5, 0.5, 1, 1, 1]", appearance)
         self.assertIn("readonly property real splitDuration: 800", appearance)
         self.assertIn("property QtObject split: QtObject {", appearance)
         self.assertIn("motion.scale(animationCurves.splitDuration)", appearance)
         self.assertIn("readonly property real splitSeam: 0.5", appearance)
-        self.assertIn("readonly property real splitNeckReach: 0.4", appearance)
+        self.assertIn("readonly property real splitNeckReach: 0.8", appearance)
         self.assertIn("### Split (one body becomes two, or two become one)", (ROOT.parents[3] / "docs/M3_GUIDELINES.md").read_text())
-        # ONE scalar, 0 fused and 1 apart, driven by the attached predicate,
-        # with exactly one Behavior - the tier whole, and a pause before a
-        # landing so the look lands before the outline moves (the reference
-        # sequences effects and space, never overlaps them).
-        self.assertIn("property real splitProgress: dockRoot.attached ? 0 : 1", dock)
+        # ONE scalar, 0 fused and 1 apart, driven by the CONFIGURED choice -
+        # never by a state the user did not toggle (a fullscreen window
+        # dropping `attached` used to replay a landing on every exit) - with
+        # exactly one Behavior: the tier whole, enabled only when there is a
+        # lift to draw, and a pause before a landing so the look lands before
+        # the outline moves (the reference sequences effects and space).
+        self.assertIn("property real splitProgress: dockRoot.splitTarget", dock)
+        self.assertIn("readonly property real splitTarget: DockReservation.attached && (root.pinned || DockReservation.frameOffset === 0) ? 0 : 1", dock)
+        self.assertNotRegex(dock, r"splitProgress:\s*dockRoot\.attached", "the scalar does not follow the fullscreen term")
         self.assertEqual(dock.count("Behavior on splitProgress"), 1)
         behavior = dock[dock.index("Behavior on splitProgress"):]
         behavior = behavior[:behavior.index("readonly property real splitTravel")]
+        self.assertIn("enabled: dockRoot.splitTravel > 0", behavior, "no lift, no spatial tier: the look alone changes")
         self.assertIn("SequentialAnimation", behavior)
         self.assertIn("PauseAnimation { duration: splitBehavior.targetValue === 0 ? Appearance.animation.elementMoveFast.duration : 0 }", behavior)
         for half in ("duration: Appearance.animation.split.duration",
@@ -166,29 +173,42 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("DockGeometry.liftOffset(root.edge, dockRoot.splitRoom, dockRoot.splitLift)", dock)
         self.assertIn("Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut) + dockRoot.splitRoom", dock,
                       "the strip grows by the room the lift needs, nothing at the defaults")
-        # The reservation steps to the destination at the start, from the
-        # CONFIGURED state - never from the animated scalar.
-        self.assertIn("+ DockGeometry.splitZoneExtra(FrameGeometry.enabled, FrameGeometry.dockAttached,", reservation)
+        # The reservation reserves the union of where the pill is and where it
+        # is going: it steps at the start of a lift and the end of a landing,
+        # a boolean that flips - never per frame, never against a floating
+        # pill. The authority's zone stays the attached one.
+        self.assertIn("exclusiveZone: dockRoot.reserves ? DockReservation.zone + dockRoot.splitZoneExtra : 0", dock)
+        self.assertIn("readonly property real splitZoneExtra: DockGeometry.splitZoneExtra(dockRoot.splitTravel, dockRoot.splitTarget === 1, dockRoot.splitProgress)", dock)
+        self.assertNotIn("splitZoneExtra", reservation)
         self.assertNotIn("splitProgress", reservation)
-        self.assertIn("exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0", dock)
         # The look: the tab's until the pill has landed apart, then the pill's
         # on the effects tier - after the motion on a lift, before it on a
-        # landing (the pause above).
-        self.assertIn("readonly property bool attachedLook: dockRoot.attached || dockRoot.splitProgress < 1", dock)
+        # landing (the pause above). With no lift the look IS the switch and
+        # runs on the effects tier alone, corners included, on its own scalar.
+        self.assertIn("readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || dockRoot.splitProgress < 1) : dockRoot.attached", dock)
+        self.assertIn("property real lookApart: dockRoot.attached ? 0 : 1", dock)
+        self.assertIn("Behavior on lookApart { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }", dock)
+        self.assertIn("readonly property real apart: dockRoot.splitTravel > 0 ? dockRoot.splitProgress : dockRoot.lookApart", dock)
         self.assertIn("Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }", dock)
         self.assertIn("Behavior on border.width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }", dock)
-        # The neck: a same-colour bridge under the pill, boxed by the module
-        # (never anchored - the turn is a size), its flanks two fillets.
+        # The corners and the neck are keyed on the SEAM - the outward pair
+        # rounds from it, the neck lives from it to the pinch - so the token
+        # is read, not decorative.
+        self.assertIn("DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.apart, dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)", dock)
         neck = dock[dock.index("id: splitNeck"):]
-        neck = neck[:neck.index("id: dockVisualBackground")]
-        self.assertIn("DockGeometry.neckReach(", dock)
-        self.assertIn("Appearance.animation.splitNeckReach", dock)
-        self.assertIn("DockGeometry.neckWaist(", dock)
+        neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]
+        self.assertIn("DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)", neck)
+        # ...and the neck is ONE Shape on one path from the module, no layer,
+        # boxed rather than anchored (the turn is a size).
         self.assertIn("DockGeometry.neckBox(root.edge,", neck)
-        self.assertIn("color: FrameGeometry.color", neck)
-        self.assertEqual(neck.count("RoundCorner {"), 2, "two flank fillets")
-        self.assertIn("DockGeometry.neckFilletCorners(root.edge)", neck)
-        self.assertIn("DockGeometry.neckFilletSize(", neck)
+        self.assertIn("DockGeometry.neckPath(root.edge,", neck)
+        self.assertIn("preferredRendererType: Shape.CurveRenderer", neck)
+        self.assertIn("fillColor: FrameGeometry.color", neck)
+        self.assertIn("Shape {\n                            id: splitNeck", dock, "the neck is a Shape")
+        self.assertEqual(neck.count("ShapePath {"), 1, "one path, not three items")
+        self.assertEqual(neck.count("Rectangle {"), 0)
+        self.assertNotIn("RoundCorner", neck)
+        self.assertNotIn("layer.enabled", neck)
         self.assertNotIn("anchors.", neck, "the neck is a box, not an anchor set that changes with the edge")
 
     def test_one_geometry_authority(self):

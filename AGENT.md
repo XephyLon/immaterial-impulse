@@ -355,21 +355,33 @@ it" are `gapsOut` apart by definition, whatever the band), on ONE scalar (`Dock.
 the dynamic-island reference in `docs/proposals/motion-split.md`, a two-segment curve whose join is
 the seam. Everything else is arithmetic on that scalar: the pill's own margins carry the lift
 (`liftedMargins`; the blur `Region` tracks its item's OWN geometry, so the frost rides), the icons
-follow through a centre offset (`liftOffset`), the outward corners round with it (`cornerRadiiAt`),
-and a neck in the band's colour (`neckBox`, `neckWaist`, two `RoundCorner` flanks) bridges the seam
-while the gap is inside `neckReach`. What still steps is the RESERVATION, and it steps from the
-configured state at the start of a direction (`splitZoneExtra`, in `DockReservation.zone`, never
-from the scalar): the compositor re-tiles and windows travel on its own animation. The look is
+follow through a centre offset (`liftOffset`), the outward corners round from the SEAM to rest
+(`cornerRadiiAt`, the seam's own shape opening), and a neck in the band's colour - one `Shape` on
+one path from the module (`neckPath`), no layer - bridges pill and band at full width up to the
+seam and narrows to nothing `splitNeckReach` of the way through the settle (`neckWaist`), so the
+bodies settle apart. The RESERVATION is what still steps, and it reserves the union of where the
+pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and the end
+of a landing, a boolean that flips - written at the start of a landing it put the windows against
+the floating pill for a second - and the compositor re-tiles on its own animation. The scalar
+follows the CONFIGURED choice (`splitTarget`), never `attached`: that predicate folds in the
+fullscreen term, and a scalar on it replayed a landing on every fullscreen exit. The look is
 sequenced outside the motion, as the reference does it: `attachedLook` holds the tab's colour and
 border until the scalar has landed apart, and a landing pauses the scalar's `SequentialAnimation` for
 the effects tier first - `PauseAnimation` keyed on the Behavior's own `targetValue`, which is set
-before the animation starts, where a binding on `attached` may not have re-evaluated yet. Two
-limits, stated: an unpinned dock never reserves and never lifts, so at the default band it takes the
-look change alone; and a configured gap larger than the elevation margin the pill lifts into grows
-the strip by the shortfall (`splitRoom`, nothing at the defaults). `test_frame_mode_contract.py`
+before the animation starts, where a binding on `attached` may not have re-evaluated yet. No lift,
+no spatial tier: an unpinned dock never reserves and never lifts, so at the default band the
+Behavior is disabled and the look, corners included, changes on the effects tier through a scalar
+of its own (`lookApart`); a configured gap larger than the elevation margin the pill lifts into
+grows the strip by the shortfall (`splitRoom`, nothing at the defaults). Two things the sandbox
+taught while measuring it: a zone request lands only on the surface's next commit, and with the
+parent display DPMS-off the nested output produces no frames at all - every zone read stale and
+every `grim`/`wf-recorder` hung until the display was switched back on; and the neck's reach is a
+fraction of the scalar's VALUE set from the reference's neck in TIME (165 ms of 800), because the
+curve's settle half is front-loaded and a value-domain 0.5 pinched in 50 ms. `test_frame_mode_contract.py`
 pins all of it; `tst_dock_geometry.qml` the arithmetic. Verified in the sandbox at 60 fps, read the
-way the reference was: the pill's extent one row above the band 322 -> 0 px across a ~700 ms lift,
-and a 133 ms look change before a ~600 ms landing. ("feat(dock): the attached <-> floating switch is
+way the reference was: the pill's extent one row above the band 322 -> 0 px across a lift, a
+133 ms look change before the descent, and the reservation 65 -> 70 at the start of a lift and
+70 -> 65 at the end of a landing. ("feat(dock): the attached <-> floating switch is
 the split"). The rounding probe runs only
 while the mode is on (`running: root.enabled`, re-armed on `configreloaded` while on): the shell
 rewrites hypr files itself, so an ungated probe spawned `hyprctl` on every self-inflicted reload for

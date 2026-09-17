@@ -209,15 +209,20 @@ function splitTravel(frameOn, reserves, gapsOut) {
     return Number(gapsOut) || 0;
 }
 
-// What a floating dock reserves beyond an attached one: the lift. The surface
-// no longer moves for the switch, so the zone is what keeps windows a gap
-// away from the floating pill, as the moved surface used to. Bound to the
-// CONFIGURED state, never to the animated scalar: the zone is a compositor
-// re-arrange, written once at the start of a direction to the destination's
-// value, and tiled windows travel on the compositor's own animation.
-function splitZoneExtra(frameOn, attached, gapsOut) {
-    if (!frameOn || attached) return 0;
-    return Number(gapsOut) || 0;
+// What the dock reserves beyond the attached zone: the lift, while the pill
+// is up OR asked to go up. The surface no longer moves for the switch, so
+// the zone is what keeps windows a gap away from a floating pill, and it
+// reserves the UNION of where the pill is and where it is going: it steps at
+// the start of a lift (windows move away, the pill lifts into the space)
+// and at the end of a landing (the pill lands, then the windows follow it
+// in). Stepping at the start of a landing put the windows against the
+// still-floating pill for the length of the motion. Two steps per gesture at
+// most - a boolean that flips, never a per-frame write - and tiled windows
+// travel on the compositor's own animation.
+function splitZoneExtra(travel, apartTarget, progress) {
+    var t = Number(travel) || 0;
+    if (t <= 0) return 0;
+    return (apartTarget || (Number(progress) || 0) > 0) ? t : 0;
 }
 
 // The pill lifts into its own inward elevation margin. A gap bigger than that
@@ -253,54 +258,54 @@ function liftOffset(edge, room, lift) {
 // Which of the pill's corners stay round, as a function of how far apart
 // the pill and the band are: 0 is the fused tab (the outward pair squared -
 // that seam is where the tab grows out of the band, and a rounded seam is a
-// pill resting on a line), 1 is the free pill, between is the outward pair
-// rounding with the scalar while the inward pair never moves. Clamped: the
+// pill resting on a line), 1 is the free pill. The outward pair rounds over
+// the SETTLE half of the scalar - from `seam`, where the outlines part, to
+// rest - because the rounding is the seam's own shape opening, not a look
+// that could wait for the effects tier; the inward pair never moves. A look
+// with no lift passes seam 0 and rounds over its whole scalar. Clamped: the
 // scalar's curve may leave the unit box, and a negative radius is not a
 // corner.
-function cornerRadiiAt(edge, radius, apart) {
-    var a = Math.max(0, Math.min(1, Number(apart) || 0));
+function cornerRadiiAt(edge, radius, apart, seam) {
+    var sm = Math.max(0, Math.min(0.999, Number(seam) || 0));
+    var a = Math.max(0, Math.min(1, ((Number(apart) || 0) - sm) / (1 - sm)));
     var r = { topLeft: radius, topRight: radius, bottomLeft: radius, bottomRight: radius };
     var out = outwardSide(edge);
-    var seam = radius * a;
-    if (out === "bottom") { r.bottomLeft = seam; r.bottomRight = seam; }
-    else if (out === "top") { r.topLeft = seam; r.topRight = seam; }
-    else if (out === "left") { r.topLeft = seam; r.bottomLeft = seam; }
-    else { r.topRight = seam; r.bottomRight = seam; }
+    var rounded = radius * a;
+    if (out === "bottom") { r.bottomLeft = rounded; r.bottomRight = rounded; }
+    else if (out === "top") { r.topLeft = rounded; r.topRight = rounded; }
+    else if (out === "left") { r.topLeft = rounded; r.bottomLeft = rounded; }
+    else { r.topRight = rounded; r.bottomRight = rounded; }
     return r;
 }
 
 // The two ends of cornerRadiiAt, for a caller with no scalar.
 function cornerRadii(edge, radius, attached) {
-    return cornerRadiiAt(edge, radius, attached ? 0 : 1);
+    return cornerRadiiAt(edge, radius, attached ? 0 : 1, 0);
 }
 
-// How far apart the two outlines may be and still be bridged by a neck: the
-// reference's 40% of the travelling body's thickness
-// (Appearance.animation.splitNeckReach), or the whole travel when that is
-// shorter - a 5 px lift on a 60 px pill is bridged all the way and the neck
-// breaks at rest. No travel, no neck.
-function neckReach(thickness, travel, fraction) {
-    var t = Number(travel) || 0;
-    if (t <= 0) return 0;
-    return Math.min((Number(thickness) || 0) * (Number(fraction) || 0), t);
-}
-
-// The neck's waist: the pill's full width when the outlines touch, nothing
-// at the reach, linear between.
-function neckWaist(width, gap, reach) {
-    var r = Number(reach) || 0;
-    if (r <= 0) return 0;
-    var g = Number(gap) || 0;
-    return (Number(width) || 0) * Math.max(0, 1 - g / r);
+// The neck's waist on the scalar: the pill's full width up to the seam (the
+// fused outline stretching - the reference's swell), narrowing to nothing at
+// the pinch-off, which sits `reach` of the way through the settle half
+// (Appearance.animation.splitNeckReach, set from the reference's 165 ms of
+// neck in the time domain). Past the pinch there is no neck: the bodies
+// settle APART.
+function neckWaist(width, apart, seam, reach) {
+    var rc = Number(reach) || 0;
+    if (rc <= 0) return 0;
+    var sm = Math.max(0, Math.min(0.999, Number(seam) || 0));
+    var span = (1 - sm) * rc;
+    var t = Math.max(0, Math.min(1, ((Number(apart) || 0) - sm) / span));
+    return (Number(width) || 0) * (1 - t);
 }
 
 // The neck's box, from the pill's: it fills the lift between the pill's
 // outward edge and the band (the pill's REST outward edge, since the pill
-// moved and the band did not), centred along the strip at the waist's width.
-function neckBox(edge, pill, lift, waist) {
+// moved and the band did not), centred along the strip at the waist plus a
+// fillet on each flank.
+function neckBox(edge, pill, lift, waist, fillet) {
     var e = normalizedEdge(edge);
     var l = Number(lift) || 0;
-    var w = Number(waist) || 0;
+    var w = (Number(waist) || 0) + 2 * (Number(fillet) || 0);
     if (isVertical(e)) {
         var y = pill.y + (pill.height - w) / 2;
         return e === "left"
@@ -313,40 +318,39 @@ function neckBox(edge, pill, lift, waist) {
         : { x: x, y: pill.y + pill.height, width: w, height: l };
 }
 
-// The neck's two flanks are concave fillets (RoundCorner) whose straight
-// edges hug the band and the waist. Named by the corner of its own box the
-// fillet fills, for the start (left/top) and end (right/bottom) flank along
-// the strip.
-function neckFilletCorners(edge) {
-    switch (normalizedEdge(edge)) {
-    case "top": return { start: "topRight", end: "topLeft" };
-    case "left": return { start: "bottomLeft", end: "topLeft" };
-    case "right": return { start: "bottomRight", end: "topRight" };
-    default: return { start: "bottomRight", end: "bottomLeft" };
-    }
-}
-
-// Where each flank fillet's box sits, in the neck's own frame: against the
-// band (the neck's far side, which is where the lift is measured to) and
-// just outside the waist, at the start and the end of the strip.
-function neckFilletOffsets(edge, neckWidth, neckHeight, size) {
-    var e = normalizedEdge(edge);
-    var sz = Number(size) || 0;
-    var w = Number(neckWidth) || 0;
-    var h = Number(neckHeight) || 0;
-    if (isVertical(e)) {
-        var x = e === "left" ? 0 : w - sz;
-        return { start: { x: x, y: -sz }, end: { x: x, y: h } };
-    }
-    var y = e === "top" ? 0 : h - sz;
-    return { start: { x: -sz, y: y }, end: { x: w, y: y } };
-}
-
 // A flank fillet is as tall as the neck and never wider than the room the
 // waist leaves on its side of the pill.
 function neckFilletSize(lift, pillWidth, waist) {
     var flank = ((Number(pillWidth) || 0) - (Number(waist) || 0)) / 2;
     return Math.max(0, Math.min(Number(lift) || 0, flank));
+}
+
+// The neck as ONE SVG path in its box's own frame - the waist rectangle with
+// a concave fillet on each flank, its straight edges hugging the pill and
+// the band - so it is one Shape with no layer rather than three items with
+// two. Drawn in (along, across): along the strip, and across from the pill
+// (0) to the band (lift); each edge maps that figure into its box, and a
+// reflection (top, right) flips the arcs' sweep where a rotation (left: two
+// reflections) keeps it.
+function neckPath(edge, waist, lift, fillet) {
+    var e = normalizedEdge(edge);
+    var w = Number(waist) || 0;
+    var l = Number(lift) || 0;
+    var f = Math.max(0, Math.min(Number(fillet) || 0, l));
+    var flips = (e === "top" || e === "right") ? 1 : 0;
+    function m(u, v) {
+        switch (e) {
+        case "top": return [u, l - v];
+        case "right": return [v, u];
+        case "left": return [l - v, u];
+        default: return [u, v];
+        }
+    }
+    function pt(cmd, u, v) { var p = m(u, v); return cmd + " " + p[0] + " " + p[1]; }
+    function arc(u, v) { var p = m(u, v); return "A " + f + " " + f + " 0 0 " + flips + " " + p[0] + " " + p[1]; }
+    function reach(u, v) { return f > 0 ? arc(u, v) : pt("L", u, v); }
+    return [pt("M", f, 0), pt("L", f + w, 0), pt("L", f + w, l - f), reach(f + w + f, l),
+            pt("L", 0, l), reach(f, l - f), "Z"].join(" ");
 }
 
 // The direction a dock icon lifts on hover and bounces on launch: inward, so

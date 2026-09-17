@@ -187,37 +187,32 @@ and a paragraph, never a literal:
   `contentGate` is, because it is a property of the curve (the join of its
   two segments) and an adopter that hard-codes 0.5 is an adopter that
   silently disagrees the day the curve is retuned.
-- **`Appearance.animation.splitNeckReach`** - `0.4`, unitless: the distance
-  between the two outlines, as a fraction of the travelling body's thickness,
-  inside which a neck is drawn. A ratio rather than pixels because the pill
-  it was measured on is 20 px tall and the dock's is 60. Distances come off
-  the spacing ladder here; a fraction of the body's own size is the honest
-  unit, as the entrance scale is derived from the rise.
+- **`Appearance.animation.splitNeckReach`** - `0.8`, unitless: how far into
+  the settle half of the scalar the neck bridges before it pinches off, as a
+  fraction of the scalar's VALUE. Set in the time domain, which is what the
+  eye sees: the reference's neck lasts 165 ms of an 800 ms motion, from the
+  seam at 0.5 of the time to the pinch at 0.7, and on the curve above - whose
+  settle half is front-loaded - 0.7 of the time is 0.9 of the value, i.e.
+  0.8 of the settle half. (The first cut read it as a distance, 40% of the
+  body's thickness; on a 5 px lift that meant the neck broke only at rest,
+  and a value-domain 0.5 pinched in 50 ms. Both were measured off the
+  sandbox and rejected.) Past the pinch the bodies settle apart.
+- Shape rides the scalar: a corner rounds from the seam to rest, because the
+  rounding is the seam's own shape opening.
 - Effects at the seam - a colour, a border, a glyph - take
   `elementMoveFast` (200 ms, `expressiveEffects`), **sequenced** with the
   spatial tier, never overlapped with it: the reference's content changes
   land strictly before the outline moves (split) or after it lands (merge),
   and a look that changes while the outline is still travelling reads as two
-  gestures.
+  gestures. A switch with no travel is a look change alone, on the effects
+  tier, corners included.
 
 Guideline paragraph, for `docs/M3_GUIDELINES.md` §2 once the tier lands:
 
 > ### Split (one body becomes two, or two become one)
 >
-> A surface that detaches from another, or docks into it, takes
-> `Appearance.animation.split` whole: one scalar 0 -> 1 per direction, on a
-> two-segment curve that accelerates into the seam and decelerates out of it,
-> with the seam at `Appearance.animation.splitSeam` (0.5). Only ONE body
-> travels; the other is the island, and it stays. The travelling body is not
-> faded in or out, ever - it is released by the island's outline or absorbed
-> by it - and the seam is bridged by a neck (a same-colour bridge whose waist
-> narrows to nothing) while the outlines are within
-> `Appearance.animation.splitNeckReach` of the travelling body's thickness.
-> Anything that changes the LOOK at the seam (a corner rounding, a border, a
-> colour) is keyed on the scalar crossing the seam and runs on the effects
-> tier after the spatial motion has landed, or before it starts, never during
-> it. Measured off the reference in `docs/proposals/motion-split.md`; the
-> first adopter is the dock's tab.
+> (The paragraph as landed in `docs/M3_GUIDELINES.md` §2 "Split"; the wording
+> there is the rule.)
 
 ## 6. The first adopter: the dock's attached <-> floating switch
 
@@ -284,13 +279,17 @@ compositor reconfigure. Three shapes were weighed:
 Under (a) the **exclusive zone** is the one thing that still steps: attached
 reserves `height + band` from the edge, floating `height + gap + band`, and
 the difference is the gap that keeps windows off the floating pill. The zone
-is written at the START of either direction, to the destination's value,
-from the CONFIGURED state and never from the scalar: the compositor
-re-tiles, and tiled windows travel on Hyprland's own window animation, so
-the step is a window slide and not a jump (measured in the sandbox: a kitty
-of 841 px becomes 836 as the reservation goes 65 -> 70). On a float the
-windows move away first and the pill lifts into the space; on an attach the
-pill lands and the windows follow it in. The surface does not move, so the
+reserves the UNION of where the pill is and where it is going
+(`splitZoneExtra`): it steps at the START of a lift (the windows move away,
+the pill lifts into the space) and at the END of a landing (the pill lands,
+then the windows follow it in) - a boolean that flips, never a per-frame
+write, and never while the pill is up: written at the start of a landing,
+which the first cut did, it put the windows against the still-floating pill
+for the length of the motion. The compositor re-tiles, and tiled windows
+travel on Hyprland's own window animation, so each step is a window slide
+and not a jump (measured in the sandbox: the reservation 65 -> 70 at +0.4 s
+of a lift, still 70 at +0.6 s of a landing, 65 at +1.1 s; a kitty of 841 px
+becomes 836 and back). The surface does not move, so the
 unpinned dock's hover sliver - which must stay AT the edge - is untouched:
 an unpinned dock never reserves and never lifts (the existing gate), and at
 the default band its look-only switch takes the effects half alone.
@@ -302,17 +301,20 @@ the default band its look-only switch takes the effects half alone.
   region - which tracks its item's own geometry - rides the lift. The inward
   margin gives up exactly what the outward one gains. The icons ride the
   pill through a centre offset on the strip (`liftOffset`).
-- **Corners**: `cornerRadii` extended to take a progress. The two outward
-  radii are `radius * clamp((s - seam) / (1 - seam), 0, 1)` on a lift and the
-  mirror on a landing - square while the outlines are one, rounding over the
-  settle half as the gap opens, round at rest. The inward pair stays at
-  `radius` throughout.
-- **The neck**: drawn while the gap is inside the reach, which is
-  `splitNeckReach * pillThickness` or the whole travel when that is shorter
-  (`neckReach`: 24 px on a 60 px pill against a 5 px lift, so the neck spans
-  the whole lift and breaks at rest - the reference's gap of half a body is
-  the same regime). Its waist is `pillWidth * (1 - gap / reach)` at the
-  band, its flanks two `RoundCorner` fillets no bigger than the lift.
+- **Corners**: `cornerRadiiAt(edge, radius, s, seam)`. The two outward
+  radii are `radius * clamp((s - seam) / (1 - seam), 0, 1)` - square while
+  the outlines are one, rounding over the settle half as the gap opens,
+  round at rest - on both directions of the one scalar. The inward pair
+  stays at `radius` throughout. With no lift the seam is 0 and the rounding
+  rides the look's own effects-tier scalar.
+- **The neck**: the pill's full width up to the seam (the fused outline
+  stretching as the pill lifts its first 2.5 px - the reference's swell,
+  which a 5 px band cannot show any other way), then narrowing to nothing at
+  the pinch, `splitNeckReach` of the way through the settle half
+  (`neckWaist`); the bodies settle apart after it. One `Shape` on one SVG
+  path from the module (`neckPath`: the waist rectangle with a concave
+  fillet on each flank, no bigger than the lift), `CurveRenderer`, no layer,
+  in the band's colour, under the pill.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
   after the scalar lands at 1 (`attachedLook` holds the tab's look while the
   scalar is below 1; the pill takes `colLayer0` and its border once it is
@@ -322,6 +324,16 @@ the default band its look-only switch takes the effects half alone.
   tier's length when the target is 0 (read off the Behavior's own
   `targetValue`) - the reference's dot-before-outline. Measured in the
   sandbox: a 133 ms look change, then the descent.
+- **The scalar follows the configured choice, not `attached`**: `attached`
+  folds in the fullscreen term, and a scalar driven by it replayed a landing
+  on every fullscreen exit. `splitTarget` reads the frame option and the pin
+  alone; fullscreen reaches the lift through `reserves` (travel 0 while
+  hidden) and the look through `attached`, and neither replays anything.
+- **No lift, no spatial tier.** An unpinned dock at the default band, or the
+  frame switching off, has nothing to split off: the Behavior is disabled
+  (`enabled: splitTravel > 0`), the scalar snaps, and the look - colour,
+  border and corners - changes on the effects tier through a scalar of its
+  own (`lookApart`).
 - **The blur region** rides the pill: a `Region` re-evaluates on its item's
   own geometry, and here it is the pill's own inset that moves, not an
   ancestor's offset (the hide is that case and keeps its `atRest` gate). Its

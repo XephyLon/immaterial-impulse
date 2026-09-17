@@ -720,13 +720,17 @@ Singleton {
         // "Split"): one scalar per direction, 0 fused and 1 apart, on the
         // two-segment curve above. `splitSeam` is where on that scalar the
         // outlines touch or part - the join of the curve's two segments, so
-        // an adopter keys the neck, a corner or a colour on it rather than on
-        // a second timer that has to agree with the duration. Both constants
-        // are unitless: a fraction of the scalar, and a fraction of the
-        // travelling body's own thickness (the reach was measured on a 20 px
-        // pill and applies to a 60 px one).
+        // an adopter keys the neck and a corner on it rather than on a
+        // second timer that has to agree with the duration. `splitNeckReach`
+        // is how far into the settle half the neck bridges before it pinches
+        // off, as a fraction of the scalar's VALUE: the reference's neck lasts
+        // 165 ms of an 800 ms motion, from the seam at 0.5 of the time to the
+        // pinch at 0.7, and on this curve - whose settle half is front-loaded
+        // - 0.7 of the time is 0.9 of the value, i.e. 0.8 of the settle half.
+        // The bodies settle apart for the rest. Both are fractions of the
+        // scalar, so a 5 px lift and a 100 px one take the same shape.
         readonly property real splitSeam: 0.5
-        readonly property real splitNeckReach: 0.4
+        readonly property real splitNeckReach: 0.8
         property QtObject split: QtObject {
             property int duration: motion.scale(animationCurves.splitDuration)
             property int type: Easing.BezierSpline

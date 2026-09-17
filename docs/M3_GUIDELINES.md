@@ -224,13 +224,16 @@ A surface that detaches from another, or docks into it, takes `Appearance.animat
 one scalar 0 -> 1 per direction, on a two-segment curve that accelerates into the seam and
 decelerates out of it, with the seam at `Appearance.animation.splitSeam` (0.5). Only ONE body
 travels; the other is the island, and it stays. The travelling body is not faded in or out, ever -
-it is released by the island's outline or absorbed by it - and the seam is bridged by a neck (a
-same-colour bridge whose waist narrows to nothing) while the outlines are within
-`Appearance.animation.splitNeckReach` of the travelling body's thickness, or the whole travel when
-that is shorter. Anything that changes the LOOK at the seam (a corner rounding, a border, a colour)
-runs on the effects tier sequenced with the spatial motion - after it has landed on a split, before
-it starts on a merge - never during it. Measured off the reference in
-`docs/proposals/motion-split.md`; the first adopter is the dock's tab (`modules/imi/dock/Dock.qml`).
+it is released by the island's outline or absorbed by it. Up to the seam the two are one outline
+(the island stretching, the reference's swell); from the seam a neck - a same-colour bridge whose
+waist narrows to nothing - bridges them until it pinches off `Appearance.animation.splitNeckReach`
+of the way through the settle half, and the bodies settle APART. Shape rides the scalar: a corner
+rounds from the seam to rest, because the rounding is the seam's own shape opening. Anything that
+changes the look but not the shape (a border, a colour, a glyph) runs on the effects tier sequenced
+with the spatial motion - after it has landed on a split, before it starts on a merge - never
+during it. A switch with no travel (nothing to split off) is a look change alone, on the effects
+tier, corners included. Measured off the reference in `docs/proposals/motion-split.md`; the first
+adopter is the dock's tab (`modules/imi/dock/Dock.qml`).
 
 ### Expandable Content
 

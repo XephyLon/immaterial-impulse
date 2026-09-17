@@ -11,6 +11,7 @@ import Quickshell.Io
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
+import QtQuick.Shapes
 import "dock_geometry.js" as DockGeometry
 
 Scope {
@@ -26,17 +27,6 @@ Scope {
     // place, so icon state, hover state and DockLaunchTracker's bookkeeping
     // survive it - the bar rebuilds instead, and loses all three.
     readonly property bool vertical: DockGeometry.isVertical(root.edge)
-
-    // dock_geometry.js names a fillet's corner (a .pragma library has no QML
-    // enums in scope); the caller maps the name and does not decide it.
-    function filletCorner(name) {
-        switch (name) {
-        case "topLeft": return RoundCorner.CornerEnum.TopLeft;
-        case "topRight": return RoundCorner.CornerEnum.TopRight;
-        case "bottomLeft": return RoundCorner.CornerEnum.BottomLeft;
-        default: return RoundCorner.CornerEnum.BottomRight;
-        }
-    }
 
     Variants {
         model: Quickshell.screens
@@ -98,7 +88,7 @@ Scope {
             // its hover sliver has to stay AT the edge - moved in, the pointer
             // slammed to the edge would land on the band, which takes no input.
             readonly property bool reserves: root.pinned && !fullscreenOnThisMonitor
-            exclusiveZone: dockRoot.reserves ? DockReservation.zone : 0
+            exclusiveZone: dockRoot.reserves ? DockReservation.zone + dockRoot.splitZoneExtra : 0
             readonly property var frameMargins: DockGeometry.directedSides(
                 root.edge, 0, dockRoot.reserves ? DockReservation.frameOffset : 0)
             margins {
@@ -127,8 +117,12 @@ Scope {
             // direction - 0 fused, 1 apart - on the split tier taken whole,
             // whose curve accelerates into the seam (0.5) and decelerates
             // out of it. Every other piece of the motion below (the lift,
-            // the corners, the neck, the look) is a function of this number,
-            // never a second animation that has to agree with it.
+            // the corners, the neck, the look, the zone) is a function of
+            // this number, never a second animation that has to agree with
+            // it. Driven by the CONFIGURED choice (`splitTarget`): the
+            // fullscreen term in `attached` is a state the user never
+            // toggled, and following it replayed a landing on every
+            // fullscreen exit.
             //
             // The pause is the reference's sequencing: effects and space
             // never overlap. On a LANDING (target 0) the look lands first -
@@ -137,10 +131,18 @@ Scope {
             // for, since the look changes after the pill has landed apart
             // (attachedLook below). Read off the Behavior's own target, which
             // is set before the animation starts, rather than off a binding
-            // that may not have re-evaluated yet.
-            property real splitProgress: dockRoot.attached ? 0 : 1
+            // that may not have re-evaluated yet. The tier is written out
+            // rather than taken from its factory because the pause is
+            // direction-dependent and a factory cannot carry one; the three
+            // properties are the tier's, whole.
+            readonly property real splitTarget: DockReservation.attached && (root.pinned || DockReservation.frameOffset === 0) ? 0 : 1
+            property real splitProgress: dockRoot.splitTarget
             Behavior on splitProgress {
                 id: splitBehavior
+                // No lift, no spatial tier: an unpinned dock at the default
+                // band, or the frame switching off, changes its LOOK and
+                // that runs on the effects tier alone (lookApart below).
+                enabled: dockRoot.splitTravel > 0
                 SequentialAnimation {
                     PauseAnimation { duration: splitBehavior.targetValue === 0 ? Appearance.animation.elementMoveFast.duration : 0 }
                     NumberAnimation {
@@ -160,19 +162,25 @@ Scope {
             // than that margin grows the strip by the shortfall (nothing at
             // the defaults) so the lifted pill stays inside its surface.
             readonly property real splitRoom: DockGeometry.splitRoom(Appearance.sizes.hyprlandGapsOut, Appearance.sizes.elevationMargin)
+            // What the zone reserves beyond the attached one: the lift, while
+            // the pill is up or asked to go up - a boolean that flips at the
+            // start of a lift and the end of a landing, so windows are never
+            // against a floating pill and the compositor re-tiles twice per
+            // gesture at most, on its own animation.
+            readonly property real splitZoneExtra: DockGeometry.splitZoneExtra(dockRoot.splitTravel, dockRoot.splitTarget === 1, dockRoot.splitProgress)
             // The look is the tab's until the pill has landed apart: on a
             // lift the colour and the border change AFTER the motion, on the
             // effects tier; on a landing `attached` flips first and the pause
-            // above holds the outline for that tier's length.
-            readonly property bool attachedLook: dockRoot.attached || dockRoot.splitProgress < 1
+            // above holds the outline for that tier's length. With no lift
+            // the look IS the switch: `attached` alone, on the effects tier,
+            // corners included, through a scalar of its own.
+            readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || dockRoot.splitProgress < 1) : dockRoot.attached
+            property real lookApart: dockRoot.attached ? 0 : 1
+            Behavior on lookApart { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
+            readonly property real apart: dockRoot.splitTravel > 0 ? dockRoot.splitProgress : dockRoot.lookApart
             // The icons ride the pill: the strip is centred in the box and
             // the pill, lifted, is not.
             readonly property var liftOffset: DockGeometry.liftOffset(root.edge, dockRoot.splitRoom, dockRoot.splitLift)
-            // How far apart the pill and the band may be and still be bridged
-            // by the neck: the reference's fraction of the pill's thickness,
-            // or the whole travel when that is shorter (it is, at 5 px on a
-            // 60 px pill: the neck spans the lift and breaks at rest).
-            readonly property real neckReach: DockGeometry.neckReach(Config.options?.dock.height ?? 60, dockRoot.splitTravel, Appearance.animation.splitNeckReach)
 
             anchors {
                 top: DockGeometry.anchors(root.edge).top
@@ -312,48 +320,36 @@ Scope {
                         }
 
                         // The neck (motion-split.md §2): a same-colour bridge
-                        // between the pill's outward edge and the band while
-                        // the two are within reach, its waist narrowing to
+                        // between the pill's outward edge and the band from
+                        // the seam to the pinch-off, its waist narrowing to
                         // nothing, its flanks two concave fillets hugging the
-                        // band and the waist. Boxes from the module, never
-                        // anchors: the turn is a size, and an anchor set that
-                        // changes with the edge is the trap the strip already
-                        // paid for. Under the pill, so the pill's own edge is
-                        // what the eye reads.
-                        Item {
+                        // band and the waist. One Shape on one path from the
+                        // module, no layer; boxed, never anchored - the turn
+                        // is a size, and an anchor set that changes with the
+                        // edge is the trap the strip already paid for. Under
+                        // the pill, so the pill's own edge is what the eye
+                        // reads. Up to the seam the waist is the pill's full
+                        // width: the fused outline stretching as the pill
+                        // lifts, which is the reference's swell.
+                        Shape {
                             id: splitNeck
                             readonly property real pillAlong: root.vertical ? dockVisualBackground.height : dockVisualBackground.width
-                            readonly property real waist: DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitLift, dockRoot.neckReach)
+                            readonly property real waist: DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)
+                            readonly property real fillet: DockGeometry.neckFilletSize(dockRoot.splitLift, splitNeck.pillAlong, splitNeck.waist)
                             readonly property var box: DockGeometry.neckBox(root.edge,
                                 { x: dockVisualBackground.x, y: dockVisualBackground.y,
                                   width: dockVisualBackground.width, height: dockVisualBackground.height },
-                                dockRoot.splitLift, splitNeck.waist)
-                            readonly property real filletSize: DockGeometry.neckFilletSize(dockRoot.splitLift, splitNeck.pillAlong, splitNeck.waist)
-                            readonly property var filletCorners: DockGeometry.neckFilletCorners(root.edge)
-                            readonly property var filletOffsets: DockGeometry.neckFilletOffsets(root.edge, splitNeck.width, splitNeck.height, splitNeck.filletSize)
+                                dockRoot.splitLift, splitNeck.waist, splitNeck.fillet)
                             visible: Config.options.dock.showBackground && dockRoot.splitLift > 0 && splitNeck.waist > 0
                             x: box.x
                             y: box.y
                             width: box.width
                             height: box.height
-                            Rectangle {
-                                width: splitNeck.width
-                                height: splitNeck.height
-                                color: FrameGeometry.color
-                            }
-                            RoundCorner {
-                                x: splitNeck.filletOffsets.start.x
-                                y: splitNeck.filletOffsets.start.y
-                                implicitSize: Math.round(splitNeck.filletSize)
-                                corner: root.filletCorner(splitNeck.filletCorners.start)
-                                color: FrameGeometry.color
-                            }
-                            RoundCorner {
-                                x: splitNeck.filletOffsets.end.x
-                                y: splitNeck.filletOffsets.end.y
-                                implicitSize: Math.round(splitNeck.filletSize)
-                                corner: root.filletCorner(splitNeck.filletCorners.end)
-                                color: FrameGeometry.color
+                            preferredRendererType: Shape.CurveRenderer
+                            ShapePath {
+                                strokeWidth: 0
+                                fillColor: FrameGeometry.color
+                                PathSvg { path: DockGeometry.neckPath(root.edge, splitNeck.waist, dockRoot.splitLift, splitNeck.fillet) }
                             }
                         }
 
@@ -381,9 +377,11 @@ Scope {
                             // fillets and the bar plate's corners in frame mode,
                             // so the pill's radius is a design value, not a sum.
                             radius: Appearance.rounding.large
-                            // The outward pair rounds with the lift: square at
-                            // the seam, a pill once apart.
-                            readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.splitProgress)
+                            // The outward pair rounds from the seam, where the
+                            // outlines part, to rest: square while fused, a
+                            // pill once apart. With no lift, over the look's
+                            // own scalar.
+                            readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius, dockRoot.apart, dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft
