@@ -437,8 +437,8 @@ the default band its look-only switch takes the effects half alone.
   point says why that matters). The neck alone, in a bench scene at the
   dock's default size - a floating window inside the sandbox, the scalar
   looping on the tier, 60 frames a second in every run - takes process CPU
-  over 8 s, three runs each: #398's `Shape` neck 50-51 ticks on hardware GL
-  and 132-133 on llvmpipe, this field 41-42 and 119-120. On the render
+  over 8 s, three runs each: #398's `Shape` neck 49-51 ticks on hardware GL
+  and 129-132 on llvmpipe, this field 41-43 and 113-116. On the render
   thread both average about 0.2 ms a frame (0.01-0.22) on either renderer; that
   timing is whole milliseconds, so the fragment shader's GPU time on
   hardware is below what it can show. Fragments further than four ramps
