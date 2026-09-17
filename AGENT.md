@@ -425,6 +425,26 @@ layout-based crops (the nested output resizes with the parent's tiling) and the 
 compositor's Lua dispatch syntax (`hl.dsp.cursor.move`; the classic `movecursor` is inert there)
 written down where the next machine finds them - the tooling lived in one machine's home dir for
 a week and a laptop session had none of it. 062486551 ("test(sandbox): the review sandbox tooling lives in the repo").
+**`stop` ends the whole sandbox session, and a measurement finds the shell by the session's
+marker.** Every process a sandbox starts carries `IMI_SANDBOX_SESSION=<sandbox-dir>` - set for the
+session only, not in the env file, so a terminal that sourced that file is never mistaken for part of
+the sandbox (a `stop` that matched `XDG_CONFIG_HOME` killed its own caller). `stop` ends every marked
+process, the shell first (the one whose argv[0] is `quickshell`; `pgrep -f quickshell` matches the
+script's own path), never a pid from the env file on its own (an env file outlives its session, and
+the pid can be anyone's by then), and lazily unmounts any FUSE mount a portal left in the run dir.
+Before this, `start` recorded the subshell of `cd && qs &` as the shell, and `stop` ended only that
+and the compositor: the shell sometimes survived, and its helpers always did - 274 of them after a
+day of review sandboxes, every tray watchdog whose bus had gone spinning at 14% of a core, the
+machine at a load average of 73. A dock review's idle CPU swung tenfold between starts because of it,
+and looked like a property of the build. So: to measure the shell, find it by the marker in
+`/proc/<pid>/environ`, never with `pgrep -n`; after a batch of sandbox runs, check that nothing marked
+is left before trusting a timing; and never delete a sandbox dir without `stop` first - its session
+keeps running and nothing can find it any more. `test_sandbox_shell.py` drives start and stop against
+fake `Hyprland`, `dbus-run-session` and `qs` binaries.
+c700c58d ("fix(sandbox): stop kills the shell, not the subshell around it"),
+0a6a74b2 ("fix(sandbox): stop ends the whole session, not just the shell and the compositor"),
+579e1424 ("fix(sandbox): stop finds the session by its own marker, not by a variable the env file exports"),
+a1375a5a ("fix(sandbox): stop kills only what carries the marker, finds the shell by argv[0], and unmounts what it left").
 **Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
 (modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
 its revert snapshot, the activity log, routine runs, paused action steps) lives in
