@@ -394,7 +394,16 @@ Scope {
                             // Painted for a split (a lift that began as the tab)
                             // and for every landing; a pill that was never fused
                             // rises without one.
-                            readonly property bool painting: Config.options.dock.showBackground && dockRoot.splitLift > 0 && splitNeck.waist > 0
+                            // Only where a shader can draw: the software scene
+                            // graph draws no ShaderEffect, and a shader that
+                            // failed to load draws nothing - with the pill's
+                            // Rectangle handed over, either would leave the icons
+                            // over bare band for the neck's whole span. There the
+                            // pill lifts without a neck.
+                            readonly property bool fieldAvailable: splitNeck.GraphicsInfo.api !== GraphicsInfo.Software
+                                && splitNeck.status !== ShaderEffect.Error
+                            readonly property bool painting: splitNeck.fieldAvailable && Config.options.dock.showBackground
+                                && dockRoot.splitLift > 0 && splitNeck.waist > 0
                                 && (dockRoot.liftFromTab || dockRoot.splitTarget === 0)
                             visible: painting
                             x: box.x
@@ -423,6 +432,7 @@ Scope {
                             readonly property real waistHalf: splitNeck.waist / 2
                             readonly property real waistCenter: root.vertical ? splitNeck.pillCenter.y : splitNeck.pillCenter.x
                             readonly property real softness: DockGeometry.BLEND_SOFTNESS
+                            readonly property real pixelRatio: dockRoot.modelData?.devicePixelRatio ?? 1
                             fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")
                         }
 

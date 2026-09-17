@@ -6,11 +6,14 @@
 // concave flanks and the corners rounding are all the one blend, covered
 // once, so nothing is antialiased against anything else (a drawn path under
 // the pill composited to a hairline). The blend radius falls off along the
-// band from the waist's centre, so the neck NARROWS to nothing at the pinch
-// rather than letting go all at once - a flat edge over a flat band is the
-// same distance everywhere, which a uniform blend bridges whole or not at
-// all. The construction follows Clavis's pill_morph.frag
-// (https://github.com/StatIndet/quickshell, GPL-3, see licenses/README.md).
+// band from the waist's centre, so the neck narrows in width to nothing at
+// the pinch rather than letting go all at once - a flat edge over a flat band
+// is the same distance everywhere, which a uniform blend bridges whole or not
+// at all.
+// Adapted from Clavis's assets/shaders/keystone/frag/pill_morph.frag
+// (https://github.com/StatIndet/quickshell, GPL-3.0-or-later); the rounded
+// box and the smooth minimum are Inigo Quilez's formulas. See
+// licenses/README.md.
 //
 // Every coordinate is in the item's own pixels, the box that
 // dock_geometry.js `blendBox` lays out: the pill, the lift down to the band,
@@ -33,6 +36,7 @@ layout(std140, binding = 0) uniform buf {
     float waistHalf;
     float waistCenter;
     float softness;
+    float pixelRatio;
 };
 
 // A rounded box with a radius per corner: x top-left, y top-right,
@@ -57,28 +61,41 @@ float smoothMinimum(float a, float b, float k)
     return min(a, b) - h * h * k * 0.25;
 }
 
-void main()
+// The joined field at a point, in item pixels.
+float field(vec2 p)
 {
-    vec2 p = qt_TexCoord0 * resolution;
     float pill = roundedBox(p - pillCenter, pillSize * 0.5, pillRadii);
     // The band: everything past its inner edge, in the direction of its
     // normal - with its zero-crossing one ramp INSIDE the band, so the ramp
     // never reaches the gap side of the edge (it tinted the gap's last row
-    // 7% along the whole box while the field painted, and the row stepped
-    // back at the hand-over); inside the band the band's own surface covers
-    // it.
+    // along the whole box while the field painted, and the row stepped back
+    // at the hand-over); inside the band the band's own surface covers it.
     float band = bandOrigin - dot(p, bandNormal) + softness;
     // The blend, tapering along the band from the waist's centre to its ends.
     float along = dot(p, abs(vec2(bandNormal.y, bandNormal.x)));
     float u = waistHalf > 0.0 ? (along - waistCenter) / waistHalf : 2.0;
     float k = blend * max(0.0, 1.0 - u * u);
-    float d = smoothMinimum(pill, band, k);
-    // Coverage over one screen pixel of the field's own gradient: between
+    return smoothMinimum(pill, band, k);
+}
+
+void main()
+{
+    vec2 p = qt_TexCoord0 * resolution;
+    float d = field(p);
+    // Coverage over one DEVICE pixel of the field's own gradient: between
     // the pill's flat edge and the flat band the two fields' gradients
     // cancel and the blended field goes flat, so a ramp in field units
-    // smeared over several pixels there (measured: a soft grey flank on a
-    // 5 px lift). `fwidth` puts the ramp back on the screen.
-    float w = max(fwidth(d), 0.001) * softness;
+    // smeared over several pixels there (measured: a soft grey flank). The
+    // gradient is taken by central differences rather than `fwidth`, which
+    // the GLSL ES 1.00 profile only has behind GL_OES_standard_derivatives -
+    // the profile an OpenGL 2.1-class backend gets (issue #70) - and floored
+    // so the saddle between the flanks, where it goes to nothing, does not
+    // alias.
+    const float h = 0.5;
+    float gx = field(p + vec2(h, 0.0)) - field(p - vec2(h, 0.0));
+    float gy = field(p + vec2(0.0, h)) - field(p - vec2(0.0, h));
+    float g = max((abs(gx) + abs(gy)) / (2.0 * h), 0.5);
+    float w = g * softness / max(pixelRatio, 0.001);
     float alpha = 1.0 - smoothstep(-w, w, d);
     fragColor = fillColor * alpha * qt_Opacity;
 }

@@ -229,6 +229,17 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("DockGeometry.fieldPill(root.edge,", neck, "the field's pill reaches into the band for the lift's first pixel")
         self.assertIn("readonly property color fillColor: FrameGeometry.color", neck)
         self.assertIn("readonly property real softness: DockGeometry.BLEND_SOFTNESS", neck)
+        # Where no shader can draw, the pill keeps its Rectangle: the software
+        # scene graph draws no ShaderEffect, and a failed load draws nothing.
+        self.assertIn("readonly property bool fieldAvailable: splitNeck.GraphicsInfo.api !== GraphicsInfo.Software", neck)
+        self.assertIn("&& splitNeck.status !== ShaderEffect.Error", neck)
+        self.assertIn("readonly property bool painting: splitNeck.fieldAvailable &&", neck)
+        # ...and the shader stays inside core GLSL ES 1.00 - the profile an
+        # OpenGL 2.1-class backend gets (issue #70, c76d6b7b): no derivatives.
+        frag = (ROOT / "modules/imi/dock/shaders/split.frag").read_text()
+        code = "\n".join(l.split("//")[0] for l in frag.splitlines())
+        for construct in ("fwidth", "dFdx", "dFdy", "#extension"):
+            self.assertNotIn(construct, code, construct)
         for gone in ("Shape {", "ShapePath {", "PathSvg", "Rectangle {", "RoundCorner", "layer.enabled", "anchors."):
             self.assertNotIn(gone, neck, gone)
         self.assertNotIn("import QtQuick.Shapes", dock)
