@@ -439,7 +439,7 @@ the default band its look-only switch takes the effects half alone.
   dock's default size - a floating window inside the sandbox, the scalar
   looping on the tier, 60 frames a second in every run - takes process CPU
   over 8 s, three runs each: #398's `Shape` neck 49-51 ticks on hardware GL
-  and 129-132 on llvmpipe, this field 41-43 and 113-116. Qt's render-loop
+  and 132-135 on llvmpipe, this field 40-42 and 117-118. Qt's render-loop
   timing (whole milliseconds) reads 0 for the render step of every frame
   of both, on either renderer; the ~0.2 ms a frame it does show is the
   swap, the same for both. The fragment shader's GPU time on hardware is
