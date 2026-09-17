@@ -431,7 +431,7 @@ TestCase {
         }
     }
 
-    function test_the_pills_field_reaches_into_the_band_until_the_lift_clears_a_pixel() {
+    function test_the_pills_field_reaches_into_the_band_until_the_lift_clears_two_pixels() {
         // The blend is nothing at rest, so for the first pixel of a lift it
         // cannot bridge even the sub-pixel gap the coverage ramp exposes as
         // a hairline (measured). The pill's FIELD therefore reaches into the
@@ -441,16 +441,40 @@ TestCase {
         // the pinch.
         // Two pixels of reach: the band's field edge sits a ramp inside the
         // band, so one pixel left the first frames a ramp short.
-        const pill = { x: 100, y: 5, width: 400, height: 60 };
         compare(Geometry.FIELD_REACH, 2);
-        compare(Geometry.fieldPill("bottom", pill, 0), { x: 100, y: 5, width: 400, height: 62 });
-        compare(Geometry.fieldPill("bottom", pill, 0.25), { x: 100, y: 5, width: 400, height: 61.75 });
-        compare(Geometry.fieldPill("bottom", pill, 2), pill, "two pixels up, nothing to reach");
-        compare(Geometry.fieldPill("bottom", pill, 4), pill);
-        compare(Geometry.fieldPill("top", pill, 0), { x: 100, y: 3, width: 400, height: 62 });
-        const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.fieldPill("left", side, 0), { x: 3, y: 100, width: 62, height: 400 });
-        compare(Geometry.fieldPill("right", side, 0.5), { x: 5, y: 100, width: 61.5, height: 400 });
+        compare(Geometry.fieldReach(0), 2);
+        compare(Geometry.fieldReach(0.25), 1.75);
+        compare(Geometry.fieldReach(2), 0, "two pixels up, nothing to reach");
+        compare(Geometry.fieldReach(4), 0);
+    }
+
+    function test_the_shaders_box_holds_still_through_the_motion() {
+        // The shader's box is laid out once for a motion, from the dock's
+        // box and the REST margins: the pill at every lift, the lift down to
+        // the band, and the blend's full spill along it. A box built from the
+        // moving pill moved the item and rebuilt two objects every frame; the
+        // moving parts are uniforms.
+        const W = 342, H = 75, travel = 5;
+        for (const edge of ["bottom", "top", "left", "right"]) {
+            const vertical = edge === "left" || edge === "right";
+            const w = vertical ? H : W, h = vertical ? W : H;
+            const rest = Geometry.margins(edge, elevation, gaps);
+            const box = Geometry.splitBox(edge, w, h, rest, 0, travel);
+            // Its band edge is the pill's rest outward edge.
+            const r = Geometry.liftedMargins(edge, rest, 0, 0);
+            const restEdge = { bottom: h - r.bottom, top: r.top, left: r.left, right: w - r.right }[edge];
+            compare((vertical ? box.x : box.y) + box.bandEdge, restEdge, edge + ": band edge");
+            // It holds the pill at every lift, with the spill on both flanks.
+            for (const lift of [0, 1.5, travel]) {
+                const m = Geometry.liftedMargins(edge, rest, 0, lift);
+                const pill = { x: m.left, y: m.top, width: w - m.left - m.right, height: h - m.top - m.bottom };
+                verify(pill.x >= box.x && pill.y >= box.y, edge + " " + lift);
+                verify(pill.x + pill.width <= box.x + box.width && pill.y + pill.height <= box.y + box.height, edge + " " + lift);
+            }
+            const spill = Geometry.neckBlend(travel, 1, 0.5);
+            compare(vertical ? box.height : box.width, (vertical ? h : w) + 2 * spill, edge + ": the spill");
+        }
+        compare(Geometry.splitBox("bottom", 342, 75, Geometry.margins("bottom", elevation, gaps), 0, 0).width, 342, "no travel, no spill");
     }
 
     function test_the_bars_overloaded_pair_reads_as_an_edge() {

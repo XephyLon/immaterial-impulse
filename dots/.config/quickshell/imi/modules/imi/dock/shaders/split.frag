@@ -16,8 +16,8 @@
 // licenses/README.md.
 //
 // Every coordinate is in the item's own pixels, the box that
-// dock_geometry.js `blendBox` lays out: the pill, the lift down to the band,
-// and the blend's spill along it.
+// dock_geometry.js `splitBox` lays out for the whole motion: the pill at
+// every lift, the lift down to the band, and the blend's spill along it.
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
@@ -37,6 +37,7 @@ layout(std140, binding = 0) uniform buf {
     float waistCenter;
     float softness;
     float pixelRatio;
+    float reach;
 };
 
 // A rounded box with a radius per corner: x top-left, y top-right,
@@ -64,7 +65,11 @@ float smoothMinimum(float a, float b, float k)
 // The joined field at a point, in item pixels.
 float field(vec2 p)
 {
-    float pill = roundedBox(p - pillCenter, pillSize * 0.5, pillRadii);
+    // The pill as the field sees it, reaching `reach` into the band so the
+    // lift's first pixels, before the blend can bridge them, stay seamless.
+    vec2 toward = bandNormal * (reach * 0.5);
+    vec2 grow = abs(bandNormal) * (reach * 0.5);
+    float pill = roundedBox(p - (pillCenter + toward), pillSize * 0.5 + grow, pillRadii);
     // The band: everything past its inner edge, in the direction of its
     // normal - with its zero-crossing one ramp INSIDE the band, so the ramp
     // never reaches the gap side of the edge (it tinted the gap's last row

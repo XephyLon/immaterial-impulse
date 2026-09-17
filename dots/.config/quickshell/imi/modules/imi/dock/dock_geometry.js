@@ -302,8 +302,9 @@ function neckWaist(width, apart, seam, reach) {
 }
 
 // A direction's duration from part way: the tier times the distance left,
-// never under the floor (the effects tier). The source's rule
-// (motion-split.md §1, `max(220, 820 * progress)`): a Behavior re-targeted
+// never under the floor (the effects tier). The source shortens a merge
+// this way (motion-split.md §1, `max(220, 820 * progress)`); here it is
+// both directions, because a Behavior re-targeted
 // mid-flight otherwise takes the whole tier to cover a tenth of the way, and
 // a lift reversed at 1% would be a jump without the floor. Clamped to the
 // unit box: the curve may overshoot, and a distance over 1 is a whole
@@ -337,24 +338,18 @@ function neckBlend(travel, apart, seam) {
     return BLEND_LIFTS * t * rise;
 }
 
-// The pill as the field sees it: reaching FIELD_REACH into the band, less
-// the lift. The blend is nothing at rest, so for the first pixel of a lift
-// it cannot bridge even the sub-pixel gap the coverage ramp exposes as a
+// How far the pill's FIELD reaches into the band: FIELD_REACH less the
+// lift. The blend is nothing at rest, so for the first pixels of a lift it
+// cannot bridge even the sub-pixel gap the coverage ramp exposes as a
 // hairline (measured: a 51 on a 21 body along the whole seam); the reach
 // keeps the union seamless until the blend is big enough to take over, and
 // is gone by then, so past the pinch the field's pill is the Rectangle's.
 // Two pixels: the band's field edge sits one ramp inside the band (the
-// shader), so a pixel of reach alone left the first frames a ramp short.
+// shader), so a pixel of reach alone left the first frames a ramp short. A
+// scalar, extended in the shader, so nothing is built per frame.
 var FIELD_REACH = 2;
-function fieldPill(edge, pill, lift) {
-    var e = normalizedEdge(edge);
-    var r = Math.max(0, FIELD_REACH - (Number(lift) || 0));
-    var box = { x: pill.x, y: pill.y, width: pill.width, height: pill.height };
-    if (e === "bottom") box.height += r;
-    else if (e === "top") { box.y -= r; box.height += r; }
-    else if (e === "right") box.width += r;
-    else { box.x -= r; box.width += r; }
-    return box;
+function fieldReach(lift) {
+    return Math.max(0, FIELD_REACH - (Number(lift) || 0));
 }
 
 // The shader's box, from the pill's: the pill, the lift down to the band
@@ -377,6 +372,18 @@ function blendBox(edge, pill, lift, spill) {
     if (e === "top") { box.y = pill.y - l; box.bandEdge = 0; box.normal = { x: 0, y: -1 }; }
     else { box.bandEdge = pill.height + l; box.normal = { x: 0, y: 1 }; }
     return box;
+}
+
+// The shader's box for a whole motion, from the dock's box and the REST
+// margins: the pill at full lift through `blendBox`, with the blend's full
+// spill. Nothing in it moves while the scalar does, so the item holds
+// still and only its uniforms change per frame; a box built from the
+// moving pill moved the item and rebuilt two objects every frame.
+function splitBox(edge, width, height, rest, room, travel) {
+    var m = liftedMargins(edge, rest, room, travel);
+    var w = Number(width) || 0, h = Number(height) || 0;
+    var full = { x: m.left, y: m.top, width: w - m.left - m.right, height: h - m.top - m.bottom };
+    return blendBox(edge, full, travel, neckBlend(travel, 1, 1));
 }
 
 // The direction a dock icon lifts on hover and bounces on launch: inward, so

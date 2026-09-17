@@ -181,7 +181,8 @@ Scope {
                 SequentialAnimation {
                     PauseAnimation { duration: splitBehavior.targetValue === 0 && dockRoot.splitProgress >= 1 ? Appearance.animation.elementMoveFast.duration : 0 }
                     // From part way, a proportional time with the effects
-                    // tier as its floor (the reference's rule): a Behavior
+                    // tier as its floor (the source shortens a merge this
+                    // way; here both directions): a Behavior
                     // re-targeted at 10% otherwise takes the whole tier to
                     // cover a tenth of the way. From the latched start, never
                     // the moving scalar.
@@ -387,10 +388,12 @@ Scope {
                             readonly property real pillAlong: root.vertical ? dockVisualBackground.height : dockVisualBackground.width
                             readonly property real waist: DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)
                             readonly property real blend: DockGeometry.neckBlend(dockRoot.splitTravel, dockRoot.splitProgress, Appearance.animation.splitSeam)
-                            readonly property var box: DockGeometry.blendBox(root.edge,
-                                { x: dockVisualBackground.x, y: dockVisualBackground.y,
-                                  width: dockVisualBackground.width, height: dockVisualBackground.height },
-                                dockRoot.splitLift, splitNeck.blend)
+                            // Laid out once for a motion from the rest margins,
+                            // so the item holds still while the scalar moves and
+                            // only the uniforms below change per frame.
+                            readonly property var box: DockGeometry.splitBox(root.edge,
+                                dockBackground.width, dockBackground.height,
+                                dockRoot.dockMargins, dockRoot.splitRoom, dockRoot.splitTravel)
                             // Painted for a split (a lift that began as the tab)
                             // and for every landing; a pill that was never fused
                             // rises without one.
@@ -413,17 +416,13 @@ Scope {
                             // The field's inputs, in the box's own pixels.
                             readonly property vector2d resolution: Qt.vector2d(width, height)
                             readonly property color fillColor: FrameGeometry.color
-                            // The pill as the field sees it: reaching into the
-                            // band for the first pixel of the lift, where the
-                            // blend is still too small to bridge a sub-pixel gap.
-                            readonly property var fieldPill: DockGeometry.fieldPill(root.edge,
-                                { x: dockVisualBackground.x, y: dockVisualBackground.y,
-                                  width: dockVisualBackground.width, height: dockVisualBackground.height },
-                                dockRoot.splitLift)
                             readonly property vector2d pillCenter: Qt.vector2d(
-                                fieldPill.x - box.x + fieldPill.width / 2,
-                                fieldPill.y - box.y + fieldPill.height / 2)
-                            readonly property vector2d pillSize: Qt.vector2d(fieldPill.width, fieldPill.height)
+                                dockVisualBackground.x - splitNeck.x + dockVisualBackground.width / 2,
+                                dockVisualBackground.y - splitNeck.y + dockVisualBackground.height / 2)
+                            readonly property vector2d pillSize: Qt.vector2d(dockVisualBackground.width, dockVisualBackground.height)
+                            // How far the pill's field reaches into the band: the
+                            // lift's first pixels, before the blend can bridge them.
+                            readonly property real reach: DockGeometry.fieldReach(dockRoot.splitLift)
                             readonly property vector4d pillRadii: Qt.vector4d(
                                 dockVisualBackground.frameRadii.topLeft, dockVisualBackground.frameRadii.topRight,
                                 dockVisualBackground.frameRadii.bottomRight, dockVisualBackground.frameRadii.bottomLeft)
@@ -432,7 +431,9 @@ Scope {
                             readonly property real waistHalf: splitNeck.waist / 2
                             readonly property real waistCenter: root.vertical ? splitNeck.pillCenter.y : splitNeck.pillCenter.x
                             readonly property real softness: DockGeometry.BLEND_SOFTNESS
-                            readonly property real pixelRatio: dockRoot.modelData?.devicePixelRatio ?? 1
+                            // The WINDOW's ratio, which follows fractional scaling;
+                            // the screen's is the output's integer scale.
+                            readonly property real pixelRatio: dockRoot.devicePixelRatio
                             fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")
                         }
 

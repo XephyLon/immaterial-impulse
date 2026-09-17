@@ -225,8 +225,11 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("ShaderEffect {\n                            id: splitNeck", dock, "the neck is a shader")
         self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")', neck)
         self.assertIn("DockGeometry.neckBlend(dockRoot.splitTravel, dockRoot.splitProgress, Appearance.animation.splitSeam)", neck)
-        self.assertIn("DockGeometry.blendBox(root.edge,", neck)
-        self.assertIn("DockGeometry.fieldPill(root.edge,", neck, "the field's pill reaches into the band for the lift's first pixel")
+        # The box holds still for a whole motion; only uniforms move per frame.
+        self.assertIn("readonly property var box: DockGeometry.splitBox(root.edge,", neck)
+        self.assertNotRegex(neck, r"box: [^\n]*(splitLift|splitProgress|dockVisualBackground)", "the box is built from the rest margins, never the moving pill")
+        self.assertIn("readonly property real reach: DockGeometry.fieldReach(dockRoot.splitLift)", neck)
+        self.assertIn("readonly property real pixelRatio: dockRoot.devicePixelRatio", neck, "the window's ratio follows fractional scaling")
         self.assertIn("readonly property color fillColor: FrameGeometry.color", neck)
         self.assertIn("readonly property real softness: DockGeometry.BLEND_SOFTNESS", neck)
         # Where no shader can draw, the pill keeps its Rectangle: the software
