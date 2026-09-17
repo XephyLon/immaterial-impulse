@@ -436,9 +436,11 @@ the pid can be anyone's by then), removes only a run dir `start` made - `run.pat
 pass and an `rm -rf`, so an empty or foreign value is ignored - after lazily unmounting any FUSE
 mount a portal left there, refuses to run from inside the sandbox, and reports what it ended and what
 is left (non-zero if anything is). Both commands canonicalise the sandbox dir - it IS the marker, and a
-stop given another spelling of it found nothing and said "nothing left". `start` over an existing
-sandbox dir stops that sandbox first and gives up if it cannot, never wipes a directory that is not a
-sandbox, and ends the session of a start that failed.
+stop given another spelling of it found nothing and said "nothing left". A directory is a sandbox
+only if it holds the `.imi-sandbox` sentinel start writes: guessing from file names (`env`,
+`run.path`) would have let `start` wipe a project whose Python venv is called `env/`. `start` over a
+sandbox dir stops that sandbox first and gives up if it cannot, never wipes a non-empty directory
+without the sentinel, and ends the session of a start that failed.
 Before this, `start` recorded the subshell of `cd && qs &` as the shell, and `stop` ended only that
 and the compositor: the shell sometimes survived, and its helpers always did - 274 of them after a
 day of review sandboxes, every tray watchdog whose bus had gone spinning at 14% of a core, the
@@ -453,7 +455,8 @@ c700c58d ("fix(sandbox): stop kills the shell, not the subshell around it"),
 579e1424 ("fix(sandbox): stop finds the session by its own marker, not by a variable the env file exports"),
 a1375a5a ("fix(sandbox): stop kills only what carries the marker, finds the shell by argv[0], and unmounts what it left"),
 dfe57a9f ("fix(sandbox): stop needs no env file, trusts no run.path, refuses from inside, and reports"),
-9e1733b0 ("fix(sandbox): one spelling of the sandbox, a literal match, a start that neither wipes nor strands").
+9e1733b0 ("fix(sandbox): one spelling of the sandbox, a literal match, a start that neither wipes nor strands"),
+609a0f3d ("fix(sandbox): a sandbox is what start marked, and the script's own hooks stay in their lane").
 **Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
 (modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
 its revert snapshot, the activity log, routine runs, paused action steps) lives in
