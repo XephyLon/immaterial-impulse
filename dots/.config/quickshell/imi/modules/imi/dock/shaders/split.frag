@@ -18,6 +18,11 @@
 // and the smooth minimum are Inigo Quilez's published formulas. Details in
 // licenses/README.md.
 //
+// Rebake after any edit, and record the bake (test_frame_mode_contract.py
+// checks both):
+//   qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o split.frag.qsb split.frag
+//   { sha256sum split.frag; qsb --version; } > split.frag.qsb.bake
+//
 // Every coordinate is in the item's own pixels, the box that
 // dock_geometry.js `splitBox` lays out for the whole motion: the pill at
 // every lift and the lift down to the band.
@@ -91,19 +96,22 @@ float field(vec2 p, float k)
     return smoothMinimum(pill, band, k);
 }
 
+// The field with the blend radius of the point itself.
+float blendedField(vec2 p)
+{
+    return field(p, blendAt(p));
+}
+
 void main()
 {
     vec2 p = qt_TexCoord0 * resolution;
-    float k = blendAt(p);
-    float d = field(p, k);
+    float d = blendedField(p);
     float px = softness / max(pixelRatio, 0.25);
     // Away from the outline the coverage is 0 or 1 whatever the gradient: the
-    // ramp's half-width is the gradient times one device pixel's softness,
-    // and with the blend radius held (below) the gradient of a polynomial
-    // smooth-minimum of two distance fields is at most 1 + h <= 2 in length,
-    // under 2.9 in the norm used here - so four of those is clear of it.
-    // Only the pixels on the edge pay for the four extra field evaluations -
-    // the interior is most of the box, and on a software rasteriser the
+    // ramp's half-width is the gradient (capped below at 1.5) times one
+    // device pixel's softness, so four of those is clear of it. Only the
+    // pixels on the edge pay for the four extra field evaluations - the
+    // interior is most of the box, and on a software rasteriser the
     // per-pixel cost is the whole frame.
     if (abs(d) > 4.0 * px) {
         fragColor = d < 0.0 ? fillColor * qt_Opacity : vec4(0.0);
@@ -115,17 +123,21 @@ void main()
     // smeared over several pixels there (measured: a soft grey flank). The
     // gradient is taken by central differences rather than `fwidth`, which
     // the GLSL ES 1.00 profile only has behind GL_OES_standard_derivatives -
-    // the profile an OpenGL 2.1-class backend gets (issue #70) - and floored
-    // so the saddle between the flanks, where it goes to nothing, does not
-    // alias. The blend radius is HELD at this pixel's value for the four
-    // taps: its taper along the band steepens without bound as the waist
-    // closes, and differencing through it read as a huge gradient on the
-    // pinch frame - a ramp so wide the neck showed as a half-covered stalk
-    // and the pill's body lightened above it (measured).
+    // the profile an OpenGL 2.1-class backend gets (issue #70). It is taken
+    // through the blend's taper - holding the radius instead drew the lift's
+    // pinch frame as a hard-sided post with no antialiasing, because the
+    // field changes fastest along the band exactly there - and CLAMPED: a
+    // smooth-minimum of two distance fields with a fixed radius has a
+    // gradient no longer than 1 (a convex blend of the two), under 1.5 in the
+    // norm used here, but the taper steepens without bound as the waist
+    // closes, and an unclamped gradient drew the landing's pinch frame as a
+    // half-covered stalk with the pill's body lightened above it (both
+    // measured). The floor keeps the saddle between the flanks, where the
+    // gradient goes to nothing, from aliasing.
     const float h = 0.5;
-    float gx = field(p + vec2(h, 0.0), k) - field(p - vec2(h, 0.0), k);
-    float gy = field(p + vec2(0.0, h), k) - field(p - vec2(0.0, h), k);
-    float g = max((abs(gx) + abs(gy)) / (2.0 * h), 0.5);
+    float gx = blendedField(p + vec2(h, 0.0)) - blendedField(p - vec2(h, 0.0));
+    float gy = blendedField(p + vec2(0.0, h)) - blendedField(p - vec2(0.0, h));
+    float g = clamp((abs(gx) + abs(gy)) / (2.0 * h), 0.5, 1.5);
     float w = g * px;
     float alpha = 1.0 - smoothstep(-w, w, d);
     fragColor = fillColor * alpha * qt_Opacity;

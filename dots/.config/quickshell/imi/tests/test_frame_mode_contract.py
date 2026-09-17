@@ -271,20 +271,32 @@ class FrameModeContract(unittest.TestCase):
     def test_the_split_shader_binary_is_built_from_its_source(self):
         # The shell loads split.frag.qsb, never split.frag: an edit to the
         # source that is not rebaked changes nothing on screen and reads as
-        # a fix. qsb's output is byte-for-byte deterministic, so the
-        # committed binary must equal a fresh bake with the same profiles
-        # (the background module's six: GLSL ES 1.00 included).
+        # a fix. split.frag.qsb.bake records what the binary was baked from -
+        # the source's sha256 and the qsb that baked it - so a source edit
+        # without a rebake fails everywhere, CI included, whatever qsb is
+        # there. Where the SAME qsb is installed the binary is also rebaked
+        # and compared byte for byte (qsb's output is deterministic; another
+        # version's is not, so that half skips).
+        import hashlib
+        shaders = ROOT / "modules/imi/dock/shaders"
+        record = (shaders / "split.frag.qsb.bake").read_text().split()
+        digest, version = record[0], " ".join(record[2:4])
+        self.assertEqual(hashlib.sha256((shaders / "split.frag").read_bytes()).hexdigest(), digest,
+                         "split.frag changed since split.frag.qsb was baked: rebake it and rewrite "
+                         "split.frag.qsb.bake (the command is in split.frag's header)")
         qsb = shutil.which("qsb") or next((p for p in ("/usr/lib/qt6/bin/qsb", "/usr/lib64/qt6/bin/qsb")
                                            if Path(p).exists()), None)
         if qsb is None:
-            self.skipTest("Qt's qsb is not installed")
-        shaders = ROOT / "modules/imi/dock/shaders"
+            self.skipTest("Qt's qsb is not installed; the source hash was checked")
+        installed = subprocess.run([qsb, "--version"], capture_output=True, text=True).stdout.strip()
+        if installed != version:
+            self.skipTest(f"baked with {version}, {installed or 'an unknown qsb'} installed; the source hash was checked")
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "split.frag.qsb"
             subprocess.run([qsb, "--glsl", "100 es,120,150", "--hlsl", "50", "--msl", "12",
                             "-o", str(out), str(shaders / "split.frag")], check=True, capture_output=True)
             self.assertEqual(out.read_bytes(), (shaders / "split.frag.qsb").read_bytes(),
-                             "split.frag.qsb is stale: rebake it with the command in this test")
+                             "split.frag.qsb does not match a bake of split.frag with the recorded qsb")
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())
