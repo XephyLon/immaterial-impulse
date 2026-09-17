@@ -367,12 +367,11 @@ Scope {
                         // The neck (motion-split.md §1, §6): the pill's field
                         // and the band's joined by a smooth-minimum whose
                         // radius is the neck - one shader over one box, the
-                        // way the reference builds it. The bridge, its two
-                        // concave flanks and the fillets spilling along the
-                        // band are the one blend, covered ONCE: a path drawn
-                        // under the pill antialiased its half of a fractional
-                        // boundary against the pill's half and composited to a
-                        // hairline. The blend is nothing at rest, grows to the
+                        // way the reference builds it. The bridge and its two
+                        // concave flanks are the one blend, covered ONCE: a
+                        // path drawn under the pill antialiased its half of a
+                        // fractional boundary against the pill's half and
+                        // composited to a hairline. The blend is nothing at rest, grows to the
                         // seam and holds; the waist (`neckWaist`) is where it
                         // acts, tapering along the band so the neck narrows to
                         // nothing at the pinch - a flat edge over a flat band

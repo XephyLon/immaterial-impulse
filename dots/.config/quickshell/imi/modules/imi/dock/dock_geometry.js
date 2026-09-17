@@ -352,38 +352,39 @@ function fieldReach(lift) {
     return Math.max(0, FIELD_REACH - (Number(lift) || 0));
 }
 
-// The shader's box, from the pill's: the pill, the lift down to the band
-// (the pill's REST outward edge, since the pill moved and the band did
-// not), and the blend's reach along the band on both flanks, where the
-// fillets spill. Boxed, never anchored. `bandEdge` is the band's inner edge
-// in the box's own frame along the across axis, and `normal` points INTO
-// the band, so the shader's field for the band is one half-plane.
-function blendBox(edge, pill, lift, spill) {
+// The shader's box, from the pill's: the pill and the lift down to the band
+// (the pill's REST outward edge, since the pill moved and the band did not).
+// Nothing along the band past the pill's ends: the blend's radius is zero
+// outside the waist, and the waist never outgrows the pill, so a margin
+// there (the first cut had one) was pixels that only paid the early-out.
+// Boxed, never anchored. `bandEdge` is the band's inner edge in the box's
+// own frame along the across axis, and `normal` points INTO the band, so the
+// shader's field for the band is one half-plane.
+function blendBox(edge, pill, lift) {
     var e = normalizedEdge(edge);
     var l = Number(lift) || 0;
-    var sp = Number(spill) || 0;
     if (isVertical(e)) {
-        var box = { x: pill.x, y: pill.y - sp, width: pill.width + l, height: pill.height + 2 * sp };
+        var box = { x: pill.x, y: pill.y, width: pill.width + l, height: pill.height };
         if (e === "left") { box.x = pill.x - l; box.bandEdge = 0; box.normal = { x: -1, y: 0 }; }
         else { box.bandEdge = pill.width + l; box.normal = { x: 1, y: 0 }; }
         return box;
     }
-    var box = { x: pill.x - sp, y: pill.y, width: pill.width + 2 * sp, height: pill.height + l };
+    var box = { x: pill.x, y: pill.y, width: pill.width, height: pill.height + l };
     if (e === "top") { box.y = pill.y - l; box.bandEdge = 0; box.normal = { x: 0, y: -1 }; }
     else { box.bandEdge = pill.height + l; box.normal = { x: 0, y: 1 }; }
     return box;
 }
 
 // The shader's box for a whole motion, from the dock's box and the REST
-// margins: the pill at full lift through `blendBox`, with the blend's full
-// spill. Nothing in it moves while the scalar does, so the item holds
-// still and only its uniforms change per frame; a box built from the
-// moving pill moved the item and rebuilt two objects every frame.
+// margins: the pill at full lift through `blendBox`. Nothing in it moves
+// while the scalar does, so the item holds still and only its uniforms
+// change per frame; a box built from the moving pill moved the item and
+// rebuilt two objects every frame.
 function splitBox(edge, width, height, rest, room, travel) {
     var m = liftedMargins(edge, rest, room, travel);
     var w = Number(width) || 0, h = Number(height) || 0;
     var full = { x: m.left, y: m.top, width: w - m.left - m.right, height: h - m.top - m.bottom };
-    return blendBox(edge, full, travel, neckBlend(travel, 1, 1));
+    return blendBox(edge, full, travel);
 }
 
 // The direction a dock icon lifts on hover and bounces on launch: inward, so

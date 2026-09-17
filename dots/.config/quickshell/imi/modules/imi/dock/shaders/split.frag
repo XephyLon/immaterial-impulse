@@ -11,13 +11,16 @@
 // is the same distance everywhere, which a uniform blend bridges whole or not
 // at all.
 // Adapted from Clavis's assets/shaders/keystone/frag/pill_morph.frag
-// (https://github.com/StatIndet/quickshell, GPL-3.0-or-later); the rounded
-// box and the smooth minimum are Inigo Quilez's formulas. See
+// https://github.com/StatIndet/quickshell (at 5183553)
+// License: GPL-3.0 | upstream by StatIndet, which carries no copyright line
+// and is GPL-3.0-or-later per its packaging; this adaptation is distributed
+// under this repository's GPL-3.0 (licenses/GPL-3.0.txt). The rounded box
+// and the smooth minimum are Inigo Quilez's published formulas. Details in
 // licenses/README.md.
 //
 // Every coordinate is in the item's own pixels, the box that
 // dock_geometry.js `splitBox` lays out for the whole motion: the pill at
-// every lift, the lift down to the band, and the blend's spill along it.
+// every lift and the lift down to the band.
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

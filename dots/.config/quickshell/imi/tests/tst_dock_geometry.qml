@@ -396,18 +396,20 @@ TestCase {
         compare(Geometry.neckBlend(0, 0.5, 0.5), 0, "no lift, no blend");
     }
 
-    function test_the_blend_box_is_the_pill_plus_the_lift_plus_the_spill_along_the_band() {
-        // The shader's box, from the pill's: the pill, the lift down to the
-        // band (the pill's REST outward edge), and the blend's own reach
-        // along the band on both flanks, where the fillets spill. Boxed, not
-        // anchored (the turn is a size). The band's edge comes back in the
-        // box's own frame, so the shader has one number for it.
+    function test_the_blend_box_is_the_pill_plus_the_lift() {
+        // The shader's box, from the pill's: the pill and the lift down to
+        // the band (the pill's REST outward edge). Nothing along the band
+        // beyond the pill's ends: the blend's radius is zero outside the
+        // waist, which never outgrows the pill, so a margin there is pixels
+        // that only ever pay the early-out. Boxed, not anchored (the turn is
+        // a size). The band's edge comes back in the box's own frame, so the
+        // shader has one number for it.
         const pill = { x: 100, y: 5, width: 400, height: 60 };
-        compare(Geometry.blendBox("bottom", pill, 4, 20), { x: 80, y: 5, width: 440, height: 64, bandEdge: 64, normal: { x: 0, y: 1 } });
-        compare(Geometry.blendBox("top", pill, 4, 20), { x: 80, y: 1, width: 440, height: 64, bandEdge: 0, normal: { x: 0, y: -1 } });
+        compare(Geometry.blendBox("bottom", pill, 4), { x: 100, y: 5, width: 400, height: 64, bandEdge: 64, normal: { x: 0, y: 1 } });
+        compare(Geometry.blendBox("top", pill, 4), { x: 100, y: 1, width: 400, height: 64, bandEdge: 0, normal: { x: 0, y: -1 } });
         const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.blendBox("left", side, 4, 20), { x: 1, y: 80, width: 64, height: 440, bandEdge: 0, normal: { x: -1, y: 0 } });
-        compare(Geometry.blendBox("right", side, 4, 20), { x: 5, y: 80, width: 64, height: 440, bandEdge: 64, normal: { x: 1, y: 0 } });
+        compare(Geometry.blendBox("left", side, 4), { x: 1, y: 100, width: 64, height: 400, bandEdge: 0, normal: { x: -1, y: 0 } });
+        compare(Geometry.blendBox("right", side, 4), { x: 5, y: 100, width: 64, height: 400, bandEdge: 64, normal: { x: 1, y: 0 } });
     }
 
     function test_the_band_edge_is_where_the_pill_rests_at_every_edge() {
@@ -426,7 +428,7 @@ TestCase {
         };
         for (const edge of ["bottom", "top", "left", "right"]) {
             const vertical = edge === "left" || edge === "right";
-            const b = Geometry.blendBox(edge, vertical ? side : pill, lift, 20);
+            const b = Geometry.blendBox(edge, vertical ? side : pill, lift);
             compare((vertical ? b.x : b.y) + b.bandEdge, rest[edge], edge);
         }
     }
@@ -450,8 +452,8 @@ TestCase {
 
     function test_the_shaders_box_holds_still_through_the_motion() {
         // The shader's box is laid out once for a motion, from the dock's
-        // box and the REST margins: the pill at every lift, the lift down to
-        // the band, and the blend's full spill along it. A box built from the
+        // box and the REST margins: the pill at every lift and the lift down
+        // to the band. A box built from the
         // moving pill moved the item and rebuilt two objects every frame; the
         // moving parts are uniforms.
         const W = 342, H = 75, travel = 5;
@@ -464,17 +466,15 @@ TestCase {
             const r = Geometry.liftedMargins(edge, rest, 0, 0);
             const restEdge = { bottom: h - r.bottom, top: r.top, left: r.left, right: w - r.right }[edge];
             compare((vertical ? box.x : box.y) + box.bandEdge, restEdge, edge + ": band edge");
-            // It holds the pill at every lift, with the spill on both flanks.
+            // It holds the pill at every lift, and runs exactly its length.
             for (const lift of [0, 1.5, travel]) {
                 const m = Geometry.liftedMargins(edge, rest, 0, lift);
                 const pill = { x: m.left, y: m.top, width: w - m.left - m.right, height: h - m.top - m.bottom };
                 verify(pill.x >= box.x && pill.y >= box.y, edge + " " + lift);
                 verify(pill.x + pill.width <= box.x + box.width && pill.y + pill.height <= box.y + box.height, edge + " " + lift);
             }
-            const spill = Geometry.neckBlend(travel, 1, 0.5);
-            compare(vertical ? box.height : box.width, (vertical ? h : w) + 2 * spill, edge + ": the spill");
+            compare(vertical ? box.height : box.width, vertical ? h : w, edge + ": the pill's length, no more");
         }
-        compare(Geometry.splitBox("bottom", 342, 75, Geometry.margins("bottom", elevation, gaps), 0, 0).width, 342, "no travel, no spill");
     }
 
     function test_the_bars_overloaded_pair_reads_as_an_edge() {
