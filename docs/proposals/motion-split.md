@@ -374,7 +374,11 @@ the default band its look-only switch takes the effects half alone.
   region - which tracks its item's own geometry - rides the lift. The inward
   margin gives up exactly what the outward one gains. The icons ride the
   pill through a centre offset on the strip (`liftOffset`).
-- **Corners**: `cornerRadiiAt(edge, radius, s, seam, reach)`. The two
+- **Corners**: `cornerRadiiAt(edge, radius, s, seam, reach)`, with the span
+  from `cornerSpan` when a neck is drawn: it starts where the pill's ends
+  leave the band - before the seam for the default 5 px lift, since the
+  neck's blend tapers to nothing at the ends - and ends at the pinch; with
+  no neck, over the whole scalar. The two
   outward radii are `radius * clamp((s - seam) / ((1 - seam) * reach), 0, 1)`
   - square while the outlines are one, rounding over the NECK's span as the
   flank exposes them, round by the pinch - on both directions of the one

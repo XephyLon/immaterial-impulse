@@ -283,12 +283,20 @@ function cornerRadiiAt(edge, radius, apart, seam, reach) {
 
 // The outward corners' span on the scalar when a neck is drawn. The neck's
 // blend is nothing at the pill's ends (it tapers to zero there), so the ends
-// leave the band as soon as the lift outruns the field's reach into it -
-// the gap under them is 2 * lift - FIELD_REACH, visible at half a pixel -
-// which for a short travel is before the seam. A corner still square there
-// hovered over a lit gap for two frames (measured). So the span starts where
-// the ends open, never later than the seam, and still ends at the pinch the
-// neck pinches at. With no travel there is no neck: the whole scalar.
+// leave the band as soon as the lift outruns the field's reach into it. The
+// pill's field reaches FIELD_REACH - lift below the pill, so its edge climbs
+// at twice the lift; this takes the ends as open once that edge is half a
+// pixel above the band's (lift 1.25 px). It is an approximation of the
+// shader, not its exact threshold: the band's zero-crossing sits a ramp
+// inside the band and the coverage ramp is a device pixel wide, so the ends
+// start to show a little earlier (the frame scan finds one threshold frame
+// with the corner still square), and at a pixel ratio above 1 slightly
+// earlier still. For the default 5 px lift that is a quarter of the way in,
+// before the seam; a corner that waited for the seam sat square over a lit
+// gap for several frames (measured). The span never starts after the seam: for
+// a lift of about 2 px or less the ends are still touching at the seam and
+// the corners start there. It ends at the pinch the neck pinches at. With
+// no travel there is no neck: the whole scalar.
 function cornerSpan(travel, seam, reach) {
     var t = Number(travel) || 0;
     if (t <= 0) return { seam: 0, reach: 1 };
