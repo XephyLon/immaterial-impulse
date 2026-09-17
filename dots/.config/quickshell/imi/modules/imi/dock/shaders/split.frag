@@ -68,6 +68,12 @@ void main()
     float u = waistHalf > 0.0 ? (along - waistCenter) / waistHalf : 2.0;
     float k = blend * max(0.0, 1.0 - u * u);
     float d = smoothMinimum(pill, band, k);
-    float alpha = 1.0 - smoothstep(-softness, softness, d);
+    // Coverage over one screen pixel of the field's own gradient: between
+    // the pill's flat edge and the flat band the two fields' gradients
+    // cancel and the blended field goes flat, so a ramp in field units
+    // smeared over several pixels there (measured: a soft grey flank on a
+    // 5 px lift). `fwidth` puts the ramp back on the screen.
+    float w = max(fwidth(d), 0.001) * softness;
+    float alpha = 1.0 - smoothstep(-w, w, d);
     fragColor = fillColor * alpha * qt_Opacity;
 }

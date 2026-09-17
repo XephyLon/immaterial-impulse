@@ -226,6 +226,7 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/split.frag.qsb")', neck)
         self.assertIn("DockGeometry.neckBlend(dockRoot.splitTravel, dockRoot.splitProgress, Appearance.animation.splitSeam)", neck)
         self.assertIn("DockGeometry.blendBox(root.edge,", neck)
+        self.assertIn("DockGeometry.fieldPill(root.edge,", neck, "the field's pill reaches into the band for the lift's first pixel")
         self.assertIn("readonly property color fillColor: FrameGeometry.color", neck)
         self.assertIn("readonly property real softness: DockGeometry.BLEND_SOFTNESS", neck)
         for gone in ("Shape {", "ShapePath {", "PathSvg", "Rectangle {", "RoundCorner", "layer.enabled", "anchors."):
@@ -240,7 +241,10 @@ class FrameModeContract(unittest.TestCase):
         # A direction from part way takes a proportional time with the
         # effects tier as its floor (the reference's rule), and the tier's
         # curve whole.
-        self.assertIn("duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, dockRoot.splitProgress, splitBehavior.targetValue)", behavior)
+        self.assertIn("duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, splitBehavior.from, splitBehavior.targetValue)", behavior)
+        self.assertIn("onTargetValueChanged: splitBehavior.from = dockRoot.splitProgress", behavior,
+                      "the start is latched: a duration bound to the moving scalar shortens its own run every frame")
+        self.assertNotRegex(behavior, r"duration: DockGeometry\.splitDuration\([^)]*dockRoot\.splitProgress")
 
     def test_one_geometry_authority(self):
         corners = _strip(CORNERS.read_text())

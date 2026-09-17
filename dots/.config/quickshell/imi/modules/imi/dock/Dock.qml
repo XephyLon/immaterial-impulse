@@ -167,6 +167,13 @@ Scope {
             onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedBefore
             Behavior on splitProgress {
                 id: splitBehavior
+                // Where the pill was when the target changed - latched, because
+                // a duration bound to the moving scalar re-evaluates every
+                // frame of its own run and shortens it as it goes (measured: a
+                // reversal at 250 ms took 680). `targetValue` moves once, before
+                // the animation starts, and the scalar is still at rest then.
+                property real from: 0
+                onTargetValueChanged: splitBehavior.from = dockRoot.splitProgress
                 // No lift, no spatial tier: an unpinned dock at the default
                 // band, or the frame switching off, changes its LOOK and
                 // that runs on the effects tier alone (lookApart below).
@@ -176,10 +183,10 @@ Scope {
                     // From part way, a proportional time with the effects
                     // tier as its floor (the reference's rule): a Behavior
                     // re-targeted at 10% otherwise takes the whole tier to
-                    // cover a tenth of the way. Read at the start, where
-                    // `splitProgress` is still where the pill is.
+                    // cover a tenth of the way. From the latched start, never
+                    // the moving scalar.
                     NumberAnimation {
-                        duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, dockRoot.splitProgress, splitBehavior.targetValue)
+                        duration: DockGeometry.splitDuration(Appearance.animation.split.duration, Appearance.animation.elementMoveFast.duration, splitBehavior.from, splitBehavior.targetValue)
                         easing.type: Appearance.animation.split.type
                         easing.bezierCurve: Appearance.animation.split.bezierCurve
                     }
@@ -397,10 +404,17 @@ Scope {
                             // The field's inputs, in the box's own pixels.
                             readonly property vector2d resolution: Qt.vector2d(width, height)
                             readonly property color fillColor: FrameGeometry.color
+                            // The pill as the field sees it: reaching into the
+                            // band for the first pixel of the lift, where the
+                            // blend is still too small to bridge a sub-pixel gap.
+                            readonly property var fieldPill: DockGeometry.fieldPill(root.edge,
+                                { x: dockVisualBackground.x, y: dockVisualBackground.y,
+                                  width: dockVisualBackground.width, height: dockVisualBackground.height },
+                                dockRoot.splitLift)
                             readonly property vector2d pillCenter: Qt.vector2d(
-                                dockVisualBackground.x - box.x + dockVisualBackground.width / 2,
-                                dockVisualBackground.y - box.y + dockVisualBackground.height / 2)
-                            readonly property vector2d pillSize: Qt.vector2d(dockVisualBackground.width, dockVisualBackground.height)
+                                fieldPill.x - box.x + fieldPill.width / 2,
+                                fieldPill.y - box.y + fieldPill.height / 2)
+                            readonly property vector2d pillSize: Qt.vector2d(fieldPill.width, fieldPill.height)
                             readonly property vector4d pillRadii: Qt.vector4d(
                                 dockVisualBackground.frameRadii.topLeft, dockVisualBackground.frameRadii.topRight,
                                 dockVisualBackground.frameRadii.bottomRight, dockVisualBackground.frameRadii.bottomLeft)
