@@ -86,7 +86,7 @@ stop)
   shells() {
     local p
     for p in $(pgrep -f quickshell); do
-      tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "XDG_CONFIG_HOME=$SB/config" && echo "$p"
+      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "XDG_CONFIG_HOME=$SB/config" && echo "$p"
     done
   }
   kill "$SANDBOX_QS_PID" $(shells) 2>/dev/null
