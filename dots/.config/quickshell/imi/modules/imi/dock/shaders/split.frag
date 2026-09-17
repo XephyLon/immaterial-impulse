@@ -20,8 +20,9 @@
 //
 // Rebake after any edit, and record the bake (test_frame_mode_contract.py
 // checks both):
-//   qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o split.frag.qsb split.frag
-//   { sha256sum split.frag; qsb --version; } > split.frag.qsb.bake
+//   QSB=$(command -v qsb || echo /usr/lib/qt6/bin/qsb)
+//   "$QSB" --glsl "100 es,120,150" --hlsl 50 --msl 12 -o split.frag.qsb split.frag
+//   { sha256sum split.frag; "$QSB" --version; } > split.frag.qsb.bake
 //
 // Every coordinate is in the item's own pixels, the box that
 // dock_geometry.js `splitBox` lays out for the whole motion: the pill at
