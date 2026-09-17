@@ -83,31 +83,44 @@ shot)
   ;;
 stop)
   SB="$1"; source "$SB/env" 2>/dev/null || exit 0
-  # Everything started inside THIS sandbox, found by its environment (every
-  # process in the session inherits IMI_SANDBOX_SESSION=<sandbox>; matching on
-  # XDG_CONFIG_HOME instead killed any terminal that had sourced the env
-  # file, this script included): the
-  # shell, and the helpers it starts - a tray watchdog, monitors, a keyring,
-  # the session's D-Bus. Killing only the recorded pids left all of those
-  # running: 274 of them after a day of reviews, a watchdog whose bus had gone
-  # spinning at 14% each. The shell goes first and gets a moment to exit on
-  # its own; whatever is left, the compositor included, follows.
-  # `session shell` narrows to the shell (its command line names quickshell).
+  # Everything started inside THIS sandbox, found by its environment: every
+  # process of the session inherits IMI_SANDBOX_SESSION=<sandbox>, which the
+  # env file does not export, so a terminal that sourced that file is never
+  # taken for part of the sandbox (matching XDG_CONFIG_HOME killed it, and
+  # this script). That covers the shell and the helpers it starts - a tray
+  # watchdog, monitors, a keyring, the session's D-Bus - which outlived every
+  # stop that killed only the recorded pids: 274 of them after a day of
+  # reviews, a watchdog whose bus had gone spinning at 14% each. The recorded
+  # pids are not killed on their own: an env file outlives its session, and
+  # by then a pid can be anyone's. The shell goes first (the process whose
+  # argv[0] is quickshell - not a whole-command-line match, which finds this
+  # script by its own path) and gets a moment to exit; the rest follows, then
+  # SIGKILL.
   session() {
-    local p
-    local pids
-    if [ "${1:-}" = shell ]; then pids=$(pgrep -u "$(id -u)" -f quickshell); else pids=$(pgrep -u "$(id -u)" .); fi
-    for p in $pids; do
-      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "IMI_SANDBOX_SESSION=$SB" && echo "$p"
+    local p argv0
+    for p in $(pgrep -u "$(id -u)" .); do
+      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "IMI_SANDBOX_SESSION=$SB" || continue
+      if [ "${1:-}" = shell ]; then
+        argv0=$({ tr '\0' '\n' < "/proc/$p/cmdline"; } 2>/dev/null | head -1)
+        [ "${argv0##*/}" = quickshell ] || continue
+      fi
+      echo "$p"
     done
   }
-  kill "$SANDBOX_QS_PID" $(session shell) 2>/dev/null
+  kill $(session shell) 2>/dev/null
   for _ in $(seq 1 10); do [ -z "$(session shell)" ] && break; sleep 0.5; done
-  kill "$SANDBOX_HYPR_PID" $(session) 2>/dev/null
+  kill $(session) 2>/dev/null
   for _ in $(seq 1 6); do [ -z "$(session)" ] && break; sleep 0.5; done
   left=$(session); [ -n "$left" ] && kill -9 $left 2>/dev/null
-  kill -9 "$SANDBOX_HYPR_PID" 2>/dev/null
-  [ -f "$SB/run.path" ] && rm -rf "$(cat "$SB/run.path")"
+  # A portal or gvfs killed hard can leave its FUSE mount in the run dir, and
+  # rm cannot remove a mountpoint; unmount lazily first.
+  if [ -f "$SB/run.path" ]; then
+    RUN=$(cat "$SB/run.path")
+    awk -v r="$RUN/" 'index($2, r) == 1 { print $2 }' /proc/self/mounts | while read -r m; do
+      fusermount3 -u -z "$m" 2>/dev/null || fusermount -u -z "$m" 2>/dev/null
+    done
+    rm -rf "$RUN" 2>/dev/null
+  fi
   echo "sandbox stopped"
   ;;
 *) echo "usage: $0 start <shell-root> <sandbox-dir> [overrides.json] | shot <sandbox-dir> <out.png> | stop <sandbox-dir>"; exit 2 ;;

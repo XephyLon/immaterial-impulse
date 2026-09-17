@@ -70,7 +70,10 @@ class SandboxStopTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="imi-sbt-")
         t = Path(self.tmp.name)
         self.bin = t / "bin"; self.bin.mkdir()
-        for name, body in (("Hyprland", FAKE_HYPRLAND), ("dbus-run-session", FAKE_DBUS), ("qs", FAKE_QS)):
+        # Files on PATH, keyed by name: nothing here launches a shell - the
+        # script under test does, and what it finds is the fake.
+        fakes = {"Hyprland": FAKE_HYPRLAND, "dbus-run-session": FAKE_DBUS, "qs": FAKE_QS}
+        for name, body in fakes.items():
             p = self.bin / name; p.write_text(body); p.chmod(0o755)
         self.root = t / "shell"; (self.root / "defaults").mkdir(parents=True)
         (self.root / "defaults" / "config.json").write_text("{}")
@@ -128,6 +131,26 @@ class SandboxStopTest(unittest.TestCase):
             self.assertEqual(shells_of(self.sb), [])
         finally:
             caller.kill()
+            caller.wait()
+
+    def test_stop_never_kills_a_stranger_behind_a_stale_pid(self):
+        # An env file outlives its session (a crash, a reboot); the pids in it
+        # can belong to anything by then. stop kills only what carries the
+        # session's marker.
+        stranger = subprocess.Popen(["sleep", "600"])
+        try:
+            self.sb.mkdir(parents=True)
+            (self.sb / "env").write_text(
+                f"export XDG_CONFIG_HOME={self.sb}/config\n"
+                f"export SANDBOX_HYPR_PID={stranger.pid}\n"
+                f"export SANDBOX_QS_PID={stranger.pid}\n")
+            r = subprocess.run(["bash", str(SCRIPT), "stop", str(self.sb)], env=self.env,
+                               capture_output=True, text=True, timeout=30)
+            self.assertIn("sandbox stopped", r.stdout)
+            self.assertIsNone(stranger.poll(), "a process that reused a recorded pid is left alone")
+        finally:
+            stranger.kill()
+            stranger.wait()
 
     def test_stop_ends_the_whole_session(self):
         # The shell starts helpers of its own (tray watchdog, monitors, a
