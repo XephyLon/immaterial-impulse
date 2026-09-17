@@ -443,13 +443,15 @@ the default band its look-only switch takes the effects half alone.
   timing (whole milliseconds) reads 0 for the render step of every frame
   of both, on either renderer; the ~0.2 ms a frame it does show is the
   swap, the same for both. The fragment shader's GPU time on hardware is
-  below what it can show, and no GPU timer is available here. Fragments further than four ramps
+  below what it can show; a GL timer query would, but Qt Quick exposes
+  none to QML, and a native harness to read one is outside this change. Fragments further than four ramps
   from the outline return after one field evaluation, so only the edge pays
-  for the gradient. In the full sandbox shell, four interleaved fresh starts
-  of each build on hardware GL: idle 59-63 ticks per 10 s against #398's
-  62-65, eight motions in 12 s 138-140 against 144-147, and the dock window
-  drawing 373-376 frames over those motions in both, none longer than
-  20 ms.
+  for the gradient. In the full sandbox shell, two sets of four
+  interleaved fresh starts of each build on hardware GL (the second on the
+  final shader): idle 59-68 ticks per 10 s against #398's 58-65 - the two
+  sets disagree on which is lower, so it is noise at this size - eight
+  motions in 12 s 138-140 against 142-147, and the dock window drawing
+  371-376 frames over those motions in both, none longer than 20 ms.
 - **A direction from part way is proportional**: the tier times the
   distance left, never under the effects tier (`splitDuration`: the
   source's rule for a merge, extended here to both directions, with the

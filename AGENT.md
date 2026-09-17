@@ -390,8 +390,13 @@ lift rather than to a pinch that is never drawn (they hovered square over a lit 
 The shader binary is what the shell loads, so `split.frag.qsb.bake` records the source hash and the
 `qsb` that baked it, and the contract fails on a source edit that was not rebaked. A shader that loads but fails to build on the
 GPU is not caught - `ShaderEffect.status` reports the load - which is why the shader itself stays inside
-core GLSL ES 1.00.
-3e63f8be ("feat(dock): the neck is a distance field, and a reversal takes a proportional time").
+core GLSL ES 1.00. With a neck, the corners start rounding where the pill's ENDS leave the band
+(`cornerSpan`), not at the seam: the blend tapers to nothing at the ends, so for a short lift they open
+first, and a corner that waited for the seam sat square over a lit gap for a few frames.
+3e63f8be ("feat(dock): the neck is a distance field, and a reversal takes a proportional time"),
+5f2eb5b1 ("fix(dock): the split shader's gradient goes through the taper again, clamped; the bake is recorded"),
+8d8a2fc1 ("fix(dock): with no neck to draw, the corners round over the whole lift; the shader binary is checked against its source"),
+e7172eda ("fix(dock): with a neck, the corners start rounding where the pill's ends leave the band").
 The RESERVATION is what still steps, and it reserves the union
 of where the pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and
 the end of a landing, a boolean that flips - written at the start of a landing it put the windows against

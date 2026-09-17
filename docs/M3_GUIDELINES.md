@@ -228,9 +228,10 @@ it is released by the island's outline or absorbed by it. Up to the seam the two
 (the island stretching, the reference's swell); from the seam a neck - a same-colour bridge whose
 waist narrows to nothing - bridges them until it pinches off `Appearance.animation.splitNeckReach`
 of the way through the settle half, and the bodies settle APART. Shape rides the scalar: a corner
-rounds from the seam to the PINCH, over the neck's own span, because the rounding is the seam's
-own shape opening and the neck's flank is what exposes it (rounding to rest left a square corner
-over a lit gap). Where no neck is drawn - no travel, or a renderer that cannot draw it - the corner
+rounds from where the bodies part to the PINCH, over the neck's own span, because the rounding is
+the seam's own shape opening and the neck's flank is what exposes it (rounding to rest left a square
+corner over a lit gap). Where they part is the seam, or earlier wherever the neck does not reach -
+a neck that tapers to nothing at the ends lets the ends part first, and the corners start there. Where no neck is drawn - no travel, or a renderer that cannot draw it - the corner
 rounds over the whole scalar instead: keyed on a pinch that never comes, it hovers square over the
 gap. Anything that changes the look but not the shape (a border, a colour, a glyph)
 runs on the effects tier sequenced with the spatial motion - after it has landed on a split,
