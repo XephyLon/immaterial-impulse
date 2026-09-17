@@ -87,6 +87,17 @@ void main()
 {
     vec2 p = qt_TexCoord0 * resolution;
     float d = field(p);
+    float px = softness / max(pixelRatio, 0.25);
+    // Away from the outline the coverage is 0 or 1 whatever the gradient: the
+    // ramp's half-width is the gradient (at most about 1.7 in this norm)
+    // times one device pixel's softness, so four of those is clear of it.
+    // Only the pixels on the edge pay for the four extra field evaluations -
+    // the interior is most of the box, and on a software rasteriser the
+    // per-pixel cost is the whole frame.
+    if (abs(d) > 4.0 * px) {
+        fragColor = d < 0.0 ? fillColor * qt_Opacity : vec4(0.0);
+        return;
+    }
     // Coverage over one DEVICE pixel of the field's own gradient: between
     // the pill's flat edge and the flat band the two fields' gradients
     // cancel and the blended field goes flat, so a ramp in field units
@@ -100,7 +111,7 @@ void main()
     float gx = field(p + vec2(h, 0.0)) - field(p - vec2(h, 0.0));
     float gy = field(p + vec2(0.0, h)) - field(p - vec2(0.0, h));
     float g = max((abs(gx) + abs(gy)) / (2.0 * h), 0.5);
-    float w = g * softness / max(pixelRatio, 0.001);
+    float w = g * px;
     float alpha = 1.0 - smoothstep(-w, w, d);
     fragColor = fillColor * alpha * qt_Opacity;
 }
