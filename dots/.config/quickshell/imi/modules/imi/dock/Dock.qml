@@ -82,8 +82,8 @@ Scope {
             // inside the surface moves. Floating is not a second surface
             // position: the pill lifts INSIDE the surface (splitLift below),
             // so the switch is drawn rather than reconfigured, and the zone
-            // alone steps - to the destination's value, at the start, from
-            // the configured state (DockReservation.zone). Only while pinned:
+            // alone steps - reserving the union of where the pill is and
+            // where it goes (splitZoneExtra below). Only while pinned:
             // an unpinned dock hides and reveals from the screen edge, and
             // its hover sliver has to stay AT the edge - moved in, the pointer
             // slammed to the edge would land on the band, which takes no input.
@@ -125,17 +125,27 @@ Scope {
             // fullscreen exit.
             //
             // The pause is the reference's sequencing: effects and space
-            // never overlap. On a LANDING (target 0) the look lands first -
-            // the tab's colour, no border, on the effects tier - and only
-            // then does the outline move; on a lift there is nothing to wait
-            // for, since the look changes after the pill has landed apart
-            // (attachedLook below). Read off the Behavior's own target, which
-            // is set before the animation starts, rather than off a binding
-            // that may not have re-evaluated yet. The tier is written out
-            // rather than taken from its factory because the pause is
-            // direction-dependent and a factory cannot carry one; the three
-            // properties are the tier's, whole.
-            readonly property real splitTarget: DockReservation.attached && (root.pinned || DockReservation.frameOffset === 0) ? 0 : 1
+            // never overlap. On a LANDING from rest (target 0, the pill
+            // fully apart) the look lands first - the tab's colour, no
+            // border, on the effects tier - and only then does the outline
+            // move; on a lift there is nothing to wait for, since the look
+            // changes after the pill has landed apart (attachedLook below),
+            // and neither is there on a lift reversed mid-flight, whose look
+            // is still the tab's - a pause there parked the pill in the air.
+            // Read off the Behavior's own target, which is set before the
+            // animation starts, and the scalar's live value, rather than off
+            // a binding that may not have re-evaluated yet. The tier is
+            // written out rather than taken from its factory because the
+            // pause is direction-dependent and a factory cannot carry one;
+            // the three properties are the tier's, whole.
+            //
+            // The target is the frame option and the PIN: pinning a floating
+            // dock is a lift off the band (the travel appears, and the scalar
+            // is at 0), not a jump to a lifted pill. Never `reserves`, which
+            // folds in the fullscreen term - a scalar on it replayed the lift
+            // on every fullscreen exit; fullscreen reaches the lift through
+            // the travel alone, while the dock is hidden.
+            readonly property real splitTarget: FrameGeometry.enabled && root.pinned && !DockReservation.attached ? 1 : 0
             property real splitProgress: dockRoot.splitTarget
             Behavior on splitProgress {
                 id: splitBehavior
@@ -144,7 +154,7 @@ Scope {
                 // that runs on the effects tier alone (lookApart below).
                 enabled: dockRoot.splitTravel > 0
                 SequentialAnimation {
-                    PauseAnimation { duration: splitBehavior.targetValue === 0 ? Appearance.animation.elementMoveFast.duration : 0 }
+                    PauseAnimation { duration: splitBehavior.targetValue === 0 && dockRoot.splitProgress >= 1 ? Appearance.animation.elementMoveFast.duration : 0 }
                     NumberAnimation {
                         duration: Appearance.animation.split.duration
                         easing.type: Appearance.animation.split.type
@@ -176,7 +186,11 @@ Scope {
             // corners included, through a scalar of its own.
             readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || dockRoot.splitProgress < 1) : dockRoot.attached
             property real lookApart: dockRoot.attached ? 0 : 1
-            Behavior on lookApart { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
+            Behavior on lookApart {
+                // Read only while there is no lift; idle otherwise.
+                enabled: dockRoot.splitTravel <= 0
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
             readonly property real apart: dockRoot.splitTravel > 0 ? dockRoot.splitProgress : dockRoot.lookApart
             // The icons ride the pill: the strip is centred in the box and
             // the pill, lifted, is not.
@@ -349,7 +363,7 @@ Scope {
                             ShapePath {
                                 strokeWidth: 0
                                 fillColor: FrameGeometry.color
-                                PathSvg { path: DockGeometry.neckPath(root.edge, splitNeck.waist, dockRoot.splitLift, splitNeck.fillet) }
+                                PathSvg { path: DockGeometry.neckPath(root.edge, splitNeck.waist, root.vertical ? splitNeck.width : splitNeck.height, splitNeck.fillet) }
                             }
                         }
 

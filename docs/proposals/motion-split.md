@@ -240,19 +240,25 @@ colour, border and corner radii flip in one frame.
   by the gap, the neck stretches and breaks, the outward corners round as
   the gap opens. Float -> attach is the SWALLOW: the pill sinks, the neck
   forms as the outlines come within reach, the corners square as it fuses.
-- **The swell.** The reference's island grows in both axes before it
-  releases. On the dock that reads as the tab thickening before it lifts -
-  a squash-and-stretch the pill has no room for inside its surface and that
-  the band, a 5 px line, cannot show. Omitted, and stated: the dock takes the
-  seam and the two-stage curve, not the swell.
+- **The swell is the fused outline stretching.** The reference's island
+  grows before it releases. The band, a 5 px line, cannot grow and the pill
+  has no room to thicken inside its surface, so the swell is reinterpreted:
+  up to the seam the pill lifts with a full-width neck under it, and what
+  the eye sees is ONE outline - the tab - getting taller. The two-stage
+  curve's accelerating first half is that stretch; the seam is where it
+  starts to part.
 - **The neck is drawn.** It is the identity of the motion: without it a
   lift is a pill moving 5 px, which is what a settings toggle already does
   when a margin changes. It is a same-colour bridge between the pill's
-  outward edge and the band's inner edge, its waist a fraction of the pill's
-  width that goes to zero at the reach, its sides concave (the fillet shape
-  `RoundCorner` already draws for the screen corners, inverted). Drawn under
-  the pill, in `FrameGeometry.color`, only while the gap is inside the reach;
-  no layer, no shader.
+  outward edge and the band's inner edge - the pill's full width up to the
+  seam, then a waist narrowing to nothing until `splitNeckReach` of the way
+  through the settle half, its flanks concave fillets. One `Shape` on one
+  path from the module, under the pill, in `FrameGeometry.color`; no layer,
+  no shader. It reaches one pixel into the pill: drawn edge to edge, the
+  pill and the neck each antialiased their half of a boundary sitting on a
+  fractional pixel while the lift animated, and two half-coverages of one
+  colour over the light band composited to a hairline across the whole width
+  for the whole fused half of every lift.
 
 ### The hard constraint, and the recommended shape
 
@@ -327,8 +333,15 @@ the default band its look-only switch takes the effects half alone.
 - **The scalar follows the configured choice, not `attached`**: `attached`
   folds in the fullscreen term, and a scalar driven by it replayed a landing
   on every fullscreen exit. `splitTarget` reads the frame option and the pin
-  alone; fullscreen reaches the lift through `reserves` (travel 0 while
-  hidden) and the look through `attached`, and neither replays anything.
+  alone - so pinning a floating dock is a lift off the band, not a jump to a
+  lifted pill; fullscreen reaches the lift through `reserves` (travel 0
+  while hidden) and the look through `attached`, and neither replays
+  anything. Unpinning a floating dock still snaps the lift to zero in one
+  frame, under the unpin's own reveal and zone changes; stated, not fixed.
+- **The pause is only for a pending look change**: a landing from rest
+  waits the effects tier for the tab's colour to land; a lift reversed
+  mid-flight has the tab's look already and waits for nothing - a pause
+  there parked the pill in the air.
 - **No lift, no spatial tier.** An unpinned dock at the default band, or the
   frame switching off, has nothing to split off: the Behavior is disabled
   (`enabled: splitTravel > 0`), the scalar snaps, and the look - colour,

@@ -735,7 +735,6 @@ Singleton {
             property int duration: motion.scale(animationCurves.splitDuration)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.split
-            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     duration: root.animation.split.duration

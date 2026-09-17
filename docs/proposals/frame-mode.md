@@ -17,9 +17,10 @@
 > measured off a dynamic-island reference (`docs/proposals/motion-split.md`): the
 > surface sits at the attached position in both states, the pill lifts off the band by
 > the compositor's gap on one scalar (`Appearance.animation.split`) with a neck at the
-> seam and its outward corners rounding as the gap opens, the reservation steps to the
-> destination at the start so windows re-tile on the compositor's own animation, and the
-> look changes outside the motion. That split is the motion base for every later
+> seam and its outward corners rounding as the gap opens, the reservation reserves the
+> union of where the pill is and where it goes (it steps at the start of a lift and the
+> end of a landing, so windows re-tile on the compositor's own animation and are never
+> against a floating pill), and the look changes outside the motion. That split is the motion base for every later
 > docking in frame mode. Not modelled yet, and the next slices: modals
 > docking into the frame; the vertical bar; a bar hidden by auto-hide or absent
 > from a screen's list; per-screen frames.

@@ -150,14 +150,16 @@ class FrameModeContract(unittest.TestCase):
         # lift to draw, and a pause before a landing so the look lands before
         # the outline moves (the reference sequences effects and space).
         self.assertIn("property real splitProgress: dockRoot.splitTarget", dock)
-        self.assertIn("readonly property real splitTarget: DockReservation.attached && (root.pinned || DockReservation.frameOffset === 0) ? 0 : 1", dock)
-        self.assertNotRegex(dock, r"splitProgress:\s*dockRoot\.attached", "the scalar does not follow the fullscreen term")
+        self.assertIn("readonly property real splitTarget: FrameGeometry.enabled && root.pinned && !DockReservation.attached ? 1 : 0", dock,
+                      "the frame option and the pin: pinning a floating dock lifts it off the band")
+        self.assertNotRegex(dock, r"splitTarget:.*(reserves|fullscreen)", "the scalar does not follow the fullscreen term")
         self.assertEqual(dock.count("Behavior on splitProgress"), 1)
         behavior = dock[dock.index("Behavior on splitProgress"):]
         behavior = behavior[:behavior.index("readonly property real splitTravel")]
         self.assertIn("enabled: dockRoot.splitTravel > 0", behavior, "no lift, no spatial tier: the look alone changes")
         self.assertIn("SequentialAnimation", behavior)
-        self.assertIn("PauseAnimation { duration: splitBehavior.targetValue === 0 ? Appearance.animation.elementMoveFast.duration : 0 }", behavior)
+        self.assertIn("PauseAnimation { duration: splitBehavior.targetValue === 0 && dockRoot.splitProgress >= 1 ? Appearance.animation.elementMoveFast.duration : 0 }", behavior,
+                      "a pause only when a look change is pending - a lift reversed mid-flight parked the pill in the air")
         for half in ("duration: Appearance.animation.split.duration",
                      "easing.type: Appearance.animation.split.type",
                      "easing.bezierCurve: Appearance.animation.split.bezierCurve"):
@@ -187,7 +189,10 @@ class FrameModeContract(unittest.TestCase):
         # runs on the effects tier alone, corners included, on its own scalar.
         self.assertIn("readonly property bool attachedLook: dockRoot.splitTravel > 0 ? (dockRoot.attached || dockRoot.splitProgress < 1) : dockRoot.attached", dock)
         self.assertIn("property real lookApart: dockRoot.attached ? 0 : 1", dock)
-        self.assertIn("Behavior on lookApart { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }", dock)
+        look = dock[dock.index("Behavior on lookApart {"):]
+        look = look[:look.index("}")]
+        self.assertIn("enabled: dockRoot.splitTravel <= 0", look, "idle while the split scalar is the one read")
+        self.assertIn("animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)", look)
         self.assertIn("readonly property real apart: dockRoot.splitTravel > 0 ? dockRoot.splitProgress : dockRoot.lookApart", dock)
         self.assertIn("Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }", dock)
         self.assertIn("Behavior on border.width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }", dock)
@@ -201,7 +206,8 @@ class FrameModeContract(unittest.TestCase):
         # ...and the neck is ONE Shape on one path from the module, no layer,
         # boxed rather than anchored (the turn is a size).
         self.assertIn("DockGeometry.neckBox(root.edge,", neck)
-        self.assertIn("DockGeometry.neckPath(root.edge,", neck)
+        self.assertIn("DockGeometry.neckPath(root.edge, splitNeck.waist, root.vertical ? splitNeck.width : splitNeck.height, splitNeck.fillet)", neck,
+                      "the path is drawn to the box's own depth, overlap included")
         self.assertIn("preferredRendererType: Shape.CurveRenderer", neck)
         self.assertIn("fillColor: FrameGeometry.color", neck)
         self.assertIn("Shape {\n                            id: splitNeck", dock, "the neck is a Shape")
