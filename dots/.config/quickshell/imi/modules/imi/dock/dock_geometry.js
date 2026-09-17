@@ -364,6 +364,64 @@ function neckPath(edge, waist, lift, fillet) {
             pt("L", 0, l), reach(f, l - f), "Z"].join(" ");
 }
 
+// A direction's duration from part way: the tier times the distance left,
+// never under the floor (the effects tier). The source's rule
+// (motion-split.md §1, `max(220, 820 * progress)`): a Behavior re-targeted
+// mid-flight otherwise takes the whole tier to cover a tenth of the way, and
+// a lift reversed at 1% would be a jump without the floor. Clamped to the
+// unit box: the curve may overshoot, and a distance over 1 is a whole
+// direction.
+function splitDuration(base, floor, from, to) {
+    var b = Number(base) || 0;
+    var f = Number(floor) || 0;
+    var d = Math.min(1, Math.abs((Number(to) || 0) - (Number(from) || 0)));
+    return Math.max(f, Math.round(b * d));
+}
+
+// The blend's radius - the neck as a distance field (motion-split.md §1,
+// §6): the smooth-minimum of the pill's field and the band's, whose radius
+// is what bridges the two. It has to be ZERO at rest, since a blend against
+// a fused tab fillets the tab's sides where the Rectangle that takes over
+// draws none - a pop at the hand-over - and it grows to its full value at
+// the seam, held through the settle where the waist does the narrowing. In
+// LIFTS: a polynomial smooth-minimum bridges a gap of g once its radius
+// passes 2g, and the gap at the seam is half the lift, so four lifts keeps
+// the full waist bridged to the seam with room for the flanks.
+var BLEND_LIFTS = 4;
+// The field's coverage ramp, in pixels either side of the outline: a
+// Rectangle's own antialiasing is about a pixel wide, and the hand-over
+// between the two must not change the edge.
+var BLEND_SOFTNESS = 0.75;
+function neckBlend(travel, apart, seam) {
+    var t = Number(travel) || 0;
+    if (t <= 0) return 0;
+    var sm = Math.max(0.001, Number(seam) || 0);
+    var rise = Math.max(0, Math.min(1, (Number(apart) || 0) / sm));
+    return BLEND_LIFTS * t * rise;
+}
+
+// The shader's box, from the pill's: the pill, the lift down to the band
+// (the pill's REST outward edge, since the pill moved and the band did
+// not), and the blend's reach along the band on both flanks, where the
+// fillets spill. Boxed, never anchored. `bandEdge` is the band's inner edge
+// in the box's own frame along the across axis, and `normal` points INTO
+// the band, so the shader's field for the band is one half-plane.
+function blendBox(edge, pill, lift, spill) {
+    var e = normalizedEdge(edge);
+    var l = Number(lift) || 0;
+    var sp = Number(spill) || 0;
+    if (isVertical(e)) {
+        var box = { x: pill.x, y: pill.y - sp, width: pill.width + l, height: pill.height + 2 * sp };
+        if (e === "left") { box.x = pill.x - l; box.bandEdge = l; box.normal = { x: -1, y: 0 }; }
+        else { box.bandEdge = pill.width + l; box.normal = { x: 1, y: 0 }; }
+        return box;
+    }
+    var box = { x: pill.x - sp, y: pill.y, width: pill.width + 2 * sp, height: pill.height + l };
+    if (e === "top") { box.y = pill.y - l; box.bandEdge = l; box.normal = { x: 0, y: -1 }; }
+    else { box.bandEdge = pill.height + l; box.normal = { x: 0, y: 1 }; }
+    return box;
+}
+
 // The direction a dock icon lifts on hover and bounces on launch: inward, so
 // the icon rises out of the dock rather than into the screen edge. One vector
 // instead of four call sites each choosing an axis and a sign.

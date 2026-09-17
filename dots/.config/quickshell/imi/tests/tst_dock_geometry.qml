@@ -388,6 +388,50 @@ TestCase {
         compare(Geometry.neckFilletSize(4, 400, 400), 0, "no flank, no fillet");
     }
 
+    function test_a_reversal_takes_a_proportional_time_never_under_the_effects_tier() {
+        // The source's rule (motion-split.md §1): a direction started from
+        // part way takes the tier's duration times the distance left, with
+        // a floor - here the effects tier - so a lift reversed at 10% does
+        // not crawl back over the whole 800 ms and a reversal at 1% is not
+        // a jump.
+        compare(Geometry.splitDuration(800, 133, 0, 1), 800, "a whole direction is the tier");
+        compare(Geometry.splitDuration(800, 133, 1, 0), 800);
+        compare(Geometry.splitDuration(800, 133, 0.5, 1), 400, "half the way, half the time");
+        compare(Geometry.splitDuration(800, 133, 0.1, 0), 133, "the floor");
+        compare(Geometry.splitDuration(800, 133, 0.9, 0.9), 133, "no distance is still the floor");
+        compare(Geometry.splitDuration(800, 133, 1.2, 0), 800, "a scalar past the unit box is clamped to a whole direction");
+    }
+
+    function test_the_blend_grows_to_the_seam_and_is_nothing_at_rest() {
+        // The neck is a distance-field blend (motion-split.md §1, §6): a
+        // smooth-minimum of the pill's and the band's fields whose radius is
+        // the neck. It is ZERO at rest - a blend against a fused tab would
+        // fillet its sides where the Rectangle draws none, a pop at the hand-
+        // over - and grows to its full value at the seam, scaled by the lift
+        // (the gap it has to bridge: a smooth-minimum bridges a gap of g
+        // once its radius passes 2g). Past the pinch the waist is 0 and the
+        // blend has nothing to act on.
+        compare(Geometry.neckBlend(5, 0, 0.5), 0, "at rest, nothing");
+        compare(Geometry.neckBlend(5, 0.25, 0.5), 10, "halfway to the seam, half the blend");
+        compare(Geometry.neckBlend(5, 0.5, 0.5), 20, "at the seam, four lifts");
+        compare(Geometry.neckBlend(5, 0.8, 0.5), 20, "held through the settle; the waist does the narrowing");
+        compare(Geometry.neckBlend(0, 0.5, 0.5), 0, "no lift, no blend");
+    }
+
+    function test_the_blend_box_is_the_pill_plus_the_lift_plus_the_spill_along_the_band() {
+        // The shader's box, from the pill's: the pill, the lift down to the
+        // band (the pill's REST outward edge), and the blend's own reach
+        // along the band on both flanks, where the fillets spill. Boxed, not
+        // anchored (the turn is a size). The band's edge comes back in the
+        // box's own frame, so the shader has one number for it.
+        const pill = { x: 100, y: 5, width: 400, height: 60 };
+        compare(Geometry.blendBox("bottom", pill, 4, 20), { x: 80, y: 5, width: 440, height: 64, bandEdge: 64, normal: { x: 0, y: 1 } });
+        compare(Geometry.blendBox("top", pill, 4, 20), { x: 80, y: 1, width: 440, height: 64, bandEdge: 4, normal: { x: 0, y: -1 } });
+        const side = { x: 5, y: 100, width: 60, height: 400 };
+        compare(Geometry.blendBox("left", side, 4, 20), { x: 1, y: 80, width: 64, height: 440, bandEdge: 4, normal: { x: -1, y: 0 } });
+        compare(Geometry.blendBox("right", side, 4, 20), { x: 5, y: 80, width: 64, height: 440, bandEdge: 64, normal: { x: 1, y: 0 } });
+    }
+
     function test_the_neck_is_one_path_with_two_concave_flanks() {
         // One Shape, no layer: the waist rectangle and its two fillets as one
         // SVG path in the neck box's own frame. The band side is the far side
