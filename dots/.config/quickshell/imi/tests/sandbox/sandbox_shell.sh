@@ -64,7 +64,10 @@ LUA
         echo "export DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
         echo "export SANDBOX_HYPR_PID=$HPID"
       } > "$SB/env"
-      cd "$ROOT" && qs -c imi > "$SB/qs.log" 2>&1 &
+      # Not `cd && qs &`: that backgrounds a subshell, and its pid is what
+      # `stop` then killed while the shell lived on.
+      cd "$ROOT" || exit 1
+      qs -c imi > "$SB/qs.log" 2>&1 &
       echo "export SANDBOX_QS_PID=$!" >> "$SB/env"
       wait $HPID
     ' _ "$SB" "$ROOT" < /dev/null > "$SB/session.log" 2>&1
@@ -77,7 +80,19 @@ shot)
   ;;
 stop)
   SB="$1"; source "$SB/env" 2>/dev/null || exit 0
-  kill "$SANDBOX_QS_PID" 2>/dev/null; sleep 1; kill "$SANDBOX_HYPR_PID" 2>/dev/null; sleep 1; kill -9 "$SANDBOX_HYPR_PID" 2>/dev/null
+  # Every shell of THIS sandbox, found by its own environment: the recorded
+  # pid, and anything else started against the same config dir. A shell that
+  # outlived a stop kept rendering, and later CPU readings landed on it.
+  shells() {
+    local p
+    for p in $(pgrep -f quickshell); do
+      tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "XDG_CONFIG_HOME=$SB/config" && echo "$p"
+    done
+  }
+  kill "$SANDBOX_QS_PID" $(shells) 2>/dev/null
+  for _ in $(seq 1 10); do [ -z "$(shells)" ] && break; sleep 0.5; done
+  left=$(shells); [ -n "$left" ] && kill -9 $left 2>/dev/null
+  kill "$SANDBOX_HYPR_PID" 2>/dev/null; sleep 1; kill -9 "$SANDBOX_HYPR_PID" 2>/dev/null
   [ -f "$SB/run.path" ] && rm -rf "$(cat "$SB/run.path")"
   echo "sandbox stopped"
   ;;

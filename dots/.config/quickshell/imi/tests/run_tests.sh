@@ -1095,6 +1095,14 @@ if ! python3 "$SCRIPT_DIR/test_frame_mode_contract.py"; then
     exit 1
 fi
 
+# The review sandbox's stop leaves no shell behind: driven against fake
+# Hyprland/dbus/qs binaries, so it needs no compositor.
+echo "Running review sandbox stop test..."
+if ! python3 "$SCRIPT_DIR/test_sandbox_shell.py"; then
+    echo "Review sandbox stop test failed."
+    exit 1
+fi
+
 echo "Running launcher Ask row contract..."
 if ! python3 "$SCRIPT_DIR/test_launcher_ai_ask.py"; then
     echo "Launcher Ask row contract failed."
