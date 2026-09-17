@@ -301,69 +301,6 @@ function neckWaist(width, apart, seam, reach) {
     return (Number(width) || 0) * (1 - t);
 }
 
-// The neck's box, from the pill's: it fills the lift between the pill's
-// outward edge and the band (the pill's REST outward edge, since the pill
-// moved and the band did not), centred along the strip at the waist plus a
-// fillet on each flank - and it reaches NECK_OVERLAP into the pill. The pill
-// is drawn over it, so nothing shows; without the overlap the pill and the
-// neck each antialiased their half of a boundary sitting on a fractional
-// pixel while the lift animated, and two half-coverages of one colour over
-// the light band composited to a hairline across the whole width for the
-// whole fused half of every lift (measured on the sandbox frames: a
-// (71, 76, 74) row inside a (22, 21, 21) body).
-var NECK_OVERLAP = 1;
-function neckBox(edge, pill, lift, waist, fillet) {
-    var e = normalizedEdge(edge);
-    var l = (Number(lift) || 0) + NECK_OVERLAP;
-    var w = (Number(waist) || 0) + 2 * (Number(fillet) || 0);
-    if (isVertical(e)) {
-        var y = pill.y + (pill.height - w) / 2;
-        return e === "left"
-            ? { x: pill.x - l + NECK_OVERLAP, y: y, width: l, height: w }
-            : { x: pill.x + pill.width - NECK_OVERLAP, y: y, width: l, height: w };
-    }
-    var x = pill.x + (pill.width - w) / 2;
-    return e === "top"
-        ? { x: x, y: pill.y - l + NECK_OVERLAP, width: w, height: l }
-        : { x: x, y: pill.y + pill.height - NECK_OVERLAP, width: w, height: l };
-}
-
-// A flank fillet is as tall as the neck and never wider than the room the
-// waist leaves on its side of the pill.
-function neckFilletSize(lift, pillWidth, waist) {
-    var flank = ((Number(pillWidth) || 0) - (Number(waist) || 0)) / 2;
-    return Math.max(0, Math.min(Number(lift) || 0, flank));
-}
-
-// The neck as ONE SVG path in its box's own frame - the waist rectangle with
-// a concave fillet on each flank, its straight edges hugging the pill and
-// the band - so it is one Shape with no layer rather than three items with
-// two. Drawn in (along, across): along the strip, and across from the pill
-// side (0) to the band (`lift` - the box's own depth, overlap included);
-// each edge maps that figure into its box, and a
-// reflection (top, right) flips the arcs' sweep where a rotation (left: two
-// reflections) keeps it.
-function neckPath(edge, waist, lift, fillet) {
-    var e = normalizedEdge(edge);
-    var w = Number(waist) || 0;
-    var l = Number(lift) || 0;
-    var f = Math.max(0, Math.min(Number(fillet) || 0, l));
-    var flips = (e === "top" || e === "right") ? 1 : 0;
-    function m(u, v) {
-        switch (e) {
-        case "top": return [u, l - v];
-        case "right": return [v, u];
-        case "left": return [l - v, u];
-        default: return [u, v];
-        }
-    }
-    function pt(cmd, u, v) { var p = m(u, v); return cmd + " " + p[0] + " " + p[1]; }
-    function arc(u, v) { var p = m(u, v); return "A " + f + " " + f + " 0 0 " + flips + " " + p[0] + " " + p[1]; }
-    function reach(u, v) { return f > 0 ? arc(u, v) : pt("L", u, v); }
-    return [pt("M", f, 0), pt("L", f + w, 0), pt("L", f + w, l - f), reach(f + w + f, l),
-            pt("L", 0, l), reach(f, l - f), "Z"].join(" ");
-}
-
 // A direction's duration from part way: the tier times the distance left,
 // never under the floor (the effects tier). The source's rule
 // (motion-split.md §1, `max(220, 820 * progress)`): a Behavior re-targeted

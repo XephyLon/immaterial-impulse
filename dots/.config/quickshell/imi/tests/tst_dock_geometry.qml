@@ -366,28 +366,6 @@ TestCase {
         compare(Geometry.neckWaist(400, 0.6, seam, 0), 0, "a zero reach never bridges");
     }
 
-    function test_the_neck_sits_between_the_pill_and_the_band_at_every_edge() {
-        // The neck's box, from the pill's: it fills the lift between the
-        // pill's outward edge and where the band is (the pill's REST outward
-        // edge), centred along the strip at the waist plus a fillet each side
-        // - and it reaches ONE pixel into the pill. The pill is drawn over it,
-        // so nothing shows; without the overlap the pill and the neck each
-        // antialias their half of a boundary that sits on a fractional pixel
-        // while the lift animates, and two half-coverages of one colour over
-        // the light band composite to a hairline across the whole width.
-        const pill = { x: 100, y: 5, width: 400, height: 60 };
-        compare(Geometry.neckBox("bottom", pill, 4, 200, 4), { x: 196, y: 64, width: 208, height: 5 });
-        compare(Geometry.neckBox("top", pill, 4, 200, 4), { x: 196, y: 1, width: 208, height: 5 });
-        const side = { x: 5, y: 100, width: 60, height: 400 };
-        compare(Geometry.neckBox("left", side, 4, 200, 4), { x: 1, y: 196, width: 5, height: 208 });
-        compare(Geometry.neckBox("right", side, 4, 200, 4), { x: 64, y: 196, width: 5, height: 208 });
-        compare(Geometry.NECK_OVERLAP, 1);
-        // The fillet is as big as the lift and never wider than the flank room.
-        compare(Geometry.neckFilletSize(4, 400, 200), 4);
-        compare(Geometry.neckFilletSize(40, 400, 380), 10);
-        compare(Geometry.neckFilletSize(4, 400, 400), 0, "no flank, no fillet");
-    }
-
     function test_a_reversal_takes_a_proportional_time_never_under_the_effects_tier() {
         // The source's rule (motion-split.md §1): a direction started from
         // part way takes the tier's duration times the distance left, with
@@ -452,22 +430,6 @@ TestCase {
         const side = { x: 5, y: 100, width: 60, height: 400 };
         compare(Geometry.fieldPill("left", side, 0), { x: 3, y: 100, width: 62, height: 400 });
         compare(Geometry.fieldPill("right", side, 0.5), { x: 5, y: 100, width: 61.5, height: 400 });
-    }
-
-    function test_the_neck_is_one_path_with_two_concave_flanks() {
-        // One Shape, no layer: the waist rectangle and its two fillets as one
-        // SVG path in the neck box's own frame. The band side is the far side
-        // (across = the box's depth: the lift plus the overlap into the pill),
-        // the pill side is across = 0. Called with the box's own depth.
-        const bottom = Geometry.neckPath("bottom", 200, 4, 4);
-        compare(bottom, "M 4 0 L 204 0 L 204 0 A 4 4 0 0 0 208 4 L 0 4 A 4 4 0 0 0 4 0 Z");
-        // Without a fillet the flanks are straight.
-        compare(Geometry.neckPath("bottom", 200, 4, 0), "M 0 0 L 200 0 L 200 4 L 200 4 L 0 4 L 0 4 Z");
-        // Each other edge is the same figure mapped into its box; a reflection
-        // flips the arcs' sweep, a rotation (two reflections) keeps it.
-        compare(Geometry.neckPath("top", 200, 4, 4), "M 4 4 L 204 4 L 204 4 A 4 4 0 0 1 208 0 L 0 0 A 4 4 0 0 1 4 4 Z");
-        compare(Geometry.neckPath("right", 200, 4, 4), "M 0 4 L 0 204 L 0 204 A 4 4 0 0 1 4 208 L 4 0 A 4 4 0 0 1 0 4 Z");
-        compare(Geometry.neckPath("left", 200, 4, 4), "M 4 4 L 4 204 L 4 204 A 4 4 0 0 0 0 208 L 0 0 A 4 4 0 0 0 4 4 Z");
     }
 
     function test_the_bars_overloaded_pair_reads_as_an_edge() {
