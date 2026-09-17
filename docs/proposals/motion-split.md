@@ -310,18 +310,19 @@ colour, border and corner radii flip in one frame.
   the eye sees is ONE outline - the tab - getting taller. The two-stage
   curve's accelerating first half is that stretch; the seam is where it
   starts to part.
-- **The neck is drawn.** It is the identity of the motion: without it a
-  lift is a pill moving 5 px, which is what a settings toggle already does
-  when a margin changes. It is a same-colour bridge between the pill's
-  outward edge and the band's inner edge - the pill's full width up to the
-  seam, then a waist narrowing to nothing until `splitNeckReach` of the way
-  through the settle half, its flanks concave fillets. One `Shape` on one
-  path from the module, under the pill, in `FrameGeometry.color`; no layer,
-  no shader. It reaches one pixel into the pill: drawn edge to edge, the
-  pill and the neck each antialiased their half of a boundary sitting on a
-  fractional pixel while the lift animated, and two half-coverages of one
-  colour over the light band composited to a hairline across the whole width
-  for the whole fused half of every lift.
+- **The neck is a distance field.** It is the identity of the motion:
+  without it a lift is a pill moving 5 px, which is what a settings toggle
+  already does when a margin changes. It is built the way the source builds
+  it (§1): the pill's rounded box and the band's half-plane as signed
+  distance fields, joined by a polynomial smooth-minimum whose radius is
+  the neck, covered once by one `ShaderEffect` (`shaders/split.frag`) over
+  the box `blendBox` lays out - the pill, the lift down to the band, the
+  blend's spill along it. The first cut was a `Shape` on one SVG path under
+  the pill, reaching a pixel into it: drawn edge to edge, the pill and the
+  path each antialiased their half of a boundary sitting on a fractional
+  pixel while the lift animated, and two half-coverages of one colour over
+  the light band composited to a hairline across the whole width for the
+  whole fused half of every lift. A field has no second edge to meet.
 
 ### The hard constraint, and the recommended shape
 
@@ -378,14 +379,37 @@ the default band its look-only switch takes the effects half alone.
   gap once the flank had passed it (a reviewer's frame scan). The inward
   pair stays at `radius` throughout. With no lift the seam is 0, the reach
   1, and the rounding rides the look's own effects-tier scalar.
-- **The neck**: the pill's full width up to the seam (the fused outline
-  stretching as the pill lifts its first 2.5 px - the reference's swell,
-  which a 5 px band cannot show any other way), then narrowing to nothing at
-  the pinch, `splitNeckReach` of the way through the settle half
-  (`neckWaist`); the bodies settle apart after it. One `Shape` on one SVG
-  path from the module (`neckPath`: the waist rectangle with a concave
-  fillet on each flank, no bigger than the lift), `CurveRenderer`, no layer,
-  in the band's colour, under the pill.
+- **The neck**: the blend's radius is nothing at rest and four lifts at
+  the seam (`neckBlend` - a smooth-minimum bridges a gap of g once its
+  radius passes 2g, and the gap at the seam is half the lift), held through
+  the settle. It acts over the waist (`neckWaist`: the pill's full width up
+  to the seam - the fused outline stretching as the pill lifts its first
+  2.5 px, the reference's swell, which a 5 px band cannot show any other way
+  - narrowing to nothing at the pinch, `splitNeckReach` of the way through
+  the settle half), tapering along the band from the waist's centre; the
+  bodies settle apart after it. Three things the field needed that the
+  source's does not, because a flat pill edge faces a flat band where the
+  source has a circle, each measured on the sandbox frames: the taper,
+  because a flat edge over a flat band is one distance everywhere and a
+  uniform blend lets go all at once instead of pinching; a coverage ramp of
+  one screen pixel of the field's own gradient (`fwidth`), because between
+  two facing edges the fields' gradients cancel and a ramp in field units
+  smeared into a soft grey flank; and the pill's field reaching into the
+  band by a pixel less the lift (`fieldPill`), because a blend that is
+  nothing at rest cannot bridge the sub-pixel gap of the first frames and
+  the ramp showed it as a hairline along the seam. While the field paints
+  the pill's `Rectangle` does not (an `opacity` flip, no Behavior): the same
+  silhouette in the same colour at both hand-overs - square corners and no
+  blend at 0, round corners and no waist past the pinch - and a translucent
+  fill drawn twice is darker. The blur region stays the pill's: the two
+  bodies, the neck unblurred, as the source publishes it.
+- **A direction from part way is proportional**: the tier times the
+  distance left, never under the effects tier (`splitDuration`, the
+  source's rule), from a start the Behavior latches when its target changes
+  - bound to the moving scalar, the duration re-evaluated every frame of
+  its own run and shortened it as it went (measured: a reversal at 250 ms
+  took 680). Measured after: a reversal from 40% of the way lands in 266 ms,
+  one from 6% in the 133 ms floor, the whole lift in 800.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
   after the scalar lands at 1 (`attachedLook` holds the tab's look while the
   scalar is below 1; the pill takes `colLayer0` and its border once it is

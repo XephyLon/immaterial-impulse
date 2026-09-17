@@ -74,7 +74,10 @@ own repo; the installer pins which revision it builds.
   looks in one frame. Windows re-tile by the gap on the compositor's own animation. The
   motion is measured off a dynamic-island reference (`docs/proposals/motion-split.md`)
   and is the base for everything that docks into the frame from here on; the Motion
-  speed slider and reduce motion reach it.
+  speed slider and reduce motion reach it. The neck is a distance field in one shader,
+  the way the reference builds it, so the seam is covered once (the drawn path left a
+  hairline); and a switch reversed mid-motion comes back in a time proportional to how
+  far it got, never under the effects tier, instead of taking the whole 800 ms.
 - The typing test's settings page is drawn in the settings grammar (sections,
   grouped rows, the shell's switch, slider and choice rows) instead of its own
   row kit; the phone tab's navigation cards, app rows and the Intelligence

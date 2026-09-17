@@ -357,12 +357,21 @@ the seam. Everything else is arithmetic on that scalar: the pill's own margins c
 (`liftedMargins`; the blur `Region` tracks its item's OWN geometry, so the frost rides), the icons
 follow through a centre offset (`liftOffset`), the outward corners round from the SEAM to the pinch
 (`cornerRadiiAt`, the seam's own shape opening with the neck that exposes it - rounding to rest left a
-square corner over a lit gap), and a neck in the band's colour - one `Shape` on one path from the module
-(`neckPath`), no layer, reaching one pixel INTO the pill (`NECK_OVERLAP`: drawn edge to edge, the pill
-and the neck each antialiased their half of a fractional boundary and two half-coverages of one colour
-over the light band composited to a hairline across the whole fused outline) - bridges pill and band at
-full width up to the seam and narrows to nothing `splitNeckReach` of the way through the settle
-(`neckWaist`), so the bodies settle apart. The RESERVATION is what still steps, and it reserves the union
+square corner over a lit gap), and a neck in the band's colour that is a DISTANCE FIELD, the way the reference builds it
+(`shaders/split.frag`, after Clavis's `pill_morph.frag`): the pill's rounded box and the band's half-plane
+joined by a smooth-minimum whose radius is the neck (`neckBlend`: nothing at rest, four lifts at the
+seam), one `ShaderEffect` over the box `blendBox` lays out, covered ONCE - the first cut was a `Shape` on
+a path under the pill, and the pill and the path each antialiased their half of a fractional boundary
+into a hairline across the whole fused outline. Three things the field needed that the source's does
+not, because a flat pill edge faces a flat band where the source has a circle: the blend tapers along the
+band from the waist's centre (`neckWaist`, to nothing `splitNeckReach` of the way through the settle), or
+a flat edge over a flat band is one distance everywhere and the neck lets go all at once; the coverage
+ramp is one screen pixel of the field's own gradient (`fwidth` - the two facing fields' gradients cancel
+between them and a ramp in field units smeared over several pixels); and the pill's field reaches into
+the band by a pixel less the lift (`fieldPill`), because a blend that is nothing at rest cannot bridge
+the sub-pixel gap of the lift's first frames. While the field paints the pill's `Rectangle` does not
+(an `opacity` flip, no Behavior): the same silhouette in the same colour at both hand-overs, and a
+translucent fill drawn twice is darker. The RESERVATION is what still steps, and it reserves the union
 of where the pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and
 the end of a landing, a boolean that flips - written at the start of a landing it put the windows against
 the floating pill for a second - and the compositor re-tiles on its own animation. The scalar's target is
@@ -375,7 +384,10 @@ is set before the animation starts, where a binding on `attached` may not have r
 which a lift reversed mid-flight (no look pending) does not trigger. The border is a COLOUR that fades,
 from the tab's own colour to `colLayer0Border`, never a width: a width animated from 0 draws nothing
 until it reaches 1, a pop wearing the tier's name, and a transparent ring would be a seam because a
-Rectangle's fill stops at its border. A lift that did not begin as the tab - a floating dock being
+Rectangle's fill stops at its border. A direction started part way takes a proportional
+time with the effects tier as its floor (`splitDuration`, the source's rule), from a start the Behavior
+LATCHES when its target changes: bound to the moving scalar, the duration re-evaluated every frame of its
+own run and shortened it as it went. A lift that did not begin as the tab - a floating dock being
 pinned, the frame switching on under one - rises as the pill it is, no neck, corners round:
 `liftFromTab` is decided at the target's rising edge from last turn's `attached` (`attachedBefore`,
 refreshed one turn late with `Qt.callLater`); reading the look at the edge fed the old latch back
