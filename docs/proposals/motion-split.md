@@ -75,8 +75,9 @@ and it says how the motion is built, which the frames could not:
   26 against 25; settled 200 + 38 + 21 = 259 -> 129.5 against 128. The split's
   1000 ms is the measured 30 frames; the merge's 820 is the measured 24.
 - **A merge started mid-split is proportional**: `max(220, 820 * progress)`
-  ms (`KeystoneSurface.qml:773`), so a reversal near either end is short and
-  never under the effects tier's length.
+  ms (`KeystoneSurface.qml:773`), so a merge reversed early is short, with a
+  220 ms floor. (Only the merge: a split started from part way is not
+  shortened there.)
 - **Blur is published for the two bodies only** (`blurBackgroundItems`), the
   neck unblurred.
 - **The attached island has concave edge fillets** where it meets the screen
@@ -387,29 +388,48 @@ the default band its look-only switch takes the effects half alone.
   2.5 px, the reference's swell, which a 5 px band cannot show any other way
   - narrowing to nothing at the pinch, `splitNeckReach` of the way through
   the settle half), tapering along the band from the waist's centre; the
-  bodies settle apart after it. Three things the field needed that the
-  source's does not, because a flat pill edge faces a flat band where the
-  source has a circle, each measured on the sandbox frames: the taper,
-  because a flat edge over a flat band is one distance everywhere and a
-  uniform blend lets go all at once instead of pinching; a coverage ramp of
-  one screen pixel of the field's own gradient (`fwidth`), because between
-  two facing edges the fields' gradients cancel and a ramp in field units
-  smeared into a soft grey flank; and the pill's field reaching into the
-  band by a pixel less the lift (`fieldPill`), because a blend that is
-  nothing at rest cannot bridge the sub-pixel gap of the first frames and
-  the ramp showed it as a hairline along the seam. While the field paints
-  the pill's `Rectangle` does not (an `opacity` flip, no Behavior): the same
+  bodies settle apart after it. The taper is a heuristic - the blend holds
+  its full radius at the waist's centre and the neck narrows in WIDTH - and
+  it is one of four things the field needed that the source's does not,
+  because a flat pill edge faces a flat band where the source has a circle,
+  each found on the sandbox frames: the taper, because a flat edge over a
+  flat band is one distance everywhere and a uniform blend lets go all at
+  once instead of pinching; a coverage ramp of one DEVICE pixel of the
+  field's own gradient, because between two facing edges the fields'
+  gradients cancel and a ramp in field units smeared into a soft grey
+  flank - the gradient by central differences and the output's pixel ratio
+  as a uniform, not `fwidth`, which GLSL ES 1.00 (the profile an OpenGL
+  2.1-class backend gets, #70) has only behind an extension, and floored so
+  the saddle between the flanks does not alias; the pill's field reaching
+  two pixels into the band less the lift (`fieldPill`), because a blend that
+  is nothing at rest cannot bridge the sub-pixel gap of the first frames and
+  the ramp showed it as a hairline along the seam; and the band's
+  zero-crossing one ramp inside the band, because its ramp otherwise tinted
+  the gap's last row along the whole box. The band's edge is given in the
+  box's own frame: 0 on the top and left edges, where the box starts at the
+  band. (A first cut put it a lift further out there; the field drew a
+  band-coloured slab into the gap on those two edges, a reviewer caught it
+  on the left-edge frames, and `tst_dock_geometry.qml` now checks the edge
+  against the pill's rest edge on all four.) While the field paints the
+  pill's `Rectangle` does not (an `opacity` flip, no Behavior): the same
   silhouette in the same colour at both hand-overs - square corners and no
   blend at 0, round corners and no waist past the pinch - and a translucent
-  fill drawn twice is darker. The blur region stays the pill's: the two
-  bodies, the neck unblurred, as the source publishes it.
+  fill drawn twice is darker. That hand-over happens only where a shader can
+  paint (`fieldAvailable`): the software scene graph draws no
+  `ShaderEffect`, and a shader that failed to load draws nothing, so there
+  the pill keeps its Rectangle and lifts without a neck. The blur region
+  stays the pill's: the two bodies, the neck unblurred, as the source
+  publishes it.
 - **A direction from part way is proportional**: the tier times the
-  distance left, never under the effects tier (`splitDuration`, the
-  source's rule), from a start the Behavior latches when its target changes
-  - bound to the moving scalar, the duration re-evaluated every frame of
-  its own run and shortened it as it went (measured: a reversal at 250 ms
-  took 680). Measured after: a reversal from 40% of the way lands in 266 ms,
-  one from 6% in the 133 ms floor, the whole lift in 800.
+  distance left, never under the effects tier (`splitDuration`: the
+  source's rule for a merge, extended here to both directions, with the
+  effects tier - 200 ms before the speed slider - as the floor), from a
+  start the Behavior latches when its target changes - bound to the moving
+  scalar, the duration re-evaluated every frame of its own run and shortened
+  it as it went (measured: a reversal at 250 ms took 680). Measured after,
+  from the pin icon's position per frame: Floating then Attached 250 ms
+  later takes about 530 ms out and back; a landing reversed 250 ms in comes
+  back in about 250 ms; a whole direction runs 45 frames.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
   after the scalar lands at 1 (`attachedLook` holds the tab's look while the
   scalar is below 1; the pill takes `colLayer0` and its border once it is

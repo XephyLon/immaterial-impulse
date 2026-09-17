@@ -233,7 +233,10 @@ own shape opening and the neck's flank is what exposes it (rounding to rest left
 over a lit gap). Anything that changes the look but not the shape (a border, a colour, a glyph)
 runs on the effects tier sequenced with the spatial motion - after it has landed on a split,
 before it starts on a merge - not during it; a border is a colour that fades, never a width
-animated from 0 (a width below 1 draws nothing). One stated exception: a split reversed into a
+animated from 0 (a width below 1 draws nothing). A direction reversed part way takes the tier's
+duration times the distance left, never less than the effects tier - a Behavior re-targeted at
+10% otherwise spends the whole tier on a tenth of the way - measured from where the body was when
+the target changed, never from the moving scalar. One stated exception: a split reversed into a
 merge before it lands has its look already pending and takes it during the descent, since nothing
 is left to wait for. A switch with no travel (nothing to split off) is a look change alone, on the
 effects tier, corners included. Measured off the reference in `docs/proposals/motion-split.md`; the first

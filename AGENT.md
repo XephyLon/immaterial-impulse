@@ -362,16 +362,26 @@ square corner over a lit gap), and a neck in the band's colour that is a DISTANC
 joined by a smooth-minimum whose radius is the neck (`neckBlend`: nothing at rest, four lifts at the
 seam), one `ShaderEffect` over the box `blendBox` lays out, covered ONCE - the first cut was a `Shape` on
 a path under the pill, and the pill and the path each antialiased their half of a fractional boundary
-into a hairline across the whole fused outline. Three things the field needed that the source's does
+into a hairline across the whole fused outline. Four things the field needed that the source's does
 not, because a flat pill edge faces a flat band where the source has a circle: the blend tapers along the
-band from the waist's centre (`neckWaist`, to nothing `splitNeckReach` of the way through the settle), or
-a flat edge over a flat band is one distance everywhere and the neck lets go all at once; the coverage
-ramp is one screen pixel of the field's own gradient (`fwidth` - the two facing fields' gradients cancel
-between them and a ramp in field units smeared over several pixels); and the pill's field reaches into
-the band by a pixel less the lift (`fieldPill`), because a blend that is nothing at rest cannot bridge
-the sub-pixel gap of the lift's first frames. While the field paints the pill's `Rectangle` does not
-(an `opacity` flip, no Behavior): the same silhouette in the same colour at both hand-overs, and a
-translucent fill drawn twice is darker. The RESERVATION is what still steps, and it reserves the union
+band from the waist's centre (`neckWaist`, so the neck narrows in width to nothing `splitNeckReach` of the
+way through the settle), or a flat edge over a flat band is one distance everywhere and the neck lets go
+all at once; the coverage ramp is one DEVICE pixel of the field's own gradient, or the two facing fields'
+gradients cancel between them and a ramp in field units smeared over several pixels - taken by central
+differences with the output's pixel ratio as a uniform, never `fwidth`, which GLSL ES 1.00 has only behind
+`GL_OES_standard_derivatives` and an OpenGL 2.1-class backend gets exactly that profile (c76d6b7b
+("fix(background): make the Doom melt transition compile on GLSL ES 1.00")); the pill's field reaches
+two pixels into the band less the lift (`fieldPill`), because a blend that is nothing at rest cannot
+bridge the sub-pixel gap of the lift's first frames; and the band's zero-crossing sits one ramp inside
+the band, or its ramp tinted the gap's last row along the whole box. The band's edge is given in the
+box's own frame - 0 on the top and left edges, where the box starts at the band - and a first cut that
+put it a lift further out drew a band-coloured slab into the gap on those two edges and dropped it in one
+frame at the hand-over. While the field paints the pill's `Rectangle` does not (an `opacity` flip, no
+Behavior): the same silhouette in the same colour at both hand-overs, and a translucent fill drawn twice
+is darker - and only where a shader CAN paint (`fieldAvailable`: not the software scene graph, which
+draws no `ShaderEffect`, and not a shader that failed to load), or the hand-over would leave the icons
+over bare band; there the pill lifts without a neck. d0f7a2bd ("feat(dock): the neck is a distance
+field, and a reversal takes a proportional time"). The RESERVATION is what still steps, and it reserves the union
 of where the pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and
 the end of a landing, a boolean that flips - written at the start of a landing it put the windows against
 the floating pill for a second - and the compositor re-tiles on its own animation. The scalar's target is
@@ -385,9 +395,10 @@ which a lift reversed mid-flight (no look pending) does not trigger. The border 
 from the tab's own colour to `colLayer0Border`, never a width: a width animated from 0 draws nothing
 until it reaches 1, a pop wearing the tier's name, and a transparent ring would be a seam because a
 Rectangle's fill stops at its border. A direction started part way takes a proportional
-time with the effects tier as its floor (`splitDuration`, the source's rule), from a start the Behavior
-LATCHES when its target changes: bound to the moving scalar, the duration re-evaluated every frame of its
-own run and shortened it as it went. A lift that did not begin as the tab - a floating dock being
+time with the effects tier as its floor (`splitDuration` - the source does this for a merge with a
+220 ms floor of its own; here it is both directions), from a start the Behavior LATCHES when its target
+changes: bound to the moving scalar, the duration re-evaluated every frame of its own run and shortened
+it as it went. A lift that did not begin as the tab - a floating dock being
 pinned, the frame switching on under one - rises as the pill it is, no neck, corners round:
 `liftFromTab` is decided at the target's rising edge from last turn's `attached` (`attachedBefore`,
 refreshed one turn late with `Qt.callLater`); reading the look at the edge fed the old latch back
