@@ -355,29 +355,43 @@ it" are `gapsOut` apart by definition, whatever the band), on ONE scalar (`Dock.
 the dynamic-island reference in `docs/proposals/motion-split.md`, a two-segment curve whose join is
 the seam. Everything else is arithmetic on that scalar: the pill's own margins carry the lift
 (`liftedMargins`; the blur `Region` tracks its item's OWN geometry, so the frost rides), the icons
-follow through a centre offset (`liftOffset`), the outward corners round from the SEAM to rest
-(`cornerRadiiAt`, the seam's own shape opening), and a neck in the band's colour - one `Shape` on
-one path from the module (`neckPath`), no layer - bridges pill and band at full width up to the
-seam and narrows to nothing `splitNeckReach` of the way through the settle (`neckWaist`), so the
-bodies settle apart. The RESERVATION is what still steps, and it reserves the union of where the
-pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and the end
-of a landing, a boolean that flips - written at the start of a landing it put the windows against
-the floating pill for a second - and the compositor re-tiles on its own animation. The scalar
-follows the CONFIGURED choice (`splitTarget`), never `attached`: that predicate folds in the
-fullscreen term, and a scalar on it replayed a landing on every fullscreen exit. The look is
-sequenced outside the motion, as the reference does it: `attachedLook` holds the tab's colour and
-border until the scalar has landed apart, and a landing pauses the scalar's `SequentialAnimation` for
-the effects tier first - `PauseAnimation` keyed on the Behavior's own `targetValue`, which is set
-before the animation starts, where a binding on `attached` may not have re-evaluated yet. No lift,
-no spatial tier: an unpinned dock never reserves and never lifts, so at the default band the
-Behavior is disabled and the look, corners included, changes on the effects tier through a scalar
-of its own (`lookApart`); a configured gap larger than the elevation margin the pill lifts into
-grows the strip by the shortfall (`splitRoom`, nothing at the defaults). Two things the sandbox
-taught while measuring it: a zone request lands only on the surface's next commit, and with the
-parent display DPMS-off the nested output produces no frames at all - every zone read stale and
-every `grim`/`wf-recorder` hung until the display was switched back on; and the neck's reach is a
-fraction of the scalar's VALUE set from the reference's neck in TIME (165 ms of 800), because the
-curve's settle half is front-loaded and a value-domain 0.5 pinched in 50 ms. `test_frame_mode_contract.py`
+follow through a centre offset (`liftOffset`), the outward corners round from the SEAM to the pinch
+(`cornerRadiiAt`, the seam's own shape opening with the neck that exposes it - rounding to rest left a
+square corner over a lit gap), and a neck in the band's colour - one `Shape` on one path from the module
+(`neckPath`), no layer, reaching one pixel INTO the pill (`NECK_OVERLAP`: drawn edge to edge, the pill
+and the neck each antialiased their half of a fractional boundary and two half-coverages of one colour
+over the light band composited to a hairline across the whole fused outline) - bridges pill and band at
+full width up to the seam and narrows to nothing `splitNeckReach` of the way through the settle
+(`neckWaist`), so the bodies settle apart. The RESERVATION is what still steps, and it reserves the union
+of where the pill is and where it is going (`splitZoneExtra`, in `Dock.qml`): at the start of a lift and
+the end of a landing, a boolean that flips - written at the start of a landing it put the windows against
+the floating pill for a second - and the compositor re-tiles on its own animation. The scalar's target is
+the frame option and the PIN (`splitTarget`), never `attached` or `reserves`: both fold in the fullscreen
+term, and a scalar on it replayed a landing (or a lift) on every fullscreen exit. The look is sequenced
+outside the motion, as the reference does it: `attachedLook` holds the tab's colour and border until the
+scalar has landed apart, and a landing from rest pauses the scalar's `SequentialAnimation` for the effects
+tier first - `PauseAnimation` keyed on the Behavior's own `targetValue` AND the scalar still at 1, which
+is set before the animation starts, where a binding on `attached` may not have re-evaluated yet, and
+which a lift reversed mid-flight (no look pending) does not trigger. The border is a COLOUR that fades,
+from the tab's own colour to `colLayer0Border`, never a width: a width animated from 0 draws nothing
+until it reaches 1, a pop wearing the tier's name, and a transparent ring would be a seam because a
+Rectangle's fill stops at its border. A lift that did not begin as the tab - a floating dock being
+pinned, the frame switching on under one - rises as the pill it is, no neck, corners round:
+`liftFromTab` is decided at the target's rising edge from last turn's `attached` (`attachedBefore`,
+refreshed one turn late with `Qt.callLater`); reading the look at the edge fed the old latch back
+through its own terms, and reading "what changed since the last edge" missed a change made between edges.
+No lift, no spatial tier: an unpinned dock never reserves and never lifts, so at the default band the
+Behavior is disabled and the look, corners included, changes on the effects tier through a scalar of its
+own (`lookApart`); a configured gap larger than the elevation margin the pill lifts into grows the strip
+by the shortfall (`splitRoom`, nothing at the defaults). Two things the sandbox taught while measuring
+it: a zone request lands only on the surface's next commit, and with the parent display DPMS-off the
+nested output produces no frames at all - every zone read stale and every `grim`/`wf-recorder` hung
+until the display was switched back on; and the neck's reach is a fraction of the scalar's VALUE set
+from the reference's neck in TIME (165 ms of 800), because the curve's settle half is front-loaded and a
+value-domain 0.5 pinched in 50 ms. Stated limits: a pill-lift reversed into a landing takes the tab's
+look during the descent (no pause, by construction); and the motion is pinned as source text and
+measured in the sandbox, never sampled in flight by the suite - the dock is a `PanelWindow`, which
+headless weston cannot build. `test_frame_mode_contract.py`
 pins all of it; `tst_dock_geometry.qml` the arithmetic. Verified in the sandbox at 60 fps, read the
 way the reference was: the pill's extent one row above the band 322 -> 0 px across a lift, a
 133 ms look change before the descent, and the reservation 65 -> 70 at the start of a lift and

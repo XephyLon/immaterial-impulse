@@ -307,12 +307,14 @@ the default band its look-only switch takes the effects half alone.
   region - which tracks its item's own geometry - rides the lift. The inward
   margin gives up exactly what the outward one gains. The icons ride the
   pill through a centre offset on the strip (`liftOffset`).
-- **Corners**: `cornerRadiiAt(edge, radius, s, seam)`. The two outward
-  radii are `radius * clamp((s - seam) / (1 - seam), 0, 1)` - square while
-  the outlines are one, rounding over the settle half as the gap opens,
-  round at rest - on both directions of the one scalar. The inward pair
-  stays at `radius` throughout. With no lift the seam is 0 and the rounding
-  rides the look's own effects-tier scalar.
+- **Corners**: `cornerRadiiAt(edge, radius, s, seam, reach)`. The two
+  outward radii are `radius * clamp((s - seam) / ((1 - seam) * reach), 0, 1)`
+  - square while the outlines are one, rounding over the NECK's span as the
+  flank exposes them, round by the pinch - on both directions of the one
+  scalar. Rounding to rest instead left a square corner hovering over a lit
+  gap once the flank had passed it (a reviewer's frame scan). The inward
+  pair stays at `radius` throughout. With no lift the seam is 0, the reach
+  1, and the rounding rides the look's own effects-tier scalar.
 - **The neck**: the pill's full width up to the seam (the fused outline
   stretching as the pill lifts its first 2.5 px - the reference's swell,
   which a 5 px band cannot show any other way), then narrowing to nothing at
@@ -329,7 +331,11 @@ the default band its look-only switch takes the effects half alone.
   Behavior is a `SequentialAnimation` whose `PauseAnimation` is the effects
   tier's length when the target is 0 (read off the Behavior's own
   `targetValue`) - the reference's dot-before-outline. Measured in the
-  sandbox: a 133 ms look change, then the descent.
+  sandbox: a 133 ms look change, then the descent. The border is a COLOUR
+  that fades - from the tab's own colour (a transparent ring would be a
+  seam, since a Rectangle's fill stops at its border) to `colLayer0Border` -
+  never a width: a width animated from 0 draws nothing until it reaches 1,
+  which a frame scan showed as a one-frame pop wearing the tier's name.
 - **The scalar follows the configured choice, not `attached`**: `attached`
   folds in the fullscreen term, and a scalar driven by it replayed a landing
   on every fullscreen exit. `splitTarget` reads the frame option and the pin
@@ -342,6 +348,25 @@ the default band its look-only switch takes the effects half alone.
   waits the effects tier for the tab's colour to land; a lift reversed
   mid-flight has the tab's look already and waits for nothing - a pause
   there parked the pill in the air.
+- **A lift that did not begin as the tab rises as a pill.** `liftFromTab` is
+  decided at the scalar's target's rising edge from what was on screen the
+  turn before (`attachedBefore`, last turn's `attached`, refreshed one turn
+  late with `Qt.callLater`): pinning a floating dock, or switching the frame
+  on under one, raises the target with the pill already on screen, and the
+  pill rises without a neck and keeps its corners and border. Two earlier
+  spellings were wrong and are recorded so they are not tried again: reading
+  the look at the edge (its own terms move on that edge, in an order nothing
+  orders, and the old latch fed itself back), and reading "what changed
+  since the last edge" (a change between edges - unpin, flip the option
+  while unpinned, pin - escapes it).
+- **Two limits, stated.** A pill-lift reversed into a landing before it
+  lands (pin a floating dock, choose Attached mid-lift) takes the tab's look
+  during the descent rather than before it: `attached` flips at once and the
+  scalar is below 1, so nothing pauses - the one path where effects and
+  space overlap, by construction. And the motion is pinned as source text
+  and measured in the sandbox, not sampled in flight by the suite: the dock
+  is a `PanelWindow`, which headless weston cannot build (no layer shell),
+  and a nested-Hyprland probe is run by hand here, not by `run_tests.sh`.
 - **No lift, no spatial tier.** An unpinned dock at the default band, or the
   frame switching off, has nothing to split off: the Behavior is disabled
   (`enabled: splitTravel > 0`), the scalar snaps, and the look - colour,
