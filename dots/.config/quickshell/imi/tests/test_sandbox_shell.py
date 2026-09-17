@@ -49,8 +49,8 @@ def shells_of(sb):
 
 
 def session_of(sb, prefix=b""):
-    """Every process started inside the sandbox, found by its environment."""
-    want = f"XDG_CONFIG_HOME={sb}/config".encode()
+    """Every process started inside the sandbox, found by its session marker."""
+    want = f"IMI_SANDBOX_SESSION={sb}".encode()
     found = []
     for pid in os.listdir("/proc"):
         if not pid.isdigit():
@@ -112,6 +112,22 @@ class SandboxStopTest(unittest.TestCase):
                            capture_output=True, text=True, timeout=30)
         self.assertIn("sandbox stopped", r.stdout)
         self.assertEqual(shells_of(self.sb), [], "a shell deaf to SIGTERM is still killed")
+
+    def test_stop_spares_a_terminal_that_sourced_the_env_file(self):
+        # The README's workflow sources <sandbox>/env, which exports the
+        # sandbox's XDG_CONFIG_HOME into the caller - and a stop matching on
+        # that variable killed its own caller (and itself: "Terminated").
+        self.start()
+        caller = subprocess.Popen(["bash", "-c", f'source "{self.sb}/env"; exec -a sourced-terminal sleep 600'], env=self.env)
+        try:
+            time.sleep(0.5)
+            r = subprocess.run(["bash", "-c", f'source "{self.sb}/env"; bash "{SCRIPT}" stop "{self.sb}"'],
+                               env=self.env, capture_output=True, text=True, timeout=30)
+            self.assertIn("sandbox stopped", r.stdout, "stop ran to its end from a sourced shell")
+            self.assertIsNone(caller.poll(), "a terminal that sourced the env file is not part of the sandbox")
+            self.assertEqual(shells_of(self.sb), [])
+        finally:
+            caller.kill()
 
     def test_stop_ends_the_whole_session(self):
         # The shell starts helpers of its own (tray watchdog, monitors, a

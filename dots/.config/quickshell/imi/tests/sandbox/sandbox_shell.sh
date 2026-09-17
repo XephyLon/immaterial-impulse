@@ -46,7 +46,10 @@ hl.monitor({ output = "", mode = "1920x1080@60", position = "0x0", scale = 1 })
 hl.config({ misc = { disable_hyprland_logo = true, disable_splash_rendering = true, force_default_wallpaper = 0, disable_autoreload = true }, general = { gaps_out = 5, gaps_in = 4, border_size = 1 }, decoration = { rounding = 12 } })
 LUA
   # The nested session on its own bus, detached; its pids and env land in the env file.
-  setsid -f env XDG_CONFIG_HOME="$SB/config" XDG_CACHE_HOME="$SB/cache" XDG_STATE_HOME="$SB/state" XDG_DATA_HOME="$SB/data" \
+  # IMI_SANDBOX_SESSION marks every process of the session for `stop`; it is
+  # deliberately NOT in the env file, so a terminal that sources that file is
+  # never mistaken for part of the sandbox.
+  setsid -f env IMI_SANDBOX_SESSION="$SB" XDG_CONFIG_HOME="$SB/config" XDG_CACHE_HOME="$SB/cache" XDG_STATE_HOME="$SB/state" XDG_DATA_HOME="$SB/data" \
     XDG_RUNTIME_DIR="$RUN" WAYLAND_DISPLAY="$PARENT_SOCKET" \
     dbus-run-session -- bash -c '
       SB="$1"; ROOT="$2"
@@ -81,7 +84,9 @@ shot)
 stop)
   SB="$1"; source "$SB/env" 2>/dev/null || exit 0
   # Everything started inside THIS sandbox, found by its environment (every
-  # process in the session inherits XDG_CONFIG_HOME=<sandbox>/config): the
+  # process in the session inherits IMI_SANDBOX_SESSION=<sandbox>; matching on
+  # XDG_CONFIG_HOME instead killed any terminal that had sourced the env
+  # file, this script included): the
   # shell, and the helpers it starts - a tray watchdog, monitors, a keyring,
   # the session's D-Bus. Killing only the recorded pids left all of those
   # running: 274 of them after a day of reviews, a watchdog whose bus had gone
@@ -93,7 +98,7 @@ stop)
     local pids
     if [ "${1:-}" = shell ]; then pids=$(pgrep -u "$(id -u)" -f quickshell); else pids=$(pgrep -u "$(id -u)" .); fi
     for p in $pids; do
-      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "XDG_CONFIG_HOME=$SB/config" && echo "$p"
+      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "IMI_SANDBOX_SESSION=$SB" && echo "$p"
     done
   }
   kill "$SANDBOX_QS_PID" $(session shell) 2>/dev/null

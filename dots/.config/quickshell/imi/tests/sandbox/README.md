@@ -35,8 +35,10 @@ cohesion, iterate until every axis is >= 8.5). Never capture the live screen.
 - Failure modes: `grim` hangs when the nested output stops producing frames (occluded or after a
   stall, or the PARENT display DPMS-off) - restart the sandbox; a `Monitor FALLBACK 0x0` line means
   the same. One sandbox at a time. To measure the shell's CPU, find it by its environment
-  (`XDG_CONFIG_HOME=<sandbox-dir>/config` in `/proc/<pid>/environ`), never with `pgrep -n`: that
-  picks the newest matching process, which need not be this sandbox's shell. `stop` ends everything the
-  sandbox started - the shell first, then its helpers and the session's D-Bus, all found by that
-  same variable (`test_sandbox_shell.py`). Before that, every stop left the helpers running. A failed QML load kills
-  the shell: read the LAST `caused by` line in `<sandbox-dir>/qs.log`.
+  (`IMI_SANDBOX_SESSION=<sandbox-dir>` in `/proc/<pid>/environ`, set for the session only - the
+  env file does not carry it, so a sourced terminal never matches), never with `pgrep -n`: that
+  picks the newest matching process, which need not be this sandbox's shell. `stop` ends
+  everything the sandbox started - the shell first, then its helpers and the session's D-Bus, all
+  found by that same variable (`test_sandbox_shell.py`); before that, every stop left the helpers
+  running. A failed QML load kills the shell: read the LAST `caused by` line in
+  `<sandbox-dir>/qs.log`.
