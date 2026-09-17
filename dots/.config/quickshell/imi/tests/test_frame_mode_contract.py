@@ -96,7 +96,9 @@ class FrameModeContract(unittest.TestCase):
         # cannot be moved to meet the band, so it keeps the pill.
         self.assertIn("readonly property bool attached: DockReservation.attached && !fullscreenOnThisMonitor\n                && (dockRoot.reserves || DockReservation.frameOffset === 0)", dock)
         self.assertIn("dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0", dock)
-        self.assertIn("border.width: Config.options.dock.showBackground && !dockRoot.attachedLook ? Appearance.borderWidth.standard : 0", dock)
+        self.assertIn("border.width: Config.options.dock.showBackground ? Appearance.borderWidth.standard : 0", dock)
+        self.assertIn("border.color: dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0Border", dock,
+                      "the border is a colour change: a width from 0 draws nothing until 1, and a transparent ring is a seam")
         self.assertNotIn("regionItem:", dock, "the blur region is composed per corner, not a single-radius rect")
         # ...and published only while the pill is at rest: a Region tracks
         # its item's OWN geometry, the dock hides by offsetting an ancestor,
@@ -192,9 +194,12 @@ class FrameModeContract(unittest.TestCase):
         # (a floating dock being pinned) rises as a pill: no neck, corners
         # round. Latched at the target's rising edge.
         self.assertIn("property bool liftFromTab: true", dock)
-        self.assertIn("dockRoot.liftFromTab = root.pinned === dockRoot.pinnedAtLastEdge\n                        && FrameGeometry.enabled === dockRoot.framedAtLastEdge;", dock,
-                      "decided from what rose the target, never from the look, whose terms re-evaluate on the same edge")
+        self.assertIn("onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedBefore", dock,
+                      "decided from last turn's attached, never from the look (its terms move on the same edge) nor from what changed (a change between edges escapes)")
+        self.assertIn("onAttachedChanged: Qt.callLater(() => { dockRoot.attachedBefore = dockRoot.attached; })", dock)
+        self.assertIn("property bool attachedBefore: false", dock, "a plain property, never a binding a handler destroys")
         self.assertNotIn("liftFromTab = dockRoot.attachedLook", dock)
+        self.assertNotIn("pinnedAtLastEdge", dock)
         self.assertIn("&& (dockRoot.liftFromTab || dockRoot.splitTarget === 0)", dock, "the neck draws for a split and for every landing")
         self.assertIn("property real lookApart: dockRoot.attached ? 0 : 1", dock)
         look = dock[dock.index("Behavior on lookApart {"):]
@@ -203,11 +208,13 @@ class FrameModeContract(unittest.TestCase):
         self.assertIn("animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)", look)
         self.assertIn("readonly property real apart: dockRoot.splitTravel > 0 ? dockRoot.splitProgress : dockRoot.lookApart", dock)
         self.assertIn("Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }", dock)
-        self.assertIn("Behavior on border.width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }", dock)
+        self.assertIn("Behavior on border.color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }", dock)
+        self.assertNotIn("Behavior on border.width", dock)
         # The corners and the neck are keyed on the SEAM - the outward pair
         # rounds from it, the neck lives from it to the pinch - so the token
         # is read, not decorative.
-        self.assertIn("dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)", dock, "the corners take the seam from the tier, or none without a lift")
+        self.assertIn("dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0,\n                                dockRoot.splitTravel > 0 ? Appearance.animation.splitNeckReach : 1)", dock,
+                      "the corners round over the neck's span - seam to pinch - or over the whole look scalar without a lift")
         neck = dock[dock.index("id: splitNeck"):]
         neck = neck[:neck.rfind("Rectangle {", 0, neck.index("id: dockVisualBackground"))]
         self.assertIn("DockGeometry.neckWaist(splitNeck.pillAlong, dockRoot.splitProgress, Appearance.animation.splitSeam, Appearance.animation.splitNeckReach)", neck)

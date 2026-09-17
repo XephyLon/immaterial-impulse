@@ -153,21 +153,19 @@ Scope {
             // the frame switching on under a floating one, rises too - the
             // travel appears - but nothing was fused: it rises as the pill
             // it already is, no neck, corners round. Decided at the target's
-            // rising edge from WHAT ROSE IT: the option (pin and frame both
-            // as they were at the last edge) means a tab is on screen;
-            // anything else means a pill. Not from the look itself, whose
-            // own terms re-evaluate on the same edge in an order nothing
-            // orders - read that way, the old latch fed itself back.
+            // rising edge from what was on screen the TURN BEFORE: `attached`
+            // as it was before this turn's changes, held in `attachedBefore`
+            // and refreshed one turn late (Qt.callLater), so the edge's
+            // handler always reads last turn's value whatever order this
+            // turn's bindings re-evaluate in. Not from the look, whose own
+            // terms move on the same edge; not from "what changed", which a
+            // change between edges (unpin, flip the option, pin) escapes.
+            // Plain properties, never bindings a handler would destroy.
             property bool liftFromTab: true
-            property bool pinnedAtLastEdge: root.pinned
-            property bool framedAtLastEdge: FrameGeometry.enabled
-            onSplitTargetChanged: {
-                if (dockRoot.splitTarget === 1)
-                    dockRoot.liftFromTab = root.pinned === dockRoot.pinnedAtLastEdge
-                        && FrameGeometry.enabled === dockRoot.framedAtLastEdge;
-                dockRoot.pinnedAtLastEdge = root.pinned;
-                dockRoot.framedAtLastEdge = FrameGeometry.enabled;
-            }
+            property bool attachedBefore: false
+            Component.onCompleted: dockRoot.attachedBefore = dockRoot.attached
+            onAttachedChanged: Qt.callLater(() => { dockRoot.attachedBefore = dockRoot.attached; })
+            onSplitTargetChanged: if (dockRoot.splitTarget === 1) dockRoot.liftFromTab = dockRoot.attachedBefore
             Behavior on splitProgress {
                 id: splitBehavior
                 // No lift, no spatial tier: an unpinned dock at the default
@@ -409,20 +407,27 @@ Scope {
                             color: !Config.options.dock.showBackground ? "transparent"
                                    : dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0
                             Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-                            border.width: Config.options.dock.showBackground && !dockRoot.attachedLook ? Appearance.borderWidth.standard : 0
-                            Behavior on border.width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
-                            border.color: Appearance.colors.colLayer0Border
+                            // The border is a COLOUR change, never a width one: a
+                            // width animated from 0 draws nothing until it reaches
+                            // 1, which is a pop wearing a tier's name (measured).
+                            // The tab's border is its own colour - a transparent
+                            // ring would be a seam, since a Rectangle's fill stops
+                            // at its border - and the pill's fades in from it.
+                            border.width: Config.options.dock.showBackground ? Appearance.borderWidth.standard : 0
+                            border.color: dockRoot.attachedLook ? FrameGeometry.color : Appearance.colors.colLayer0Border
+                            Behavior on border.color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
                             // `large`: the tab's inward corners sit next to the
                             // fillets and the bar plate's corners in frame mode,
                             // so the pill's radius is a design value, not a sum.
                             radius: Appearance.rounding.large
                             // The outward pair rounds from the seam, where the
-                            // outlines part, to rest: square while fused, a
-                            // pill once apart. With no lift, over the look's
-                            // own scalar.
+                            // outlines part, to the pinch, with the neck that
+                            // exposes it: square while fused, a pill once apart.
+                            // With no lift, over the look's own scalar.
                             readonly property var frameRadii: DockGeometry.cornerRadiiAt(root.edge, radius,
                                 dockRoot.liftFromTab || dockRoot.splitTarget === 0 ? dockRoot.apart : 1,
-                                dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0)
+                                dockRoot.splitTravel > 0 ? Appearance.animation.splitSeam : 0,
+                                dockRoot.splitTravel > 0 ? Appearance.animation.splitNeckReach : 1)
                             topLeftRadius:     frameRadii.topLeft
                             topRightRadius:    frameRadii.topRight
                             bottomLeftRadius:  frameRadii.bottomLeft

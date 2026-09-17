@@ -319,29 +319,33 @@ TestCase {
         compare(Geometry.liftOffset("bottom", 10, 5), { x: 0, y: 0 });
     }
 
-    function test_the_outward_corners_round_from_the_seam() {
+    function test_the_outward_corners_round_from_the_seam_to_the_pinch() {
         // Fused, the seam is square; free, the pill is a pill. The outward
-        // pair rounds over the SETTLE half of the scalar - from the seam,
-        // where the outlines part, to rest - and the inward pair never moves.
+        // pair rounds over the NECK'S span - from the seam, where the
+        // outlines part, to the pinch-off - so the corner is round by the
+        // time the flank has fully exposed it; rounding to rest instead left
+        // a square corner hovering over a lit gap. The inward pair never
+        // moves.
         const r = 22;
-        const seam = 0.5;
-        compare(Geometry.cornerRadiiAt("bottom", r, 0, seam), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
-        compare(Geometry.cornerRadiiAt("bottom", r, 0.5, seam), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 }, "square until the seam");
-        compare(Geometry.cornerRadiiAt("bottom", r, 0.75, seam), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
-        compare(Geometry.cornerRadiiAt("bottom", r, 1, seam), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
-        compare(Geometry.cornerRadiiAt("top", r, 0.625, seam), { topLeft: 5.5, topRight: 5.5, bottomLeft: r, bottomRight: r });
-        compare(Geometry.cornerRadiiAt("left", r, 0.75, seam), { topLeft: 11, topRight: r, bottomLeft: 11, bottomRight: r });
-        compare(Geometry.cornerRadiiAt("right", r, 0.75, seam), { topLeft: r, topRight: 11, bottomLeft: r, bottomRight: 11 });
-        // A look with no lift has no seam: the whole scalar is the rounding.
-        compare(Geometry.cornerRadiiAt("bottom", r, 0.5, 0), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
+        const seam = 0.5, reach = 0.8;
+        compare(Geometry.cornerRadiiAt("bottom", r, 0, seam, reach), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 });
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.5, seam, reach), { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 }, "square until the seam");
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.7, seam, reach), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 }, "half way to the pinch");
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.9, seam, reach), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r }, "round at the pinch");
+        compare(Geometry.cornerRadiiAt("bottom", r, 1, seam, reach), { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("top", r, 0.6, seam, reach), { topLeft: 5.5, topRight: 5.5, bottomLeft: r, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("left", r, 0.7, seam, reach), { topLeft: 11, topRight: r, bottomLeft: 11, bottomRight: r });
+        compare(Geometry.cornerRadiiAt("right", r, 0.7, seam, reach), { topLeft: r, topRight: 11, bottomLeft: r, bottomRight: 11 });
+        // A look with no lift has no seam and no neck: the whole scalar is the rounding.
+        compare(Geometry.cornerRadiiAt("bottom", r, 0.5, 0, 1), { topLeft: r, topRight: r, bottomLeft: 11, bottomRight: 11 });
         // Past the ends is the ends: a curve that leaves the unit box must not
         // produce a negative radius or a corner rounder than the pill.
-        compare(Geometry.cornerRadiiAt("bottom", r, -0.2, seam), Geometry.cornerRadiiAt("bottom", r, 0, seam));
-        compare(Geometry.cornerRadiiAt("bottom", r, 1.3, seam), Geometry.cornerRadiiAt("bottom", r, 1, seam));
+        compare(Geometry.cornerRadiiAt("bottom", r, -0.2, seam, reach), Geometry.cornerRadiiAt("bottom", r, 0, seam, reach));
+        compare(Geometry.cornerRadiiAt("bottom", r, 1.3, seam, reach), Geometry.cornerRadiiAt("bottom", r, 1, seam, reach));
         // The boolean form is the two ends of the same function.
         for (const edge of ["top", "bottom", "left", "right"]) {
-            compare(Geometry.cornerRadii(edge, r, true), Geometry.cornerRadiiAt(edge, r, 0, seam), edge);
-            compare(Geometry.cornerRadii(edge, r, false), Geometry.cornerRadiiAt(edge, r, 1, seam), edge);
+            compare(Geometry.cornerRadii(edge, r, true), Geometry.cornerRadiiAt(edge, r, 0, seam, reach), edge);
+            compare(Geometry.cornerRadii(edge, r, false), Geometry.cornerRadiiAt(edge, r, 1, seam, reach), edge);
         }
     }
 

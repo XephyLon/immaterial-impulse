@@ -259,15 +259,18 @@ function liftOffset(edge, room, lift) {
 // the pill and the band are: 0 is the fused tab (the outward pair squared -
 // that seam is where the tab grows out of the band, and a rounded seam is a
 // pill resting on a line), 1 is the free pill. The outward pair rounds over
-// the SETTLE half of the scalar - from `seam`, where the outlines part, to
-// rest - because the rounding is the seam's own shape opening, not a look
-// that could wait for the effects tier; the inward pair never moves. A look
-// with no lift passes seam 0 and rounds over its whole scalar. Clamped: the
-// scalar's curve may leave the unit box, and a negative radius is not a
+// the NECK'S span - from `seam`, where the outlines part, to the pinch-off
+// `reach` of the way through the settle - because the rounding is the
+// seam's own shape opening: the neck's flank exposes the corner as it
+// narrows, and a corner still square once exposed hovered over a lit gap
+// (rounding to rest did that). The inward pair never moves. A look with no
+// lift passes seam 0 and reach 1 and rounds over its whole scalar. Clamped:
+// the scalar's curve may leave the unit box, and a negative radius is not a
 // corner.
-function cornerRadiiAt(edge, radius, apart, seam) {
+function cornerRadiiAt(edge, radius, apart, seam, reach) {
     var sm = Math.max(0, Math.min(0.999, Number(seam) || 0));
-    var a = Math.max(0, Math.min(1, ((Number(apart) || 0) - sm) / (1 - sm)));
+    var rc = Math.max(0.001, Math.min(1, reach === undefined ? 1 : (Number(reach) || 0)));
+    var a = Math.max(0, Math.min(1, ((Number(apart) || 0) - sm) / ((1 - sm) * rc)));
     var r = { topLeft: radius, topRight: radius, bottomLeft: radius, bottomRight: radius };
     var out = outwardSide(edge);
     var rounded = radius * a;
@@ -280,7 +283,7 @@ function cornerRadiiAt(edge, radius, apart, seam) {
 
 // The two ends of cornerRadiiAt, for a caller with no scalar.
 function cornerRadii(edge, radius, attached) {
-    return cornerRadiiAt(edge, radius, attached ? 0 : 1, 0);
+    return cornerRadiiAt(edge, radius, attached ? 0 : 1, 0, 1);
 }
 
 // The neck's waist on the scalar: the pill's full width up to the seam (the
