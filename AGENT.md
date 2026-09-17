@@ -420,8 +420,9 @@ look during the descent (no pause, by construction); and the motion is pinned as
 measured in the sandbox, never sampled in flight by the suite - the dock is a `PanelWindow`, which
 headless weston cannot build. `test_frame_mode_contract.py`
 pins all of it; `tst_dock_geometry.qml` the arithmetic. Verified in the sandbox at 60 fps, read the
-way the reference was: the pill's extent one row above the band 322 -> 0 px across a lift, a
-133 ms look change before the descent, and the reservation 65 -> 70 at the start of a lift and
+way the reference was: the pill's extent one row above the band 322 -> 0 px across a lift, the
+effects tier's 200 ms look change before the descent (a change detector first read it as 133 ms by
+trimming the fade's faint ends), and the reservation 65 -> 70 at the start of a lift and
 70 -> 65 at the end of a landing. ("feat(dock): the attached <-> floating switch is
 the split"). The rounding probe runs only
 while the mode is on (`running: root.enabled`, re-armed on `configreloaded` while on): the shell

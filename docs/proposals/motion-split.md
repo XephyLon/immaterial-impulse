@@ -318,9 +318,9 @@ colour, border and corner radii flip in one frame.
   distance fields, joined by a polynomial smooth-minimum whose radius is
   the neck, covered once by one `ShaderEffect` (`shaders/split.frag`) over
   a box laid out once per motion from the rest margins (`splitBox`) - the
-  pill at every lift, the lift down to the band, the blend's full spill
-  along it - so the item holds still and only its uniforms change per
-  frame. The first cut was a `Shape` on one SVG path under
+  pill at every lift and the lift down to the band, nothing past the
+  pill's ends, where the blend's radius is zero - so the item holds still
+  and only its uniforms change per frame. The first cut was a `Shape` on one SVG path under
   the pill, reaching a pixel into it: drawn edge to edge, the pill and the
   path each antialiased their half of a boundary sitting on a fractional
   pixel while the lift animated, and two half-coverages of one colour over
@@ -458,7 +458,10 @@ the default band its look-only switch takes the effects half alone.
   Behavior is a `SequentialAnimation` whose `PauseAnimation` is the effects
   tier's length when the target is 0 (read off the Behavior's own
   `targetValue`) - the reference's dot-before-outline. Measured in the
-  sandbox: a 133 ms look change, then the descent. The border is a COLOUR
+  sandbox: the border's fade starts, and the descent's first visible
+  frame follows 167 ms later - the 200 ms pause less the descent's first
+  sub-pixel frames. (An earlier note said 133 ms; that was a change
+  detector trimming the fade's faint ends.) The border is a COLOUR
   that fades - from the tab's own colour (a transparent ring would be a
   seam, since a Rectangle's fill stops at its border) to `colLayer0Border` -
   never a width: a width animated from 0 draws nothing until it reaches 1,
@@ -510,8 +513,8 @@ the default band its look-only switch takes the effects half alone.
 Sandbox recordings at 60 fps (`wf-recorder` on the nested output), both
 directions, read frame by frame the way the reference was: the pill's
 extent one row above the band goes 322 -> 0 px across a ~700 ms lift and
-0 -> 322 across a ~600 ms landing that starts 133 ms after the look has
-changed; pinned and unpinned; the default band and 14 px; the dock on the
+0 -> 322 across a ~600 ms landing that starts once the 200 ms look change
+has run; pinned and unpinned; the default band and 14 px; the dock on the
 left edge; the settings row. `tst_dock_geometry.qml` pins the lift, the
 room, the lifted margins, the icon offset, the corners at a scalar and the
 neck's boxes; `test_frame_mode_contract.py` pins the tier, the one scalar
