@@ -17,9 +17,12 @@ does not, so a terminal that sourced it is never matched). It needs no env file,
 from one on its own, removes only a run dir `start` made (`/tmp/imi-sb-XXXXXX`, unmounting any FUSE
 mount left in it), refuses to run from inside the sandbox, and says how many processes it ended and
 whether any are left - exiting non-zero if any are. The sandbox dir is canonicalised by both
-commands, so any spelling of it names the same sandbox. `start` on an existing sandbox dir stops
-that sandbox first and gives up if it cannot; it will not wipe a non-empty directory that is not a
-sandbox; and a start that fails ends the session it began. Before these, every stop left the
+commands, so any spelling of it names the same sandbox. A directory is a sandbox only if it holds
+the `.imi-sandbox` sentinel `start` writes - never because of the names of the files in it. `start`
+on an existing sandbox dir stops that sandbox first and gives up if it cannot; it will not wipe a
+non-empty directory without the sentinel; and a start that fails ends the session it began.
+`SANDBOX_START_WAIT` and `SANDBOX_STOP_KILL` are hooks for `test_sandbox_shell.py`; the latter
+accepts only `true` and says so when set. Before these, every stop left the
 shell's helpers running, and they piled up (`test_sandbox_shell.py`).
 
 - `<shell-root>` is `dots/.config/quickshell/imi` of the worktree under review. It is SYMLINKED,

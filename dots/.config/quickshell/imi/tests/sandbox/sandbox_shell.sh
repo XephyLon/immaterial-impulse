@@ -8,6 +8,10 @@
 #   sandbox_shell.sh shot  <sandbox-dir> <out.png>
 #   sandbox_shell.sh stop  <sandbox-dir>
 set -u
+# This script calls itself (start stops a sandbox it reuses or failed to
+# bring up): by bash and its own path, not "$0", which need not be an
+# executable path (no +x, a noexec mount, `bash <(...)`).
+self() { bash "${BASH_SOURCE[0]}" "$@"; }
 cmd="${1:-}"; shift || true
 case "$cmd" in
 start)
@@ -19,17 +23,26 @@ start)
   PARENT_SOCKET="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
   # Reusing a sandbox dir: stop what is running there first. Wiping the dir
   # under a live session left it running with nothing on disk to find it by.
-  # A directory that is not a sandbox is never wiped, and neither is one
-  # whose sandbox could not be stopped (a stop that refuses leaves its
-  # session running, and wiping the dir would orphan it).
+  # A directory is a sandbox only if start made it: it carries the
+  # .imi-sandbox sentinel. Nothing else counts - a sandbox's file names are
+  # ordinary ones (a Python venv is commonly env/), and guessing from them
+  # would wipe a project. A non-empty directory without the sentinel is
+  # never wiped, and neither is a sandbox that could not be stopped (a stop
+  # that refuses leaves its session running, and wiping the dir would
+  # orphan it).
   if [ -e "$SB" ]; then
-    if [ -e "$SB/run.path" ] || [ -e "$SB/env" ] || [ -e "$SB/env.partial" ]; then
-      "$0" stop "$SB" || { echo "start: could not stop the sandbox in $SB; not reusing it" >&2; exit 1; }
+    if [ -f "$SB/.imi-sandbox" ]; then
+      self stop "$SB" || { echo "start: could not stop the sandbox in $SB; not reusing it" >&2; exit 1; }
     elif [ -n "$(ls -A "$SB" 2>/dev/null)" ]; then
-      echo "start: $SB exists and is not a sandbox; not wiping it" >&2; exit 1
+      echo "start: $SB exists and is not a sandbox (no .imi-sandbox); not wiping it" >&2; exit 1
     fi
   fi
+  # SANDBOX_START_WAIT (seconds) exists for test_sandbox_shell.py, which
+  # drives a start that never comes up; the defaults are 30 s for the
+  # compositor and 40 s for the shell.
+  WAIT_S="${SANDBOX_START_WAIT:-}"
   rm -rf "$SB"; mkdir -p "$SB/config/immaterial-impulse" "$SB/config/quickshell" "$SB/cache" "$SB/state" "$SB/data"
+  echo "made by tests/sandbox/sandbox_shell.sh start; stop it before deleting this directory" > "$SB/.imi-sandbox"
   # The runtime dir must be SHORT: a unix socket path is capped at 108 bytes,
   # and under a deep scratchpad path wl_display_add_socket_auto fails
   # ("m_szWLDisplaySocket was null"). /tmp/imi-sb-<name>, mode 0700.
@@ -67,12 +80,12 @@ LUA
   setsid -f env IMI_SANDBOX_SESSION="$SB" XDG_CONFIG_HOME="$SB/config" XDG_CACHE_HOME="$SB/cache" XDG_STATE_HOME="$SB/state" XDG_DATA_HOME="$SB/data" \
     XDG_RUNTIME_DIR="$RUN" WAYLAND_DISPLAY="$PARENT_SOCKET" \
     dbus-run-session -- bash -c '
-      SB="$1"; ROOT="$2"
+      SB="$1"; ROOT="$2"; WAIT_S="$3"
       echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" > "$SB/env.partial"
       Hyprland -c "$SB/hypr.lua" > "$SB/hypr.log" 2>&1 &
       HPID=$!
       SIG=""
-      for _ in $(seq 1 60); do sleep 0.5; SIG=$(ls "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1); [ -n "$SIG" ] && [ -S "$XDG_RUNTIME_DIR/hypr/$SIG/.socket.sock" ] && break; SIG=""; done
+      for _ in $(seq 1 $(( ${WAIT_S:-30} * 10 ))); do sleep 0.1; SIG=$(ls "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1); [ -n "$SIG" ] && [ -S "$XDG_RUNTIME_DIR/hypr/$SIG/.socket.sock" ] && break; SIG=""; done
       [ -n "$SIG" ] || { echo "FAILED: nested compositor never came up" >> "$SB/env.partial"; exit 1; }
       export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
       export WAYLAND_DISPLAY=$(ls "$XDG_RUNTIME_DIR" | grep -E "^wayland-[0-9]+$" | head -1)
@@ -88,13 +101,13 @@ LUA
       qs -c imi > "$SB/qs.log" 2>&1 &
       echo "export SANDBOX_QS_PID=$!" >> "$SB/env"
       wait $HPID
-    ' _ "$SB" "$ROOT" < /dev/null > "$SB/session.log" 2>&1
-  for _ in $(seq 1 80); do sleep 0.5; [ -f "$SB/env" ] && grep -q SANDBOX_QS_PID "$SB/env" && break; done
+    ' _ "$SB" "$ROOT" "$WAIT_S" < /dev/null > "$SB/session.log" 2>&1
+  for _ in $(seq 1 $(( ${WAIT_S:-40} * 10 ))); do sleep 0.1; [ -f "$SB/env" ] && grep -q SANDBOX_QS_PID "$SB/env" && break; done
   # A start that did not get as far as the shell has still started a
   # session (the compositor at least); end it rather than leave it running.
   if ! grep -qs SANDBOX_QS_PID "$SB/env"; then
     echo "FAILED"; cat "$SB/env.partial" 2>/dev/null; tail -5 "$SB/hypr.log" 2>/dev/null
-    "$0" stop "$SB"
+    self stop "$SB" || echo "start: the failed session could not be stopped; run stop from outside any sandbox" >&2
     exit 1
   fi
   echo "sandbox up: source $SB/env"
@@ -137,13 +150,20 @@ stop)
     done
   }
   # SANDBOX_STOP_KILL exists for test_sandbox_shell.py alone: a kill that
-  # does nothing is how it reaches the "still running" report.
-  signal() { ${SANDBOX_STOP_KILL:-kill} "$@"; }
+  # does nothing (`true`, the only value accepted) is how it reaches the
+  # "still running" report. It announces itself, so a stray export is not
+  # mistaken for a stuck session.
+  case "${SANDBOX_STOP_KILL:-}" in
+    "") signal() { kill "$@"; } ;;
+    true) echo "stop: SANDBOX_STOP_KILL=true is set - nothing will be signalled (test mode)" >&2
+          signal() { :; } ;;
+    *) echo "stop: SANDBOX_STOP_KILL may only be 'true' (a test hook); refusing" >&2; exit 2 ;;
+  esac
   found=$(session | wc -w)
   signal $(session shell) 2>/dev/null
-  for _ in $(seq 1 10); do [ -z "$(session shell)" ] && break; sleep 0.5; done
+  for _ in $(seq 1 50); do [ -z "$(session shell)" ] && break; sleep 0.1; done
   signal $(session) 2>/dev/null
-  for _ in $(seq 1 6); do [ -z "$(session)" ] && break; sleep 0.5; done
+  for _ in $(seq 1 30); do [ -z "$(session)" ] && break; sleep 0.1; done
   hard=$(session); [ -n "$hard" ] && signal -9 $hard 2>/dev/null
   sleep 0.2
   left=$(session | wc -w)

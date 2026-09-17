@@ -23,6 +23,8 @@ MARKER = "IMI_SANDBOX_SESSION"
 
 FAKE_HYPRLAND = """#!/usr/bin/env python3
 import os, socket, time
+if os.environ.get("FAKE_HYPR_NEVER_UP"):
+    time.sleep(600)
 sig = os.path.join(os.environ["XDG_RUNTIME_DIR"], "hypr", "fakesig")
 os.makedirs(sig, exist_ok=True)
 a = socket.socket(socket.AF_UNIX); a.bind(os.path.join(sig, ".socket.sock"))
@@ -95,7 +97,7 @@ class SandboxStopTest(unittest.TestCase):
                         XDG_RUNTIME_DIR=str(self.parent_run), WAYLAND_DISPLAY="wayland-parent")
         self.env.pop(MARKER, None)
         self.strays = []
-        self.run_dirs_before = set(Path("/tmp").glob("imi-sb-*"))
+        self.run_dirs = set()
 
     def tearDown(self):
         for pid in session_of(self.sb):
@@ -104,9 +106,11 @@ class SandboxStopTest(unittest.TestCase):
             p.kill(); p.wait()
         self.stop()
         self.tmp.cleanup()
-        leaked = set(Path("/tmp").glob("imi-sb-*")) - self.run_dirs_before
+        # Only the run dirs this test's own starts made: a review sandbox
+        # started meanwhile has its own, and it is none of this test's business.
+        leaked = {d for d in self.run_dirs if os.path.exists(d)}
         for d in leaked:
-            subprocess.run(["rm", "-rf", str(d)])
+            subprocess.run(["rm", "-rf", d])
         self.assertEqual(leaked, set(), "a test left a sandbox run dir in /tmp")
 
     def run_script(self, *args, env=None):
@@ -116,8 +120,15 @@ class SandboxStopTest(unittest.TestCase):
     def stop(self, env=None):
         return self.run_script("stop", str(self.sb), env=env)
 
+    def remember_run_dir(self):
+        try:
+            self.run_dirs.add((self.sb / "run.path").read_text().strip())
+        except OSError:
+            pass
+
     def start(self, env=None):
         r = self.run_script("start", str(self.root), str(self.sb), env=env)
+        self.remember_run_dir()
         self.assertIn("sandbox up", r.stdout, r.stdout + r.stderr)
         for _ in range(40):
             if shells_of(self.sb) and session_of(self.sb, "fake-helper"):
@@ -186,11 +197,34 @@ class SandboxStopTest(unittest.TestCase):
         self.assertIsNone(p.poll(), "a sandbox whose path the other's matches as a pattern is left alone")
 
     def test_start_refuses_to_wipe_a_directory_that_is_not_a_sandbox(self):
+        # Including one that happens to hold files a sandbox also has - a
+        # Python venv is commonly named env/.
         self.sb.mkdir(parents=True)
         (self.sb / "precious").write_text("x")
+        (self.sb / "env").mkdir()
+        (self.sb / "run.path").write_text("/tmp/imi-sb-abcdef\n")
         r = self.run_script("start", str(self.root), str(self.sb))
         self.assertNotEqual(r.returncode, 0)
+        self.assertIn("not a sandbox", r.stderr)
         self.assertTrue((self.sb / "precious").exists())
+
+    def test_a_start_that_fails_ends_the_session_it_began(self):
+        # The compositor never comes up: start reports the failure, and the
+        # session it launched (the compositor, the D-Bus wrapper) is gone.
+        env = dict(self.env, FAKE_HYPR_NEVER_UP="1", SANDBOX_START_WAIT="2")
+        r = self.run_script("start", str(self.root), str(self.sb), env=env)
+        self.remember_run_dir()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("FAILED", r.stdout)
+        time.sleep(0.3)
+        self.assertEqual(session_of(self.sb), [], "nothing of the failed start is left running")
+
+    def test_the_test_only_kill_override_announces_itself(self):
+        self.sb.mkdir(parents=True)
+        r = self.run_script("stop", str(self.sb), env=dict(self.env, SANDBOX_STOP_KILL="true"))
+        self.assertIn("SANDBOX_STOP_KILL", r.stderr)
+        r = self.run_script("stop", str(self.sb), env=dict(self.env, SANDBOX_STOP_KILL="rm -rf /nonexistent"))
+        self.assertNotEqual(r.returncode, 0, "only the test's no-op is accepted")
 
     def test_start_does_not_wipe_a_sandbox_it_could_not_stop(self):
         # A stop that refuses (run from inside a sandbox) must stop the start
@@ -244,6 +278,7 @@ class SandboxStopTest(unittest.TestCase):
         # A start that fails before the env file exists still leaves its
         # compositor running; the marker is all stop needs.
         self.sb.mkdir(parents=True)
+        (self.sb / ".imi-sandbox").write_text("x")
         leftover = self.marked("sleep", "600")
         r = self.stop()
         self.assertIn("sandbox stopped", r.stdout)
