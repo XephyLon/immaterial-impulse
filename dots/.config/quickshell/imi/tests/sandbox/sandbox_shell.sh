@@ -80,19 +80,28 @@ shot)
   ;;
 stop)
   SB="$1"; source "$SB/env" 2>/dev/null || exit 0
-  # Every shell of THIS sandbox, found by its own environment: the recorded
-  # pid, and anything else started against the same config dir. A shell that
-  # outlived a stop kept rendering, and later CPU readings landed on it.
-  shells() {
+  # Everything started inside THIS sandbox, found by its environment (every
+  # process in the session inherits XDG_CONFIG_HOME=<sandbox>/config): the
+  # shell, and the helpers it starts - a tray watchdog, monitors, a keyring,
+  # the session's D-Bus. Killing only the recorded pids left all of those
+  # running: 274 of them after a day of reviews, a watchdog whose bus had gone
+  # spinning at 14% each. The shell goes first and gets a moment to exit on
+  # its own; whatever is left, the compositor included, follows.
+  # `session shell` narrows to the shell (its command line names quickshell).
+  session() {
     local p
-    for p in $(pgrep -f quickshell); do
+    local pids
+    if [ "${1:-}" = shell ]; then pids=$(pgrep -u "$(id -u)" -f quickshell); else pids=$(pgrep -u "$(id -u)" .); fi
+    for p in $pids; do
       { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "XDG_CONFIG_HOME=$SB/config" && echo "$p"
     done
   }
-  kill "$SANDBOX_QS_PID" $(shells) 2>/dev/null
-  for _ in $(seq 1 10); do [ -z "$(shells)" ] && break; sleep 0.5; done
-  left=$(shells); [ -n "$left" ] && kill -9 $left 2>/dev/null
-  kill "$SANDBOX_HYPR_PID" 2>/dev/null; sleep 1; kill -9 "$SANDBOX_HYPR_PID" 2>/dev/null
+  kill "$SANDBOX_QS_PID" $(session shell) 2>/dev/null
+  for _ in $(seq 1 10); do [ -z "$(session shell)" ] && break; sleep 0.5; done
+  kill "$SANDBOX_HYPR_PID" $(session) 2>/dev/null
+  for _ in $(seq 1 6); do [ -z "$(session)" ] && break; sleep 0.5; done
+  left=$(session); [ -n "$left" ] && kill -9 $left 2>/dev/null
+  kill -9 "$SANDBOX_HYPR_PID" 2>/dev/null
   [ -f "$SB/run.path" ] && rm -rf "$(cat "$SB/run.path")"
   echo "sandbox stopped"
   ;;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The review sandbox's stop leaves no shell behind.
+"""The review sandbox's stop leaves nothing of the sandbox behind.
 
 `tests/sandbox/sandbox_shell.sh stop` killed the pid it had recorded for the
 shell, and that pid was the background SUBSHELL of `cd "$ROOT" && qs ... &`,
@@ -39,11 +39,17 @@ exec "$@"
 # The shell: named quickshell in its own cmdline (the real launcher execs the
 # binary), deaf to SIGTERM.
 FAKE_QS = """#!/usr/bin/env bash
+setsid -f bash -c 'exec -a fake-helper sleep 600'
 exec -a quickshell python3 -c 'import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(600)'
 """
 
 
 def shells_of(sb):
+    return session_of(sb, b"quickshell")
+
+
+def session_of(sb, prefix=b""):
+    """Every process started inside the sandbox, found by its environment."""
     want = f"XDG_CONFIG_HOME={sb}/config".encode()
     found = []
     for pid in os.listdir("/proc"):
@@ -54,7 +60,7 @@ def shells_of(sb):
             cmd = Path(f"/proc/{pid}/cmdline").read_bytes()
         except OSError:
             continue
-        if want in env and cmd.startswith(b"quickshell"):
+        if want in env and cmd.startswith(prefix):
             found.append(int(pid))
     return found
 
@@ -74,7 +80,7 @@ class SandboxStopTest(unittest.TestCase):
                         XDG_RUNTIME_DIR=str(self.parent_run), WAYLAND_DISPLAY="wayland-parent")
 
     def tearDown(self):
-        for pid in shells_of(self.sb):
+        for pid in session_of(self.sb):
             os.kill(pid, signal.SIGKILL)
         subprocess.run(["bash", str(SCRIPT), "stop", str(self.sb)], env=self.env, capture_output=True, timeout=30)
         self.tmp.cleanup()
@@ -106,6 +112,20 @@ class SandboxStopTest(unittest.TestCase):
                            capture_output=True, text=True, timeout=30)
         self.assertIn("sandbox stopped", r.stdout)
         self.assertEqual(shells_of(self.sb), [], "a shell deaf to SIGTERM is still killed")
+
+    def test_stop_ends_the_whole_session(self):
+        # The shell starts helpers of its own (tray watchdog, monitors, a
+        # keyring, a D-Bus): they outlived every stop, 274 of them after a
+        # day of reviews, and a watchdog whose bus had gone spun at 14% each.
+        self.start()
+        for _ in range(20):
+            if session_of(self.sb, b"fake-helper"):
+                break
+            time.sleep(0.25)
+        self.assertTrue(session_of(self.sb, b"fake-helper"), "the fake helper is running")
+        subprocess.run(["bash", str(SCRIPT), "stop", str(self.sb)], env=self.env, capture_output=True, timeout=30)
+        time.sleep(0.5)
+        self.assertEqual(session_of(self.sb), [], "nothing started inside the sandbox survives its stop")
 
 
 if __name__ == "__main__":
