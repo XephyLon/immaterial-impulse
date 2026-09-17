@@ -43,7 +43,7 @@ trigger frame, at 33.3 ms per frame.
 ### The source, read after the measurement
 
 The shell in the clip is Clavis (https://github.com/StatIndet/quickshell,
-GPL-3), and its recording pill is the island; the source was read on
+GPL-3.0-or-later per its packaging), and its recording pill is the island; the source was read on
 2026-09-17 at 5183553 after the frames had been measured. It confirms the
 measurement at a scale of exactly 0.5 (a 2560-wide screen recorded at 1280)
 and it says how the motion is built, which the frames could not:
@@ -317,8 +317,10 @@ colour, border and corner radii flip in one frame.
   it (§1): the pill's rounded box and the band's half-plane as signed
   distance fields, joined by a polynomial smooth-minimum whose radius is
   the neck, covered once by one `ShaderEffect` (`shaders/split.frag`) over
-  the box `blendBox` lays out - the pill, the lift down to the band, the
-  blend's spill along it. The first cut was a `Shape` on one SVG path under
+  a box laid out once per motion from the rest margins (`splitBox`) - the
+  pill at every lift, the lift down to the band, the blend's full spill
+  along it - so the item holds still and only its uniforms change per
+  frame. The first cut was a `Shape` on one SVG path under
   the pill, reaching a pixel into it: drawn edge to edge, the pill and the
   path each antialiased their half of a boundary sitting on a fractional
   pixel while the lift animated, and two half-coverages of one colour over
@@ -397,11 +399,13 @@ the default band its look-only switch takes the effects half alone.
   once instead of pinching; a coverage ramp of one DEVICE pixel of the
   field's own gradient, because between two facing edges the fields'
   gradients cancel and a ramp in field units smeared into a soft grey
-  flank - the gradient by central differences and the output's pixel ratio
-  as a uniform, not `fwidth`, which GLSL ES 1.00 (the profile an OpenGL
+  flank - the gradient by central differences and the window's pixel
+  ratio (which follows fractional scaling) as a uniform, not `fwidth`, which GLSL ES 1.00 (the profile an OpenGL
   2.1-class backend gets, #70) has only behind an extension, and floored so
-  the saddle between the flanks does not alias; the pill's field reaching
-  two pixels into the band less the lift (`fieldPill`), because a blend that
+  the saddle between the flanks does not alias (so there, and on the
+  diagonal flanks, the ramp is somewhat wider than one device pixel); the
+  pill's field reaching two pixels into the band less the lift
+  (`fieldReach`, a uniform), because a blend that
   is nothing at rest cannot bridge the sub-pixel gap of the first frames and
   the ramp showed it as a hairline along the seam; and the band's
   zero-crossing one ramp inside the band, because its ramp otherwise tinted
@@ -416,8 +420,11 @@ the default band its look-only switch takes the effects half alone.
   blend at 0, round corners and no waist past the pinch - and a translucent
   fill drawn twice is darker. That hand-over happens only where a shader can
   paint (`fieldAvailable`): the software scene graph draws no
-  `ShaderEffect`, and a shader that failed to load draws nothing, so there
-  the pill keeps its Rectangle and lifts without a neck. The blur region
+  `ShaderEffect`, and a shader whose file failed to load draws nothing, so
+  there the pill keeps its Rectangle and lifts without a neck. A shader that
+  loads and then fails to build on the GPU is not caught (the effect's
+  `status` reports the load); keeping the shader inside core GLSL ES 1.00
+  is the guard for that. The blur region
   stays the pill's: the two bodies, the neck unblurred, as the source
   publishes it.
 - **A direction from part way is proportional**: the tier times the
@@ -428,8 +435,10 @@ the default band its look-only switch takes the effects half alone.
   scalar, the duration re-evaluated every frame of its own run and shortened
   it as it went (measured: a reversal at 250 ms took 680). Measured after,
   from the pin icon's position per frame: Floating then Attached 250 ms
-  later takes about 530 ms out and back; a landing reversed 250 ms in comes
-  back in about 250 ms; a whole direction runs 45 frames.
+  later takes 466 to 650 ms out and back across three recordings (the
+  reversal point is a shell sleep plus a Python start-up, so it varies); a
+  landing reversed about 250 ms in comes back in 250 to 283 ms; a whole
+  direction runs 43 to 45 frames.
 - **Colour and border**: `elementMoveFast`, sequenced. On a lift they run
   after the scalar lands at 1 (`attachedLook` holds the tab's look while the
   scalar is below 1; the pill takes `colLayer0` and its border once it is
