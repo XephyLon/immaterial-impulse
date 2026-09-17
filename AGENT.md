@@ -430,8 +430,12 @@ marker.** Every process a sandbox starts carries `IMI_SANDBOX_SESSION=<sandbox-d
 session only, not in the env file, so a terminal that sourced that file is never mistaken for part of
 the sandbox (a `stop` that matched `XDG_CONFIG_HOME` killed its own caller). `stop` ends every marked
 process, the shell first (the one whose argv[0] is `quickshell`; `pgrep -f quickshell` matches the
-script's own path), never a pid from the env file on its own (an env file outlives its session, and
-the pid can be anyone's by then), and lazily unmounts any FUSE mount a portal left in the run dir.
+script's own path), needs no env file (a start that failed before writing one still left a
+compositor running), never kills a pid from one on its own (an env file outlives its session, and
+the pid can be anyone's by then), removes only a run dir `start` made - `run.path` feeds an unmount
+pass and an `rm -rf`, so an empty or foreign value is ignored - after lazily unmounting any FUSE
+mount a portal left there, refuses to run from inside the sandbox, and reports what it ended and what
+is left. `start` over an existing sandbox dir stops that sandbox first.
 Before this, `start` recorded the subshell of `cd && qs &` as the shell, and `stop` ended only that
 and the compositor: the shell sometimes survived, and its helpers always did - 274 of them after a
 day of review sandboxes, every tray watchdog whose bus had gone spinning at 14% of a core, the
@@ -444,7 +448,8 @@ fake `Hyprland`, `dbus-run-session` and `qs` binaries.
 c700c58d ("fix(sandbox): stop kills the shell, not the subshell around it"),
 0a6a74b2 ("fix(sandbox): stop ends the whole session, not just the shell and the compositor"),
 579e1424 ("fix(sandbox): stop finds the session by its own marker, not by a variable the env file exports"),
-a1375a5a ("fix(sandbox): stop kills only what carries the marker, finds the shell by argv[0], and unmounts what it left").
+a1375a5a ("fix(sandbox): stop kills only what carries the marker, finds the shell by argv[0], and unmounts what it left"),
+dfe57a9f ("fix(sandbox): stop needs no env file, trusts no run.path, refuses from inside, and reports").
 **Modes & Routines is one engine, `services/Modes.qml`, and every surface reads it.** Definitions
 (modes in priority order, routines) live in `Config.options.modes`; the APPLIED state (active mode,
 its revert snapshot, the activity log, routine runs, paused action steps) lives in
