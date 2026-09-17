@@ -372,7 +372,10 @@ gradients cancel between them and a ramp in field units smeared over several pix
 differences with the WINDOW's pixel ratio as a uniform (`devicePixelRatio` on the window follows
 fractional scaling; the screen's is the output's integer scale), never `fwidth`, which GLSL ES 1.00 has only behind
 `GL_OES_standard_derivatives` and an OpenGL 2.1-class backend gets exactly that profile (c76d6b7b
-("fix(background): make the Doom melt transition compile on GLSL ES 1.00")); the pill's field reaches
+("fix(background): make the Doom melt transition compile on GLSL ES 1.00")) - and CLAMPED to
+[0.5, 1.5]: the blend's taper along the band steepens without bound as the waist closes, and an
+unclamped gradient drew the pinch frame as a half-covered stalk, while one taken with the radius held
+fixed left the post's sides unantialiased (both measured); the pill's field reaches
 two pixels into the band less the lift (`fieldReach`, a uniform the shader extends the pill by), because a blend that is nothing at rest cannot
 bridge the sub-pixel gap of the lift's first frames; and the band's zero-crossing sits one ramp inside
 the band, or its ramp tinted the gap's last row along the whole box. The band's edge is given in the
@@ -382,7 +385,10 @@ frame at the hand-over. While the field paints the pill's `Rectangle` does not (
 Behavior): the same silhouette in the same colour at both hand-overs, and a translucent fill drawn twice
 is darker - and only where a shader CAN paint (`fieldAvailable`: not the software scene graph, which
 draws no `ShaderEffect`, and not a shader whose file failed to load), or the hand-over would leave the
-icons over bare band; there the pill lifts without a neck. A shader that loads but fails to build on the
+icons over bare band; there the pill lifts without a neck, and its outward corners round over the whole
+lift rather than to a pinch that is never drawn (they hovered square over a lit gap for half of it).
+The shader binary is what the shell loads, so `split.frag.qsb.bake` records the source hash and the
+`qsb` that baked it, and the contract fails on a source edit that was not rebaked. A shader that loads but fails to build on the
 GPU is not caught - `ShaderEffect.status` reports the load - which is why the shader itself stays inside
 core GLSL ES 1.00.
 3e63f8be ("feat(dock): the neck is a distance field, and a reversal takes a proportional time").

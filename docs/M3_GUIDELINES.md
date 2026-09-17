@@ -230,7 +230,9 @@ waist narrows to nothing - bridges them until it pinches off `Appearance.animati
 of the way through the settle half, and the bodies settle APART. Shape rides the scalar: a corner
 rounds from the seam to the PINCH, over the neck's own span, because the rounding is the seam's
 own shape opening and the neck's flank is what exposes it (rounding to rest left a square corner
-over a lit gap). Anything that changes the look but not the shape (a border, a colour, a glyph)
+over a lit gap). Where no neck is drawn - no travel, or a renderer that cannot draw it - the corner
+rounds over the whole scalar instead: keyed on a pinch that never comes, it hovers square over the
+gap. Anything that changes the look but not the shape (a border, a colour, a glyph)
 runs on the effects tier sequenced with the spatial motion - after it has landed on a split,
 before it starts on a merge - not during it; a border is a colour that fades, never a width
 animated from 0 (a width below 1 draws nothing). A direction reversed part way takes the tier's

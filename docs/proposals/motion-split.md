@@ -403,11 +403,12 @@ the default band its look-only switch takes the effects half alone.
   ratio (which follows fractional scaling) as a uniform, not `fwidth`, which GLSL ES 1.00 (the profile an OpenGL
   2.1-class backend gets, #70) has only behind an extension, and floored so
   the saddle between the flanks does not alias (so there, and on the
-  diagonal flanks, the ramp is somewhat wider than one device pixel), with
-  the blend radius HELD at the pixel's own value across the four taps -
-  differencing through the taper, which steepens without bound as the
-  waist closes, drew the pinch frame as a half-covered stalk with the
-  pill's body lightened above it; the
+  diagonal flanks, the ramp is somewhat wider than one device pixel), and
+  clamped to 1.5 above: differencing through the blend's taper, which
+  steepens without bound as the waist closes, drew the landing's pinch
+  frame as a half-covered stalk with the pill's body lightened above it,
+  and holding the radius fixed instead left the lift's pinch frame a
+  hard-sided post (both measured); the
   pill's field reaching two pixels into the band less the lift
   (`fieldReach`, a uniform), because a blend that
   is nothing at rest cannot bridge the sub-pixel gap of the first frames and
@@ -438,10 +439,11 @@ the default band its look-only switch takes the effects half alone.
   dock's default size - a floating window inside the sandbox, the scalar
   looping on the tier, 60 frames a second in every run - takes process CPU
   over 8 s, three runs each: #398's `Shape` neck 49-51 ticks on hardware GL
-  and 129-132 on llvmpipe, this field 41-43 and 113-116. On the render
-  thread both average about 0.2 ms a frame (0.01-0.22) on either renderer; that
-  timing is whole milliseconds, so the fragment shader's GPU time on
-  hardware is below what it can show. Fragments further than four ramps
+  and 129-132 on llvmpipe, this field 41-43 and 113-116. Qt's render-loop
+  timing (whole milliseconds) reads 0 for the render step of every frame
+  of both, on either renderer; the ~0.2 ms a frame it does show is the
+  swap, the same for both. The fragment shader's GPU time on hardware is
+  below what it can show, and no GPU timer is available here. Fragments further than four ramps
   from the outline return after one field evaluation, so only the edge pays
   for the gradient. In the full sandbox shell, four interleaved fresh starts
   of each build on hardware GL: idle 59-63 ticks per 10 s against #398's
