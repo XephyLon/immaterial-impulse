@@ -14,6 +14,9 @@ start)
   ROOT="$1"; SB="$2"; OVERRIDES="${3:-}"
   [ -n "${WAYLAND_DISPLAY:-}" ] || { echo "no WAYLAND_DISPLAY: the nested compositor needs a parent"; exit 1; }
   PARENT_SOCKET="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+  # Reusing a sandbox dir: stop what is running there first. Wiping the dir
+  # under a live session left it running with nothing on disk to find it by.
+  [ -d "$SB" ] && "$0" stop "$SB"
   rm -rf "$SB"; mkdir -p "$SB/config/immaterial-impulse" "$SB/config/quickshell" "$SB/cache" "$SB/state" "$SB/data"
   # The runtime dir must be SHORT: a unix socket path is capped at 108 bytes,
   # and under a deep scratchpad path wl_display_add_socket_auto fails
@@ -82,7 +85,7 @@ shot)
   SB="$1"; OUT="$2"; source "$SB/env"; grim "$OUT" && echo "$OUT"
   ;;
 stop)
-  SB="$1"; source "$SB/env" 2>/dev/null || exit 0
+  SB="$1"
   # Everything started inside THIS sandbox, found by its environment: every
   # process of the session inherits IMI_SANDBOX_SESSION=<sandbox>, which the
   # env file does not export, so a terminal that sourced that file is never
@@ -90,16 +93,24 @@ stop)
   # this script). That covers the shell and the helpers it starts - a tray
   # watchdog, monitors, a keyring, the session's D-Bus - which outlived every
   # stop that killed only the recorded pids: 274 of them after a day of
-  # reviews, a watchdog whose bus had gone spinning at 14% each. The recorded
-  # pids are not killed on their own: an env file outlives its session, and
-  # by then a pid can be anyone's. The shell goes first (the process whose
+  # reviews, a watchdog whose bus had gone spinning at 14% each. Nothing
+  # needs the env file: a start that failed before writing it still left a
+  # compositor running, and the pids in an env file that outlived its
+  # session can be anyone's. The shell goes first (the marked process whose
   # argv[0] is quickshell - not a whole-command-line match, which finds this
-  # script by its own path) and gets a moment to exit; the rest follows, then
-  # SIGKILL.
+  # script by its own path) and gets a moment to exit; the rest follows,
+  # then SIGKILL.
+  if tr '\0' '\n' < /proc/$$/environ 2>/dev/null | grep -q '^IMI_SANDBOX_SESSION='; then
+    echo "stop: run this from outside the sandbox - from inside, it would end its own caller" >&2
+    exit 1
+  fi
+  # One grep over every environ (NUL-separated, exact entry); only our own
+  # processes are readable, and one that exits mid-scan is simply absent.
   session() {
-    local p argv0
-    for p in $(pgrep -u "$(id -u)" .); do
-      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "IMI_SANDBOX_SESSION=$SB" || continue
+    local f p argv0
+    for f in $(grep -lzx -- "IMI_SANDBOX_SESSION=$SB" /proc/[0-9]*/environ 2>/dev/null); do
+      p=${f#/proc/}; p=${p%/environ}
+      [ "$p" = "$$" ] && continue
       if [ "${1:-}" = shell ]; then
         argv0=$({ tr '\0' '\n' < "/proc/$p/cmdline"; } 2>/dev/null | head -1)
         [ "${argv0##*/}" = quickshell ] || continue
@@ -107,21 +118,33 @@ stop)
       echo "$p"
     done
   }
+  found=$(session | wc -w)
   kill $(session shell) 2>/dev/null
   for _ in $(seq 1 10); do [ -z "$(session shell)" ] && break; sleep 0.5; done
   kill $(session) 2>/dev/null
   for _ in $(seq 1 6); do [ -z "$(session)" ] && break; sleep 0.5; done
-  left=$(session); [ -n "$left" ] && kill -9 $left 2>/dev/null
-  # A portal or gvfs killed hard can leave its FUSE mount in the run dir, and
-  # rm cannot remove a mountpoint; unmount lazily first.
-  if [ -f "$SB/run.path" ]; then
-    RUN=$(cat "$SB/run.path")
+  hard=$(session); [ -n "$hard" ] && kill -9 $hard 2>/dev/null
+  sleep 0.2
+  left=$(session | wc -w)
+  # The run dir: only one start made - /tmp/imi-sb-XXXXXX, an existing
+  # directory owned by us. run.path feeds an unmount pass and an rm -rf, so an
+  # empty or foreign value (a failed mktemp, a hand edit) is left alone. A
+  # portal or gvfs killed hard can leave its FUSE mount there, and rm cannot
+  # remove a mountpoint; unmount lazily first.
+  RUN=$(head -1 "$SB/run.path" 2>/dev/null)
+  if [[ "$RUN" =~ ^/tmp/imi-sb-[A-Za-z0-9]{6}$ ]] && [ -d "$RUN" ] && [ ! -L "$RUN" ] && [ -O "$RUN" ]; then
     awk -v r="$RUN/" 'index($2, r) == 1 { print $2 }' /proc/self/mounts | while read -r m; do
       fusermount3 -u -z "$m" 2>/dev/null || fusermount -u -z "$m" 2>/dev/null
     done
     rm -rf "$RUN" 2>/dev/null
   fi
-  echo "sandbox stopped"
+  hardn=$(echo $hard | wc -w)
+  if [ "$left" -eq 0 ]; then
+    echo "sandbox stopped: $found processes ended, nothing left${hard:+ ($hardn needed SIGKILL)}"
+  else
+    echo "sandbox stopped: $found processes found, $left STILL RUNNING - check /proc for IMI_SANDBOX_SESSION=$SB" >&2
+    echo "sandbox stopped (incomplete)"
+  fi
   ;;
 *) echo "usage: $0 start <shell-root> <sandbox-dir> [overrides.json] | shot <sandbox-dir> <out.png> | stop <sandbox-dir>"; exit 2 ;;
 esac

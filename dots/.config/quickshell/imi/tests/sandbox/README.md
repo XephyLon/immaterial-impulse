@@ -9,7 +9,15 @@ cohesion, iterate until every axis is >= 8.5). Never capture the live screen.
     tests/sandbox/sandbox_shell.sh start <shell-root> <sandbox-dir> [overrides.json]
     source <sandbox-dir>/env            # hyprctl, qs -c imi ipc, grim, wtype now talk to the sandbox
     tests/sandbox/sandbox_shell.sh shot <sandbox-dir> <out.png>
-    tests/sandbox/sandbox_shell.sh stop <sandbox-dir>
+    tests/sandbox/sandbox_shell.sh stop <sandbox-dir>     # from OUTSIDE the sandbox
+
+`stop` ends everything the sandbox started - the shell first, then its helpers and the session's
+D-Bus - found by `IMI_SANDBOX_SESSION=<sandbox-dir>`, which only the session carries (the env file
+does not, so a terminal that sourced it is never matched). It needs no env file, never kills a pid
+from one on its own, removes only a run dir `start` made (`/tmp/imi-sb-XXXXXX`, unmounting any FUSE
+mount left in it), refuses to run from inside the sandbox, and says how many processes it ended and
+whether any are left. `start` on an existing sandbox dir stops that sandbox first. Before these,
+every stop left the shell's helpers running, and they piled up (`test_sandbox_shell.py`).
 
 - `<shell-root>` is `dots/.config/quickshell/imi` of the worktree under review. It is SYMLINKED,
   not copied: editing under `<sandbox-dir>/config/quickshell/imi/` edits the repo. Probe patches go
@@ -34,11 +42,8 @@ cohesion, iterate until every axis is >= 8.5). Never capture the live screen.
   (stacked branches all add Unreleased lines).
 - Failure modes: `grim` hangs when the nested output stops producing frames (occluded or after a
   stall, or the PARENT display DPMS-off) - restart the sandbox; a `Monitor FALLBACK 0x0` line means
-  the same. One sandbox at a time. To measure the shell's CPU, find it by its environment
-  (`IMI_SANDBOX_SESSION=<sandbox-dir>` in `/proc/<pid>/environ`, set for the session only - the
-  env file does not carry it, so a sourced terminal never matches), never with `pgrep -n`: that
-  picks the newest matching process, which need not be this sandbox's shell. `stop` ends
-  everything the sandbox started - the shell first, then its helpers and the session's D-Bus, all
-  found by that same variable (`test_sandbox_shell.py`); before that, every stop left the helpers
-  running. A failed QML load kills the shell: read the LAST `caused by` line in
+  the same. One sandbox at a time. To measure the shell's CPU, find it by the session marker in
+  `/proc/<pid>/environ`, never with `pgrep -n`: that picks the newest matching process, which need
+  not be this sandbox's shell. Never delete a sandbox dir by hand - `stop` it (a session whose dir
+  is gone keeps running). A failed QML load kills the shell: read the LAST `caused by` line in
   `<sandbox-dir>/qs.log`.
